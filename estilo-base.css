@@ -832,3 +832,6 @@
   .how-grid.two { grid-template-columns: repeat(2, 1fr); }
   @media (max-width: 900px) { .how-grid.two { grid-template-columns: 1fr; } }
   .stat span { display:block; max-width: 260px; }
+  .norms-grid.three { grid-template-columns: repeat(3, 1fr); }
+  .norms-grid.wide { grid-template-columns: 2fr 1fr; }
+  @media (max-width: 900px) { .norms-grid.three, .norms-grid.wide { grid-template-columns: 1fr; } }
