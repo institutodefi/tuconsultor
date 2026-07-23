@@ -829,3 +829,6 @@
   .consultify-band .accent { color: #E89313; }
   .btn-consultify { background: #F5A623; color: #061B45; }
   .btn-consultify:hover { background: #E89313; }
+  .how-grid.two { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .how-grid.two { grid-template-columns: 1fr; } }
+  .stat span { display:block; max-width: 260px; }
