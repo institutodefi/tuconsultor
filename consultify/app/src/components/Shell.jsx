@@ -23,7 +23,7 @@ export default function Shell({ children }) {
               {/* La calculadora es económica: solo superadmin (o sin login, para captar leads) */}
               {(!user || verEconomico) && <NavLink to="/calculadora" className={navItem}>Calcula tu oferta</NavLink>}
               {user && esCliente && <NavLink to="/clientes" className={navItem}>Zona clientes</NavLink>}
-              {user && esEquipo && <NavLink to="/consultores" className={navItem}>Zona interna</NavLink>}
+              {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita360 PM Tool</NavLink>}
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -65,6 +65,11 @@ export default function Shell({ children }) {
         </p>
         <p className="mt-3 text-[11px] font-semibold italic text-brand-orange/90">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</p>
       </footer>
+      <a href="/app/" aria-label="Orbita 360" title="Orbita 360"
+         className="tc-logo-animado fixed bottom-5 right-5 z-30 hidden md:block opacity-80 transition hover:opacity-100"
+         style={{ width: 72, height: 72 }}>
+        <img src="/app/marca/orbita-isotipo-anim.svg" alt="" style={{ width: '100%', height: '100%' }} />
+      </a>
     </div>
   );
 }

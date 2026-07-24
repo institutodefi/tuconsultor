@@ -22,7 +22,7 @@
   html { scroll-behavior: smooth; }
   /* Rubik para titulares y marca; Manrope para el resto (cuerpo). */
   h1, h2, h3, .rubik { font-family: 'Manrope', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
-  .btn-orbita { display:inline-flex; align-items:center; gap:7px; font-family:'Rubik','Manrope',sans-serif; font-weight:600; }
+  .btn-orbita { display:inline-flex; align-items:center; gap:7px; font-family:'Manrope',sans-serif; font-weight:600; }
   .btn-orbita .orbita-ic { height:20px; width:auto; display:block; }
   body {
     font-family: 'Manrope', system-ui, sans-serif;
