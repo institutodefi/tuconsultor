@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/estilo-base.css?v=4" />
+<link rel="stylesheet" href="/estilo-base.css?v=5" />
 </head>
 <body>
 
@@ -45,7 +45,10 @@
 </nav>
 
 <header class="hero" role="banner">
-  <div class="container hero-content">
+  <div class="container hero-content" style="position:relative">
+    <img src="/marca/casita-anim.svg" alt="" class="tc-logo-animado" aria-hidden="true"
+         style="position:absolute;right:0;top:24px;width:230px;height:230px;opacity:.9" id="casita-hero" />
+    <style>@media (max-width:900px){ #casita-hero{ display:none } }</style>
     <div class="pre-tag">GESTIÓN CON CORAZÓN desde 2006 <span class="heart" aria-hidden="true">❤</span></div>
     <h1>
       <span>Consultoría que</span>
@@ -136,7 +139,7 @@
     </p>
     <div class="hero-actions">
       <a href="/servicios/consultify.html" class="btn btn-primary">Conoce Consultify</a>
-      <a href="https://consultify.tuconsultor.com" class="btn btn-consultify" target="_blank" rel="noopener">Ir a consultify.tuconsultor.com →</a>
+      <a href="https://consultify.tuconsultor.com" class="btn btn-consultify" target="_blank" rel="noopener">Ir a consultify.pro →</a>
     </div>
   </div>
 </section>

@@ -64,7 +64,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon_32.png" />
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon_64.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<meta name="theme-color" content="#061B45" />
+<meta name="theme-color" content="#04173F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="application-name" content="Consultify" />
@@ -368,16 +368,16 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&family=Rubik:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --navy-900: #061B45;
-    --navy-800: #0A2A6C;
+    --navy-900: #04173F;
+    --navy-800: #04173F;
     --navy-700: #1E3A8A;
-    --orange: #F5A623;
-    --orange-deep: #E89313;
+    --orange: #013886;
+    --orange-deep: #014695;
     --white: #FFFFFF;
     --off-white: #F8F9FB;
-    --cream: #F4EFE5;
-    --ink: #0A1530;
-    --muted: #5B6680;
+    --cream: #F3F7FC;
+    --ink: #014695;
+    --muted: #3A5178;
     --line: rgba(10, 21, 48, 0.10);
   }
 
@@ -399,19 +399,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
 
   /* Skip-to-content for keyboard users */
-  .skip-link {
-    position: absolute;
-    top: -40px;
-    left: 8px;
-    background: var(--orange);
-    color: var(--navy-900);
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-    z-index: 1000;
-    transition: top 0.2s;
-    text-decoration: none;
-  }
+  .skip-link { position:absolute; left:-9999px; top:0; background: var(--orange); color:#FFFFFF; padding:10px 18px; z-index:100; border-radius:0 0 10px 0; } .skip-link:focus { left:0; }
   .skip-link:focus {
     top: 8px;
     outline: 3px solid var(--navy-900);
@@ -502,7 +490,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .btn-primary { background: var(--navy-800); color: var(--white); }
   .btn-primary:hover { background: var(--navy-900); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(10, 42, 108, 0.25); }
-  .btn-orange { background: var(--orange); color: var(--navy-900); }
+  .btn-orange { background: var(--orange); color: #FFFFFF; }
   .btn-ghost { background: var(--white); color: var(--navy-800); border: 1px solid var(--line); }
   .btn-ghost:hover { border-color: var(--navy-700); transform: translateY(-1px); }
   .btn-orange:hover { background: var(--orange-deep); transform: translateY(-1px); }
@@ -512,7 +500,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .hero::before {
     content: ''; position: absolute; top: -200px; right: -300px;
     width: 800px; height: 800px;
-    background: radial-gradient(circle, rgba(245, 166, 35, 0.10) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(1, 56, 134, 0.10) 0%, transparent 60%);
     border-radius: 50%; pointer-events: none;
   }
   .hero::after {
@@ -524,8 +512,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .hero-content { position: relative; z-index: 2; max-width: 920px; }
   .pre-tag {
     display: inline-flex; align-items: center; gap: 10px;
-    background: rgba(245, 166, 35, 0.08);
-    border: 1px solid rgba(245, 166, 35, 0.25);
+    background: rgba(1, 56, 134, 0.08);
+    border: 1px solid rgba(1, 56, 134, 0.25);
     color: var(--orange-deep);
     padding: 8px 16px; border-radius: 100px;
     font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
@@ -946,8 +934,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .impl-num {
     font-size: 14px; font-weight: 800;
     color: var(--orange);
-    background: rgba(245, 166, 35, 0.12);
-    border: 1px solid rgba(245, 166, 35, 0.3);
+    background: rgba(1, 56, 134, 0.12);
+    border: 1px solid rgba(1, 56, 134, 0.3);
     padding: 4px 12px;
     border-radius: 100px;
     letter-spacing: 0.16em;
@@ -977,7 +965,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   
   .impl-card.combo {
     background: linear-gradient(180deg, var(--white) 0%, #FBF9F4 100%);
-    border-color: rgba(245, 166, 35, 0.25);
+    border-color: rgba(1, 56, 134, 0.25);
   }
   .impl-card.combo.featured {
     background: var(--navy-900);
@@ -996,7 +984,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     letter-spacing: -0.01em;
   }
   .impl-badge.max {
-    background: #FF8800;
+    background: #013886;
     color: var(--white);
   }
   .impl-card.combo.featured .impl-badge {
@@ -1040,11 +1028,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     line-height: 1.1;
     margin-bottom: 4px;
     padding-top: 10px;
-    border-top: 1px dashed rgba(245, 166, 35, 0.4);
+    border-top: 1px dashed rgba(1, 56, 134, 0.4);
   }
   .impl-card.combo.featured .impl-time {
     color: var(--orange);
-    border-top-color: rgba(245, 166, 35, 0.5);
+    border-top-color: rgba(1, 56, 134, 0.5);
   }
   
   .impl-pace {
@@ -1105,7 +1093,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     content: ''; position: absolute;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 120%; height: 200%;
-    background: radial-gradient(circle, rgba(245,166,35,0.10) 0%, transparent 50%);
+    background: radial-gradient(circle, rgba(1, 56, 134,0.10) 0%, transparent 50%);
     pointer-events: none;
   }
   .final-cta-inner { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; }
@@ -1185,6 +1173,32 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
 
 
+
+  /* ── Overrides AAA (auditoría UNE 139803) ── */
+  .model-card.featured .badge, .badge { color: #FFFFFF; }
+  .model-card.featured .model-ia, .model-card.featured .model-from,
+  .model-card.featured .price-cur, .model-card.featured .price-per,
+  .model-card.featured .model-tagline { color: #9DBEF3; }
+  .model-card.featured .model-from b, .model-card.featured .price-num { color: #EAF4F7; }
+  .skip-link { color: #FFFFFF !important; background: #013886 !important; }
+  .price-table thead .tag, .combos-table thead .tag { color: #9DBEF3; }
+  .impl-badge { color: #FFFFFF; }
+  .impl-card.featured .impl-norm, .impl-card.combo.featured .impl-norm,
+  .impl-card.featured .impl-time, .impl-card.combo.featured .impl-time,
+  .impl-card.featured .impl-num, .impl-card.featured .impl-cov,
+  .impl-card.featured .impl-pace, .impl-card.featured .impl-price { color: #9DBEF3; }
+  .impl-card.featured .impl-badge, .impl-card.combo.featured .impl-badge { color: #FFFFFF; }
+  .impl-card.featured .impl-time b, .impl-card.featured .impl-price b { color: #EAF4F7; }
+  /* Sección "combos" (fondo navy): todo acento como texto pasa a azul claro AAA */
+  .combos .section-eyebrow, .combos .accent, .combos .from,
+  .combos .combos-table .per, .combos .max, .combos [class*="descuento"],
+  .combos td span, .combos th span { color: #9DBEF3; }
+  .combos h2, .combos .combos-table td, .combos .combos-table th { color: #EAF4F7; }
+  .combos .combos-table td b, .combos .price-num { color: #FFFFFF; }
+  .combos h2 span.accent, .combos h2 .accent, .final-cta .accent, .final-cta h2 span.accent,
+  footer h4, .footer-col h4, footer .accent, footer a, .footer-bot span, .footer-bot a { color: #9DBEF3 !important; }
+  footer, footer p, .footer-bot { color: #C8D6EE; }
+  .model-card.featured .per, .price-table thead th .per { color: #B9CDF0; }
 </style>
 </head>
 <body>
@@ -1198,7 +1212,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <nav aria-label="Navegación principal">
   <div class="container nav-inner">
     <a href="#" class="nav-logo">
-      <img src="logo.png" alt="Consultify · consultoría ISO impulsada por IA" />
+      <img src="/marca/consultify-horizontal-light.svg" alt="Consultify · consultoría ISO impulsada por IA" />
     </a>
     <div class="nav-mid">
       <a href="#models" data-i18n="nav.models">Modelos</a>
@@ -1829,7 +1843,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="container">
     <div class="footer-top">
       <div class="footer-brand">
-        <img src="logo_white.png" alt="Consultify · consultoría ISO impulsada por IA" />
+        <img src="/marca/consultify-horizontal-blanco.svg" alt="Consultify · consultoría ISO impulsada por IA" />
         <p data-i18n="footer.tagline">El Spotify de la consultoría. Suscríbete a un equipo de consultores impulsado por IA. Una línea de TuConsultor.</p>
       </div>
       <div class="footer-col">

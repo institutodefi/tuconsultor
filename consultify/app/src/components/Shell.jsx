@@ -16,7 +16,7 @@ export default function Shell({ children }) {
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between gap-6 px-4">
           <div className="flex items-center gap-8">
             <a href="/" className="flex items-center">
-              <img src="/logo.png" alt="Consultify" className="h-9 w-auto" />
+              <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado h-16 w-auto" />
             </a>
             <nav className="hidden gap-6 text-sm font-semibold md:flex">
               <a href="/" className="text-navy-900/75 transition hover:text-navy-700">Web</a>
@@ -54,7 +54,7 @@ export default function Shell({ children }) {
       </header>
       <main className="flex-1">{children}</main>
       <footer className="border-t border-white/10 bg-navy-900 py-8 text-center text-xs text-white/55">
-        <img src="/logo_white.png" alt="" className="mx-auto mb-3 h-7 w-auto opacity-90" />
+        <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
         <p className="mt-1">Precios sin IVA salvo indicación · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
         <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
