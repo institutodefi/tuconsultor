@@ -33,6 +33,23 @@
   to = "/.netlify/functions/generar-oferta"
   status = 200
 
+[[redirects]]
+  from = "/api/contacto"
+  to = "/.netlify/functions/contacto"
+  status = 200
+
+[[redirects]]
+  from = "/api/newsletter"
+  to = "/.netlify/functions/newsletter"
+  status = 200
+
+# ── 1b · El blog vivió en Consultify: redirigir al blog de TuConsultor ──
+[[redirects]]
+  from = "https://consultify.tuconsultor.com/blog/*"
+  to = "https://www.tuconsultor.com/blog/"
+  status = 301
+  force = true
+
 # ── 2 · Subdominio Consultify: la app (SPA, sin force: los assets reales pasan) ──
 [[redirects]]
   from = "https://consultify.tuconsultor.com/app/*"

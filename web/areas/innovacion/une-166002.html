@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/estilo-base.css?v=5" />
+<link rel="stylesheet" href="/estilo-base.css?v=2" />
 </head>
 <body>
 
@@ -101,6 +101,59 @@
   </div>
 </section>
 
+<section class="norms" id="contacto-producto" style="padding-top:20px">
+  <div class="container">
+    <div class="section-head"><div class="section-eyebrow">HABLEMOS</div>
+      <h2><span class="strong">¿Te ayudamos con esto?</span></h2></div>
+    <div style="display:grid;gap:26px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));max-width:980px">
+      <form class="norm-card" data-form="contacto" style="display:flex;flex-direction:column;gap:12px">
+        <strong style="font-size:18px">Escríbenos</strong>
+        <input type="text" name="web" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
+        <label style="font-size:13px;color:var(--muted)">Nombre<input required name="nombre" type="text" autocomplete="name" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:#0D1A33;color:var(--ink)" /></label>
+        <label style="font-size:13px;color:var(--muted)">Email<input required name="email" type="email" autocomplete="email" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:#0D1A33;color:var(--ink)" /></label>
+        <label style="font-size:13px;color:var(--muted)">Empresa<input name="empresa" type="text" autocomplete="organization" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:#0D1A33;color:var(--ink)" /></label>
+        <label style="font-size:13px;color:var(--muted)">¿Qué necesitas?<textarea required name="mensaje" rows="4" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid var(--line);background:#0D1A33;color:var(--ink);resize:vertical"></textarea></label>
+        <button type="submit" class="btn btn-orange">Enviar mensaje</button>
+        <p data-msg role="status" style="font-size:14px;font-weight:700;margin:0"></p>
+      </form>
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <div class="norm-card" style="display:flex;flex-direction:column;gap:12px">
+          <strong style="font-size:18px">Newsletter de gestión</strong>
+          <p style="font-size:14px;color:var(--muted);margin:0">Un artículo diario sobre normas y Modelo EFQM. Sin spam, date de baja cuando quieras.</p>
+          <form data-form="newsletter" style="display:flex;gap:10px;flex-wrap:wrap">
+            <input type="text" name="web" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
+            <input required name="email" type="email" placeholder="Email" aria-label="Email" autocomplete="email" style="flex:1;min-width:200px;padding:11px 14px;border-radius:999px;border:1.5px solid var(--line);background:#0D1A33;color:var(--ink)" />
+            <button type="submit" class="btn btn-primary">Suscribirme</button>
+            <p data-msg role="status" style="font-size:14px;font-weight:700;margin:0;width:100%"></p>
+          </form>
+        </div>
+        <div class="norm-card">
+          <strong style="font-size:16px">WhatsApp</strong>
+          <p style="font-size:14px;margin:6px 0 0"><a href="https://wa.me/34672462321" style="color:var(--acento-texto)">+34 672 462 321</a> · <a href="mailto:hola@tuconsultor.com" style="color:var(--acento-texto)">hola@tuconsultor.com</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+document.querySelectorAll('[data-form]').forEach(function(f){
+  f.addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    var msg=f.querySelector('[data-msg]'); msg.textContent='…';
+    var datos=Object.fromEntries(new FormData(f).entries());
+    datos.producto='UNE 166002'; datos.origen=location.pathname;
+    var api=f.getAttribute('data-form')==='contacto'?'/api/contacto':'/api/newsletter';
+    try{
+      var r=await fetch('https://consultify.tuconsultor.com'+api,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(datos)});
+      var d=await r.json();
+      msg.style.color=d.ok?'var(--verde-texto)':'#FF7A7D';
+      msg.textContent=d.ok?'¡Recibido! Te contestamos muy pronto.':(d.error||'No se pudo enviar. Inténtalo de nuevo.');
+      if(d.ok)f.reset();
+    }catch(e){ msg.style.color='#FF7A7D'; msg.textContent='No se pudo enviar. Inténtalo de nuevo.'; }
+  });
+});
+</script>
+
 <section id="contacto" class="final-cta">
   <div class="final-cta-inner container">
     <h2>Hablemos de <span class="accent">tu proyecto.</span></h2>
@@ -152,5 +205,7 @@
     </div>
   </div>
 </footer>
+<script src="/orbita-flotante.js" defer></script>
+<script src="/whatsapp-widget.js" defer></script>
 </body>
 </html>

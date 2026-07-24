@@ -23,7 +23,7 @@ export default function Shell({ children }) {
           <a href="/" className="rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]">Web</a>
           {(!user || verEconomico) && <NavLink to="/calculadora" className={navItem}>Calcula tu oferta</NavLink>}
           {user && esCliente && <NavLink to="/clientes" className={navItem}>Zona clientes</NavLink>}
-          {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita · PMTool</NavLink>}
+          {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita.PMTool</NavLink>}
         </nav>
         <div className="mt-auto px-4 pb-6">
           {demo && <span className="chip mb-3 w-full justify-center bg-brand-verde/15 text-brand-verdeTexto">Modo demo</span>}
@@ -53,7 +53,7 @@ export default function Shell({ children }) {
           </a>
           <div className="flex items-center gap-2">
             {user && esCliente && <NavLink to="/clientes" className="text-xs font-bold text-[#EAF4F7]">Zona clientes</NavLink>}
-            {user && esEquipo && <NavLink to="/consultores" className="text-xs font-bold text-[#EAF4F7]">Orbita · PMTool</NavLink>}
+            {user && esEquipo && <NavLink to="/consultores" className="text-xs font-bold text-[#EAF4F7]">Orbita.PMTool</NavLink>}
             {user
               ? <button onClick={logout} className="btn-ghost !px-3 !py-1.5 text-xs">Salir</button>
               : <Link to="/acceso" className="btn-primary !px-3 !py-1.5 text-xs">Acceder</Link>}
@@ -75,7 +75,7 @@ export default function Shell({ children }) {
         </p>
         <p className="mt-3 text-[11px] font-semibold italic text-brand-orange/90">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</p>
       </footer>
-      <a href="/app/" aria-label="Orbita 360" title="Orbita 360"
+      <a href="/app/acceso" aria-label="Orbita 360" title="Orbita 360"
          className="tc-logo-animado fixed bottom-5 right-5 z-30 hidden md:block opacity-80 transition hover:opacity-100"
          style={{ width: 72, height: 72 }}>
         <img src="/app/marca/orbita-isotipo-anim.svg" alt="" style={{ width: '100%', height: '100%' }} />

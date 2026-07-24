@@ -7,7 +7,7 @@
 // (la RLS de Supabase ya lo restringe, pero lo reforzamos en la query).
 // =============================================================================
 
-const SITE = 'https://consultify.tuconsultor.com';
+const SITE = 'https://www.tuconsultor.com';
 
 function esc(s) {
   return String(s || '')
@@ -23,7 +23,7 @@ export default async (req) => {
   if (SUPA && ANON) {
     try {
       const hoy = new Date().toISOString().slice(0, 10);
-      const url = `${SUPA}/rest/v1/blog_posts` +
+      const url = `${SUPA}/rest/v1/blog_tuconsultor` +
         `?select=slug,titulo,extracto,autor,fecha_publicacion,pilar` +
         `&estado=neq.borrador&fecha_publicacion=lte.${hoy}` +
         `&order=fecha_publicacion.desc&limit=40`;
