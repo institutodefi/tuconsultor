@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+*/node_modules/
+
+# Builds
+dist/
+app/dist/
+.netlify/
+
+# Variables de entorno (NUNCA subir credenciales al repo)
+.env
+.env.*
+!.env.example
+app/.env
+app/.env.*
+!app/.env.example
+
+# Logs y temporales
+*.log
+npm-debug.log*
+.DS_Store

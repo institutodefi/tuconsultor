@@ -1,0 +1,5 @@
+# Sitio estático de www.tuconsultor.com
+# En Netlify: Site settings → Build & deploy → Base directory = web
+[build]
+  publish = "."
+  command = "echo 'sitio estático, sin build'"
