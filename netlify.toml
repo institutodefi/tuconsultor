@@ -1,56 +1,56 @@
-[build]
-  command = "cd app && npm install && npm run build && cd ../netlify/functions && npm install"
-  publish = "dist"
-  functions = "netlify/functions"
+# ═══ TuConsultor + Consultify · UN SOLO DEPLOY ═══
+# Dominios del sitio: www.tuconsultor.com (primario), tuconsultor.com,
+# consultify.tuconsultor.com (alias servido por rewrites por host).
 
-# ── Secrets scanning ─────────────────────────────────────────────────────────
-# La SUPABASE_SERVICE_ROLE_KEY se usa SOLO en las funciones serverless (backend),
-# que no son públicas. El escáner de Netlify la detecta en el bundle de funciones
-# y da un falso positivo. La omitimos del escaneo (sigue siendo secreta y NUNCA
-# se expone al navegador, porque no lleva prefijo VITE_ ni se usa en app/src).
-# Si alguna vez ves este secreto en dist/ (frontend), NO lo omitas: sería fuga real.
+[build]
+  command = "cd consultify/app && npm install && npm run build && cd ../netlify/functions && npm install && cd ../../.. && node build-dist.mjs"
+  publish = "dist"
+  functions = "consultify/netlify/functions"
+
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "SUPABASE_SERVICE_ROLE_KEY"
 
-# Empaquetado de funciones: esbuild incluye las dependencias (pdf-lib, pptxgenjs)
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["pdf-lib", "pptxgenjs"]
 
-# Refresco diario del semáforo de cobros (facturas Holded), a las 06:00 UTC.
 [functions."cobros-diario"]
   schedule = "0 6 * * *"
 
-# Feed .ics suscribible de la agenda
+# ── 1 · Funciones (válidas en ambos hosts; deben ir ANTES de los rewrites) ──
 [[redirects]]
   from = "/api/agenda-feed"
   to = "/.netlify/functions/agenda-feed"
   status = 200
 
-# Feed RSS del blog (para envíos automáticos por Brevo)
 [[redirects]]
   from = "/blog/rss.xml"
   to = "/.netlify/functions/blog-rss"
   status = 200
 
-# Generación automática de oferta (PDF + PPTX)
 [[redirects]]
   from = "/api/generar-oferta"
   to = "/.netlify/functions/generar-oferta"
   status = 200
 
-# SPA: cualquier ruta bajo /app/ sirve la app React
+# ── 2 · Subdominio Consultify: la app (SPA, sin force: los assets reales pasan) ──
+[[redirects]]
+  from = "https://consultify.tuconsultor.com/app/*"
+  to = "/app/index.html"
+  status = 200
+
+# ── 3 · Subdominio Consultify: resto → carpeta /consultify (force: pisa la raíz) ──
+[[redirects]]
+  from = "https://consultify.tuconsultor.com/*"
+  to = "/consultify/:splat"
+  status = 200
+  force = true
+
+# ── 4 · SPA de la app también en el dominio principal ──
 [[redirects]]
   from = "/app/*"
   to = "/app/index.html"
   status = 200
-
-# www → apex
-[[redirects]]
-  from = "https://consultify.tuconsultor.com/*"
-  to = "https://consultify.tuconsultor.com/:splat"
-  status = 301
-  force = true
 
 [[headers]]
   for = "/*"
