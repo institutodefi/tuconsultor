@@ -835,3 +835,12 @@
   .norms-grid.three { grid-template-columns: repeat(3, 1fr); }
   .norms-grid.wide { grid-template-columns: 2fr 1fr; }
   @media (max-width: 900px) { .norms-grid.three, .norms-grid.wide { grid-template-columns: 1fr; } }
+  /* --- Corazón que late --- */
+  .heart { display:inline-block; color:#E5484D; animation: latido 1.3s ease-in-out infinite; transform-origin:center; }
+  @keyframes latido { 0%,100%{transform:scale(1)} 14%{transform:scale(1.28)} 28%{transform:scale(1)} 42%{transform:scale(1.22)} 56%{transform:scale(1)} }
+  .corazon-line { font-weight:800; letter-spacing:.08em; font-size:13px; text-transform:uppercase; }
+  .pre-tag .heart { margin-left:4px; }
+  /* --- Buscador de sistemas --- */
+  .sgs-search { width:100%; max-width:560px; padding:15px 22px; border-radius:100px; border:1.5px solid var(--line); font:600 15px Manrope,system-ui,sans-serif; color:var(--ink); background:var(--white); outline:none; }
+  .sgs-search:focus { border-color: var(--orange); box-shadow: 0 0 0 4px rgba(46,107,230,.12); }
+  .sgs-empty { color:var(--muted); font-size:15px; padding:24px 4px; display:none; }
