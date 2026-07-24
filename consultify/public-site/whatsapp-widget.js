@@ -10,7 +10,7 @@
   if (window.__waWidgetLoaded) return;
   window.__waWidgetLoaded = true;
 
-  var PHONE = '34615478641';
+  var PHONE = '34672462321';
 
   var lang = (document.documentElement.lang || 'es').toLowerCase().split('-')[0];
   if (['es', 'en', 'ar'].indexOf(lang) === -1) lang = 'es';

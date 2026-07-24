@@ -5,55 +5,65 @@ import { ROL_LABEL, can } from '../lib/permisos.js';
 export default function Shell({ children }) {
   const { user, role, realRole, logout, demo, verEconomico } = useAuth();
   const navItem = ({ isActive }) =>
-    isActive ? 'text-navy-900' : 'text-navy-900/75 hover:text-navy-700 transition';
+    (isActive
+      ? 'rounded-xl px-4 py-2.5 bg-brand-verde/15 text-brand-verdeTexto font-bold'
+      : 'rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]');
 
   const esEquipo = can.esEquipo(role);
   const esCliente = role === 'cliente';
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#061F2B]/95 backdrop-blur">
-        <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between gap-6 px-4">
-          <div className="flex items-center gap-8">
-            <a href="/" className="flex items-center">
-              <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado h-16 w-auto" />
-            </a>
-            <nav className="hidden gap-6 text-sm font-semibold md:flex">
-              <a href="/" className="text-navy-900/75 transition hover:text-navy-700">Web</a>
-              {/* La calculadora es económica: solo superadmin (o sin login, para captar leads) */}
-              {(!user || verEconomico) && <NavLink to="/calculadora" className={navItem}>Calcula tu oferta</NavLink>}
-              {user && esCliente && <NavLink to="/clientes" className={navItem}>Zona clientes</NavLink>}
-              {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita360 PM Tool</NavLink>}
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            {demo && <span className="chip bg-brand-orange/15 text-brand-orangeDark hidden sm:inline-flex">Modo demo</span>}
-            {user ? (
-              <>
-                {/* Perfil: email + rol SIEMPRE visible (también en móvil) */}
-                <div className="text-right">
-                  <p className="hidden text-xs font-bold text-navy-900 leading-tight sm:block">{user.email}</p>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#10394A] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA]">
-                    {ROL_LABEL[role] || role}
-                    {realRole === 'superadmin' && role !== 'superadmin' && (
-                      <span className="text-brand-orangeDark">· viendo como</span>
-                    )}
-                  </span>
-                </div>
-                {/* Avatar con inicial */}
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]" title={`${user.email} · ${ROL_LABEL[role] || role}`}>
-                  {(user.email || '?').charAt(0).toUpperCase()}
-                </span>
-                <button onClick={logout} className="btn-ghost !px-4 !py-2">Salir</button>
-              </>
-            ) : (
-              <Link to="/acceso" className="btn-primary !px-4 !py-2">Acceder</Link>
-            )}
+    <div className="min-h-screen md:flex">
+      {/* ── Barra lateral Orbita (manual A5: 248px, #061F2B, logo vertical) ── */}
+      <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 z-40 w-[248px] bg-[#061F2B] border-r border-white/10">
+        <a href="/app/" className="flex justify-center pt-8 pb-6">
+          <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado w-40 h-auto" />
+        </a>
+        <nav className="flex flex-col gap-1 px-4 text-sm font-semibold">
+          <a href="/" className="rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]">Web</a>
+          {(!user || verEconomico) && <NavLink to="/calculadora" className={navItem}>Calcula tu oferta</NavLink>}
+          {user && esCliente && <NavLink to="/clientes" className={navItem}>Zona clientes</NavLink>}
+          {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita · PMTool</NavLink>}
+        </nav>
+        <div className="mt-auto px-4 pb-6">
+          {demo && <span className="chip mb-3 w-full justify-center bg-brand-verde/15 text-brand-verdeTexto">Modo demo</span>}
+          {user ? (
+            <div className="rounded-2xl bg-[#10394A] p-3 text-center">
+              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]">
+                {(user.email || '?').charAt(0).toUpperCase()}
+              </span>
+              <p className="truncate text-xs font-bold text-[#EAF4F7]">{user.email}</p>
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#061F2B] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA]">
+                {ROL_LABEL[role] || role}
+                {realRole === 'superadmin' && role !== 'superadmin' && <span className="text-brand-verdeTexto">· viendo como</span>}
+              </span>
+              <button onClick={logout} className="btn-ghost mt-3 w-full !py-2">Salir</button>
+            </div>
+          ) : (
+            <Link to="/acceso" className="btn-primary w-full">Acceder</Link>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Cabecera móvil ── */}
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#061F2B]/95 backdrop-blur md:hidden">
+        <div className="flex h-[60px] items-center justify-between px-4">
+          <a href="/app/" className="flex items-center">
+            <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="tc-logo-animado h-9 w-auto" />
+          </a>
+          <div className="flex items-center gap-2">
+            {user && esCliente && <NavLink to="/clientes" className="text-xs font-bold text-[#EAF4F7]">Zona clientes</NavLink>}
+            {user && esEquipo && <NavLink to="/consultores" className="text-xs font-bold text-[#EAF4F7]">Orbita · PMTool</NavLink>}
+            {user
+              ? <button onClick={logout} className="btn-ghost !px-3 !py-1.5 text-xs">Salir</button>
+              : <Link to="/acceso" className="btn-primary !px-3 !py-1.5 text-xs">Acceder</Link>}
           </div>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
-      <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
+
+      <div className="flex min-h-screen flex-1 flex-col md:ml-[248px]">
+        <main className="flex-1">{children}</main>
+        <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
         <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
         <p className="mt-1">Precios sin IVA salvo indicación · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
@@ -70,6 +80,7 @@ export default function Shell({ children }) {
          style={{ width: 72, height: 72 }}>
         <img src="/app/marca/orbita-isotipo-anim.svg" alt="" style={{ width: '100%', height: '100%' }} />
       </a>
+      </div>
     </div>
   );
 }

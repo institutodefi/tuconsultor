@@ -128,10 +128,10 @@ export default function Acceso() {
     <div className="mx-auto max-w-5xl px-4 py-12">
       <div className="mb-8 text-center">
         <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado mx-auto mb-3 h-24 w-auto" />
-        <h1 className="font-orbita text-2xl font-extrabold text-navy-900">El ecosistema digital de TuConsultor</h1>
-        <p className="mt-1 text-sm font-medium text-navy-400">Elige tu tipo de acceso.</p>
+        <h1 className="font-orbita text-2xl font-extrabold text-[#EAF4F7]">El ecosistema digital de TuConsultor</h1>
+        <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Elige tu tipo de acceso.</p>
         {demo && (
-          <p className="mx-auto mt-3 max-w-xl rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orangeDark">
+          <p className="mx-auto mt-3 max-w-xl rounded-xl bg-brand-verde/10 p-3 text-xs font-semibold text-brand-verdeTexto">
             Modo demo (sin Supabase): cualquier email entra. Usa un email con «consultify» para la zona de consultores.
           </p>
         )}
@@ -140,7 +140,7 @@ export default function Acceso() {
       <div className="grid items-start gap-6 md:grid-cols-2">
         {/* ─── CONSULTORES ─── */}
         <PanelAcceso acento="navy" titulo="Consultores" subtitulo="Equipo y administración" icono={iconoConsultor}
-          footer={<p className="mt-4 text-center text-xs font-medium text-navy-300">¿Sin cuenta de consultor? La crea un administrador desde la zona de equipo.</p>}>
+          footer={<p className="mt-4 text-center text-xs font-medium text-[#9FC0CB]">¿Sin cuenta de consultor? La crea un administrador desde la zona de equipo.</p>}>
           <form onSubmit={loginConsultor} className="space-y-4">
             <div><label className="label" htmlFor="c-email">Email corporativo</label><input id="c-email" type="email" required className="input" autoComplete="email" value={c.email} onChange={e => setC({ ...c, email: e.target.value })} /></div>
             <CampoPassword id="c-pass" label="Contraseña" value={c.password} onChange={e => setC({ ...c, password: e.target.value })} required={!demo} autoComplete="current-password" />

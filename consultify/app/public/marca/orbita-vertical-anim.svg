@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 350" width="300" height="350"><rect width="300" height="350" fill="#0A2B3A"/><defs><radialGradient id="gordvea" cx="32%" cy="26%" r="78%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 350" width="300" height="350"><defs><radialGradient id="gordvea" cx="32%" cy="26%" r="78%">
   <stop offset="0%" stop-color="#1B5468" stop-opacity="0.93"/><stop offset="55%" stop-color="#103A4C" stop-opacity="0.8"/>
   <stop offset="100%" stop-color="#0A2B3A" stop-opacity="0.95"/></radialGradient>
  <linearGradient id="rordvea" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1FA1A6"/>

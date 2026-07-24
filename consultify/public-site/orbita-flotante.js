@@ -10,7 +10,7 @@
   var css = document.createElement('style');
   css.textContent = [
     '#orbita-flotante{position:fixed;right:20px;bottom:86px;z-index:9997;display:flex;align-items:center;gap:0;',
-    'background:#061B45;color:#fff;border-radius:999px;height:52px;padding:0 6px;text-decoration:none;',
+    'background:#04173F;color:#fff;border-radius:999px;height:52px;padding:0 6px;text-decoration:none;',
     'box-shadow:0 6px 18px rgba(6,27,69,.28);font-family:Rubik,Manrope,system-ui,sans-serif;font-weight:600;',
     'overflow:hidden;transition:padding .2s ease}',
     '#orbita-flotante img{height:34px;width:34px;object-fit:contain;flex:0 0 auto}',
