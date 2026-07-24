@@ -12,7 +12,7 @@ export default function Shell({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 border-b border-[rgba(10,21,48,0.10)] bg-white/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#061F2B]/95 backdrop-blur">
         <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between gap-6 px-4">
           <div className="flex items-center gap-8">
             <a href="/" className="flex items-center">
@@ -33,7 +33,7 @@ export default function Shell({ children }) {
                 {/* Perfil: email + rol SIEMPRE visible (también en móvil) */}
                 <div className="text-right">
                   <p className="hidden text-xs font-bold text-navy-900 leading-tight sm:block">{user.email}</p>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2 py-0.5 text-[11px] font-bold text-navy-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#10394A] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA]">
                     {ROL_LABEL[role] || role}
                     {realRole === 'superadmin' && role !== 'superadmin' && (
                       <span className="text-brand-orangeDark">· viendo como</span>
@@ -41,7 +41,7 @@ export default function Shell({ children }) {
                   </span>
                 </div>
                 {/* Avatar con inicial */}
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-900 text-sm font-extrabold text-white" title={`${user.email} · ${ROL_LABEL[role] || role}`}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]" title={`${user.email} · ${ROL_LABEL[role] || role}`}>
                   {(user.email || '?').charAt(0).toUpperCase()}
                 </span>
                 <button onClick={logout} className="btn-ghost !px-4 !py-2">Salir</button>
@@ -53,7 +53,7 @@ export default function Shell({ children }) {
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t border-white/10 bg-navy-900 py-8 text-center text-xs text-white/55">
+      <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
         <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
         <p className="mt-1">Precios sin IVA salvo indicación · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
