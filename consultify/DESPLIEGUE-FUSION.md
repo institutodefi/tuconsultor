@@ -53,3 +53,9 @@ La BD nueva arranca vacía (con el blog sembrado). Si en el proyecto antiguo
 (`ttcnbuxfewmuwbgapmws`) hay datos reales que conservar (clientes, ofertas,
 tareas), NO los pierdas: antes de apagar ese proyecto, exporta con
 Database → Backups o dímelo y preparo un pg_dump selectivo con remapeo.
+
+## v52 · Acceso único (julio 2026)
+1. Ejecutar `supabase/migracion-v52-acceso-unico.sql` (dominios internos → equipo,
+   profesionales → cliente, gratuitos → bloqueados, consultor = admin de su cliente).
+2. Ejecutar `supabase/blog-tuconsultor-seed.sql` (blog de tuconsultor.com, 365 posts).
+3. Pruebas de acceso: ver PRUEBAS-ACCESO.md

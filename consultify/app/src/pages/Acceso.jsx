@@ -52,6 +52,11 @@ function PanelAcceso({ acento, titulo, subtitulo, icono, children, footer }) {
   );
 }
 
+const DOMINIOS_GRATUITOS = ['gmail.com','googlemail.com','hotmail.com','hotmail.es','outlook.com','outlook.es','live.com','msn.com','yahoo.com','yahoo.es','icloud.com','me.com','mac.com','protonmail.com','proton.me','aol.com','gmx.com','gmx.es','mail.com','yandex.com','zoho.com','tutanota.com','mail.ru'];
+const dominioDe = (email) => (email.split('@')[1] || '').toLowerCase();
+const esGratuito = (email) => DOMINIOS_GRATUITOS.includes(dominioDe(email));
+const esInterno = (email) => ['tuconsultor.com', 'consultify.pro'].includes(dominioDe(email));
+
 export default function Acceso() {
   const { login, register, demo } = useAuth();
   const nav = useNavigate();
@@ -95,6 +100,14 @@ export default function Acceso() {
         const { role } = await login(k.email, k.password);
         nav(ROLES_EQUIPO.includes(role) ? '/consultores' : '/clientes');
       } else {
+        if (esGratuito(k.email)) {
+          setKMsg({ ok: false, text: 'Solo se admiten cuentas de correo profesionales (dominio de tu empresa). Las cuentas de Gmail, Hotmail, Outlook, etc. no son válidas.' });
+          setKBusy(false); return;
+        }
+        if (esInterno(k.email)) {
+          setKMsg({ ok: false, text: 'Las cuentas @tuconsultor.com y @consultify.pro son de equipo: entra directamente con tu contraseña, sin registro.' });
+          setKBusy(false); return;
+        }
         const r = await register(k.email, k.password, k.nombre, k.empresa);
         if (r.needsConfirm) setKMsg({ ok: true, text: 'Cuenta creada. Revisa tu email para confirmar el acceso.' });
         else nav('/clientes');

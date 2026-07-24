@@ -1,27 +1,30 @@
 
   :root {
-    --navy-900: #061B45;
-    --navy-800: #0A2A6C;
-    --navy-700: #1E3A8A;
-    --orange: #2E6BE6;
-    --orange-deep: #1C4FD6;
-    --white: #FFFFFF;
-    --off-white: #F8F9FB;
-    --cream: #EEF3FC;
-    --ink: #0A1530;
-    --muted: #5B6680;
-    --line: rgba(10, 21, 48, 0.10);
+    /* Identidad TUCONSULTOR v4.0 · tema data-sitio="tuconsultor" */
+    --navy-900: #060D1F;            /* zonas más oscuras (footer, destacado) */
+    --navy-800: #0A2B3A;
+    --navy-700: #1E5C72;            /* azul petróleo */
+    --orange: #F99001;              /* Naranja Vanguardia — acento */
+    --orange-deep: #DB7F00;
+    --verde: #1FA1A6;               /* Verde Órbita */
+    --white: #17233F;               /* superficie de tarjetas */
+    --off-white: #101C36;
+    --cream: #101C36;               /* secciones alternas */
+    --ink: #FFFFFF;                 /* tinta principal */
+    --muted: #A5B1CB;               /* tinta suave */
+    --line: #25314F;                /* bordes */
+    --fondo: #0E1730;               /* Azul Web — fondo del sitio */
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   /* Rubik para titulares y marca; Manrope para el resto (cuerpo). */
-  h1, h2, h3, .rubik { font-family: 'Rubik', 'Manrope', system-ui, sans-serif; }
+  h1, h2, h3, .rubik { font-family: 'Manrope', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
   .btn-orbita { display:inline-flex; align-items:center; gap:7px; font-family:'Rubik','Manrope',sans-serif; font-weight:600; }
   .btn-orbita .orbita-ic { height:20px; width:auto; display:block; }
   body {
     font-family: 'Manrope', system-ui, sans-serif;
-    background: var(--white);
+    background: var(--fondo);
     color: var(--ink);
     font-size: 17px;
     line-height: 1.55;
@@ -134,7 +137,7 @@
   }
   .btn-primary { background: var(--navy-800); color: var(--white); }
   .btn-primary:hover { background: var(--navy-900); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(10, 42, 108, 0.25); }
-  .btn-orange { background: var(--orange); color: #FFFFFF; }
+  .btn-orange { background: var(--orange); color: #0E1730; }
   .btn-ghost { background: var(--white); color: var(--navy-800); border: 1px solid var(--line); }
   .btn-ghost:hover { border-color: var(--navy-700); transform: translateY(-1px); }
   .btn-orange:hover { background: var(--orange-deep); transform: translateY(-1px); }
@@ -144,7 +147,7 @@
   .hero::before {
     content: ''; position: absolute; top: -200px; right: -300px;
     width: 800px; height: 800px;
-    background: radial-gradient(circle, rgba(46, 107, 230, 0.10) 0%, transparent 60%);
+    background: radial-gradient(circle, rgba(249, 144, 1, 0.10) 0%, transparent 60%);
     border-radius: 50%; pointer-events: none;
   }
   .hero::after {
@@ -156,8 +159,8 @@
   .hero-content { position: relative; z-index: 2; max-width: 920px; }
   .pre-tag {
     display: inline-flex; align-items: center; gap: 10px;
-    background: rgba(46, 107, 230, 0.08);
-    border: 1px solid rgba(46, 107, 230, 0.25);
+    background: rgba(249, 144, 1, 0.08);
+    border: 1px solid rgba(249, 144, 1, 0.25);
     color: var(--orange-deep);
     padding: 8px 16px; border-radius: 100px;
     font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
@@ -294,7 +297,7 @@
   .model-card.featured .badge {
     position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
     background: var(--orange);
-    color: #FFFFFF;
+    color: #0E1730;
     padding: 6px 16px;
     border-radius: 100px;
     font-size: 11px; font-weight: 700;
@@ -578,8 +581,8 @@
   .impl-num {
     font-size: 14px; font-weight: 800;
     color: var(--orange);
-    background: rgba(46, 107, 230, 0.12);
-    border: 1px solid rgba(46, 107, 230, 0.3);
+    background: rgba(249, 144, 1, 0.12);
+    border: 1px solid rgba(249, 144, 1, 0.3);
     padding: 4px 12px;
     border-radius: 100px;
     letter-spacing: 0.16em;
@@ -608,8 +611,8 @@
   .impl-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(10,21,48,0.08); }
   
   .impl-card.combo {
-    background: linear-gradient(180deg, var(--white) 0%, #F4F7FE 100%);
-    border-color: rgba(46, 107, 230, 0.25);
+    background: var(--white);
+    border-color: rgba(249, 144, 1, 0.25);
   }
   .impl-card.combo.featured {
     background: var(--navy-900);
@@ -672,11 +675,11 @@
     line-height: 1.1;
     margin-bottom: 4px;
     padding-top: 10px;
-    border-top: 1px dashed rgba(46, 107, 230, 0.4);
+    border-top: 1px dashed rgba(249, 144, 1, 0.4);
   }
   .impl-card.combo.featured .impl-time {
     color: var(--orange);
-    border-top-color: rgba(46, 107, 230, 0.5);
+    border-top-color: rgba(249, 144, 1, 0.5);
   }
   
   .impl-pace {
@@ -737,7 +740,7 @@
     content: ''; position: absolute;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 120%; height: 200%;
-    background: radial-gradient(circle, rgba(46, 107, 230,0.10) 0%, transparent 50%);
+    background: radial-gradient(circle, rgba(249, 144, 1,0.10) 0%, transparent 50%);
     pointer-events: none;
   }
   .final-cta-inner { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; }
@@ -823,12 +826,12 @@
   @media (max-width: 1100px) { .models-grid.four { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px)  { .models-grid.four { grid-template-columns: 1fr; } }
   .nav-logo img { height: 34px; width: auto; }
-  .consultify-band { background: linear-gradient(180deg, #FFFFFF 0%, #FDF7EC 100%); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .consultify-band .section-eyebrow { color: #E89313; }
-  .consultify-band .section-eyebrow::before { background: #F5A623; }
-  .consultify-band .accent { color: #E89313; }
-  .btn-consultify { background: #F5A623; color: #061B45; }
-  .btn-consultify:hover { background: #E89313; }
+  .consultify-band { background: #101C36; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .consultify-band .section-eyebrow { color: #6FA0E8; }
+  .consultify-band .section-eyebrow::before { background: #6FA0E8; }
+  .consultify-band .accent { color: #6FA0E8; }
+  .btn-consultify { background: #013886; color: #FFFFFF; }
+  .btn-consultify:hover { background: #014695; }
   .how-grid.two { grid-template-columns: repeat(2, 1fr); }
   @media (max-width: 900px) { .how-grid.two { grid-template-columns: 1fr; } }
   .stat span { display:block; max-width: 260px; }
@@ -842,5 +845,5 @@
   .pre-tag .heart { margin-left:4px; }
   /* --- Buscador de sistemas --- */
   .sgs-search { width:100%; max-width:560px; padding:15px 22px; border-radius:100px; border:1.5px solid var(--line); font:600 15px Manrope,system-ui,sans-serif; color:var(--ink); background:var(--white); outline:none; }
-  .sgs-search:focus { border-color: var(--orange); box-shadow: 0 0 0 4px rgba(46,107,230,.12); }
+  .sgs-search:focus { border-color: var(--orange); box-shadow: 0 0 0 4px rgba(249,144,1,.12); }
   .sgs-empty { color:var(--muted); font-size:15px; padding:24px 4px; display:none; }
