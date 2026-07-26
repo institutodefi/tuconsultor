@@ -44,6 +44,7 @@ export const GRUPOS_PORTAL = [
       { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'gestion'] },
       { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
       { to: 'clientes',  label: 'Clientes',  icon: 'users',    roles: ['superadmin', 'admin', 'director', 'gestion'] },
+      { to: 'leads',     label: 'Clientes potenciales', icon: 'contact', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       { to: 'ofertas',   label: 'Ofertas',   icon: 'receipt',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
       { to: 'proyectos', label: 'Proyectos', icon: 'folder-kanban', roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
     ],

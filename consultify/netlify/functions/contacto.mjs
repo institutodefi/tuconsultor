@@ -33,7 +33,28 @@ export default async (req) => {
       method: 'POST', headers: { 'api-key': apiKey, 'content-type': 'application/json' },
       body: JSON.stringify({ email, updateEnabled: true,
         attributes: { NOMBRE: nombre, EMPRESA: empresa, ORIGEN: 'contacto-web', PRODUCTO: producto, NECESIDAD: necesidad, TAMANO: tamano, PLAZO: plazo, CONSENTIMIENTO_COMERCIAL: acepta_comercial === 'si' } }),
+    }).then(async (rc) => {
+      if (!rc.ok) {
+        // si algún atributo no existe en Brevo, reintenta solo con el email
+        await fetch('https://api.brevo.com/v3/contacts', {
+          method: 'POST', headers: { 'api-key': apiKey, 'content-type': 'application/json' },
+          body: JSON.stringify({ email, updateEnabled: true }),
+        });
+      }
     });
+  } catch {}
+  // Lead a Orbita.PMTool (Supabase) — no bloquea la respuesta si falla
+  try {
+    const SB = process.env.SUPABASE_URL;
+    const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+    if (SB && SRK) {
+      await fetch(`${SB}/rest/v1/leads`, {
+        method: 'POST',
+        headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, 'content-type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ nombre, email, empresa, telefono: b.telefono || '', producto, necesidad, tamano, plazo,
+          mensaje: String(mensaje).slice(0, 2000), origen, consentimiento_comercial: acepta_comercial === 'si' }),
+      });
+    }
   } catch {}
   return Response.json({ ok: true });
 };

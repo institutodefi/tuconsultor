@@ -6,6 +6,7 @@ import Clientes from './consultores/Clientes.jsx';
 import Empresas from './consultores/Empresas.jsx';
 import Contactos from './consultores/Contactos.jsx';
 import Ofertas from './consultores/Ofertas.jsx';
+import Leads from './consultores/Leads.jsx';
 import ProyectosConfig from './consultores/ProyectosConfig.jsx';
 import Agenda from './consultores/Agenda.jsx';
 import MiAgenda from './consultores/MiAgenda.jsx';
@@ -139,6 +140,7 @@ export default function ConsultorPortal() {
               <Route path="clientes" element={<Guard ok={verClientes}><Clientes /></Guard>} />
               <Route path="empresas" element={<Guard ok={verClientes}><Empresas /></Guard>} />
               <Route path="contactos" element={<Guard ok={verClientes}><Contactos /></Guard>} />
+              <Route path="leads" element={<Leads />} />
               <Route path="ofertas" element={<Guard ok={verClientes}><Ofertas /></Guard>} />
               <Route path="*" element={<Navigate to="." replace />} />
             </Routes>

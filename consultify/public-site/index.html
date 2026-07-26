@@ -1836,7 +1836,45 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="accent" data-i18n="cta.title.2">Certifícate en tiempo récord.</span>
     </h2>
     <p data-i18n="cta.body">Modelo prepago de suscripción mensual con permanencia mínima de 12 meses. Como Spotify, pero para tu cuenta de resultados.</p>
-    <a href="mailto:hola@tuconsultor.com" class="btn btn-orange" style="font-size: 16px; padding: 16px 32px;" data-i18n="cta.button" data-evt="click_activar_suscripcion" data-evt-loc="cta_final">Activar mi suscripción →</a>
+
+    <form id="activar" data-form-activar style="max-width:640px;margin:34px auto 0;background:#FFFFFF;border-radius:22px;padding:28px 26px;text-align:left;display:flex;flex-direction:column;gap:13px;box-shadow:0 18px 50px rgba(0,0,0,.35)">
+      <strong style="font-size:20px;color:#014695" data-i18n="form.titulo">Activa tu suscripción</strong>
+      <p style="font-size:13.5px;color:#3A5178;margin:0" data-i18n="form.sub">Rellena esto y te llamamos hoy mismo para dejarlo todo listo. Sin compromiso hasta que firmes.</p>
+      <input type="text" name="web" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
+      <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))">
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.nombre">Nombre</span><input required name="nombre" type="text" autocomplete="name" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530" /></label>
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.email">Email profesional</span><input required name="email" type="email" autocomplete="email" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530" /></label>
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.empresa">Empresa</span><input required name="empresa" type="text" autocomplete="organization" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530" /></label>
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.telefono">Teléfono</span><input name="telefono" type="tel" autocomplete="tel" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530" /></label>
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.normas">Norma(s) de interés</span><select required name="necesidad" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530;background:#fff">
+          <option value="">—</option><option>ISO 9001</option><option>ISO 14001</option><option>ISO 27001</option><option>ISO 45001</option><option>Combo integrado (varias)</option><option data-i18n="form.otra">Otra / no lo sé aún</option>
+        </select></label>
+        <label style="font-size:12.5px;font-weight:700;color:#3A5178"><span data-i18n="form.modelo">Modelo</span><select required name="plazo" style="width:100%;margin-top:4px;padding:11px 14px;border-radius:12px;border:1.5px solid #C7D3E8;color:#0A1530;background:#fff">
+          <option value="">—</option><option>Relación</option><option>Implicación</option><option>Compromiso</option><option data-i18n="form.asesoradme">Asesoradme</option>
+        </select></label>
+      </div>
+      <p style="font-size:11px;color:#3A5178;line-height:1.5;margin:0">Responsables: TRESCORE PROYECTOS ITE, S.L., INSTITUTO EXCELENCIA EUROPEA, S.L. e INSTITUTO EUROPEO DE BLOCKCHAIN Y DEFI, S.L., corresponsables. Finalidad: atender su solicitud. Legitimación: su consentimiento. Derechos: rgpd@tuconsultor.com. Más información en la <a href="/legal/privacidad.html" style="color:#013886;text-decoration:underline">Política de Privacidad</a>.</p>
+      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#3A5178"><input required type="checkbox" name="acepta_privacidad" value="si" style="width:17px;height:17px;margin-top:2px" /> <span data-i18n="form.rgpd">He leído y acepto la Política de Privacidad.</span></label>
+      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#3A5178"><input type="checkbox" name="acepta_comercial" value="si" style="width:17px;height:17px;margin-top:2px" /> <span data-i18n="form.comercial">Deseo recibir comunicaciones comerciales (opcional).</span></label>
+      <button type="submit" class="btn btn-orange" style="font-size:16px;padding:15px 30px;border:none;cursor:pointer" data-i18n="cta.button">Activar mi suscripción →</button>
+      <p data-msg role="status" style="font-size:14px;font-weight:800;margin:0"></p>
+    </form>
+    <script>
+    document.querySelector('[data-form-activar]').addEventListener('submit', async function(ev){
+      ev.preventDefault();
+      var f = ev.target, msg = f.querySelector('[data-msg]'); msg.textContent = '…';
+      var datos = Object.fromEntries(new FormData(f).entries());
+      datos.producto = 'Suscripción Consultify'; datos.origen = location.pathname;
+      datos.mensaje = 'Solicitud de activación · Normas: ' + (datos.necesidad||'—') + ' · Modelo: ' + (datos.plazo||'—') + ' · Tel: ' + (datos.telefono||'—');
+      try {
+        var r = await fetch('/api/contacto', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(datos) });
+        var d = await r.json();
+        msg.style.color = d.ok ? '#0B7A3B' : '#B3261E';
+        msg.textContent = d.ok ? '¡Recibido! Te llamamos hoy mismo para activarlo todo.' : (d.error || 'No se pudo enviar.');
+        if (d.ok) f.reset();
+      } catch(e) { msg.style.color='#B3261E'; msg.textContent='No se pudo enviar. Inténtalo de nuevo.'; }
+    });
+    </script>
   </div>
 </section>
 
@@ -2252,7 +2290,11 @@ const i18n = {
     'cta.title.1': 'Start this week.',
     'cta.title.2': 'Certify in record time.',
     'cta.body': 'Prepaid monthly subscription model with a 12-month minimum commitment. Like Spotify, but for your bottom line.',
-    'cta.button': 'Start my subscription →',
+      'cta.button': 'Start my subscription →',
+    'form.titulo': 'Activate your subscription', 'form.sub': "Fill this in and we will call you today to set everything up. No commitment until you sign.",
+    'form.nombre': 'Name', 'form.email': 'Work email', 'form.empresa': 'Company', 'form.telefono': 'Phone',
+    'form.normas': 'Standard(s) of interest', 'form.modelo': 'Model', 'form.otra': 'Other / not sure yet', 'form.asesoradme': 'Advise me',
+    'form.rgpd': 'I have read and accept the Privacy Policy.', 'form.comercial': 'I wish to receive commercial communications (optional).',
 
     'footer.tagline': 'The Spotify of consulting. Subscribe to a team of consultants powered by AI. A line of TuConsultor.',
     'wa.title': 'Consultify',
