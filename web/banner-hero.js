@@ -171,12 +171,13 @@
     + '.tc-b-slide{display:none}'
     + '.tc-b-slide.tc-viva{display:block;animation:tc-b-entra .5s ease both}'
     + '@keyframes tc-b-entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'
-    + '.tc-b-mandos{display:flex;align-items:center;gap:14px;margin-top:26px;flex-wrap:wrap}'
+    + '.tc-b-mandos{display:flex;align-items:center;gap:14px;margin:18px 0 22px;flex-wrap:wrap}'
     + '.tc-b-puntos{display:flex;gap:8px;align-items:center}'
-    + '.tc-b-punto{width:9px;height:9px;padding:0;border:0;border-radius:50%;cursor:pointer;'
+    + '.tc-b-punto{width:11px;height:11px;padding:0;border:0;border-radius:50%;cursor:pointer;'
     + 'background:rgba(255,255,255,.26);transition:background .2s,transform .2s}'
     + '.tc-b-punto:hover{background:rgba(255,255,255,.5)}'
-    + '.tc-b-punto[aria-current="true"]{background:var(--tc-naranja,#F99001);transform:scale(1.35)}'
+    + '.tc-b-punto[aria-current="true"]{background:var(--tc-naranja,#F99001);transform:scale(1.3);'
+    + 'box-shadow:0 0 0 4px rgba(249,144,1,.22)}'
     + '.tc-b-flecha{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;cursor:pointer;'
     + 'border:1px solid rgba(255,255,255,.18);background:transparent;color:rgba(255,255,255,.6);'
     + "font:700 14px/1 'Manrope',system-ui,sans-serif;transition:border-color .2s,color .2s}"
@@ -188,6 +189,12 @@
   document.head.appendChild(st);
 
   // ── Anuncio 1 = el hero que ya existe ─────────────────────────────────────
+  // La fila de cifras no es de ningún anuncio concreto: son datos del sitio. Se
+  // aparta para recolocarla al final, después de los mandos, y así los puntos
+  // del banner quedan justo debajo de los botones y no fuera de pantalla.
+  var cifras = hero.querySelector('.stats-row');
+  if (cifras) cifras.remove();
+
   var pista = document.createElement('div');
   var primero = document.createElement('div');
   primero.className = 'tc-b-slide tc-viva';
@@ -235,6 +242,7 @@
     + '<button type="button" class="tc-b-flecha" data-paso="1" aria-label="' + esc(L.sig) + '">' + (rtl ? '‹' : '›') + '</button>'
     + '<span class="tc-b-cuenta"><b>1</b> ' + esc(L.de) + ' ' + total + '</span>';
   hero.appendChild(mandos);
+  if (cifras) hero.appendChild(cifras);   // las cifras, debajo de los mandos
 
   var puntos = mandos.querySelector('.tc-b-puntos');
   for (var i = 0; i < total; i++) {
