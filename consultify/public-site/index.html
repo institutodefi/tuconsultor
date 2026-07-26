@@ -1198,6 +1198,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .combos h2 span.accent, .combos h2 .accent, .final-cta .accent, .final-cta h2 span.accent,
   footer h4, .footer-col h4, footer .accent, footer a, .footer-bot span, .footer-bot a { color: #9DBEF3 !important; }
   footer, footer p, .footer-bot { color: #C8D6EE; }
+  /* Responsividad: tablas anchas con scroll propio; sin desbordes laterales */
+  html, body { overflow-x: hidden; }
+  .price-table, .combos-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  img, svg, video { max-width: 100%; height: auto; }
   .model-card.featured .per, .price-table thead th .per { color: #B9CDF0; }
 </style>
 </head>

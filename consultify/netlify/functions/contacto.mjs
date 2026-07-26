@@ -7,13 +7,14 @@ export default async (req) => {
   if (!apiKey) return Response.json({ ok: false, error: 'BREVO_API_KEY no configurada' }, { status: 500 });
   let b; try { b = await req.json(); } catch { return Response.json({ ok: false, error: 'JSON inválido' }, { status: 400 }); }
   if (b.web) return Response.json({ ok: true }); // honeypot
-  const { nombre = '', email = '', empresa = '', mensaje = '', producto = '', origen = '' } = b;
+  const { nombre = '', email = '', empresa = '', mensaje = '', producto = '', origen = '', necesidad = '', tamano = '', plazo = '', acepta_privacidad = '', acepta_comercial = '' } = b;
+  if (acepta_privacidad !== 'si') return Response.json({ ok: false, error: 'Debes aceptar la Política de Privacidad' }, { status: 400 });
   if (!email || !mensaje) return Response.json({ ok: false, error: 'Faltan email o mensaje' }, { status: 400 });
 
   const destino = process.env.BREVO_SENDER_EMAIL || 'hola@tuconsultor.com';
   const html = `<h2>Contacto desde la web</h2>
     <p><b>Producto:</b> ${producto || '—'} · <b>Página:</b> ${origen || '—'}</p>
-    <p><b>Nombre:</b> ${nombre} · <b>Empresa:</b> ${empresa}</p>
+    <p><b>Nombre:</b> ${nombre} · <b>Empresa:</b> ${empresa} (${tamano || '?'} personas)</p>\n    <p><b>Necesidad:</b> ${necesidad || '—'} · <b>Plazo:</b> ${plazo || '—'} · <b>Comercial:</b> ${acepta_comercial === 'si' ? 'SÍ' : 'no'}</p>
     <p><b>Email:</b> ${email}</p><hr/><p>${String(mensaje).slice(0, 4000)}</p>`;
   const r = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -31,7 +32,7 @@ export default async (req) => {
     await fetch('https://api.brevo.com/v3/contacts', {
       method: 'POST', headers: { 'api-key': apiKey, 'content-type': 'application/json' },
       body: JSON.stringify({ email, updateEnabled: true,
-        attributes: { NOMBRE: nombre, EMPRESA: empresa, ORIGEN: 'contacto-web', PRODUCTO: producto } }),
+        attributes: { NOMBRE: nombre, EMPRESA: empresa, ORIGEN: 'contacto-web', PRODUCTO: producto, NECESIDAD: necesidad, TAMANO: tamano, PLAZO: plazo, CONSENTIMIENTO_COMERCIAL: acepta_comercial === 'si' } }),
     });
   } catch {}
   return Response.json({ ok: true });
