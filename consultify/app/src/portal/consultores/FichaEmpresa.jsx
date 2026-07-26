@@ -56,6 +56,15 @@ export default function FichaEmpresa({
   const [form, setForm] = useState(null);           // null = modo lectura
   const [msg, setMsg] = useState(null);
   const [holded, setHolded] = useState({ estado: 'inactivo' }); // inactivo|buscando|encontrado|no|error
+  const [diag, setDiag] = useState(null); // resultado de "probar conexión" con Holded
+
+  // Diagnóstico de conexión: prueba las dos APIs de Holded con su autenticación
+  // correcta y dice cuál responde. Evita adivinar cuando sale un 403.
+  async function probarHolded() {
+    setDiag({ cargando: true });
+    try { setDiag(await holdedFn({ action: 'diagnostico' })); }
+    catch (e) { setDiag({ ok: false, conclusion: `No se pudo contactar con la función: ${e?.message || e}` }); }
+  }
   const [brevoOcupado, setBrevoOcupado] = useState(false);
 
   // Al abrir una empresa nueva, entra directamente en edición.
@@ -302,7 +311,31 @@ export default function FichaEmpresa({
             </p>
           )}
           {holded.estado === 'error' && (
-            <p className="rounded-xl bg-red-500/10 p-2.5 text-xs font-bold text-red-300">Holded: {holded.error}</p>
+            <div className="space-y-2">
+              <p className="rounded-xl bg-red-500/10 p-2.5 text-xs font-bold text-red-300">Holded: {holded.error}</p>
+              <button onClick={probarHolded} disabled={diag?.cargando}
+                className="rounded-lg border border-[#1E5468] px-3 py-1.5 text-xs font-bold text-[#9FC0CB] hover:border-brand-verde hover:text-[#EAF4F7]">
+                {diag?.cargando ? 'Probando…' : 'Probar conexión con Holded'}
+              </button>
+            </div>
+          )}
+          {diag && !diag.cargando && (
+            <div className="space-y-1.5 rounded-xl bg-[#0D3242] p-3 text-[11.5px] leading-snug text-[#B9D2DA]">
+              <p className="font-bold text-[#EAF4F7]">{diag.conclusion || diag.error}</p>
+              {diag.pruebas?.map((pr, i) => (
+                <p key={i}>
+                  <span className={pr.ok ? 'text-emerald-300' : 'text-red-300'}>{pr.ok ? '✓' : '✗'}</span>{' '}
+                  <b>{pr.api}</b> · HTTP {pr.http}{pr.motivo ? ` · ${pr.motivo}` : ''}
+                </p>
+              ))}
+              {diag.pruebas && (
+                <p className="text-[#7FA7B4]">
+                  Claves configuradas en Netlify: v2 {diag.clave_v2_configurada ? 'sí' : 'no'} ·
+                  v1 {diag.clave_v1_configurada ? 'sí' : 'no'}
+                  {diag.claves_distintas ? ' (distintas)' : ' (la misma para las dos)'}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

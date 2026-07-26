@@ -1,6 +1,13 @@
 // netlify/functions/holded.mjs
-// Integración con Holded (facturación) — API v2. SOLO backend: la API key nunca
-// llega al navegador. La v2 usa autenticación Bearer y base https://api.holded.com.
+// Integración con Holded (facturación). SOLO backend: la API key nunca llega al
+// navegador.
+//
+// ⚠ LAS DOS APIS DE HOLDED NO SE AUTENTICAN IGUAL:
+//   · /api/v2/...            → Authorization: Bearer <token>   (API nueva, jun-2026)
+//   · /api/invoicing/v1/...  → cabecera  key: <apiKey>         (API clásica)
+// Además los tokens son distintos: los de v1 se generan en el banner
+// "Go to Api Keys v1" de Ajustes › Desarrolladores › Credenciales. Mandar un
+// token de v1 como Bearer (o uno de v2 en la cabecera key) devuelve HTTP 403.
 //
 // El vínculo Consultify↔Holded se hace por CIF/NIF. En Holded el CIF se guarda en
 // el campo `code` del contacto. Buscamos listando contactos y comparando `code`.
@@ -21,6 +28,34 @@ const HOLDED_BASE = 'https://api.holded.com/api/v2';
 // Endpoint alternativo (API invoicing v1, muy usado). Si el v2 no devuelve
 // contactos, probamos este. Su auth también admite Bearer y la cabecera key.
 const HOLDED_BASE_INV = 'https://api.holded.com/api/invoicing/v1';
+
+// Clave por API. Si solo hay una configurada, se usa para las dos y ya avisará
+// el diagnóstico de cuál falla.
+const CLAVE_V2 = () => process.env.HOLDED_API_KEY || process.env.HOLDED_API_KEY_V2 || '';
+const CLAVE_V1 = () => process.env.HOLDED_API_KEY_V1 || process.env.HOLDED_API_KEY || '';
+
+// Cabeceras de autenticación según el endpoint al que vamos.
+function cabeceras(base) {
+  const comunes = { 'Content-Type': 'application/json', Accept: 'application/json' };
+  if (base === HOLDED_BASE_INV) return { ...comunes, key: CLAVE_V1() };
+  return { ...comunes, Authorization: `Bearer ${CLAVE_V2()}` };
+}
+
+// Mensaje legible a partir de la respuesta de error de Holded.
+function motivo(status, data) {
+  const propio = data && typeof data === 'object'
+    ? (data.message || data.error || data.info || null)
+    : (typeof data === 'string' && data.trim() ? data.trim().slice(0, 200) : null);
+  if (status === 403) {
+    return propio
+      ? `Holded rechaza la clave (403): ${propio}`
+      : 'Holded rechaza la clave (403). Suele ser una de tres: el token no corresponde a esa API '
+        + '(v1 usa la cabecera "key", v2 usa Bearer), el token no tiene el permiso de contactos, o está caducado.';
+  }
+  if (status === 401) return propio || 'Holded no reconoce la clave (401): revisa HOLDED_API_KEY en Netlify.';
+  if (status === 429) return 'Holded ha limitado las peticiones (429). Espera un minuto y reinténtalo.';
+  return propio || `Holded ha respondido HTTP ${status}.`;
+}
 const ROLES_OK = ['superadmin', 'admin', 'director'];
 
 function json(data, status = 200) {
@@ -49,11 +84,7 @@ async function holded(path, { method = 'GET', body, base = HOLDED_BASE } = {}) {
   try {
     r = await fetch(`${base}${path}`, {
       method,
-      headers: {
-        Authorization: `Bearer ${process.env.HOLDED_API_KEY}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers: cabeceras(base),
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (e) {
@@ -242,12 +273,46 @@ export default async (req) => {
   const { action } = body;
 
   try {
+    // ── Diagnóstico de conexión ──
+    // Prueba las dos APIs con su autenticación correcta y dice cuál responde.
+    // Sirve para saber, sin adivinar, qué tipo de token hay configurado.
+    if (action === 'diagnostico') {
+      const pruebas = [];
+      for (const [nombre, base, auth] of [
+        ['API v2 (Bearer)', HOLDED_BASE, 'Authorization: Bearer'],
+        ['API invoicing v1 (cabecera key)', HOLDED_BASE_INV, 'key'],
+      ]) {
+        const r = await holded('/contacts?page=1&limit=1', { base });
+        pruebas.push({
+          api: nombre,
+          autenticacion: auth,
+          http: r.status,
+          ok: r.ok,
+          contactos: r.ok && Array.isArray(r.data) ? r.data.length : null,
+          motivo: r.ok ? null : motivo(r.status, r.data),
+        });
+      }
+      const funciona = pruebas.find((p) => p.ok);
+      return json({
+        ok: true,
+        clave_v2_configurada: !!CLAVE_V2(),
+        clave_v1_configurada: !!CLAVE_V1(),
+        claves_distintas: CLAVE_V1() !== CLAVE_V2(),
+        pruebas,
+        conclusion: funciona
+          ? `Conexión correcta por ${funciona.api}.`
+          : 'Ninguna de las dos APIs acepta la clave. Genera un token nuevo en Holded '
+            + '(Ajustes › Desarrolladores › Credenciales) con permiso de contactos y facturas, '
+            + 'y ponlo en HOLDED_API_KEY si es de la v2, o en HOLDED_API_KEY_V1 si lo has sacado del banner "Api Keys v1".',
+      });
+    }
+
     // Estado de cobros de UN cliente (por CIF): consulta Holded en vivo.
     if (action === 'estado_cobros') {
       const cif = norm(body.cif);
       if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
       const res = await buscarContactoPorCif(cif);
-      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
       if (!res.match) return json({ ok: true, estado: null, sin_contacto: true });
       const est = await estadoCobrosDeContacto(res.match.id, { diagnostico: !!body.diagnostico });
       return json({ ok: true, holded_id: res.match.id, ...est });
@@ -295,7 +360,7 @@ export default async (req) => {
       const cif = norm(body.cif);
       if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
       const res = await buscarContactoPorCif(cif);
-      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
       return json({ ok: true, encontrado: !!res.match, contacto: res.match || null });
     }
 
@@ -304,7 +369,7 @@ export default async (req) => {
       const cif = norm(body.cif);
       if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
       const res = await buscarContactoPorCif(cif);
-      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
       if (!res.match) {
         // Diagnóstico: devolvemos la respuesta CRUDA de Holded para ver su estructura
         // real y saber de dónde extraer la lista de contactos.
@@ -339,7 +404,7 @@ export default async (req) => {
       const cif = norm(body.cif);
       if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
       const res = await buscarContactoPorCif(cif);
-      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
       if (!res.match) return json({ ok: true, encontrado: false });
       return json({
         ok: true,
@@ -374,7 +439,7 @@ export default async (req) => {
       if (!cif) return json({ ok: false, error: 'El cliente no tiene CIF.' }, 400);
 
       const res = await buscarContactoPorCif(cif);
-      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
 
       const base = res.base || HOLDED_BASE; // usar el endpoint que respondió con datos
       const payload = aContactoHolded(c);
