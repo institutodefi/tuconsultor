@@ -609,7 +609,7 @@ export default function Proyectos() {
                       <th className="py-2 w-8"><input type="checkbox" checked={selT.size === tareasProyecto.length && tareasProyecto.length > 0} onChange={e => e.target.checked ? setSelT(new Set(tareasProyecto.map(t => t.id))) : setSelT(new Set())} /></th>
                       <th className="py-2 w-16 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
                       <th className="py-2 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
-                      <th className="py-2 w-40 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('consultor')}>Consultor{flechaOrden('consultor')}</th>
+                      <th className="py-2 w-40 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('consultor')}>Consultor/a{flechaOrden('consultor')}</th>
                       <th className="py-2 w-28 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('fecha')}>Fecha límite{flechaOrden('fecha')}</th>
                       <th className="py-2 text-right w-16 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('horas')}>Horas{flechaOrden('horas')}</th>
                       <th className="py-2 w-8"></th>

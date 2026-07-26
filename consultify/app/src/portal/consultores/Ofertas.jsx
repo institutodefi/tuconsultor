@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { listAll, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, NORMAS, fmtEUR } from '../../lib/calcEngine.js';
+import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 
 // Histórico interno de ofertas (todas las del equipo).
 export default function Ofertas() {
@@ -117,7 +118,8 @@ export default function Ofertas() {
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-extrabold">Histórico de ofertas</h2>
-          <p className="text-sm font-medium text-navy-400">{rows.length} oferta{rows.length !== 1 ? 's' : ''} emitida{rows.length !== 1 ? 's' : ''}.</p>
+          <p className="text-sm font-medium text-[#9FC0CB]">{rows.length} oferta{rows.length !== 1 ? 's' : ''} emitida{rows.length !== 1 ? 's' : ''}.</p>
+          <p className="mt-1 max-w-2xl text-[11.5px] font-medium leading-relaxed text-[#7FA7B4]">{DISCLAIMER_CORTO} Todas las ofertas emitidas incluyen este aviso en el PDF y en el PowerPoint.</p>
         </div>
         <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
@@ -180,7 +182,7 @@ export default function Ofertas() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditNormas(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-extrabold text-navy-900">Normas de la oferta</h3>
-            <p className="mt-1 text-sm font-medium text-navy-400">{editNormas.oferta.numero_oferta} · {editNormas.oferta.empresa}</p>
+            <p className="mt-1 text-sm font-medium text-[#9FC0CB]">{editNormas.oferta.numero_oferta} · {editNormas.oferta.empresa}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {NORMAS.map(n => {
                 const on = editNormas.normas.includes(n.id);

@@ -18,7 +18,7 @@ export default function BoxEquipo({ consultores, sel, setSel, activoId, onActivo
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
-              <th className="py-2 w-8"></th><th className="py-2">Consultor</th><th className="py-2">Nivel</th><th className="py-2 text-right">Jornada</th>
+              <th className="py-2 w-8"></th><th className="py-2">Consultor/a</th><th className="py-2">Nivel</th><th className="py-2 text-right">Jornada</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-navy-50">

@@ -116,7 +116,7 @@ export default function Proyectos() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label className="label" htmlFor="p-consultor">Consultor {form.normas.length > 0 && <span className="normal-case text-navy-300">({consultoresAptos.length} aptos)</span>}</label>
+              <label className="label" htmlFor="p-consultor">Consultor/a {form.normas.length > 0 && <span className="normal-case text-navy-300">({consultoresAptos.length} disponibles)</span>}</label>
               <select id="p-consultor" className="input" value={form.consultor_id} onChange={e => setForm({ ...form, consultor_id: e.target.value })}>
                 <option value="">Sin asignar</option>
                 {consultoresAptos.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.nivel})</option>)}
@@ -149,7 +149,7 @@ export default function Proyectos() {
       <div className="card overflow-x-auto !p-0">
         <table className="w-full min-w-[860px] text-sm">
           <thead><tr className="border-b border-navy-100 text-left text-xs font-bold uppercase tracking-wider text-navy-300">
-            <th className="px-5 py-3">Cliente</th><th className="px-5 py-3">Normas</th><th className="px-5 py-3">Modelo</th><th className="px-5 py-3">Consultor</th><th className="px-5 py-3">Estado</th>{verEconomico && <th className="px-5 py-3 text-right">Precio</th>}<th className="px-5 py-3 text-right">Acciones</th>
+            <th className="px-5 py-3">Cliente</th><th className="px-5 py-3">Normas</th><th className="px-5 py-3">Modelo</th><th className="px-5 py-3">Consultor/a</th><th className="px-5 py-3">Estado</th>{verEconomico && <th className="px-5 py-3 text-right">Precio</th>}<th className="px-5 py-3 text-right">Acciones</th>
           </tr></thead>
           <tbody className="divide-y divide-navy-50">
             {proyectos.map(p => (

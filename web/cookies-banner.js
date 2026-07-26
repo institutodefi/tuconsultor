@@ -6,6 +6,8 @@
   function aplicar(v) {
     // Analíticas solo con consentimiento explícito ('todas' o config con analiticas)
     window.tcCookiesAnaliticas = (v === 'todas' || v === 'config-analiticas');
+    // Avisa a gtm.js: Google Tag Manager solo se carga con consentimiento.
+    try { document.dispatchEvent(new CustomEvent('tc-cookies', { detail: v })); } catch (e) {}
   }
   var banner;
   function cerrar() { if (banner) { banner.remove(); banner = null; } }

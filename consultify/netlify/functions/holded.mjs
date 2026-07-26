@@ -95,6 +95,46 @@ function deContactoHolded(x) {
   };
 }
 
+// ── Mapeo COMPLETO Holded → ficha de empresa del CRM ────────────────────────
+// Holded guarda la dirección en billAddress y la web en socialNetworks.website.
+// Extraemos todo lo aprovechable; lo que no venga se queda vacío y se rellena
+// a mano en la ficha.
+function deEmpresaHolded(x) {
+  const dir = x?.billAddress || x?.bill_address || x?.address || {};
+  const web = x?.socialNetworks?.website || x?.socialNetworks?.web || x?.website || x?.web || '';
+  const personas = x?.contactPersons || x?.contact_persons || x?.persons || [];
+  const tipo = String(x?.type || '').toLowerCase();
+
+  return {
+    nombre: x?.name || '',
+    nombre_comercial: x?.tradeName || x?.trade_name || '',
+    cif: norm(x?.code || x?.vatnumber || x?.vat_number || ''),
+    vat_id: x?.vatnumber || x?.vat_number || '',
+    email: x?.email || '',
+    telefono: x?.phone ? String(x.phone) : '',
+    movil: x?.mobile ? String(x.mobile) : '',
+    web: web ? String(web) : '',
+    direccion: dir?.address || dir?.street || '',
+    poblacion: dir?.city || '',
+    cp: dir?.postalCode || dir?.postal_code || dir?.zip || '',
+    provincia: dir?.province || dir?.state || '',
+    pais: dir?.country || 'España',
+    es_cliente: x?.clientRecord != null || tipo === 'client' || tipo === 'lead',
+    es_proveedor: x?.supplierRecord != null || tipo === 'supplier' || tipo === 'provider',
+    tags: Array.isArray(x?.tags) ? x.tags.filter(Boolean).map(String) : [],
+    notas: x?.notes || x?.note || '',
+    // Personas de contacto que Holded tenga colgando del contacto
+    contactos: (Array.isArray(personas) ? personas : [])
+      .map((p) => ({
+        nombre: p?.name || p?.firstName || '',
+        email: p?.email || '',
+        telefono: p?.phone ? String(p.phone) : (p?.mobile ? String(p.mobile) : ''),
+        cargo: p?.job || p?.position || p?.role || '',
+      }))
+      .filter((p) => p.nombre || p.email),
+  };
+}
+
 // Mapea un cliente de Consultify al formato de contacto de Holded v2.
 // El CIF va en `code`. Solo enviamos campos con valor.
 function aContactoHolded(c) {
@@ -291,6 +331,23 @@ export default async (req) => {
         return json({ ok: true, encontrado: false, diagnostico });
       }
       return json({ ok: true, encontrado: true, holded_id: res.match.id, datos: deContactoHolded(res.match) });
+    }
+
+    // Ficha COMPLETA de empresa a partir del CIF (para el alta en el CRM).
+    // Devuelve además las personas de contacto que Holded tenga registradas.
+    if (action === 'buscar_empresa') {
+      const cif = norm(body.cif);
+      if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
+      const res = await buscarContactoPorCif(cif);
+      if (res.error) return json({ ok: false, error: `Error consultando Holded (HTTP ${res.error.status})`, detalle: res.error.data }, 502);
+      if (!res.match) return json({ ok: true, encontrado: false });
+      return json({
+        ok: true,
+        encontrado: true,
+        holded_id: res.match.id,
+        empresa: deEmpresaHolded(res.match),
+        crudo: res.match,          // se guarda en empresas.holded_datos (auditoría)
+      });
     }
 
     if (action === 'crear') {

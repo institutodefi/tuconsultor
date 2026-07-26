@@ -6,10 +6,10 @@
 export const ROLES = ['superadmin', 'admin', 'director', 'consultor', 'gestion', 'cliente'];
 
 export const ROL_LABEL = {
-  superadmin: 'Superadministrador',
-  admin: 'Administrador',
-  director: 'Director de Proyecto',
-  consultor: 'Consultor',
+  superadmin: 'Superadministración',
+  admin: 'Administración',
+  director: 'Dirección de Proyecto',
+  consultor: 'Consultoría',
   gestion: 'Equipo de gestión',
   cliente: 'Cliente',
 };
@@ -35,16 +35,16 @@ export const GRUPOS_PORTAL = [
     label: 'Comercial',
     items: [
       { to: 'planificador', label: 'Generador de ofertas', icon: 'file-text', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+      { to: 'reglas',       label: 'Reglas comerciales',   icon: 'sliders-horizontal', roles: ['superadmin', 'admin', 'director'] },
       { to: 'sistemas',     label: 'Sistemas de gestión',  icon: 'shield-check', roles: ['superadmin', 'admin', 'director'] },
     ],
   },
   {
     label: 'CRM',
     items: [
-      { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'gestion'] },
-      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
-      { to: 'clientes',  label: 'Clientes',  icon: 'users',    roles: ['superadmin', 'admin', 'director', 'gestion'] },
-      { to: 'leads',     label: 'Clientes potenciales', icon: 'contact', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      // Una sola pestaña: clientes, proveedores y potenciales son filtros de 'empresas'
+      { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       { to: 'ofertas',   label: 'Ofertas',   icon: 'receipt',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
       { to: 'proyectos', label: 'Proyectos', icon: 'folder-kanban', roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
     ],
@@ -66,9 +66,9 @@ export const TABS_PORTAL = GRUPOS_PORTAL.flatMap((g) => g.items);
 // Capacidades puntuales
 export const ROLES_CLIENTE = ['administrador', 'consultor', 'usuario_cliente'];
 export const ROL_CLIENTE_LABEL = {
-  administrador: 'Administrador (jefe del proyecto)',
-  consultor: 'Consultor',
-  usuario_cliente: 'Usuario cliente',
+  administrador: 'Administración (responsable del proyecto)',
+  consultor: 'Consultoría',
+  usuario_cliente: 'Persona usuaria del cliente',
 };
 
 export const can = {

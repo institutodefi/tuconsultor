@@ -279,6 +279,10 @@ export async function generarPDFOferta(r, cli, anexo) {
     'Incluye: documentación del sistema, formación al equipo, auditoría interna y acompañamiento a la certificación.',
     'No incluye: tasas de la entidad certificadora ni acompañamiento presencial a la auditoría externa (600 €/jornada).',
     'Validez de la oferta: 30 días naturales desde su fecha de emisión.',
+    r.disclaimer
+      || 'Oferta orientativa sujeta a validación. El importe calculado en la web es una estimación de partida y no tiene '
+       + 'carácter contractual. Queda sujeto a la validación del equipo consultor y al alcance definitivo del sistema de '
+       + 'gestión, al número de personas trabajadoras y al número de sedes o centros de trabajo incluidos.',
   ];
   for (const c of condiciones) {
     espacio(28);

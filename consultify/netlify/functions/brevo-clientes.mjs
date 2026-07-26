@@ -49,7 +49,10 @@ async function subirContacto(c, apiKey, listaId) {
     EMPRESA: c.empresa || '',
     CIF: c.cif_matriz || c.cif || '',
     TELEFONO: c.telefono || '',
-    TIPO: 'Cliente',
+    CARGO: c.cargo || '',
+    WEB: c.web || '',
+    // Cliente · Proveedor · Potencial — lo decide quien llama (ficha de empresa)
+    TIPO: c.tipo || 'Cliente',
     DOI_PENDIENTE: !!listaId,
   };
 

@@ -1,47 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" dir="ltr">
 <head>
-<!-- Google Consent Mode v2 (por defecto denegado; el banner lo actualiza) -->
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('consent', 'default', {
-    'ad_storage': 'denied',
-    'ad_user_data': 'denied',
-    'ad_personalization': 'denied',
-    'analytics_storage': 'denied',
-    'functionality_storage': 'granted',
-    'security_storage': 'granted',
-    'wait_for_update': 500
-  });
-  // Si en una visita anterior el usuario ya aceptó analíticas, lo aplicamos ya.
-  try {
-    var _c = JSON.parse(localStorage.getItem('consultify_cookies_v1') || 'null');
-    if (_c && _c.analiticas) {
-      gtag('consent', 'update', {
-        'analytics_storage': 'granted',
-        'ad_storage': 'granted',
-        'ad_user_data': 'granted',
-        'ad_personalization': 'granted'
-      });
-    }
-  } catch (e) {}
-</script>
-<!-- End Google Consent Mode v2 -->
-<!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-KV974VT5');</script>
-<!-- End Google Tag Manager -->
-<!-- Google tag (gtag.js) · GA4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3EHR79WBR1"></script>
-<script>
-  gtag('js', new Date());
-  gtag('config', 'G-3EHR79WBR1');
-</script>
-<!-- End Google tag (gtag.js) -->
+<script src="/gtm.js" defer></script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Consultoría ISO con IA · Certifica ISO 9001, 14001, 27001 y 45001 | Consultify</title>
@@ -1189,10 +1149,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 </head>
 <body>
 <div style="background:#061B45;color:#F8F9FB;font-size:13px;padding:8px 0;text-align:center;font-family:Manrope,system-ui,sans-serif">Consultify es la línea digital de <a href="/" style="color:#F5A623;font-weight:700;text-decoration:none">TuConsultor</a> · <a href="/" style="color:inherit">← Volver a tuconsultor.com</a></div>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KV974VT5"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
 
 <a href="#main" class="skip-link">Saltar al contenido</a>
 
@@ -2602,5 +2558,6 @@ document.querySelectorAll('.lang-switch button').forEach(btn => {
 <script src="/cookies-banner.js" defer></script>
   <script src="whatsapp-flotante.js" defer></script>
   <script src="orbita-flotante.js" defer></script>
+<script src="/formulario-proyecto.js" defer></script>
 </body>
 </html>

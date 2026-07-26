@@ -381,14 +381,14 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
           <input type="date" className="input" value={fechaIni || ''} onChange={e => setFechaIni(e.target.value)} />
         </div>
         <div>
-          <label className="label">Consultor 1</label>
+          <label className="label">Consultor/a 1</label>
           <select className="input" value={c1} onChange={e => setC1(e.target.value)}>
             <option value="">Sin asignar</option>
             {consultores.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.apellidos || ''}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">Consultor 2</label>
+          <label className="label">Consultor/a 2</label>
           <select className="input" value={c2} onChange={e => setC2(e.target.value)}>
             <option value="">Sin asignar</option>
             {consultores.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.apellidos || ''}</option>)}
@@ -580,7 +580,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                     <th className="py-2">Tarea</th>
                     <th className="py-2">Tipo</th>
                     <th className="py-2 text-right">Horas</th>
-                    <th className="py-2">Consultor</th>
+                    <th className="py-2">Consultor/a</th>
                     <th className="py-2">Estimada</th>
                     <th className="py-2">Real</th>
                     <th className="py-2">Seg.</th>

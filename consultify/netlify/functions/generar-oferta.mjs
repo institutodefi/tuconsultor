@@ -74,6 +74,14 @@ const NORMAS = [
 const NORMA_BY_ID = Object.fromEntries(NORMAS.map((n) => [n.id, n]));
 const TARIFA = { J1: 30, J2: 40, J3: 55, Senior: 75 };
 const MARGEN = 0.60, IVA = 0.21, MESES_IMPL = 12;
+
+// Aviso obligatorio en TODAS las ofertas (espejo de app/src/lib/legal.js).
+// Redacción con perspectiva de género: "personas trabajadoras", "equipo consultor".
+const DISCLAIMER_OFERTA =
+  'Oferta orientativa sujeta a validación. El importe calculado en la web es una estimación de partida y no tiene ' +
+  'carácter contractual. Queda sujeto a la validación del equipo consultor y al alcance definitivo del sistema de ' +
+  'gestión, al número de personas trabajadoras y al número de sedes o centros de trabajo incluidos. No incluye las ' +
+  'tasas de la entidad de certificación.';
 const MODELOS = {
   Apoyo: { tipo: 'bolsa', hSist: null, hPres: 0, paso: 100, suelo: 0, leyenda: 'Pago único prepagado al 100 %. No contratable a menos de 60 días de una auditoría externa. Acompañamiento a auditoría aparte (600 €/jornada).' },
   Relación: { tipo: 'mes', hSist: 2, hPres: 0, paso: 25, suelo: 350, leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.' },
@@ -157,6 +165,7 @@ async function generarPPTX(r, cli, anexo) {
     : `Consultoría para el sistema de gestión ${normNames}, en modelo ${r.modelo}.`;
   s.addText(objeto, { x: 0.6, y: 1.0, w: 9, h: 0.9, fontFace: 'Arial', fontSize: 12, color: INK, valign: 'top' });
 
+  s.addText(r.disclaimer || DISCLAIMER_OFERTA, { x: 0.6, y: 4.55, w: 8.8, h: 0.6, fontFace: 'Arial', fontSize: 7.5, color: '8896AD', valign: 'top' });
   s.addText('Consultify, una empresa de TuConsultor · CIF B84867670 · hola@tuconsultor.com', { x: 0.6, y: 5.2, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
 
   // --- Slide: INVERSIÓN (protagonista, mismo lenguaje visual que el PDF) ---
@@ -401,6 +410,31 @@ export default async (req) => {
   const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false } = body;
   const r = calcular(normas, modelo, { meses, tiene9001 });
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
+
+  // ── Reglas comerciales ──
+  // El motor de esta función no conoce las reglas comerciales (viven en la base
+  // de datos y las aplica el navegador). Si el cliente nos manda su resultado,
+  // manda el suyo: así el documento nunca contradice el precio que se vio en
+  // pantalla. Recalculamos IVA, total y fraccionamiento sobre el precio final.
+  const ov = body.override;
+  if (ov && Number.isFinite(Number(ov.precioCatalogo))) {
+    r.precioBase = Number(ov.precioBase ?? r.precioCatalogo);
+    r.precioCatalogo = Number(ov.precioCatalogo);
+    if (ov.horas) r.horas = ov.horas;
+    if (Number.isFinite(Number(ov.hTotal))) r.hTotal = Number(ov.hTotal);
+    r.reglasAplicadas = Array.isArray(ov.reglas) ? ov.reglas : [];
+    r.iva = Math.round(r.precioCatalogo * IVA * 100) / 100;
+    r.totalConIva = Math.round((r.precioCatalogo + r.iva) * 100) / 100;
+    if (r.fraccionado) {
+      const meses2 = r.fraccionado.meses;
+      const totalSinIva = r.precioCatalogo * meses2;
+      const totalConIvaFrac = Math.round(totalSinIva * (1 + IVA) * 100) / 100;
+      const r2 = (x) => Math.round(x * 100) / 100;
+      const c1 = r2(totalConIvaFrac * 0.50), c2 = r2(totalConIvaFrac * 0.25);
+      r.fraccionado = { ...r.fraccionado, totalSinIva, totalConIva: totalConIvaFrac, cuota1: c1, cuota2: c2, cuota3: r2(totalConIvaFrac - c1 - c2) };
+    }
+  }
+  r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
   r.normaNombres = normas.map((id) => (NORMA_BY_ID[id]?.nombre || id));
   r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || 3, 1);

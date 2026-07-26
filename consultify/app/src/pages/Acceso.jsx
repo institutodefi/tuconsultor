@@ -140,7 +140,7 @@ export default function Acceso() {
       <div className="grid items-start gap-6 md:grid-cols-2">
         {/* ─── CONSULTORES ─── */}
         <PanelAcceso acento="navy" titulo="Consultores" subtitulo="Equipo y administración" icono={iconoConsultor}
-          footer={<p className="mt-4 text-center text-xs font-medium text-[#9FC0CB]">¿Sin cuenta de consultor? La crea un administrador desde la zona de equipo.</p>}>
+          footer={<p className="mt-4 text-center text-xs font-medium text-[#9FC0CB]">¿Sin cuenta de consultoría? La crea la administración desde la zona de equipo.</p>}>
           <form onSubmit={loginConsultor} className="space-y-4">
             <div><label className="label" htmlFor="c-email">Email corporativo</label><input id="c-email" type="email" required className="input" autoComplete="email" value={c.email} onChange={e => setC({ ...c, email: e.target.value })} /></div>
             <CampoPassword id="c-pass" label="Contraseña" value={c.password} onChange={e => setC({ ...c, password: e.target.value })} required={!demo} autoComplete="current-password" />

@@ -252,7 +252,7 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="flex items-end">
-                <p className="text-[11px] font-medium text-navy-300">Las horas de la tarea son su total; no varían por el nivel del consultor.</p>
+                <p className="text-[11px] font-medium text-navy-300">Las horas de la tarea son su total; no varían por el nivel de quien la ejecuta.</p>
               </div>
             </div>
             <div className="mt-3 flex gap-3">

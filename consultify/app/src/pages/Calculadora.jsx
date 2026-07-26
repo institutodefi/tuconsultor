@@ -1,3 +1,7 @@
+// ⚠ LEGADO · NO ENRUTADA. La calculadora pública viva es GeneradorOfertas.jsx
+// (main.jsx: /calculadora → <GeneradorOfertas publico />). Este fichero conserva
+// la paleta clara antigua; si algún día se reactiva, hay que adaptarlo al tema
+// oscuro de Órbita y añadirle el «desde» y el disclaimer de lib/legal.js.
 import { useMemo, useState } from 'react';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, compararModelos, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 import { insertRow, siguienteNumeroOferta } from '../lib/data.js';
@@ -228,7 +232,7 @@ export default function Calculadora() {
                       <div><label className="label" htmlFor="l-apellidos">Apellidos</label><input id="l-apellidos" required className="input" value={lead.apellidos} onChange={e => setLead({ ...lead, apellidos: e.target.value })} /></div>
                       <div><label className="label" htmlFor="l-empresa">Empresa</label><input id="l-empresa" required className="input" value={lead.empresa} onChange={e => setLead({ ...lead, empresa: e.target.value })} /></div>
                       <div><label className="label" htmlFor="l-cif">CIF</label><input id="l-cif" className="input" placeholder="B-00000000" value={lead.cif} onChange={e => setLead({ ...lead, cif: e.target.value })} /></div>
-                      <div><label className="label" htmlFor="l-cargo">Cargo</label><input id="l-cargo" className="input" placeholder="p. ej. Director de Calidad" value={lead.cargo} onChange={e => setLead({ ...lead, cargo: e.target.value })} /></div>
+                      <div><label className="label" htmlFor="l-cargo">Cargo</label><input id="l-cargo" className="input" placeholder="p. ej. Dirección de Calidad" value={lead.cargo} onChange={e => setLead({ ...lead, cargo: e.target.value })} /></div>
                       <div><label className="label" htmlFor="l-email">Email</label><input id="l-email" type="email" required className="input" value={lead.email} onChange={e => setLead({ ...lead, email: e.target.value })} /></div>
                       <div className="sm:col-span-2"><label className="label" htmlFor="l-tel">Teléfono</label><input id="l-tel" className="input" value={lead.telefono} onChange={e => setLead({ ...lead, telefono: e.target.value })} /></div>
                     </div>
@@ -279,7 +283,7 @@ export default function Calculadora() {
                 )}
                 <div className="mt-4 space-y-1.5 text-sm font-medium text-white/80">
                   <p>{res.nSistemas} sistema{res.nSistemas > 1 ? 's' : ''} · modelo {modelo}</p>
-                  {modelo !== 'Implantación' && <p>{res.hTotal} h de consultor{res.tipo === 'mes' ? ' cada mes' : ''}</p>}
+                  {modelo !== 'Implantación' && <p>{res.hTotal} h de consultoría{res.tipo === 'mes' ? ' cada mes' : ''}</p>}
                 </div>
               </>
             ) : (

@@ -8,12 +8,54 @@ function demo() {
     consultores: demoClone('consultores'), clientes: demoClone('clientes'),
     proyectos: demoClone('proyectos'), presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
+    reglas_comerciales: [],
     procesos_subprocesos: [],
     procesos_bandas: [],
     procesos_riesgos: [],
-    empresas: [],
-    contactos: [],
-    empresa_contactos: [],
+    // Demo del CRM unificado (v56): un grupo con matriz y dos filiales,
+    // un proveedor y contactos con sus roles, para poder ver el organigrama,
+    // el semáforo y la homologación sin base de datos.
+    empresas: [
+      { id: 'emp-matriz', nombre: 'GRUPO ANDES HOLDING, S.L.', cif: 'B84867670', nombre_comercial: 'Grupo Andes',
+        es_cliente: true, es_proveedor: false, estado_comercial: 'activo', direccion: 'Paseo de la Castellana 18',
+        poblacion: 'Madrid', cp: '28046', provincia: 'Madrid', pais: 'España', web: 'grupoandes.example',
+        email: 'info@grupoandes.example', telefono: '910000000', empresa_matriz_id: null, creado: '2026-01-10T09:00:00Z' },
+      { id: 'emp-fil1', nombre: 'ANDES INGENIERÍA, S.L.', cif: 'B87093076',
+        es_cliente: true, es_proveedor: false, estado_comercial: 'activo', poblacion: 'Alcorcón', provincia: 'Madrid',
+        pais: 'España', empresa_matriz_id: 'emp-matriz', creado: '2026-01-12T09:00:00Z' },
+      { id: 'emp-fil2', nombre: 'ANDES SERVICIOS CANARIAS, S.L.', cif: 'B38785820',
+        es_cliente: true, es_proveedor: false, estado_comercial: 'activo', direccion: 'Calle Ruiz de Padrón, loc. 5',
+        poblacion: 'San Sebastián de la Gomera', cp: '38800', provincia: 'Santa Cruz de Tenerife', pais: 'España',
+        telefono: '922550103', empresa_matriz_id: 'emp-matriz', creado: '2026-01-14T09:00:00Z' },
+      { id: 'emp-prov', nombre: 'LABORATORIO CALIBRA, S.L.', cif: 'B06996631',
+        es_cliente: false, es_proveedor: true, estado_comercial: 'activo', poblacion: 'Getafe', provincia: 'Madrid',
+        pais: 'España', empresa_matriz_id: null, creado: '2026-02-02T09:00:00Z' },
+      { id: 'emp-pot', nombre: 'TALLERES NORTE', cif: null,
+        es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', origen: 'web',
+        pais: 'España', empresa_matriz_id: null, creado: '2026-07-01T09:00:00Z' },
+    ],
+    contactos: [
+      { id: 'con-1', nombre: 'Marta', apellidos: 'Ferrer', cargo: 'Directora general', email: 'marta.ferrer@grupoandes.example',
+        telefono: '600111222', consentimiento_marketing: true, consentimiento_fecha: '2026-01-10T09:00:00Z', creado: '2026-01-10T09:00:00Z' },
+      { id: 'con-2', nombre: 'Luis', apellidos: 'Cano', cargo: 'Administración', email: 'facturacion@grupoandes.example',
+        telefono: '600111223', consentimiento_marketing: false, creado: '2026-01-10T09:10:00Z' },
+      { id: 'con-3', nombre: 'Nuria', apellidos: 'Beltrán', cargo: 'Responsable de calidad', email: 'calidad@andesingenieria.example',
+        telefono: '600111224', consentimiento_marketing: true, consentimiento_fecha: '2026-01-12T09:00:00Z', creado: '2026-01-12T09:00:00Z' },
+      { id: 'con-4', nombre: 'Óscar', apellidos: 'Prieto', cargo: 'Gerente', email: 'oscar@calibra.example',
+        consentimiento_marketing: false, creado: '2026-02-02T09:00:00Z' },
+    ],
+    empresa_contactos: [
+      { id: 'ec-1', empresa_id: 'emp-matriz', contacto_id: 'con-1', rol: 'directivo',   principal: true },
+      { id: 'ec-2', empresa_id: 'emp-matriz', contacto_id: 'con-2', rol: 'facturacion', principal: false },
+      { id: 'ec-3', empresa_id: 'emp-fil1',   contacto_id: 'con-3', rol: 'proyecto',    principal: false },
+      { id: 'ec-4', empresa_id: 'emp-prov',   contacto_id: 'con-4', rol: 'directivo',   principal: true },
+    ],
+    homologaciones: [
+      { id: 'hom-1', empresa_id: 'emp-prov', concepto: 'Certificado ISO 9001 en vigor', estado: 'validado',
+        obligatorio: true, fecha_validez: '2027-03-31', orden: 10, creado: '2026-02-02T09:00:00Z' },
+      { id: 'hom-2', empresa_id: 'emp-prov', concepto: 'Póliza de responsabilidad civil', estado: 'pendiente',
+        obligatorio: true, orden: 20, creado: '2026-02-02T09:05:00Z' },
+    ],
     tareas_catalogo: catalogoFilas(), agenda_tareas: [], cliente_tareas: [], proyectos_cliente: [], cliente_contactos: [], vacaciones: [], festivos: [],
   };
   return demoState;
@@ -21,14 +63,17 @@ function demo() {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 export async function listAll(table, order = 'creado') {
-  if (DEMO) return demo()[table];
+  // En demo se devuelve una COPIA: si se devolviera la misma referencia, React
+  // compararía el estado por identidad, no re-renderizaría y la pantalla
+  // parecería congelada tras un alta.
+  if (DEMO) return (demo()[table] || []).slice();
   const { data, error } = await supabase.from(table).select('*').order(order, { ascending: false });
   if (error) throw error;
   return data;
 }
 
 export async function listTable(table) {
-  if (DEMO) return demo()[table];
+  if (DEMO) return (demo()[table] || []).slice();
   // PostgREST devuelve como máximo 1000 filas por petición. Tablas grandes como
   // tareas_catalogo (~1000+ filas) se cortaban y dejaban fuera las últimas normas
   // (p. ej. UNE 158101). Paginamos por rangos hasta traerlas todas.

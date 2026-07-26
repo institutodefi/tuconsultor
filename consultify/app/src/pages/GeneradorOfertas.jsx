@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
-import { insertRow, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
+import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
+import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 
@@ -35,13 +36,30 @@ export default function GeneradorOfertas({ publico = false }) {
   const [error, setError] = useState(null);
   const [pideInfo, setPideInfo] = useState(false);   // "Otra norma · pide info": abre formulario de solicitud
   const [infoState, setInfoState] = useState('idle');// idle | sending | ok | error
+  const [reglas, setReglas] = useState([]);          // reglas comerciales vigentes
+
+  // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
+  // lo que esté vigente el día en que se calcula.
+  useEffect(() => {
+    let vivo = true;
+    listTable('reglas_comerciales')
+      .then((r) => { if (vivo) setReglas((r || []).filter((x) => x.activa)); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, []);
+
+  // "desde" en el canal público: el precio de la web es una estimación de partida.
+  const desde = prefijoPrecio(publico);
 
   const toggle = (id) => {
     if (id === '9001') return;
     setSel(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   };
 
-  const res = useMemo(() => calcular(sel, modelo, { meses, tiene9001 }), [sel, modelo, meses, tiene9001]);
+  const res = useMemo(
+    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno' }),
+    [sel, modelo, meses, tiene9001, reglas, publico],
+  );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
   const esMes = res?.tipo === 'mes' && !esImpl;
@@ -132,6 +150,13 @@ export default function GeneradorOfertas({ publico = false }) {
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
           email: cli.email, presupuesto_id: fila?.id,
+          // Resultado con reglas comerciales aplicadas (manda el motor del cliente)
+          override: {
+            precioCatalogo: res.precioCatalogo, precioBase: res.precioBase,
+            horas: res.horas, hTotal: res.hTotal,
+            reglas: res.reglas.map((r) => ({ nombre: r.nombre, efecto: r.efecto })),
+          },
+          disclaimer: DISCLAIMER_OFERTA,
         }),
       });
       // La función podría devolver HTML (404/500) en vez de JSON: lo controlamos.
@@ -197,7 +222,7 @@ export default function GeneradorOfertas({ publico = false }) {
       <div className="mb-6 max-w-2xl">
         <p className="eyebrow">{publico ? 'Calcula tu oferta' : 'Generador de ofertas'}</p>
         <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight">{publico ? 'Tu sistema de gestión, con precio en 60 segundos' : 'Crea una oferta en 60 segundos'}</h1>
-        <p className="mt-2 text-sm font-medium text-navy-400">Elige normas y modelo, mira el precio en vivo y {publico ? 'recibe tu propuesta personalizada.' : 'exporta la oferta en PDF y PowerPoint.'}</p>
+        <p className="mt-2 text-sm font-medium text-[#9FC0CB]">Elige normas y modelo, mira el precio en vivo y {publico ? 'recibe tu propuesta personalizada.' : 'exporta la oferta en PDF y PowerPoint.'}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
@@ -212,38 +237,38 @@ export default function GeneradorOfertas({ publico = false }) {
                 return (
                   <button key={n.id} onClick={() => toggle(n.id)} aria-disabled={base}
                     className={`flex items-start gap-3 rounded-xl border-[1.5px] p-3 text-left transition ${
-                      base ? 'border-brand-orange bg-brand-orange/5'
-                      : on ? 'border-navy-800 bg-navy-50' : 'border-navy-100 bg-white hover:border-navy-300'}`}>
+                      base ? 'border-brand-orange bg-brand-orange/15'
+                      : on ? 'border-brand-verde bg-brand-verde/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-verde'}`}>
                     <span className={`mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] text-[11px] text-white ${
-                      base ? 'border-brand-orange bg-brand-orange' : on ? 'border-navy-800 bg-navy-800' : 'border-navy-200 bg-white'}`}>
+                      base ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]' : on ? 'border-brand-verde bg-brand-verde' : 'border-[#3F7D93] bg-transparent'}`}>
                       {(on || base) ? '✓' : ''}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-bold leading-tight">{n.nombre}{base && <span className="ml-1.5 rounded bg-brand-orange px-1.5 py-px text-[9px] font-extrabold uppercase text-white align-middle">base</span>}</span>
-                      <span className="mt-0.5 block text-[11.5px] leading-snug text-navy-400">{n.desc}</span>
+                      <span className="block text-sm font-bold leading-tight text-[#EAF4F7]">{n.nombre}{base && <span className="ml-1.5 rounded bg-brand-orange px-1.5 py-px text-[9px] font-extrabold uppercase text-white align-middle">base</span>}</span>
+                      <span className="mt-0.5 block text-[11.5px] leading-snug text-[#9FC0CB]">{n.desc}</span>
                     </span>
                   </button>
                 );
               })}
               {/* Otra norma · pide info → abre el formulario de solicitud */}
               <button onClick={() => setPideInfo(v => !v)}
-                className={`flex items-start gap-3 rounded-xl border-[1.5px] border-dashed p-3 text-left transition ${pideInfo ? 'border-brand-orange bg-brand-orange/5' : 'border-navy-200 bg-white hover:border-brand-orange'}`}>
-                <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] border-brand-orange text-[13px] font-bold text-brand-orangeDark">?</span>
+                className={`flex items-start gap-3 rounded-xl border-[1.5px] border-dashed p-3 text-left transition ${pideInfo ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-orange'}`}>
+                <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] border-brand-orange text-[13px] font-bold text-brand-orange">?</span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-bold leading-tight text-brand-orangeDark">¿Quieres otra norma?</span>
-                  <span className="mt-0.5 block text-[11.5px] leading-snug text-navy-400">No dudes en pedirnos información. Te asesoramos sin compromiso.</span>
+                  <span className="block text-sm font-bold leading-tight text-brand-orange">¿Quieres otra norma?</span>
+                  <span className="mt-0.5 block text-[11.5px] leading-snug text-[#9FC0CB]">No dudes en pedirnos información. Te asesoramos sin compromiso.</span>
                 </span>
               </button>
             </div>
 
             {/* Formulario de solicitud de información */}
             {pideInfo && (
-              <div className="mt-4 rounded-xl border-[1.5px] border-brand-orange/40 bg-brand-orange/5 p-4">
+              <div className="mt-4 rounded-xl border-[1.5px] border-brand-orange/40 bg-brand-orange/10 p-4">
                 {infoState === 'ok' ? (
-                  <p className="text-sm font-bold text-brand-orangeDark">¡Gracias! Hemos recibido tu solicitud. Te contactaremos muy pronto.</p>
+                  <p className="text-sm font-bold text-brand-orange">¡Gracias! Hemos recibido tu solicitud. Te contactaremos muy pronto.</p>
                 ) : (
                   <>
-                    <p className="mb-3 text-sm font-bold text-navy-800">Cuéntanos qué norma te interesa y te asesoramos.</p>
+                    <p className="mb-3 text-sm font-bold text-[#EAF4F7]">Cuéntanos qué norma te interesa y te asesoramos.</p>
                     <div className="grid gap-2.5 sm:grid-cols-2">
                       <input className="input sm:col-span-2" placeholder="¿Qué norma o certificación te interesa?" value={cli.normaInteres || ''} onChange={e => setCli({ ...cli, normaInteres: e.target.value })} />
                       <input className="input" placeholder="Nombre" value={cli.nombre} onChange={e => setCli({ ...cli, nombre: e.target.value })} />
@@ -251,24 +276,24 @@ export default function GeneradorOfertas({ publico = false }) {
                       <input className="input" type="email" placeholder="Email" value={cli.email} onChange={e => setCli({ ...cli, email: e.target.value })} />
                       <input className="input" placeholder="Teléfono" value={cli.telefono} onChange={e => setCli({ ...cli, telefono: e.target.value })} />
                     </div>
-                    <label className="mt-3 flex items-start gap-2.5 text-[12.5px] text-navy-500 cursor-pointer">
+                    <label className="mt-3 flex items-start gap-2.5 text-[12.5px] text-[#B9D2DA] cursor-pointer">
                       <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
-                      <span>Acepto que TuConsultor trate mis datos para contactarme. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orangeDark underline">Política de privacidad</a> (RGPD).</span>
+                      <span>Acepto que TuConsultor trate mis datos para contactarme. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad</a> (RGPD).</span>
                     </label>
                     <button onClick={enviarSolicitudInfo} disabled={infoState === 'sending'}
                       className="mt-3 rounded-xl bg-brand-orange px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-brand-orangeDark disabled:opacity-50">
                       {infoState === 'sending' ? 'Enviando…' : 'Solicitar información'}
                     </button>
-                    {infoState === 'error' && <p className="mt-2 text-xs font-bold text-red-600">No se pudo enviar. Inténtalo de nuevo.</p>}
+                    {infoState === 'error' && <p className="mt-2 text-xs font-bold text-red-300">No se pudo enviar. Inténtalo de nuevo.</p>}
                   </>
                 )}
               </div>
             )}
-            <label className="mt-3 flex items-start gap-2.5 rounded-xl border-[1.5px] border-navy-100 bg-navy-50/50 p-3 cursor-pointer">
+            <label className="mt-3 flex items-start gap-2.5 rounded-xl border-[1.5px] border-[#1E5468] bg-[#0D3242] p-3 cursor-pointer">
               <input type="checkbox" checked={tiene9001} onChange={e => setTiene9001(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
               <span className="text-sm">
-                <span className="font-bold">Ya tengo la ISO 9001 certificada</span>
-                <span className="block text-[12px] text-navy-400">Aplica un 50 % de descuento sobre las horas de la ISO 9001 (sistema base ya implantado).</span>
+                <span className="font-bold text-[#EAF4F7]">Ya tengo la ISO 9001 certificada</span>
+                <span className="block text-[12px] text-[#9FC0CB]">Aplica un 50 % de descuento sobre las horas de la ISO 9001 (sistema base ya implantado).</span>
               </span>
             </label>
           </section>
@@ -282,7 +307,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 return (
                   <button key={mid} onClick={() => setModelo(mid)}
                     className={`min-w-[96px] flex-1 rounded-xl border-[1.5px] p-3 text-center transition ${
-                      on ? 'border-navy-800 bg-navy-800 text-white' : 'border-navy-100 bg-white hover:border-navy-300'}`}>
+                      on ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]' : 'border-[#1E5468] bg-[#0D3242] text-[#EAF4F7] hover:border-brand-verde'}`}>
                     <span className="block text-sm font-extrabold">{mid}</span>
                   </button>
                 );
@@ -294,7 +319,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 placeholder={res ? `mín. ${res.minMeses}` : ''} value={meses}
                 onChange={e => setMeses(e.target.value)} />
               {res && (
-                <p className={`mt-1 text-xs font-medium ${plazoMal ? 'text-red-600' : 'text-navy-400'}`}>
+                <p className={`mt-1 text-xs font-medium ${plazoMal ? 'text-red-300' : 'text-[#9FC0CB]'}`}>
                   {plazoMal
                     ? `El modelo ${modelo} exige un mínimo de ${res.minMeses} meses.`
                     : `Mínimo para ${modelo}: ${res.minMeses} meses. En uso: ${res.meses}.`}
@@ -315,13 +340,19 @@ export default function GeneradorOfertas({ publico = false }) {
               <>
                 {res.fraccionado ? (
                   <>
-                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> sin IVA</span></p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{fmtEUR(res.fraccionado.totalConIva)} con IVA · {res.fraccionado.meses} meses</p>
+                    <p className="mt-3 text-4xl font-extrabold tracking-tight">
+                      {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
+                      {fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> sin IVA</span>
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">{desde}{fmtEUR(res.fraccionado.totalConIva)} con IVA · {res.fraccionado.meses} meses</p>
                   </>
                 ) : (
                   <>
-                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{esMes ? ' /mes sin IVA' : ' sin IVA'}</span></p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{fmtEUR(res.totalConIva)} con IVA{esMes ? '/mes' : ''}</p>
+                    <p className="mt-3 text-4xl font-extrabold tracking-tight">
+                      {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
+                      {fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{esMes ? ' /mes sin IVA' : ' sin IVA'}</span>
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">{desde}{fmtEUR(res.totalConIva)} con IVA{esMes ? '/mes' : ''}</p>
                   </>
                 )}
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -331,6 +362,28 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 {res.tiene9001 && (
                   <p className="mt-3 rounded-xl bg-brand-orange/20 p-2.5 text-xs font-bold text-brand-orange">ISO 9001 ya certificada: −50 % en sus horas aplicado.</p>
+                )}
+
+                {/* Reglas comerciales aplicadas a esta oferta */}
+                {res.reglas?.length > 0 && (
+                  <div className="mt-3 rounded-xl bg-brand-verde/15 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-verdeTexto">
+                      {publico ? 'Ventajas aplicadas' : 'Reglas comerciales aplicadas'}
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      {res.reglas.map((t, i) => (
+                        <li key={i} className="text-[11.5px] leading-snug text-white/85">
+                          <b className="text-white">{t.nombre}</b> · {t.efecto}
+                        </li>
+                      ))}
+                    </ul>
+                    {res.ajusteReglas !== 0 && (
+                      <p className="mt-1.5 text-[11px] font-bold text-brand-verdeTexto">
+                        {res.ajusteReglas < 0 ? 'Ahorro' : 'Ajuste'} sobre tarifa: {fmtEUR(Math.abs(res.ajusteReglas))}
+                        {esMes ? '/mes' : ''} (tarifa {fmtEUR(res.precioBase)}{esMes ? '/mes' : ''})
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Plan de pagos según modelo */}
@@ -386,7 +439,7 @@ export default function GeneradorOfertas({ publico = false }) {
                     {estado.parcial ? (
                       <p className="mt-1 text-xs font-medium text-white/80">
                         {publico
-                          ? 'Hemos recibido tu solicitud. Un asesor te enviará la propuesta en PDF muy pronto.'
+                          ? 'Hemos recibido tu solicitud. Una persona del equipo te enviará la propuesta en PDF muy pronto.'
                           : `Oferta ${estado.numero} registrada. El documento se está generando; si no aparece, puedes regenerarlo desde Ofertas.`}
                       </p>
                     ) : (
@@ -407,9 +460,15 @@ export default function GeneradorOfertas({ publico = false }) {
                 )}
               </>
             )}
-            <p className="mt-5 border-t border-white/15 pt-4 text-[11px] font-medium leading-relaxed text-white/50">
-              Canarias: IGIC no aplica (0% / exento). El IVA del 21 % se sustituye por la base sin impuesto.
-            </p>
+            <div className="mt-5 border-t border-white/15 pt-4 text-[11px] font-medium leading-relaxed text-white/60">
+              <p className="rounded-lg bg-white/5 p-2.5 text-white/70">
+                <b className="block text-white/85">Aviso sobre esta oferta</b>
+                {publico ? DISCLAIMER_OFERTA : DISCLAIMER_CORTO}
+              </p>
+              <p className="mt-2 text-white/50">
+                Canarias: IGIC no aplica (0 % / exento). El IVA del 21 % se sustituye por la base sin impuesto.
+              </p>
+            </div>
           </div>
         </aside>
       </div>

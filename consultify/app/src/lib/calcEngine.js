@@ -5,6 +5,8 @@
 // 9+14+45 Impl.=1.312→1.325 · 9+14+27+45 Rel.=696→700
 // ============================================================
 
+import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.js';
+
 export const NORMAS = [
   { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
   { id: '14001',    nombre: 'ISO 14001', desc: 'Gestión ambiental',              nivel: 'J3', hApoyo: 46 },
@@ -124,7 +126,18 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // Validación de plazo mínimo (no bloquea el cálculo; el front decide si genera).
   const plazoOk = mesesProyecto >= minMeses;
 
-  const raw = { J2: 0, J3: 0, Senior: 0 };
+  // ── Reglas comerciales vigentes y aplicables a esta oferta ──
+  const ctx = {
+    modelo: modeloId, normas: normaIds, nSistemas: normas.length,
+    tiene9001, canal: opts.canal || 'interno', fecha: opts.fecha,
+  };
+  const reglas = reglasAplicables(opts.reglas, ctx);
+  const traza = [];
+  const anotar = (r, detalle) => traza.push({
+    id: r.id, nombre: r.nombre, tipo: r.tipo, efecto: describirEfecto(r), detalle,
+  });
+
+  const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
 
   if (m.tipo === 'bolsa') {
     for (const n of normas) raw[n.nivel] += n.hApoyo * (n.id === '9001' ? f9001 : 1);
@@ -140,17 +153,65 @@ export function calcular(normaIds, modeloId, opts = {}) {
   if (normas.length <= 4) raw.J3 += coord;
   else raw.Senior += coord;
 
+  // ── Regla 1 · OPTIMIZACIÓN: ajusta las horas; el precio deriva de ellas ──
+  const hSinReglas = Math.ceil(raw.J1) + Math.ceil(raw.J2) + Math.ceil(raw.J3) + Math.ceil(raw.Senior);
+  for (const r of reglas.filter((x) => x.tipo === 'optimizacion')) {
+    const f = factorOptimizacion(r);
+    if (f === 1) continue;
+    const niveles = r.nivel ? [r.nivel] : ['J1', 'J2', 'J3', 'Senior'];
+    for (const nv of niveles) raw[nv] = (raw[nv] || 0) * f;
+    anotar(r, 'horas ajustadas');
+  }
+
   const h = {
+    J1: Math.ceil(raw.J1),
     J2: Math.ceil(raw.J2),
     J3: Math.ceil(raw.J3),
     Senior: Math.ceil(raw.Senior),
   };
-  const hTotal = h.J2 + h.J3 + h.Senior;
-  const coste = h.J2 * TARIFA.J2 + h.J3 * TARIFA.J3 + h.Senior * TARIFA.Senior;
-  const precioExacto = Math.round(coste * (1 + MARGEN));
+  const hTotal = h.J1 + h.J2 + h.J3 + h.Senior;
+
+  // ── Regla 2 · PRECIO/HORA: sustituye la tarifa de catálogo ──
+  const tarifa = { ...TARIFA };
+  for (const r of reglas.filter((x) => x.tipo === 'precio_hora')) {
+    const v = Number(r.valor);
+    if (!Number.isFinite(v) || v <= 0) continue;
+    if (r.nivel) tarifa[r.nivel] = v;
+    else for (const k of Object.keys(tarifa)) tarifa[k] = v;
+    anotar(r, r.nivel ? `tarifa ${r.nivel} = ${v} €/h` : `todas las tarifas a ${v} €/h`);
+  }
+
+  // ── Regla 3 · MARGEN ──
+  let margen = MARGEN;
+  for (const r of reglas.filter((x) => x.tipo === 'margen')) {
+    const v = Number(r.valor);
+    if (!Number.isFinite(v) || v < 0) continue;
+    margen = v / 100;
+    anotar(r, `margen ${v} %`);
+  }
+
+  const coste = h.J1 * tarifa.J1 + h.J2 * tarifa.J2 + h.J3 * tarifa.J3 + h.Senior * tarifa.Senior;
+  const precioExacto = Math.round(coste * (1 + margen));
 
   let precioCatalogo = Math.ceil(precioExacto / m.paso) * m.paso;
   if (m.suelo > 0) precioCatalogo = Math.max(m.suelo, precioCatalogo);
+
+  // ── Regla 4 · DESCUENTOS y RECARGOS sobre el precio de catálogo ──
+  // Se aplican DESPUÉS del suelo: si no, un descuento sobre una cuota que ya
+  // está en el suelo de 350 € no se vería nunca.
+  const precioBase = precioCatalogo;
+  for (const r of reglas.filter((x) => x.tipo === 'descuento' || x.tipo === 'recargo')) {
+    const v = Number(r.valor);
+    if (!Number.isFinite(v) || v <= 0) continue;
+    const signo = r.tipo === 'descuento' ? -1 : 1;
+    const antes = precioCatalogo;
+    precioCatalogo = r.unidad === 'euros'
+      ? precioCatalogo + signo * v
+      : precioCatalogo * (1 + signo * v / 100);
+    precioCatalogo = Math.max(0, Math.round(precioCatalogo * 100) / 100);
+    anotar(r, `${fmtEURplano(antes)} → ${fmtEURplano(precioCatalogo)}`);
+  }
+  const ajusteReglas = Math.round((precioCatalogo - precioBase) * 100) / 100;
 
   const iva = Math.round(precioCatalogo * IVA * 100) / 100;
   const totalConIva = Math.round((precioCatalogo + iva) * 100) / 100;
@@ -187,9 +248,15 @@ export function calcular(normaIds, modeloId, opts = {}) {
     tiene9001,
     horas: h,
     hTotal,
+    hSinReglas,
     coste,
     precioExacto,
     precioCatalogo,
+    precioBase,
+    ajusteReglas,
+    margen,
+    tarifa,
+    reglas: traza,
     iva,
     totalConIva,
     fraccionado,
@@ -201,6 +268,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
 export function compararModelos(normaIds) {
   return MODELO_IDS.map(mid => calcular(normaIds, mid)).filter(Boolean);
 }
+
+// Formato corto para las trazas de reglas (sin dependencias de Intl en SSR).
+const fmtEURplano = (n) => `${Math.round(n * 100) / 100} €`;
 
 export const fmtEUR = (n) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
