@@ -850,6 +850,36 @@
     .footer-bot a, .footer-links a { display: inline-block; padding: 5px 0; }
   }
 
+  /* ------------ LOGOS DE LAS EMPRESAS DEL GRUPO ------------
+     Antes cada logo iba dentro de un recuadro navy con estilos en línea, y
+     cada uno a una altura distinta (44, 72, 96px), así que ni se alineaban
+     entre sí ni con el nombre de la empresa. Ahora:
+       · fondo transparente, sin caja
+       · caja de alto FIJO con object-fit: los tres ocupan el mismo espacio
+         vertical aunque uno sea horizontal y otros lleven el texto debajo
+       · alineados a la izquierda, en la misma línea que el nombre */
+  .logo-empresa {
+    display: flex; align-items: center; justify-content: flex-start;
+    height: 76px; margin-bottom: 18px;
+  }
+  .logo-empresa img {
+    max-height: 100%; max-width: 100%; width: auto; height: auto;
+    object-fit: contain; object-position: left center;
+  }
+  .logo-empresa-hero {
+    display: flex; align-items: center; justify-content: flex-start;
+    height: 104px; margin-bottom: 26px;
+  }
+  .logo-empresa-hero img {
+    max-height: 100%; max-width: 460px; width: auto; height: auto;
+    object-fit: contain; object-position: left center;
+  }
+  @media (max-width: 640px) {
+    .logo-empresa { height: 62px; margin-bottom: 14px; }
+    .logo-empresa-hero { height: 78px; margin-bottom: 20px; }
+    .logo-empresa-hero img { max-width: 100%; }
+  }
+
   /* --- TuConsultor extras --- */
   .models-grid.four { grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 1100px) { .models-grid.four { grid-template-columns: repeat(2, 1fr); } }
