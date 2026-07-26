@@ -4,12 +4,15 @@ import { listTable } from '../../lib/data.js';
 import { supabase } from '../../lib/supabase.js';
 import { NORMA_BY_ID, fmtEUR, calcular } from '../../lib/calcEngine.js';
 import { useAuth } from '../../lib/auth.jsx';
+import { NavLink } from 'react-router-dom';
+import { ROL_LABEL, ROL_CLIENTE_LABEL, can } from '../../lib/permisos.js';
 
 const NAVY = '#0A2A6C', ORANGE = '#F5A623';
 const PIE_COLORS = ['#0A2A6C', '#2B4A93', '#4C6BB4', '#7E97CE', '#F5A623'];
 
 export default function Dashboard() {
-  const { verEconomico } = useAuth();
+  const { verEconomico, role, user, demo } = useAuth();
+  const [miembros, setMiembros] = useState([]);
   const [consultores, setConsultores] = useState([]);
   const [proyectos, setProyectos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -21,6 +24,8 @@ export default function Dashboard() {
     listTable('proyectos_cliente').then(setProyectos).catch(() => setProyectos([]));
     listTable('clientes').then(setClientes).catch(() => setClientes([]));
     listTable('cliente_tareas').then(setTareas).catch(() => setTareas([]));
+    if (demo) listTable('clientes').then(cs => setMiembros((cs || []).slice(0, 1).map(c => ({ id: 1, cliente_id: c.id, usuario_id: 'demo', rol_cliente: 'administrador' })))).catch(() => setMiembros([]));
+    else listTable('miembros_cliente').then(setMiembros).catch(() => setMiembros([]));
     setReady(true);
   };
   useEffect(cargar, []);
@@ -94,7 +99,35 @@ export default function Dashboard() {
   if (!ready) return <p className="font-semibold text-navy-400">Cargando…</p>;
 
   return (
-    <div className="space-y-8">
+    <div>
+      {/* ── Nosotros: rol interno, permisos y clientes activos ── */}
+      <div className="card mb-5 !p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="eyebrow !mb-0">Nosotros</p>
+            <span className="chip bg-brand-orange/15 text-brand-orange">{ROL_LABEL[role] || role}</span>
+            {role === 'superadmin' && <span className="chip bg-brand-verde/15 text-brand-verdeTexto">Acceso total</span>}
+            {can.gestionarEquipo(role) && role !== 'superadmin' && <span className="chip bg-brand-verde/15 text-brand-verdeTexto">Gestión de equipo</span>}
+            {verEconomico && <span className="chip bg-sky-500/15 text-sky-300">Ve económico</span>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#7FA7B4]">Clientes activos</p>
+            {(role === 'superadmin' || role === 'admin'
+              ? clientes
+              : clientes.filter(c => miembros.some(m => m.cliente_id === c.id && (demo || m.usuario_id === user?.id)))
+            ).slice(0, 8).map(c => {
+              const m = miembros.find(x => x.cliente_id === c.id && (demo || x.usuario_id === user?.id));
+              return (
+                <NavLink key={c.id} to="../clientes" className="chip bg-[#0D3242] text-[#CFE3E9] hover:ring-1 hover:ring-brand-verde/50" title={m ? ROL_CLIENTE_LABEL[m.rol_cliente] : 'Sin asignación directa'}>
+                  {c.nombre || c.empresa || `#${c.id}`}{m ? ` · ${m.rol_cliente === 'administrador' ? 'jefe' : m.rol_cliente.replace('_', ' ')}` : ''}
+                </NavLink>
+              );
+            })}
+            {!clientes.length && <span className="text-xs text-[#7FA7B4]">Sin clientes todavía</span>}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {verEconomico ? (
           <>
@@ -205,6 +238,7 @@ export default function Dashboard() {
           {!carga.length && <p className="text-sm font-medium text-navy-400">Sin consultores activos. Añádelos en la pestaña Equipo.</p>}
         </div>
       </div>
+    </div>
     </div>
   );
 }

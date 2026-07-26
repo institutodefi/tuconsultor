@@ -64,6 +64,13 @@ export const GRUPOS_PORTAL = [
 export const TABS_PORTAL = GRUPOS_PORTAL.flatMap((g) => g.items);
 
 // Capacidades puntuales
+export const ROLES_CLIENTE = ['administrador', 'consultor', 'usuario_cliente'];
+export const ROL_CLIENTE_LABEL = {
+  administrador: 'Administrador (jefe del proyecto)',
+  consultor: 'Consultor',
+  usuario_cliente: 'Usuario cliente',
+};
+
 export const can = {
   // Ver importes, márgenes, MRR, calculadora → SOLO superadmin
   verEconomico: (rol) => rol === 'superadmin',

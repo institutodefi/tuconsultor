@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth.jsx';
 import { ROL_LABEL } from '../../lib/permisos.js';
 import { NORMAS } from '../../lib/calcEngine.js';
+import { ROLES_CLIENTE, ROL_CLIENTE_LABEL } from '../../lib/permisos.js';
+import { listTable, insertRow, deleteRow, updateRow } from '../../lib/data.js';
 
 const ROLES_ASIGNABLES = ['superadmin', 'admin', 'director', 'consultor', 'gestion'];
 const ROLES_DOMINIO = ['director', 'consultor'];
@@ -33,6 +35,39 @@ export default function Accesos() {
   // Formulario de invitación (incluye datos de agenda: nivel, normas, capacidad)
   const [inv, setInv] = useState({ email: '', nombre: '', apellidos: '', rol: 'consultor', nivel: '', normas: [], capacidad_clientes: 12 });
   const [invBusy, setInvBusy] = useState(false);
+  const [clientes, setClientes] = useState([]);
+  const [miembros, setMiembros] = useState([]);
+  const [asignando, setAsignando] = useState(null); // id de usuario con el panel abierto
+  const [nuevo, setNuevo] = useState({ cliente_id: '', rol_cliente: 'consultor' });
+
+  async function cargarClientes() {
+    try {
+      const [c, m] = await Promise.all([
+        listTable('clientes').catch(() => []),
+        listTable('miembros_cliente').catch(() => []),
+      ]);
+      setClientes(c || []); setMiembros(m || []);
+    } catch { /* sin datos */ }
+  }
+  useEffect(() => { if (esSuper) cargarClientes(); }, [esSuper]);
+
+  async function asignar(usuarioId) {
+    if (!nuevo.cliente_id) return;
+    setMsg(null); setError(null);
+    try {
+      await insertRow('miembros_cliente', { usuario_id: usuarioId, cliente_id: nuevo.cliente_id, rol_cliente: nuevo.rol_cliente });
+      setNuevo({ cliente_id: '', rol_cliente: 'consultor' });
+      setMsg('Cliente asignado.'); cargarClientes();
+    } catch { setError('No se pudo asignar (¿ya estaba asignado?).'); }
+  }
+  async function quitarAsignacion(m) {
+    try { await deleteRow('miembros_cliente', m.id); cargarClientes(); }
+    catch { setError('No se pudo quitar la asignación.'); }
+  }
+  async function cambiarRolCliente(m, rol) {
+    try { await updateRow('miembros_cliente', m.id, { rol_cliente: rol }); cargarClientes(); }
+    catch { setError('No se pudo cambiar el rol en el cliente.'); }
+  }
 
   async function cargar() {
     setCargando(true); setError(null);
@@ -208,7 +243,45 @@ export default function Accesos() {
                           {ROLES_ASIGNABLES.map(r => <option key={r} value={r}>{ROL_LABEL[r]}</option>)}
                         </select>
                       </td>
-                      <td className="px-3 py-3">{u.nivel ? <Badge>{u.nivel}</Badge> : <span className="text-navy-300">—</span>}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-col gap-1">
+                          {u.nivel ? <Badge>{u.nivel}</Badge> : <span className="text-navy-300">—</span>}
+                          <button onClick={() => { setAsignando(asignando === u.id ? null : u.id); setNuevo({ cliente_id: '', rol_cliente: u.rol === 'cliente' ? 'usuario_cliente' : 'consultor' }); }}
+                            className="text-left text-[11px] font-bold text-brand-orangeDark hover:underline">
+                            Clientes ({miembros.filter(m => m.usuario_id === u.id).length}) {asignando === u.id ? '▴' : '▾'}
+                          </button>
+                          {asignando === u.id && (
+                            <div className="mt-1 w-64 rounded-xl border border-navy-100 bg-navy-50/60 p-2">
+                              {miembros.filter(m => m.usuario_id === u.id).map(m => {
+                                const c = clientes.find(x => x.id === m.cliente_id);
+                                return (
+                                  <div key={m.id} className="mb-1 flex items-center justify-between gap-1 rounded-lg bg-white px-2 py-1">
+                                    <span className="truncate text-[11px] font-bold text-navy-800">{c?.nombre || c?.empresa || `#${m.cliente_id}`}</span>
+                                    <select value={m.rol_cliente} onChange={e => cambiarRolCliente(m, e.target.value)}
+                                      className="rounded border border-navy-100 px-1 py-0.5 text-[10px] font-bold text-navy-600">
+                                      {ROLES_CLIENTE.filter(r => u.rol === 'cliente' || r !== 'usuario_cliente').map(r => <option key={r} value={r}>{ROL_CLIENTE_LABEL[r]}</option>)}
+                                    </select>
+                                    <button onClick={() => quitarAsignacion(m)} className="text-xs font-bold text-red-500" title="Quitar">✕</button>
+                                  </div>
+                                );
+                              })}
+                              <div className="mt-1.5 flex items-center gap-1">
+                                <select value={nuevo.cliente_id} onChange={e => setNuevo(n => ({ ...n, cliente_id: e.target.value }))}
+                                  className="w-28 rounded border border-navy-100 px-1 py-1 text-[10px] font-bold text-navy-600">
+                                  <option value="">Cliente…</option>
+                                  {clientes.filter(c => !miembros.some(m => m.usuario_id === u.id && m.cliente_id === c.id)).map(c =>
+                                    <option key={c.id} value={c.id}>{c.nombre || c.empresa || `#${c.id}`}</option>)}
+                                </select>
+                                <select value={nuevo.rol_cliente} onChange={e => setNuevo(n => ({ ...n, rol_cliente: e.target.value }))}
+                                  className="rounded border border-navy-100 px-1 py-1 text-[10px] font-bold text-navy-600">
+                                  {ROLES_CLIENTE.filter(r => u.rol === 'cliente' || r !== 'usuario_cliente').map(r => <option key={r} value={r}>{ROL_CLIENTE_LABEL[r]}</option>)}
+                                </select>
+                                <button onClick={() => asignar(u.id)} className="rounded-lg bg-brand-orange px-2 py-1 text-[10px] font-extrabold text-white">Añadir</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-3">{u.activo ? <Badge tone="green">Activo</Badge> : <Badge tone="red">Desactivado</Badge>}</td>
                       <td className="px-3 py-3 text-navy-500">{fecha(u.ultimo_acceso)}</td>
                       <td className="px-5 py-3">
