@@ -104,7 +104,10 @@ export async function insertRow(table, row) {
                 (msg.includes('permission denied') && msg.includes('users'));
   if (esRls) {
     const { error: e2 } = await supabase.from(table).insert(row);
-    if (!e2) return { ...row };          // alta correcta; sin id de vuelta
+    // La fila se ha creado, pero la política de LECTURA no la devuelve: no
+    // tenemos id. Se marca para que la interfaz pueda decir la verdad en vez
+    // de anunciar un alta que no puede comprobar.
+    if (!e2) return { ...row, _sinLecturaDeVuelta: true };
     throw e2;                            // si también falla, propagamos el real
   }
   // 3) Columna ausente en el schema cache de PostgREST (p.ej. migración pendiente

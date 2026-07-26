@@ -1,8 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   PREVIEW DE CARGA · Orbita 360 · con selector de idioma
+   CORTINA DE BIENVENIDA · con selector de idioma
    ---------------------------------------------------------------------------
-   Cortina con la marca animada mientras carga la portada, y con los cinco
-   idiomas del sitio a la vista para poder elegir desde el primer segundo.
+   Saluda a TuConsultor mientras carga la portada, con los cinco idiomas del
+   sitio a la vista para poder elegir desde el primer segundo.
+
+   La animación es el isotipo de la órbita SIN el logotipo «Orbita 360»
+   (marca/orbita-esfera-anim.svg): quien entra en tuconsultor.com viene a
+   TuConsultor, y cambiarle la marca en la primera pantalla despista. Orbita
+   360 se presenta más abajo, en su anuncio del banner.
 
    Reglas de sensatez, porque una pantalla de carga mal hecha es una barrera:
      · Solo en la primera visita de la sesión (sessionStorage).
@@ -42,13 +47,25 @@
     { k: 'ar', nombre: 'العربية',   corto: 'AR', bandera: '🇸🇦', raiz: '/ar/' },
   ];
 
+  // Saludo grande en el idioma de la página, y debajo la bienvenida en los
+  // otros cuatro: la cortina es la puerta de un sitio en cinco idiomas y así lo
+  // dice desde el primer segundo, sin necesidad de rotar (la cortina dura menos
+  // de un segundo y una rotación no se llegaría a ver).
   var T = {
-    es: { cargando: 'Cargando', elige: 'Elige tu idioma', saltar: 'Entrar' },
-    en: { cargando: 'Loading',  elige: 'Choose your language', saltar: 'Enter' },
-    fr: { cargando: 'Chargement', elige: 'Choisissez votre langue', saltar: 'Entrer' },
-    de: { cargando: 'Wird geladen', elige: 'Sprache wählen', saltar: 'Eintreten' },
-    ar: { cargando: 'جارٍ التحميل', elige: 'اختر لغتك', saltar: 'ابدأ' },
+    es: { cargando: 'Cargando', elige: 'Elige tu idioma', saltar: 'Entrar',
+          saluda: ['Bienvenido a', 'TuConsultor'] },
+    en: { cargando: 'Loading',  elige: 'Choose your language', saltar: 'Enter',
+          saluda: ['Welcome to', 'TuConsultor'] },
+    fr: { cargando: 'Chargement', elige: 'Choisissez votre langue', saltar: 'Entrer',
+          saluda: ['Bienvenue chez', 'TuConsultor'] },
+    de: { cargando: 'Wird geladen', elige: 'Sprache wählen', saltar: 'Eintreten',
+          saluda: ['Willkommen bei', 'TuConsultor'] },
+    ar: { cargando: 'جارٍ التحميل', elige: 'اختر لغتك', saltar: 'ابدأ',
+          saluda: ['مرحبًا بك في', 'TuConsultor'] },
   };
+
+  // Solo la palabra, para la línea multilingüe.
+  var BIENVENIDA = { es: 'Bienvenido', en: 'Welcome', fr: 'Bienvenue', de: 'Willkommen', ar: 'مرحبًا' };
 
   var lang = (document.documentElement.getAttribute('lang') || 'es').slice(0, 2).toLowerCase();
   var t = T[lang] || T.es;
@@ -71,7 +88,16 @@
     + 'transition:opacity .45s ease,visibility .45s ease}'
     + '#tc-preview.tc-fuera{opacity:0;visibility:hidden;pointer-events:none}'
     + '#tc-preview .tc-p-caja{display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px}'
-    + '#tc-preview img{width:min(190px,38vw);height:auto;display:block}'
+    + '#tc-preview img{width:min(150px,32vw);height:auto;display:block}'
+    + "#tc-preview .tc-p-saludo{margin:0;text-align:center;"
+    + "font-family:'Rubik','Noto Sans Arabic',system-ui,sans-serif;letter-spacing:-.015em;"
+    + 'font-weight:600;line-height:1.15;font-size:clamp(1.35rem,3.4vw,2.1rem);color:#fff}'
+    + '#tc-preview .tc-p-saludo b{display:block;font-weight:700;color:var(--tc-naranja,#F99001)}'
+    + '#tc-preview .tc-p-otros{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;'
+    + "margin:0;font:500 12.5px/1.4 'Rubik','Noto Sans Arabic',system-ui,sans-serif;"
+    + "color:rgba(255,255,255,.45)}"
+    + '#tc-preview .tc-p-otros span{white-space:nowrap}'
+    + '#tc-preview .tc-p-otros span+span::before{content:\'·\';margin-inline-end:12px;opacity:.5}'
     + '#tc-preview .tc-p-linea{width:min(170px,34vw);height:2px;border-radius:2px;'
     + 'background:rgba(255,255,255,.14);overflow:hidden}'
     + '#tc-preview .tc-p-linea i{display:block;height:100%;width:35%;border-radius:2px;'
@@ -102,7 +128,7 @@
   var capa = document.createElement('div');
   capa.id = 'tc-preview';
   capa.setAttribute('role', 'status');
-  capa.setAttribute('aria-label', t.cargando);
+  capa.setAttribute('aria-label', t.saluda.join(' ') + ' · ' + t.cargando);
   if (rtl) capa.setAttribute('dir', 'rtl');
 
   var botones = IDIOMAS.map(function (i) {
@@ -115,7 +141,10 @@
 
   capa.innerHTML = ''
     + '<div class="tc-p-caja">'
-    + '<img src="/marca/orbita-pmtool.svg" alt="Orbita 360" width="300" height="350" />'
+    + '<img src="/marca/orbita-esfera-anim.svg" alt="TuConsultor" width="300" height="300" />'
+    + '<p class="tc-p-saludo">' + t.saluda[0] + '<b>' + t.saluda[1] + '</b></p>'
+    + '<p class="tc-p-otros">' + IDIOMAS.filter(function (i) { return i.k !== lang; })
+        .map(function (i) { return '<span lang="' + i.k + '">' + BIENVENIDA[i.k] + '</span>'; }).join('') + '</p>'
     + '<div class="tc-p-linea"><i></i></div>'
     + '<p class="tc-p-rot">' + t.elige + '</p>'
     + '<nav class="tc-p-idiomas" aria-label="' + t.elige + '">' + botones + '</nav>'

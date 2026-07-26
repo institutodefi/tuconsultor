@@ -4,6 +4,7 @@ import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES } from '../../lib/crm.js';
 import FichaEmpresa from './FichaEmpresa.jsx';
+import { diagnosticarCrm, informeTexto } from '../../lib/diagnosticoCrm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // EMPRESAS · pestaña única del CRM.
@@ -35,6 +36,13 @@ export default function Empresas() {
   const [q, setQ] = useState('');
   const [filtro, setFiltro] = useState('todas');
   const [nueva, setNueva] = useState(false);
+  const [diagBd, setDiagBd] = useState(null);   // comprobación de escritura en la base
+
+  async function comprobarBd() {
+    setDiagBd({ cargando: true });
+    try { setDiagBd(await diagnosticarCrm()); }
+    catch (e) { setDiagBd({ conclusion: `La comprobación falló: ${e?.message || e}`, problemas: [] }); }
+  }
 
   const sel = params.get('e');
   const seleccionar = (id) => { setNueva(false); if (id) setParams({ e: String(id) }); else setParams({}); };
@@ -112,10 +120,56 @@ export default function Empresas() {
             Clientes, proveedores y potenciales en una sola ficha. Cada empresa lleva sus contactos y, si es proveedor, su homologación.
           </p>
         </div>
-        {puedeEditar && <button onClick={() => setNueva(true)} className="btn-orange">+ Nueva empresa</button>}
+        <div className="flex flex-wrap gap-2">
+          {['superadmin', 'admin'].includes(role) && (
+            <button onClick={comprobarBd} disabled={diagBd?.cargando} className="btn-ghost !px-3 !py-2 text-xs">
+              {diagBd?.cargando ? 'Comprobando…' : '⚙ Comprobar base de datos'}
+            </button>
+          )}
+          {puedeEditar && <button onClick={() => setNueva(true)} className="btn-orange">+ Nueva empresa</button>}
+        </div>
       </div>
 
       {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orange">Modo demo: los cambios no se guardan.</div>}
+
+      {diagBd && !diagBd.cargando && (
+        <div className="space-y-2 rounded-xl border border-[#1E5468] bg-[#0D3242] p-3 text-[11.5px] leading-snug text-[#B9D2DA]">
+          <div className="flex items-start justify-between gap-3">
+            <p className={`font-extrabold ${diagBd.problemas?.length ? 'text-red-300' : 'text-emerald-300'}`}>{diagBd.conclusion}</p>
+            <div className="flex shrink-0 gap-2">
+              <button onClick={() => navigator.clipboard?.writeText(informeTexto(diagBd))}
+                className="rounded border border-[#1E5468] px-2 py-1 text-[11px] font-bold text-[#9FC0CB] hover:border-brand-verde">copiar informe</button>
+              <button onClick={() => setDiagBd(null)} className="text-[#7FA7B4] hover:text-white">×</button>
+            </div>
+          </div>
+
+          {diagBd.sesion && (
+            <p>Sesión: <b className="text-[#EAF4F7]">{diagBd.sesion.email}</b>
+              {diagBd.perfil?.fila
+                ? <> · perfiles: rol <b className="text-[#EAF4F7]">{diagBd.perfil.fila.rol}</b>, activo <b className={diagBd.perfil.fila.activo === true ? 'text-emerald-300' : 'text-red-300'}>{String(diagBd.perfil.fila.activo)}</b></>
+                : <b className="text-red-300"> · sin fila en perfiles</b>}
+            </p>
+          )}
+
+          {Object.entries(diagBd.tablas || {}).map(([t, x]) => (
+            <p key={t}>
+              <b className="text-[#EAF4F7]">{t}</b> ·
+              lectura <span className={x.lectura?.ok ? 'text-emerald-300' : 'text-red-300'}>{x.lectura?.ok ? 'ok' : 'no'}</span> ·
+              escritura <span className={x.escritura?.ok ? (x.escritura.leidaDeVuelta ? 'text-emerald-300' : 'text-brand-orange') : 'text-red-300'}>
+                {x.escritura?.ok ? (x.escritura.leidaDeVuelta ? 'ok' : 'crea pero no lee') : 'no'}
+              </span>
+              {x.escritura && !x.escritura.ok && <> · <code className="text-[#EAF4F7]">{x.escritura.code} {x.escritura.message}</code></>}
+              {x.columnasAusentes?.length > 0 && <> · faltan columnas: <code className="text-red-300">{x.columnasAusentes.join(', ')}</code></>}
+            </p>
+          ))}
+
+          {diagBd.problemas?.length > 0 && (
+            <ul className="space-y-1 border-t border-[#1E5468] pt-2 font-semibold text-red-300">
+              {diagBd.problemas.map((pr, i) => <li key={i}>· {pr}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
 
       {(rojas > 0 || huerfanos > 0) && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-red-500/10 p-3 text-xs font-bold text-red-300">
