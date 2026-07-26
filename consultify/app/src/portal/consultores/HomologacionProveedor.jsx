@@ -32,7 +32,7 @@ const SUGERENCIAS = [
 
 const VACIA = { concepto: '', requisito: '', estado: 'pendiente', obligatorio: true, fecha_validez: '', notas: '' };
 
-export default function HomologacionProveedor({ empresa, puedeEditar, onCambio }) {
+export default function HomologacionProveedor({ empresa, puedeEditar, onCambio, desnudo = false }) {
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [nueva, setNueva] = useState({ ...VACIA });
@@ -110,7 +110,7 @@ export default function HomologacionProveedor({ empresa, puedeEditar, onCambio }
   const homologado = obligatorias.length > 0 && validadas.length === obligatorias.length && caducadas.length === 0;
 
   return (
-    <div className="card space-y-4">
+    <div className={desnudo ? "space-y-3" : "card space-y-4"}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">Condiciones de homologación</h4>

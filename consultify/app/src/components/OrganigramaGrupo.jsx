@@ -42,7 +42,7 @@ function aplanar(nodo) {
 
 const recortar = (s, n) => (String(s || '').length > n ? String(s).slice(0, n - 1) + '…' : String(s || ''));
 
-export default function OrganigramaGrupo({ empresas, empresaId, onSeleccionar }) {
+export default function OrganigramaGrupo({ empresas, empresaId, onSeleccionar, desnudo = false }) {
   const datos = useMemo(() => {
     const raiz = raizDelGrupo(empresas, empresaId);
     if (!raiz) return null;
@@ -58,7 +58,7 @@ export default function OrganigramaGrupo({ empresas, empresaId, onSeleccionar })
   const vbH = alturaTotal + MARGEN * 2;
 
   return (
-    <div className="card">
+    <div className={desnudo ? '' : 'card'}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">Estructura del grupo</h4>

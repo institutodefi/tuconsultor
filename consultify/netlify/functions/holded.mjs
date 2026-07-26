@@ -128,11 +128,25 @@ function listaContactos(data) {
 
 // El CIF va en `code` (confirmado en la respuesta real de la v2). Comprobamos
 // también las variantes con guion bajo por robustez.
-const cifDe = (x) => {
-  const cands = [x?.code, x?.vat_number, x?.vatnumber, x?.vatNumber, x?.custom_id, x?.customId, x?.trade_name, x?.nif, x?.cif];
-  for (const c of cands) { const n = norm(c); if (n) return n; }
-  return '';
+// Todos los campos donde Holded puede llevar el CIF, según versión de API y
+// cómo se haya dado de alta el contacto.
+//
+// OJO: hay que comparar contra TODOS, no quedarse con el primero que venga
+// relleno. Si el contacto tiene un código interno en `code` (tipo CL-0001) y el
+// CIF real en `vat_number`, devolver solo `code` hace que la búsqueda no
+// encuentre nunca al cliente aunque esté ahí. `trade_name` se excluye a
+// propósito: es el nombre comercial, nunca un CIF, y venía tapando al resto.
+const cifsDe = (x) => {
+  const cands = [x?.code, x?.vat_number, x?.vatnumber, x?.vatNumber, x?.taxNumber, x?.tax_number,
+                 x?.custom_id, x?.customId, x?.nif, x?.cif];
+  return cands.map(norm).filter(Boolean);
 };
+
+// Primer CIF encontrado (solo para mostrar/registrar, no para comparar).
+const cifDe = (x) => cifsDe(x)[0] || '';
+
+// ¿Este contacto de Holded corresponde al CIF que buscamos?
+const coincideCif = (x, objetivo) => !!objetivo && cifsDe(x).includes(objetivo);
 
 // Mapea un contacto de Holded a los campos de cliente de Consultify (para autocompletar).
 function deContactoHolded(x) {
@@ -207,7 +221,7 @@ async function buscarContactoPorCif(cif) {
     if (!r.ok) return { error: r };
     const lista = listaContactos(r.data);
     if (lista.length === 0) break;
-    const match = lista.find((x) => cifDe(x) === objetivo);
+    const match = lista.find((x) => coincideCif(x, objetivo));
     if (match) return { match, base: HOLDED_BASE };
     // ¿hay más páginas?
     const hayMas = r.data?.has_more === true && r.data?.cursor;

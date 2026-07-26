@@ -15,7 +15,7 @@ import { ROLES_CONTACTO, ROL_LABEL, emailValido } from '../../lib/crm.js';
 
 const VACIO = { nombre: '', apellidos: '', cargo: '', email: '', telefono: '', consentimiento_marketing: false };
 
-export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEditar, onCambio, onAbrirContacto }) {
+export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEditar, onCambio, onAbrirContacto, desnudo = false }) {
   const [asignando, setAsignando] = useState(null);   // rol al que se está asignando
   const [modo, setModo] = useState('buscar');         // buscar | crear
   const [busqueda, setBusqueda] = useState('');
@@ -245,13 +245,15 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
   );
 
   return (
-    <div className="card space-y-4">
-      <div>
-        <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">Contactos de la empresa</h4>
-        <p className="mt-0.5 text-xs text-[#7FA7B4]">
-          Los mismos registros que la pestaña Contactos: aquí solo se les asigna su papel en esta empresa.
-        </p>
-      </div>
+    <div className={desnudo ? 'space-y-2.5' : 'card space-y-4'}>
+      {!desnudo && (
+        <div>
+          <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">Contactos de la empresa</h4>
+          <p className="mt-0.5 text-xs text-[#7FA7B4]">
+            Los mismos registros que la pestaña Contactos: aquí solo se les asigna su papel en esta empresa.
+          </p>
+        </div>
+      )}
 
       {/* Tres roles nombrados */}
       <div className="space-y-2">
