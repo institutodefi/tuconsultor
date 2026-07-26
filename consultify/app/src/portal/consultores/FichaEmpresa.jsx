@@ -325,9 +325,25 @@ export default function FichaEmpresa({
               {diag.pruebas?.map((pr, i) => (
                 <p key={i}>
                   <span className={pr.ok ? 'text-emerald-300' : 'text-red-300'}>{pr.ok ? '✓' : '✗'}</span>{' '}
-                  <b>{pr.api}</b> · HTTP {pr.http}{pr.motivo ? ` · ${pr.motivo}` : ''}
+                  <b>{pr.api}</b> · HTTP {pr.http}
+                  {pr.respuesta_holded ? <> · respuesta de Holded: <code className="text-[#EAF4F7]">{pr.respuesta_holded}</code></> : (pr.motivo ? ` · ${pr.motivo}` : '')}
                 </p>
               ))}
+              {diag.huella_v2?.configurada && (
+                <p className="text-[#7FA7B4]">
+                  Clave v2: {diag.huella_v2.longitud} caracteres · {diag.huella_v2.empieza}…{diag.huella_v2.acaba}
+                  {diag.huella_v2.espacios_alrededor && <b className="text-red-300"> · ¡tiene espacios alrededor!</b>}
+                  {diag.huella_v2.salto_de_linea && <b className="text-red-300"> · ¡tiene un salto de línea!</b>}
+                  {diag.huella_v2.comillas && <b className="text-red-300"> · ¡está entre comillas!</b>}
+                  {diag.huella_v2.caracteres_raros && <b className="text-red-300"> · contiene caracteres extraños</b>}
+                </p>
+              )}
+              {diag.claves_distintas && diag.huella_v1?.configurada && (
+                <p className="text-[#7FA7B4]">
+                  Clave v1: {diag.huella_v1.longitud} caracteres · {diag.huella_v1.empieza}…{diag.huella_v1.acaba}
+                  {(diag.huella_v1.espacios_alrededor || diag.huella_v1.salto_de_linea || diag.huella_v1.comillas) && <b className="text-red-300"> · formato sospechoso</b>}
+                </p>
+              )}
               {diag.pruebas && (
                 <p className="text-[#7FA7B4]">
                   Claves configuradas en Netlify: v2 {diag.clave_v2_configurada ? 'sí' : 'no'} ·

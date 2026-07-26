@@ -41,6 +41,25 @@ function cabeceras(base) {
   return { ...comunes, Authorization: `Bearer ${CLAVE_V2()}` };
 }
 
+// Huella de una clave: lo justo para diagnosticar sin revelar el secreto.
+// Nunca devuelve la clave completa: solo longitud, extremos y anomalías.
+function huella(clave) {
+  const c = String(clave || '');
+  if (!c) return { configurada: false };
+  return {
+    configurada: true,
+    longitud: c.length,
+    empieza: c.slice(0, 4),
+    acaba: c.slice(-4),
+    // Anomalías típicas al pegar el valor en el panel de Netlify:
+    espacios_alrededor: c !== c.trim(),
+    salto_de_linea: /[\r\n]/.test(c),
+    comillas: /^["']|["']$/.test(c),
+    caracteres_raros: /[^A-Za-z0-9._\-]/.test(c.trim()),
+    solo_hex: /^[a-f0-9]+$/i.test(c.trim()),
+  };
+}
+
 // Mensaje legible a partir de la respuesta de error de Holded.
 function motivo(status, data) {
   const propio = data && typeof data === 'object'
@@ -290,6 +309,10 @@ export default async (req) => {
           ok: r.ok,
           contactos: r.ok && Array.isArray(r.data) ? r.data.length : null,
           motivo: r.ok ? null : motivo(r.status, r.data),
+          // Respuesta literal de Holded, recortada: es la pista más fiable.
+          respuesta_holded: r.ok ? null : (typeof r.data === 'string'
+            ? r.data.slice(0, 160)
+            : JSON.stringify(r.data || null).slice(0, 160)),
         });
       }
       const funciona = pruebas.find((p) => p.ok);
@@ -298,6 +321,8 @@ export default async (req) => {
         clave_v2_configurada: !!CLAVE_V2(),
         clave_v1_configurada: !!CLAVE_V1(),
         claves_distintas: CLAVE_V1() !== CLAVE_V2(),
+        huella_v2: huella(CLAVE_V2()),
+        huella_v1: huella(CLAVE_V1()),
         pruebas,
         conclusion: funciona
           ? `Conexión correcta por ${funciona.api}.`
