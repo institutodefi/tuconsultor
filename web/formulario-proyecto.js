@@ -138,11 +138,14 @@
     + '.tc-fp .tc-fp-sub a{color:var(--tc-naranja,#F99001);font-weight:600}'
     + '.tc-fp-grid{display:grid;gap:14px;grid-template-columns:1fr 1fr}'
     + '.tc-fp-full{grid-column:1/-1}'
-    + '@media(max-width:620px){.tc-fp-grid{grid-template-columns:1fr}.tc-fp{padding:18px}}'
+    + '@media(max-width:620px){.tc-fp-grid{grid-template-columns:1fr}.tc-fp{padding:16px}'
+    + '.tc-fp-envio{flex-direction:column;align-items:stretch;gap:10px}'
+    + '.tc-fp-envio .btn{width:100%;text-align:center;padding-block:13px}'
+    + '.tc-fp-nota{text-align:center}}'
     + '.tc-fp label{display:block;font-size:.74rem;font-weight:700;letter-spacing:.08em;'
     + 'text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:6px}'
     + '.tc-fp input,.tc-fp select,.tc-fp textarea{width:100%;box-sizing:border-box;'
-    + 'font-family:inherit;font-size:.95rem;color:#fff;background:rgba(255,255,255,.09);'
+    + 'font-family:inherit;font-size:16px;color:#fff;background:rgba(255,255,255,.09);'
     + 'border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:11px 13px;'
     + 'transition:border-color .15s,box-shadow .15s}'
     + '.tc-fp textarea{resize:vertical;min-height:96px}'
@@ -150,9 +153,9 @@
     + '.tc-fp select option{color:#12303D;background:#fff}'
     + '.tc-fp input:focus,.tc-fp select:focus,.tc-fp textarea:focus{outline:none;'
     + 'border-color:var(--tc-naranja,#F99001);box-shadow:0 0 0 3px rgba(249,144,1,.28)}'
-    + '.tc-fp-check{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;'
+    + '.tc-fp-check{display:flex;gap:10px;align-items:center;min-height:24px;font-size:.84rem;'
     + 'line-height:1.5;color:rgba(255,255,255,.78);cursor:pointer}'
-    + '.tc-fp-check input{width:17px;height:17px;flex:0 0 auto;margin-top:2px;accent-color:var(--tc-naranja,#F99001)}'
+    + '.tc-fp-check input{width:24px;height:24px;flex:0 0 auto;margin:0;accent-color:var(--tc-naranja,#F99001)}'
     + '.tc-fp-check a{color:var(--tc-naranja,#F99001);font-weight:600;text-decoration:underline}'
     + '.tc-fp-envio{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:14px;'
     + 'justify-content:space-between;margin-top:2px}'
@@ -162,7 +165,8 @@
     + '.tc-fp-ok{text-align:center;padding:14px 4px}'
     + '.tc-fp-ok h3{color:var(--tc-naranja,#F99001)}'
     + '.tc-fp-ok p{color:rgba(255,255,255,.8);font-size:.95rem;margin:6px 0 0}'
-    + '.tc-fp-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}';
+    + '.tc-fp-hp{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;'
+    + 'clip-path:inset(50%);white-space:nowrap;border:0}';
   var st = document.createElement('style');
   st.setAttribute('data-tc', 'formulario-proyecto');
   st.textContent = css;

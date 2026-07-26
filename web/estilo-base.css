@@ -822,6 +822,33 @@
   }
 
 
+  /* ------------ TELÉFONO (≤640px) ------------
+     La mayoría del tráfico entra por aquí: el hero ocupaba dos pantallas
+     enteras antes de que se leyera nada. Se recorta titular, subtítulo,
+     aire vertical y la fila de cifras. */
+  @media (max-width: 640px) {
+    .hero { padding: 30px 0 38px; }
+    section { padding: 40px 0; }
+    .hero h1 { font-size: clamp(29px, 8.6vw, 40px); letter-spacing: -0.01em; }
+    .hero .sub { font-size: 15px; line-height: 1.55; }
+    .hero .sub::before { display: none; }
+    .pre-tag { font-size: 9.5px; letter-spacing: 0.16em; }
+    .hero-actions { gap: 10px; }
+    .hero-actions .btn { flex: 1 1 auto; min-width: 46%; text-align: center; padding-block: 12px; }
+    .stats-row { gap: 18px 22px; margin-top: 26px; padding-top: 22px; }
+    .stats-row > * { flex: 1 1 42%; }
+    footer { padding: 34px 0 26px; }
+
+    /* Tarjetas: 36-38px de relleno es aire de escritorio. En una sola columna
+       encarece cada tarjeta en más de 100px de alto. */
+    .how-card, .model-card, .norm-card, .level-card { padding: 22px 20px; }
+    .how-grid, .models-grid, .norms-grid, .impl-grid { gap: 14px; }
+    .impl-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Enlaces legales del pie: 19px de alto no se aciertan con el pulgar.
+       WCAG 2.5.8 pide 24 como mínimo. */
+    .footer-bot a, .footer-links a { display: inline-block; padding: 5px 0; }
+  }
 
   /* --- TuConsultor extras --- */
   .models-grid.four { grid-template-columns: repeat(4, 1fr); }

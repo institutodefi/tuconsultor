@@ -1,97 +1,99 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- ESTADO DE LAS MIGRACIONES DEL CRM
 --
--- Solo mira: no cambia nada. Dice qué está aplicado en esta base de datos y,
--- al final, en qué orden hay que ejecutar lo que falte.
+-- UNA SOLA consulta a propósito: el editor SQL de Supabase solo muestra el
+-- resultado de la última instrucción, así que varios SELECT separados hacen que
+-- se pierda todo menos el final. Aquí va todo unido y ordenado.
 --
--- Pégalo entero en el editor SQL de Supabase.
+-- Solo lee. No cambia nada. Pégalo entero y ejecútalo.
+-- Cambia el correo de la última línea si no es el tuyo.
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ── 1 · Tablas ─────────────────────────────────────────────────────────────
-select 'TABLAS' as bloque, t as elemento,
-       case when to_regclass('public.' || t) is null then '✗ NO EXISTE' else '✓ existe' end as estado,
-       m as la_crea
-  from (values
-        ('empresas', 'v48'),
-        ('contactos', 'v48'),
-        ('empresa_contactos', 'v48'),
-        ('homologaciones', 'v56'),
-        ('reglas_comerciales', 'v57'),
-        ('leads', 'v54'),
-        ('perfiles', 'instalación')
-       ) as x(t, m);
+with correo as (select 'alejandro@tuconsultor.com'::text as email),
 
--- ── 2 · Columnas que la ficha de empresa da por hechas ─────────────────────
-select 'COLUMNAS empresas' as bloque, c as elemento,
-       case when exists (
-              select 1 from information_schema.columns
-               where table_schema = 'public' and table_name = 'empresas' and column_name = c
-            ) then '✓ existe' else '✗ FALTA' end as estado,
-       m as la_crea
-  from (values
-        ('cif', 'v48'), ('es_cliente', 'v48'), ('es_proveedor', 'v48'),
-        ('nombre_comercial', 'v56'), ('email', 'v56'), ('telefono', 'v56'),
-        ('movil', 'v56'), ('web', 'v56'), ('poblacion', 'v56'), ('cp', 'v56'),
-        ('provincia', 'v56'), ('pais', 'v56'), ('vat_id', 'v56'),
-        ('empresa_matriz_id', 'v56'), ('estado_comercial', 'v56'),
-        ('holded_datos', 'v56'), ('holded_sincronizado_en', 'v56'),
-        ('brevo_sincronizado_en', 'v56')
-       ) as x(c, m);
+tablas as (
+  select 1 as orden, 'TABLA' as bloque, t as elemento, m as la_crea,
+         case when to_regclass('public.' || t) is null then '✗ NO EXISTE' else '✓ existe' end as estado
+    from (values ('empresas','v48'), ('contactos','v48'), ('empresa_contactos','v48'),
+                 ('homologaciones','v56'), ('reglas_comerciales','v57'),
+                 ('leads','v54'), ('perfiles','instalación')) as x(t, m)
+),
 
--- ── 3 · Columna `rol` del puente empresa ↔ contacto (v56) ──────────────────
-select 'COLUMNAS empresa_contactos' as bloque, 'rol' as elemento,
-       case when exists (
-              select 1 from information_schema.columns
-               where table_schema = 'public' and table_name = 'empresa_contactos' and column_name = 'rol'
-            ) then '✓ existe' else '✗ FALTA' end as estado,
-       'v56' as la_crea;
+columnas as (
+  select 2 as orden, 'COLUMNA ' || tb as bloque, c as elemento, m as la_crea,
+         case when exists (select 1 from information_schema.columns i
+                            where i.table_schema = 'public' and i.table_name = tb and i.column_name = c)
+              then '✓ existe' else '✗ FALTA' end as estado
+    from (values
+      ('empresas','cif','v48'), ('empresas','es_cliente','v48'), ('empresas','es_proveedor','v48'),
+      ('empresas','nombre_comercial','v56'), ('empresas','email','v56'), ('empresas','telefono','v56'),
+      ('empresas','movil','v56'), ('empresas','web','v56'), ('empresas','poblacion','v56'),
+      ('empresas','cp','v56'), ('empresas','provincia','v56'), ('empresas','pais','v56'),
+      ('empresas','vat_id','v56'), ('empresas','empresa_matriz_id','v56'),
+      ('empresas','estado_comercial','v56'), ('empresas','holded_datos','v56'),
+      ('empresas','holded_sincronizado_en','v56'), ('empresas','brevo_sincronizado_en','v56'),
+      ('empresa_contactos','rol','v56'), ('contactos','consentimiento_marketing','v48')
+    ) as y(tb, c, m)
+),
 
--- ── 4 · Índice único del CIF (v58) ─────────────────────────────────────────
-select 'ÍNDICES' as bloque, 'empresas_cif_unico' as elemento,
-       case when exists (select 1 from pg_indexes
-                          where schemaname = 'public' and indexname = 'empresas_cif_unico')
-            then '✓ existe' else '✗ FALTA' end as estado,
-       'v58' as la_crea;
+indice as (
+  select 3 as orden, 'ÍNDICE' as bloque, 'empresas_cif_unico' as elemento, 'v58' as la_crea,
+         case when exists (select 1 from pg_indexes
+                            where schemaname = 'public' and indexname = 'empresas_cif_unico')
+              then '✓ existe' else '✗ FALTA' end as estado
+),
 
--- ── 5 · ¿La política de escritura admite ya a «director»? (v59) ────────────
-select 'POLÍTICAS' as bloque, tablename || ' · ' || policyname as elemento,
-       case when qual like '%director%' then '✓ v59 aplicada' else '✗ política antigua (v48)' end as estado,
-       'v59' as la_crea
-  from pg_policies
- where schemaname = 'public'
-   and tablename in ('empresas','contactos','empresa_contactos')
-   and policyname like '%_write';
+politicas as (
+  select 4 as orden, 'POLÍTICA' as bloque, tablename || ' · ' || policyname as elemento, 'v59' as la_crea,
+         case when qual like '%director%' then '✓ v59 aplicada' else '✗ política antigua (v48)' end as estado
+    from pg_policies
+   where schemaname = 'public' and policyname like '%\_write'
+     and tablename in ('empresas','contactos','empresa_contactos','homologaciones','reglas_comerciales')
+),
 
--- ── 6 · Perfiles bloqueados por `activo` en NULL ───────────────────────────
-select 'PERFILES' as bloque,
-       'activo en NULL' as elemento,
-       case when count(*) = 0 then '✓ ninguno' else '✗ ' || count(*) || ' perfil(es) bloqueado(s)' end as estado,
-       'v59 lo corrige' as la_crea
-  from public.perfiles where activo is null;
+perfiles_null as (
+  select 5 as orden, 'PERFILES' as bloque, 'con activo en NULL' as elemento, 'v59 lo corrige' as la_crea,
+         case when count(*) = 0 then '✓ ninguno'
+              else '✗ ' || count(*) || ' bloqueado(s): activo NULL impide escribir' end as estado
+    from public.perfiles where activo is null
+),
 
--- ── 7 · Tu perfil ──────────────────────────────────────────────────────────
--- Cambia el correo si hace falta.
-select 'MI PERFIL' as bloque, email as elemento,
-       case
-         when activo is null then '✗ BLOQUEADO · activo es NULL'
-         when activo = false then '✗ BLOQUEADO · activo es false'
-         when rol not in ('superadmin','admin','director','consultor','gestion') then '✗ BLOQUEADO · rol ' || rol
-         else '✓ puede escribir · rol ' || rol
-       end as estado,
-       '' as la_crea
-  from public.perfiles
- where email = 'alejandro@tuconsultor.com';
+mi_perfil as (
+  select 6 as orden, 'MI PERFIL' as bloque, p.email as elemento, '' as la_crea,
+         case when p.activo is null then '✗ BLOQUEADO · activo es NULL'
+              when p.activo = false then '✗ BLOQUEADO · activo es false'
+              when p.rol not in ('superadmin','admin','director','consultor','gestion')
+                   then '✗ BLOQUEADO · rol ' || p.rol
+              else '✓ puede escribir · rol ' || p.rol end as estado
+    from public.perfiles p, correo c where p.email = c.email
+),
 
+-- Fila final: qué hay que ejecutar, deducido de lo anterior.
+veredicto as (
+  select 9 as orden, '➤ QUÉ EJECUTAR' as bloque,
+         case
+           when to_regclass('public.homologaciones') is null
+             then 'v56 PRIMERO (falta homologaciones y columnas de empresas), luego v57, v58 y v59'
+           when to_regclass('public.reglas_comerciales') is null
+             then 'v57, luego v58 y v59'
+           when not exists (select 1 from pg_indexes where indexname = 'empresas_cif_unico')
+             then 'v58 y v59'
+           when not exists (select 1 from pg_policies
+                             where schemaname='public' and tablename='empresas'
+                               and policyname like '%\_write' and qual like '%director%')
+             then 'solo v59'
+           else 'nada: todo aplicado. Recarga el esquema en Settings → API'
+         end as elemento,
+         '' as la_crea, '' as estado
+)
 
--- ═══════════════════════════════════════════════════════════════════════════
--- ORDEN DE EJECUCIÓN de lo que salga con ✗
---
---   1 · migracion-v56-crm-unificado.sql          ← columnas + homologaciones + rol
---   2 · migracion-v57-reglas-comerciales.sql     ← pestaña Reglas comerciales
---   3 · migracion-v58-cif-clave.sql              ← CIF obligatorio y único
---   4 · migracion-v59-arreglo-escritura-crm.sql  ← permisos de escritura
---
--- La v56 va PRIMERA sí o sí: las otras tres dan por hecho lo que ella crea.
--- Después de la última, en Supabase: Settings → API → Reload schema (o espera
--- un minuto), y luego pulsa «⚙ Comprobar base de datos» en la pestaña Empresas.
--- ═══════════════════════════════════════════════════════════════════════════
+select bloque, elemento, estado, la_crea from (
+  select * from tablas       union all
+  select * from columnas     union all
+  select * from indice       union all
+  select * from politicas    union all
+  select * from perfiles_null union all
+  select * from mi_perfil    union all
+  select * from veredicto
+) todo
+order by orden, elemento;
