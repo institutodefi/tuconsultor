@@ -190,7 +190,7 @@ document.querySelectorAll('[data-form]').forEach(function(f){
       var r=await fetch('https://consultify.tuconsultor.com'+api,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(datos)});
       var d=await r.json();
       msg.style.color=d.ok?'var(--verde-texto)':'#FF7A7D';
-      msg.textContent=d.ok?'¡Recibido! Te contestamos muy pronto.':(d.error||'No se pudo enviar. Inténtalo de nuevo.');
+      msg.textContent=d.ok?(d.doi?{'es':'¡Casi! Revisa tu correo y confirma la suscripción.','en':'Almost there! Check your inbox and confirm.','fr':'Presque ! Vérifiez votre email et confirmez.'}['es']||'¡Recibido! Te contestamos muy pronto.':'¡Recibido! Te contestamos muy pronto.'):(d.error||'No se pudo enviar. Inténtalo de nuevo.');
       if(d.ok)f.reset();
     }catch(e){ msg.style.color='#FF7A7D'; msg.textContent='No se pudo enviar. Inténtalo de nuevo.'; }
   });
