@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listTable, updateRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { registrar } from '../../lib/registro.js';
+import { generarDeclaracion } from '../../lib/declaracionAccesibilidad.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AUDITORÍA INTERNA DE ACCESIBILIDAD · UNE 139803:2012
@@ -73,6 +74,8 @@ export default function Accesibilidad() {
   const [origenF, setOrigenF] = useState('todos');
   const [abierto, setAbierto] = useState(null);
   const [msg, setMsg] = useState(null);
+  const [decl, setDecl] = useState(null);   // { texto, nivel }
+  const [nivelObjetivo, setNivelObjetivo] = useState('AA');
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -145,6 +148,25 @@ export default function Accesibilidad() {
     }
   }
 
+  function declarar() {
+    const texto = generarDeclaracion(filas, conf, {
+      nivelObjetivo,
+      sitio: 'https://www.tuconsultor.com',
+      alcance: 'Todas las páginas bajo el dominio, en sus cinco versiones idiomáticas (es, en, fr, de, ar), y la aplicación Orbita 360 en consultify.tuconsultor.com/app.',
+      tecnologias: 'HTML, CSS, JavaScript, SVG',
+    });
+    setDecl({ texto, nivel: nivelObjetivo });
+    registrar('exportar', { entidad: 'accesibilidad_criterios', detalle: `declaración nivel ${nivelObjetivo}` });
+  }
+
+  function descargarDeclaracion() {
+    const url = URL.createObjectURL(new Blob([decl.texto], { type: 'text/markdown;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `declaracion-aplicabilidad-${decl.nivel}-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
   function exportar() {
     const cab = ['codigo', 'nivel', 'origen', 'principio', 'titulo', 'aplicable', 'mecanismo', 'justificacion', 'metodos', 'estado', 'observaciones', 'evidencia', 'revisado_en'];
     const esc = (v) => `"${String(Array.isArray(v) ? v.join(' / ') : (v ?? '')).replace(/"/g, '""')}"`;
@@ -171,7 +193,18 @@ export default function Accesibilidad() {
             criterio. Es lo que sostiene la declaración de accesibilidad del RD 1112/2018.
           </p>
         </div>
-        <button onClick={exportar} disabled={!filas.length} className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-40">⇩ Exportar CSV</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select className="input !w-auto !py-1.5 !px-2 !text-[12px]" value={nivelObjetivo}
+            onChange={(e) => setNivelObjetivo(e.target.value)} aria-label="Nivel objetivo de la declaración">
+            <option value="A">Objetivo A</option>
+            <option value="AA">Objetivo AA</option>
+            <option value="AAA">Objetivo AAA</option>
+          </select>
+          <button onClick={declarar} disabled={!filas.length} className="btn-orange !px-3 !py-2 text-xs disabled:opacity-40">
+            Generar declaración
+          </button>
+          <button onClick={exportar} disabled={!filas.length} className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-40">⇩ CSV</button>
+        </div>
       </div>
 
       {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orange">Modo demo: los cambios no se guardan.</div>}
@@ -179,6 +212,34 @@ export default function Accesibilidad() {
         <div className={`rounded-xl px-3 py-2 text-xs font-bold ${msg.err ? 'bg-red-500/12 text-red-300' : 'bg-emerald-500/12 text-emerald-300'}`}>
           <button onClick={() => setMsg(null)} className="float-right pl-2 text-[#7FA7B4] hover:text-white">×</button>{msg.t}
         </div>
+      )}
+
+      {/* Declaración generada */}
+      {decl && (
+        <section className="card space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-brand-orange">
+              Declaración de aplicabilidad · objetivo {decl.nivel}
+            </h2>
+            <div className="flex gap-2">
+              <button onClick={descargarDeclaracion} className="btn-orange !px-3 !py-1.5 text-[11px]">⇩ Descargar .md</button>
+              <button onClick={() => navigator.clipboard?.writeText(decl.texto)} className="btn-ghost !px-3 !py-1.5 text-[11px]">Copiar</button>
+              <button onClick={() => setDecl(null)} className="text-[#7FA7B4] hover:text-white">×</button>
+            </div>
+          </div>
+          {/* El veredicto se ve sin leerlo todo */}
+          {decl.texto.includes('NO sostienen') ? (
+            <p className="rounded-lg bg-red-500/12 px-3 py-2 text-[12.5px] font-bold text-red-300">
+              Los datos no sostienen todavía una declaración de conformidad de nivel {decl.nivel}.
+              El documento vale como registro interno, pero no debe publicarse como declaración de conformidad.
+            </p>
+          ) : (
+            <p className="rounded-lg bg-emerald-500/12 px-3 py-2 text-[12.5px] font-bold text-emerald-300">
+              Los datos sostienen una declaración de conformidad de nivel {decl.nivel}.
+            </p>
+          )}
+          <pre className="max-h-96 overflow-auto rounded-lg bg-[#0D3242] p-3 text-[11px] leading-relaxed text-[#CFE3E9] whitespace-pre-wrap">{decl.texto}</pre>
+        </section>
       )}
 
       {/* Resumen por nivel */}
