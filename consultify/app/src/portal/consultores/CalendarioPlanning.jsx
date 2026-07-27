@@ -66,28 +66,28 @@ export default function CalendarioPlanning({ year = new Date().getFullYear(), mo
   return (
     <div className="card p-0 overflow-hidden">
       {/* Cabecera navegación: flechas + dos desplegables (mes / año) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-navy-100">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-[#1E5468]">
         <button onClick={() => cambiarMes(-1)}
-          className="rounded-lg px-3 py-1.5 text-sm font-bold text-navy-500 hover:bg-navy-50">←</button>
+          className="rounded-lg px-3 py-1.5 text-sm font-bold text-[#9FC0CB] hover:bg-[#0D3242]">←</button>
         <div className="flex items-center gap-2">
           <select value={mes} onChange={(e) => setMes(Number(e.target.value))}
-            className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-sm font-bold text-navy-800">
+            className="rounded-lg border border-[#1E5468] bg-[#10394A] px-3 py-1.5 text-sm font-bold text-[#EAF4F7]">
             {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
           </select>
           <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}
-            className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-sm font-bold text-navy-800">
+            className="rounded-lg border border-[#1E5468] bg-[#10394A] px-3 py-1.5 text-sm font-bold text-[#EAF4F7]">
             {anios.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
           <button onClick={() => { setMes(new Date().getMonth()); setAnio(hoyAnio); }}
-            className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-brand-orangeDark hover:bg-brand-orange/10" title="Ir al mes actual">Hoy</button>
+            className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#F9A83A] hover:bg-brand-orange/10" title="Ir al mes actual">Hoy</button>
         </div>
         <button onClick={() => cambiarMes(1)}
-          className="rounded-lg px-3 py-1.5 text-sm font-bold text-navy-500 hover:bg-navy-50">→</button>
+          className="rounded-lg px-3 py-1.5 text-sm font-bold text-[#9FC0CB] hover:bg-[#0D3242]">→</button>
       </div>
 
       {/* Cabecera días de la semana */}
-      <div className="grid grid-cols-7 border-b border-navy-100 bg-navy-50/40">
-        {DOW.map((d) => <div key={d} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-navy-400">{d}</div>)}
+      <div className="grid grid-cols-7 border-b border-[#1E5468] bg-navy-50/40">
+        {DOW.map((d) => <div key={d} className="px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-[#9FC0CB]">{d}</div>)}
       </div>
 
       {/* Rejilla */}
@@ -103,10 +103,10 @@ export default function CalendarioPlanning({ year = new Date().getFullYear(), mo
           return (
             <div key={i}
               onClick={() => onDia && !esFinde && !esFestivo && onDia(iso)}
-              className={`min-h-[90px] border-b border-r border-navy-50 p-1.5 align-top transition ${esFinde || esFestivo ? 'bg-navy-50/40' : 'bg-white hover:bg-brand-orange/5'} ${onDia && !esFinde && !esFestivo ? 'cursor-pointer' : ''}`}>
+              className={`min-h-[90px] border-b border-r border-navy-50 p-1.5 align-top transition ${esFinde || esFestivo ? 'bg-navy-50/40' : 'bg-[#10394A] hover:bg-brand-orange/5'} ${onDia && !esFinde && !esFestivo ? 'cursor-pointer' : ''}`}>
               <div className="flex items-center justify-between">
-                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${esHoy ? 'bg-brand-orange text-navy-900' : esFinde || esFestivo ? 'text-navy-300' : 'text-navy-600'}`}>{dia.getDate()}</span>
-                {hd > 0 && <span className="text-[10px] font-bold text-navy-400">{Math.round(hd * 10) / 10}h</span>}
+                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${esHoy ? 'bg-brand-orange text-[#EAF4F7]' : esFinde || esFestivo ? 'text-[#7FA7B4]' : 'text-[#B9D2DA]'}`}>{dia.getDate()}</span>
+                {hd > 0 && <span className="text-[10px] font-bold text-[#9FC0CB]">{Math.round(hd * 10) / 10}h</span>}
               </div>
               <div className="mt-1 space-y-0.5">
                 {items.slice(0, 3).map((t) => {
@@ -123,7 +123,7 @@ export default function CalendarioPlanning({ year = new Date().getFullYear(), mo
                     </button>
                   );
                 })}
-                {items.length > 3 && <p className="px-1 text-[9px] font-bold text-navy-300">+{items.length - 3} más</p>}
+                {items.length > 3 && <p className="px-1 text-[9px] font-bold text-[#7FA7B4]">+{items.length - 3} más</p>}
               </div>
             </div>
           );
@@ -131,7 +131,7 @@ export default function CalendarioPlanning({ year = new Date().getFullYear(), mo
       </div>
 
       {/* Leyenda */}
-      <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-t border-navy-100 text-[11px] font-semibold text-navy-400">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-t border-[#1E5468] text-[11px] font-semibold text-[#9FC0CB]">
         {Object.entries(COLOR_TIPO).map(([tipo, col]) => (
           <span key={tipo} className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: col }} />

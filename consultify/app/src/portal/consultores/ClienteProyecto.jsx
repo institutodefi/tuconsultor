@@ -31,8 +31,8 @@ const tipoTarea = (t) => {
 };
 const TIPO_LABEL = { produccion: 'Producción', gestion: 'Gestión', coordinacion: 'Coordinación' };
 const TIPO_CLASE = {
-  produccion: 'bg-brand-orange/15 text-brand-orangeDark',
-  gestion: 'bg-navy-100 text-navy-600',
+  produccion: 'bg-brand-orange/15 text-[#F9A83A]',
+  gestion: 'bg-[#123F52] text-[#B9D2DA]',
   coordinacion: 'bg-navy-800 text-white',
 };
 
@@ -344,9 +344,9 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
   // La planificación solo se permite sobre un cliente realmente dado de alta.
   if (!cliente?.id) {
     return (
-      <div className="mt-5 border-t border-navy-100 pt-5">
+      <div className="mt-5 border-t border-[#1E5468] pt-5">
         <h4 className="font-extrabold">Proyecto y tareas</h4>
-        <p className="mt-3 rounded-xl bg-navy-50 p-4 text-sm font-medium text-navy-500">
+        <p className="mt-3 rounded-xl bg-[#0D3242] p-4 text-sm font-medium text-[#9FC0CB]">
           Guarda primero el cliente (alta) para poder planificar sus tareas.
         </p>
       </div>
@@ -354,11 +354,11 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
   }
 
   return (
-    <div className="mt-5 space-y-5 border-t border-navy-100 pt-5">
+    <div className="mt-5 space-y-5 border-t border-[#1E5468] pt-5">
       <h4 className="font-extrabold">Proyecto y tareas</h4>
 
       {normasCliente.length === 0 && (
-        <p className="rounded-xl bg-navy-50 p-3 text-sm font-medium text-navy-500">
+        <p className="rounded-xl bg-[#0D3242] p-3 text-sm font-medium text-[#9FC0CB]">
           Este cliente no tiene normas en sus empresas todavía. Añade normas en el perfil para detectar sus tareas.
         </p>
       )}
@@ -374,7 +374,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
         <div>
           <label className="label">Meses estimados</label>
           <input type="number" min="1" className="input" value={meses} onChange={e => setMeses(e.target.value)} />
-          <p className="mt-1 text-xs font-medium text-navy-400">Al guardar, el calendario de las tareas se reescala a esta duración.</p>
+          <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Al guardar, el calendario de las tareas se reescala a esta duración.</p>
         </div>
         <div>
           <label className="label">Fecha inicio</label>
@@ -400,7 +400,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
         <button onClick={generarTareas} disabled={!normasCliente.length} className="btn-orange !px-4 !py-2 disabled:opacity-40">
           Detectar y añadir tareas ({propuesta.length})
         </button>
-        {msg && <span className="text-sm font-bold text-navy-600">{msg}</span>}
+        {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
       </div>
 
       {/* Resumen horas y coordinación */}
@@ -410,13 +410,13 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
           <p className="mt-1 text-2xl font-extrabold">{fmtH(totalHoras + coordinacion)}</p>
           <p className="text-xs font-medium text-white/60">{fmtH(totalHoras)} tareas · {fmtH(coordinacion)} coord.</p>
         </div>
-        <div className="rounded-xl border border-navy-100 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy-300">{nombreCons(c1)}</p>
+        <div className="rounded-xl border border-[#1E5468] p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">{nombreCons(c1)}</p>
           <p className="mt-1 text-2xl font-extrabold">{fmtH(porConsultor[c1] || 0)}</p>
           <button onClick={() => descargarICS(c1)} disabled={!c1} className="btn-ghost !px-3 !py-1.5 mt-1 text-xs disabled:opacity-40">⬇ Calendario .ics</button>
         </div>
-        <div className="rounded-xl border border-navy-100 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy-300">{nombreCons(c2)}</p>
+        <div className="rounded-xl border border-[#1E5468] p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">{nombreCons(c2)}</p>
           <p className="mt-1 text-2xl font-extrabold">{fmtH(porConsultor[c2] || 0)}</p>
           <button onClick={() => descargarICS(c2)} disabled={!c2} className="btn-ghost !px-3 !py-1.5 mt-1 text-xs disabled:opacity-40">⬇ Calendario .ics</button>
         </div>
@@ -427,18 +427,18 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
         <div>
           <div className="mb-2 flex items-baseline justify-between">
             <p className="label !mb-0">Gantt por bloque de proceso</p>
-            <p className="text-xs font-medium text-navy-400">{gantt.min} → {gantt.max}</p>
+            <p className="text-xs font-medium text-[#9FC0CB]">{gantt.min} → {gantt.max}</p>
           </div>
           <div className="space-y-1.5">
             {gantt.filas.map(f => (
               <div key={f.bloque} className="flex items-center gap-3">
-                <span className="w-16 shrink-0 text-xs font-bold text-navy-600">{f.bloque}</span>
-                <div className="relative h-6 flex-1 rounded bg-navy-50">
+                <span className="w-16 shrink-0 text-xs font-bold text-[#B9D2DA]">{f.bloque}</span>
+                <div className="relative h-6 flex-1 rounded bg-[#0D3242]">
                   <div className="absolute top-0 h-6 rounded bg-brand-orange/80"
                     style={{ left: `${f.left}%`, width: `${f.width}%` }}
                     title={`${f.bloque}: ${f.n} tareas · ${fmtH(f.horas)} · ${f.fmin}→${f.fmax}`} />
                 </div>
-                <span className="w-28 shrink-0 text-right text-xs font-medium text-navy-400">{f.hechas}/{f.n} · {fmtH(f.horas)}</span>
+                <span className="w-28 shrink-0 text-right text-xs font-medium text-[#9FC0CB]">{f.hechas}/{f.n} · {fmtH(f.horas)}</span>
               </div>
             ))}
           </div>
@@ -452,7 +452,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
           <div className="flex flex-wrap gap-2">
             {normasConTareas.map(n => (
               <button key={n} onClick={() => descargarICSNorma(n)}
-                className="chip border border-navy-200 bg-white font-bold text-navy-700 hover:border-brand-orange">
+                className="chip border border-[#1E5468] bg-[#10394A] font-bold text-[#CFE3E9] hover:border-brand-orange">
                 ⬇ {n} ({tareas.filter(t => t.norma_id === n && t.fecha_estimada).length})
               </button>
             ))}
@@ -464,7 +464,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
       {tareas.length > 0 && (
         <div className="space-y-3">
           {/* Filtro de tareas */}
-          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-navy-100 bg-white px-3 py-2">
+          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-[#1E5468] bg-[#10394A] px-3 py-2">
             <div>
               <label className="label !mb-0.5 !text-[11px]">Buscar</label>
               <input className="input !w-40 !py-1.5 !text-sm" placeholder="texto…" value={fTexto} onChange={e => setFTexto(e.target.value)} />
@@ -493,7 +493,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
               </select>
             </div>
             <button onClick={() => { setFTexto(''); setFSistema(''); setFBloque(''); setFTipo(''); }} className="btn-ghost !px-3 !py-1.5 text-xs">Limpiar</button>
-            <button onClick={() => setAgrupar(a => !a)} className={`chip border text-xs font-bold ${agrupar ? 'border-brand-orange bg-brand-orange/10 text-brand-orangeDark' : 'border-navy-200 text-navy-500'}`}>
+            <button onClick={() => setAgrupar(a => !a)} className={`chip border text-xs font-bold ${agrupar ? 'border-brand-orange bg-brand-orange/10 text-[#F9A83A]' : 'border-[#1E5468] text-[#9FC0CB]'}`}>
               {agrupar ? '▣ Agrupado' : '☰ Vista lista'}
             </button>
             {agrupar && (
@@ -502,16 +502,16 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                 <option value="subproceso">por proceso+subproceso (sistemas comunes)</option>
               </select>
             )}
-            <span className="ml-auto text-xs font-medium text-navy-400">{tareasFiltradas.length} de {tareas.length} · {fmtH(tareasFiltradas.reduce((s, t) => s + (Number(t.horas) || 0), 0))}</span>
+            <span className="ml-auto text-xs font-medium text-[#9FC0CB]">{tareasFiltradas.length} de {tareas.length} · {fmtH(tareasFiltradas.reduce((s, t) => s + (Number(t.horas) || 0), 0))}</span>
           </div>
 
           {/* Acciones masivas sobre la selección (o el filtro si no hay selección) */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-navy-100 bg-navy-50/40 px-3 py-2">
-            <span className="text-xs font-bold text-navy-500">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-navy-50/40 px-3 py-2">
+            <span className="text-xs font-bold text-[#9FC0CB]">
               {sel.size ? `${sel.size} seleccionada(s)` : `${tareasFiltradas.length} filtrada(s)`}
             </span>
-            <button onClick={selTodas} className="text-xs font-bold text-navy-500 hover:underline">Sel. todas</button>
-            <button onClick={selNinguna} className="text-xs font-bold text-navy-500 hover:underline">Ninguna</button>
+            <button onClick={selTodas} className="text-xs font-bold text-[#9FC0CB] hover:underline">Sel. todas</button>
+            <button onClick={selNinguna} className="text-xs font-bold text-[#9FC0CB] hover:underline">Ninguna</button>
             <span className="mx-1 h-4 w-px bg-navy-200" />
             <select className="input !w-auto !py-1.5 !text-sm" value="__" onChange={e => { if (e.target.value !== '__') { asignarMasivo(e.target.value === '__none' ? '' : e.target.value); e.target.value = '__'; } }}>
               <option value="__" disabled>Asignar a…</option>
@@ -525,10 +525,10 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
               <option value="coordinacion">Coordinación</option>
             </select>
             <span className="mx-1 h-4 w-px bg-navy-200" />
-            <label className="text-xs font-bold text-navy-500">Reducción integración</label>
+            <label className="text-xs font-bold text-[#9FC0CB]">Reducción integración</label>
             <input type="number" min="0" max="100" className="input !w-16 !py-1.5 !text-sm" value={redInt} onChange={e => setRedInt(e.target.value)} />
-            <span className="text-xs font-bold text-navy-400">%</span>
-            <button onClick={aplicarReduccion} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-brand-orangeDark">Aplicar</button>
+            <span className="text-xs font-bold text-[#9FC0CB]">%</span>
+            <button onClick={aplicarReduccion} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-[#F9A83A]">Aplicar</button>
             <button onClick={borrarMasivo} className="ml-auto text-xs font-bold text-red-500 hover:underline">Eliminar</button>
           </div>
 
@@ -536,18 +536,18 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
           {agrupar ? (
             <div className="space-y-2">
               {grupos.map(g => (
-                <details key={g.clave} className="rounded-xl border border-navy-100 bg-white p-3" open>
+                <details key={g.clave} className="rounded-xl border border-[#1E5468] bg-[#10394A] p-3" open>
                   <summary className="flex cursor-pointer items-center justify-between gap-2">
-                    <span className="font-extrabold text-navy-700">{g.clave} <span className="text-xs font-medium text-navy-400">· {g.items.length} tareas · {[...g.sistemas].join(', ')}</span></span>
+                    <span className="font-extrabold text-[#CFE3E9]">{g.clave} <span className="text-xs font-medium text-[#9FC0CB]">· {g.items.length} tareas · {[...g.sistemas].join(', ')}</span></span>
                     <span className="flex items-center gap-2">
                       {g.sistemas.size > 1 && (
                         <button onClick={(e) => { e.preventDefault(); setSel(new Set(g.items.map(t => t.id))); }}
-                          className="chip border border-brand-orange bg-brand-orange/10 text-[11px] font-bold text-brand-orangeDark"
+                          className="chip border border-brand-orange bg-brand-orange/10 text-[11px] font-bold text-[#F9A83A]"
                           title="Seleccionar este grupo para sumar/compensar sus horas con el % de reducción de arriba">
                           ⚖ seleccionar para compensar
                         </button>
                       )}
-                      <span className="text-sm font-bold text-navy-800">{fmtH(g.horas)}</span>
+                      <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(g.horas)}</span>
                     </span>
                   </summary>
                   <div className="mt-2 space-y-1">
@@ -556,10 +556,10 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                       return (
                         <div key={t.id} className="flex items-center gap-2 text-sm">
                           <input type="checkbox" checked={sel.has(t.id)} onChange={() => toggleSel(t.id)} />
-                          <span className="chip w-16 justify-center bg-navy-50 text-[11px] text-navy-600">{t.norma_id}</span>
+                          <span className="chip w-16 justify-center bg-[#0D3242] text-[11px] text-[#B9D2DA]">{t.norma_id}</span>
                           <span className={`chip text-[11px] font-bold ${TIPO_CLASE[tipo]}`}>{TIPO_LABEL[tipo]}</span>
                           <span className="flex-1 font-medium">{t.proceso} - {t.subproceso}</span>
-                          <span className="text-navy-400">{fmtH(t.horas)}</span>
+                          <span className="text-[#9FC0CB]">{fmtH(t.horas)}</span>
                         </div>
                       );
                     })}
@@ -572,7 +572,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-sm">
                 <thead>
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                     <th className="py-2" title="Seleccionar para acciones en masa"><input type="checkbox" checked={sel.size === tareasFiltradas.length && tareasFiltradas.length > 0} onChange={e => e.target.checked ? selTodas() : selNinguna()} /> sel</th>
                     <th className="py-2" title="Marcar tarea como hecha">hecha</th>
                     <th className="py-2">Sistema</th>
@@ -594,8 +594,8 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                       <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${sel.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
                         <td className="py-1.5"><input type="checkbox" checked={sel.has(t.id)} onChange={() => toggleSel(t.id)} /></td>
                         <td className="py-1.5"><input type="checkbox" checked={!!t.hecha} onChange={e => patch(t.id, { hecha: e.target.checked })} /></td>
-                        <td className="py-1.5"><span className="chip bg-navy-50 text-[11px] text-navy-600">{t.norma_id}</span></td>
-                        <td className="py-1.5 text-xs font-bold text-navy-400">{t.bloque}</td>
+                        <td className="py-1.5"><span className="chip bg-[#0D3242] text-[11px] text-[#B9D2DA]">{t.norma_id}</span></td>
+                        <td className="py-1.5 text-xs font-bold text-[#9FC0CB]">{t.bloque}</td>
                         <td className="py-1.5 font-medium">{t.proceso} - {t.subproceso}</td>
                         <td className="py-1.5"><span className={`chip text-[11px] font-bold ${TIPO_CLASE[tipo]}`}>{TIPO_LABEL[tipo]}</span></td>
                         <td className="py-1.5 text-right">{fmtH(t.horas)}</td>
@@ -608,7 +608,7 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                         <td className="py-1.5"><input type="date" className="input !py-1 !text-xs" value={t.fecha_estimada || ''} onChange={e => patch(t.id, { fecha_estimada: e.target.value || null })} /></td>
                         <td className="py-1.5"><input type="date" className="input !py-1 !text-xs" value={t.fecha_real || ''} onChange={e => patch(t.id, { fecha_real: e.target.value || null })} /></td>
                         <td className="py-1.5 text-center">
-                          <button onClick={() => addSeguimiento(t)} title="Añadir seguimiento" className="text-xs font-bold text-navy-500 hover:text-brand-orange">
+                          <button onClick={() => addSeguimiento(t)} title="Añadir seguimiento" className="text-xs font-bold text-[#9FC0CB] hover:text-brand-orange">
                             +seg{Array.isArray(t.seguimientos) && t.seguimientos.length ? ` (${t.seguimientos.length})` : ''}
                           </button>
                         </td>
@@ -628,8 +628,8 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
         const pend = propuesta.filter(p => !tareas.some(t => t.norma_id === p.norma_id && t.subproceso === p.subproceso));
         const porNorma = [...new Set(pend.map(p => p.norma_id))];
         return (
-          <details className="rounded-xl border border-navy-100 p-4" open>
-            <summary className="cursor-pointer text-sm font-bold text-navy-700">
+          <details className="rounded-xl border border-[#1E5468] p-4" open>
+            <summary className="cursor-pointer text-sm font-bold text-[#CFE3E9]">
               Tareas detectadas a demanda · {pend.length} sin añadir
             </summary>
             <div className="mt-3 space-y-4">
@@ -638,14 +638,14 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
                 return (
                   <div key={norma}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-navy-500">{norma} · {lista.length} tareas</span>
-                      <button onClick={() => addVarias(lista)} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-brand-orangeDark">+ añadir toda la norma</button>
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#9FC0CB]">{norma} · {lista.length} tareas</span>
+                      <button onClick={() => addVarias(lista)} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-[#F9A83A]">+ añadir toda la norma</button>
                     </div>
                     <div className="space-y-1">
                       {lista.map((p, i) => (
                         <div key={i} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="font-medium">{p.proceso} - {p.subproceso} <span className="text-navy-300">· {fmtH(p.horas)} · {p.fecha_estimada}</span></span>
-                          <button onClick={() => addTarea(p)} className="chip border border-navy-200 bg-white text-xs font-bold text-navy-600 hover:border-brand-orange">+ añadir</button>
+                          <span className="font-medium">{p.proceso} - {p.subproceso} <span className="text-[#7FA7B4]">· {fmtH(p.horas)} · {p.fecha_estimada}</span></span>
+                          <button onClick={() => addTarea(p)} className="chip border border-[#1E5468] bg-[#10394A] text-xs font-bold text-[#B9D2DA] hover:border-brand-orange">+ añadir</button>
                         </div>
                       ))}
                     </div>

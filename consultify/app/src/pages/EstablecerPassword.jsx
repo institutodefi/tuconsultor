@@ -44,16 +44,16 @@ export default function EstablecerPassword() {
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <div className="card">
-        <h1 className="text-2xl font-extrabold text-navy-900">Crea tu contraseña</h1>
-        <p className="mt-1 text-sm font-medium text-navy-400">Elige una contraseña segura para acceder a Consultify.</p>
+        <h1 className="text-2xl font-extrabold text-[#EAF4F7]">Crea tu contraseña</h1>
+        <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Elige una contraseña segura para acceder a Consultify.</p>
 
         {haySesion === false && (
-          <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-600">
+          <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">
             Este enlace no es válido o ha caducado. Pide al administrador que te reenvíe la invitación.
           </div>
         )}
 
-        {msg && <div className={`mt-4 rounded-xl p-3 text-sm font-bold ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{msg.t}</div>}
+        {msg && <div className={`mt-4 rounded-xl p-3 text-sm font-bold ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-300'}`}>{msg.t}</div>}
 
         <form onSubmit={guardar} className="mt-5 space-y-4">
           <div>
@@ -72,7 +72,7 @@ export default function EstablecerPassword() {
           </button>
         </form>
 
-        <p className="mt-4 text-xs text-navy-300">Requisitos: mínimo 8 caracteres, con mayúscula, minúscula y número.</p>
+        <p className="mt-4 text-xs text-[#7FA7B4]">Requisitos: mínimo 8 caracteres, con mayúscula, minúscula y número.</p>
       </div>
     </div>
   );

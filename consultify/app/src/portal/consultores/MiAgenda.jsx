@@ -20,15 +20,15 @@ function RelojJornada({ titulo, valor, capacidad, color, sub }) {
   };
   const pct = Math.round((valor / MAXG) * 100);
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-navy-100 p-3">
-      <p className="text-xs font-bold uppercase tracking-wider text-navy-300">{titulo}</p>
+    <div className="flex flex-col items-center rounded-2xl border border-[#1E5468] p-3">
+      <p className="text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">{titulo}</p>
       <svg viewBox="0 0 200 170" className="w-full max-w-[180px]">
         <path d={arco(START, START + SWEEP, R)} fill="none" stroke="#EEF2FA" strokeWidth="13" strokeLinecap="round" />
         {valor > 0 && <path d={arco(START, ang(valor), R)} fill="none" stroke={color} strokeWidth="13" strokeLinecap="round" />}
         <text x={CX} y={CY + 6} textAnchor="middle" fontSize="24" fontWeight="800" fill="#0A1530">{Math.round(valor).toLocaleString('es-ES')}</text>
         <text x={CX} y={CY + 24} textAnchor="middle" fontSize="11" fill="#5B6680">horas · {pct}%</text>
       </svg>
-      <p className="text-[11px] font-medium text-navy-400">{sub}</p>
+      <p className="text-[11px] font-medium text-[#9FC0CB]">{sub}</p>
     </div>
   );
 }
@@ -102,16 +102,16 @@ export default function MiAgenda() {
         <div>
           <p className="eyebrow">Mi agenda</p>
           <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight">Mis tareas y mi jornada</h1>
-          {yo && <p className="mt-1 text-sm font-medium text-navy-400">{yo.nombre} {yo.apellidos || ''} · jornada {capacidad}%</p>}
+          {yo && <p className="mt-1 text-sm font-medium text-[#9FC0CB]">{yo.nombre} {yo.apellidos || ''} · jornada {capacidad}%</p>}
         </div>
-        <div className="inline-flex rounded-xl border border-navy-200 p-0.5">
-          <button onClick={() => setVista('lista')} className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${vista === 'lista' ? 'bg-navy-800 text-white' : 'text-navy-400 hover:text-navy-700'}`}>Lista</button>
-          <button onClick={() => setVista('planning')} className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${vista === 'planning' ? 'bg-navy-800 text-white' : 'text-navy-400 hover:text-navy-700'}`}>Planning</button>
+        <div className="inline-flex rounded-xl border border-[#1E5468] p-0.5">
+          <button onClick={() => setVista('lista')} className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${vista === 'lista' ? 'bg-navy-800 text-white' : 'text-[#9FC0CB] hover:text-[#CFE3E9]'}`}>Lista</button>
+          <button onClick={() => setVista('planning')} className={`rounded-lg px-3 py-1.5 text-sm font-bold transition ${vista === 'planning' ? 'bg-navy-800 text-white' : 'text-[#9FC0CB] hover:text-[#CFE3E9]'}`}>Planning</button>
         </div>
       </div>
 
       {cargado && !yo && (
-        <div className="card"><p className="text-sm font-medium text-navy-400">No encontramos tu ficha de consultor. Pide que asocien tu correo en Equipo.</p></div>
+        <div className="card"><p className="text-sm font-medium text-[#9FC0CB]">No encontramos tu ficha de consultor. Pide que asocien tu correo en Equipo.</p></div>
       )}
 
       {vista === 'planning' && yo && (
@@ -124,14 +124,14 @@ export default function MiAgenda() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="label !mb-0">Meses</p>
           <div className="flex gap-2">
-            <button onClick={todos} className="chip border border-navy-200 text-xs font-bold text-navy-500">Todos</button>
-            <button onClick={ninguno} className="chip border border-navy-200 text-xs font-bold text-navy-500">Ninguno</button>
+            <button onClick={todos} className="chip border border-[#1E5468] text-xs font-bold text-[#9FC0CB]">Todos</button>
+            <button onClick={ninguno} className="chip border border-[#1E5468] text-xs font-bold text-[#9FC0CB]">Ninguno</button>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
           {MESES.map((m, i) => (
             <button key={m} onClick={() => toggleMes(i)}
-              className={`chip justify-center border text-xs font-bold transition ${mesesSel.has(i) ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400'}`}>
+              className={`chip justify-center border text-xs font-bold transition ${mesesSel.has(i) ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB]'}`}>
               {mesesSel.has(i) ? '✓ ' : ''}{m.slice(0, 3)}
             </button>
           ))}
@@ -156,10 +156,10 @@ export default function MiAgenda() {
           <div key={tipo} className="card !p-4">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-              <span className="text-xs font-bold uppercase tracking-wide text-navy-400">{label}</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-[#9FC0CB]">{label}</span>
             </div>
-            <p className="mt-1 text-2xl font-extrabold text-navy-900">{fmtH(tot[tipo])}</p>
-            <p className="text-[11px] font-medium text-navy-300">
+            <p className="mt-1 text-2xl font-extrabold text-[#EAF4F7]">{fmtH(tot[tipo])}</p>
+            <p className="text-[11px] font-medium text-[#7FA7B4]">
               {tot.prev > 0 ? Math.round((tot[tipo] / tot.prev) * 100) : 0}% de lo previsto
             </p>
           </div>
@@ -171,7 +171,7 @@ export default function MiAgenda() {
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+              <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Mes</th><th className="py-2 text-right">Prevista</th><th className="py-2 text-right">Efectiva</th>
                 <th className="py-2 text-right">Pendiente</th><th className="py-2 text-right">Tareas</th>
               </tr>
@@ -182,8 +182,8 @@ export default function MiAgenda() {
                   <td className="py-2 font-bold">{MESES[f.mes]}</td>
                   <td className="py-2 text-right">{fmtH(f.prevista)}</td>
                   <td className="py-2 text-right">{fmtH(f.efectiva)}</td>
-                  <td className="py-2 text-right text-brand-orangeDark font-bold">{fmtH(f.hPend)} <span className="text-navy-300 font-medium">({f.nPend})</span></td>
-                  <td className="py-2 text-right text-navy-400">{f.total}</td>
+                  <td className="py-2 text-right text-[#F9A83A] font-bold">{fmtH(f.hPend)} <span className="text-[#7FA7B4] font-medium">({f.nPend})</span></td>
+                  <td className="py-2 text-right text-[#9FC0CB]">{f.total}</td>
                 </tr>
               ))}
             </tbody>
@@ -195,12 +195,12 @@ export default function MiAgenda() {
       <div className="card">
         <h4 className="font-extrabold">Mis tareas pendientes ({tareasPendientes.length})</h4>
         {tareasPendientes.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-navy-300">No tienes tareas pendientes en los meses elegidos.</p>
+          <p className="mt-3 text-sm font-medium text-[#7FA7B4]">No tienes tareas pendientes en los meses elegidos.</p>
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                   <th className="py-2">Fecha</th><th className="py-2">Tarea</th><th className="py-2">Tipo</th><th className="py-2 text-right">Horas</th>
                 </tr>
               </thead>

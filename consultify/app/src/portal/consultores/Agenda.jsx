@@ -13,7 +13,9 @@ import {
   getTareasAgenda, crearTareaAgenda, actualizarTareaAgenda, borrarTareaAgenda,
 } from '../../lib/agenda.js';
 
-const NAVY = '#0A2A6C', ORANGE = '#F5A623';
+// Aclarados para el tema oscuro: #0A2A6C daba 1,09:1 sobre la tarjeta y
+// #4C6BB4 daba 2,39:1. Estos dan 5,84:1 y 6,3:1.
+const NAVY = '#8AB4F8', ORANGE = '#F9A83A';
 const DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const r1 = (n) => Math.round(n * 10) / 10;
 
@@ -40,8 +42,8 @@ function RelojAnual({ previstas, reales, proyeccion, ritmo, capacidad }) {
         {previstas > 0 && <path d={arco(START, ang(previstas), R)} fill="none" stroke={ORANGE} strokeWidth="12" strokeLinecap="round" />}
         {reales > 0 && <path d={arco(START, ang(reales), RI)} fill="none" stroke="#061B45" strokeWidth="9" strokeLinecap="round" />}
         <line x1={t1x} y1={t1y} x2={t2x} y2={t2y} stroke="#DC2626" strokeWidth="3" />
-        <line x1={CX} y1={CY} x2={nx} y2={ny} stroke="#4C6BB4" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 2" />
-        <circle cx={CX} cy={CY} r="5" fill="#4C6BB4" />
+        <line x1={CX} y1={CY} x2={nx} y2={ny} stroke="#8AB4F8" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 2" />
+        <circle cx={CX} cy={CY} r="5" fill="#8AB4F8" />
         <text x={CX} y={CY + 32} textAnchor="middle" fontSize="20" fontWeight="800" fill="#0A1530">
           {Math.round(reales).toLocaleString('es-ES')} h
         </text>
@@ -51,16 +53,16 @@ function RelojAnual({ previstas, reales, proyeccion, ritmo, capacidad }) {
       </svg>
       <div className="grid w-full grid-cols-2 gap-2 text-center text-xs">
         <div className="rounded-xl bg-brand-orange/10 px-2 py-1.5">
-          <p className="font-extrabold text-brand-orangeDark">{Math.round(previstas).toLocaleString('es-ES')} h</p>
-          <p className="font-semibold text-navy-400">previstas · {Math.round((previstas / MAXG) * 100)}%</p>
+          <p className="font-extrabold text-[#F9A83A]">{Math.round(previstas).toLocaleString('es-ES')} h</p>
+          <p className="font-semibold text-[#9FC0CB]">previstas · {Math.round((previstas / MAXG) * 100)}%</p>
         </div>
-        <div className={`rounded-xl px-2 py-1.5 ${sobre ? 'bg-red-50' : 'bg-navy-50'}`}>
-          <p className={`font-extrabold ${sobre ? 'text-red-700' : 'text-navy-800'}`}>{Math.round(proyeccion).toLocaleString('es-ES')} h</p>
-          <p className={`font-semibold ${sobre ? 'text-red-600' : 'text-navy-400'}`}>proyección · {Math.round((proyeccion / MAXG) * 100)}%</p>
+        <div className={`rounded-xl px-2 py-1.5 ${sobre ? 'bg-red-50' : 'bg-[#0D3242]'}`}>
+          <p className={`font-extrabold ${sobre ? 'text-red-300' : 'text-[#EAF4F7]'}`}>{Math.round(proyeccion).toLocaleString('es-ES')} h</p>
+          <p className={`font-semibold ${sobre ? 'text-red-300' : 'text-[#9FC0CB]'}`}>proyección · {Math.round((proyeccion / MAXG) * 100)}%</p>
         </div>
       </div>
-      {sobre && <p className="mt-1.5 text-xs font-bold text-red-600">La proyección supera la capacidad productiva</p>}
-      <p className="mt-1 text-xs font-medium text-navy-400">Ritmo real: {ritmo.toFixed(1)} h imputadas por día laborable transcurrido</p>
+      {sobre && <p className="mt-1.5 text-xs font-bold text-red-300">La proyección supera la capacidad productiva</p>}
+      <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Ritmo real: {ritmo.toFixed(1)} h imputadas por día laborable transcurrido</p>
     </div>
   );
 }
@@ -154,21 +156,21 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4" onClick={onCerrar}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[22px] bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[22px] bg-[#10394A] p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-extrabold">{editando ? 'Editar tarea' : 'Nueva tarea'}</h3>
-          <button onClick={onCerrar} className="rounded-full px-2.5 py-1 text-navy-300 hover:bg-navy-50 hover:text-navy-700" aria-label="Cerrar">✕</button>
+          <button onClick={onCerrar} className="rounded-full px-2.5 py-1 text-[#7FA7B4] hover:bg-[#0D3242] hover:text-[#CFE3E9]" aria-label="Cerrar">✕</button>
         </div>
 
         <div className="space-y-3">
           <div>
             <label className="label">Título{deProyecto ? '' : ' *'}</label>
             {deProyecto ? (
-              <div className="input bg-navy-50/60 text-navy-700 font-medium">{f.titulo || '—'}</div>
+              <div className="input bg-navy-50/60 text-[#CFE3E9] font-medium">{f.titulo || '—'}</div>
             ) : (
               <input className="input" value={f.titulo} onChange={set('titulo')} autoFocus placeholder="Ej.: Auditoría interna ISO 9001 — Cliente X" />
             )}
-            {f.codigo && <p className="mt-1 text-[11px] font-bold text-brand-orangeDark">Código: {f.codigo}</p>}
+            {f.codigo && <p className="mt-1 text-[11px] font-bold text-[#F9A83A]">Código: {f.codigo}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -181,7 +183,7 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
             <div>
               <label className="label">{f.tipo === 'proceso_interno' ? 'Proceso interno' : 'Proyecto'}</label>
               {deProyecto ? (
-                <div className="input bg-navy-50/60 text-navy-700 font-medium">{proyectoAuto}</div>
+                <div className="input bg-navy-50/60 text-[#CFE3E9] font-medium">{proyectoAuto}</div>
               ) : f.tipo === 'proceso_interno' ? (
                 <select className="input" value={f.proceso_interno_id} onChange={set('proceso_interno_id')}>
                   <option value="">— Elige proceso interno —</option>
@@ -202,16 +204,16 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
               {TIPOS_TAREA.map((t) => (
                 <button key={t.id} type="button" onClick={() => setF((x) => ({ ...x, tipo: t.id }))}
                   className={`chip flex-1 justify-center border transition ${
-                    f.tipo === t.id ? 'border-navy-800 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'
+                    f.tipo === t.id ? 'border-navy-800 bg-navy-800 text-white' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'
                   }`}>{t.nombre}</button>
               ))}
             </div>
-            <p className="mt-1 text-[11px] font-medium text-navy-300">Cada tipo consume su bolsa de jornada: producción {PCT_PRODUCTIVO * 100} % · gestión {PCT_GESTION * 100} % · coordinación {PCT_COORDINACION * 100} % · procesos internos {PCT_PROC_INTERNO * 100} %.</p>
+            <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">Cada tipo consume su bolsa de jornada: producción {PCT_PRODUCTIVO * 100} % · gestión {PCT_GESTION * 100} % · coordinación {PCT_COORDINACION * 100} % · procesos internos {PCT_PROC_INTERNO * 100} %.</p>
           </div>
 
           {/* Colaboradores invitados (gestión manual) */}
           <div>
-            <label className="label">Colaboradores <span className="font-normal text-navy-300">(equipo invitado a esta tarea)</span></label>
+            <label className="label">Colaboradores <span className="font-normal text-[#7FA7B4]">(equipo invitado a esta tarea)</span></label>
             <div className="flex flex-wrap gap-1.5">
               {equipo.filter((c) => String(c.id) !== String(f.consultor_id)).map((c) => {
                 const inv = (f.colaboradores || []).some((x) => String(x.id) === String(c.id));
@@ -223,18 +225,18 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
                         ? x.colaboradores.filter((y) => String(y.id) !== String(c.id))
                         : [...x.colaboradores, { id: c.id, nombre: c.nombre, email: c.email || null }],
                     }))}
-                    className={`chip border transition ${inv ? 'border-brand-orange bg-brand-orange/15 text-brand-orangeDark' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'}`}>
+                    className={`chip border transition ${inv ? 'border-brand-orange bg-brand-orange/15 text-[#F9A83A]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'}`}>
                     {inv ? '✓ ' : '+ '}{c.nombre}
                   </button>
                 );
               })}
-              {equipo.length <= 1 && <span className="text-xs text-navy-300">No hay más miembros de equipo para invitar.</span>}
+              {equipo.length <= 1 && <span className="text-xs text-[#7FA7B4]">No hay más miembros de equipo para invitar.</span>}
             </div>
           </div>
 
           {/* Planificado */}
           <div className="rounded-2xl border border-brand-orange/40 bg-brand-orange/5 p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-brand-orangeDark">Planificado</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[#F9A83A]">Planificado</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Fecha prevista *</label>
@@ -246,13 +248,13 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
                   value={f.horas_previstas} onChange={set('horas_previstas')} />
               </div>
             </div>
-            <div className="mt-2 rounded-xl bg-white/70 px-3 py-2 text-[11px] font-semibold text-navy-500">
-              {nivelResp} · eficiencia {Math.round(coef * 100)}% → consume <strong className="text-navy-800">{horasConsultor} h</strong> de su capacidad
-              {horasTarea > 9 && <span className="ml-1 text-red-600">· la tarea supera 9h/día</span>}
+            <div className="mt-2 rounded-xl bg-white/70 px-3 py-2 text-[11px] font-semibold text-[#9FC0CB]">
+              {nivelResp} · eficiencia {Math.round(coef * 100)}% → consume <strong className="text-[#EAF4F7]">{horasConsultor} h</strong> de su capacidad
+              {horasTarea > 9 && <span className="ml-1 text-red-300">· la tarea supera 9h/día</span>}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="flex items-end">
-                <p className="text-[11px] font-medium text-navy-300">Las horas de la tarea son su total; no varían por el nivel de quien la ejecuta.</p>
+                <p className="text-[11px] font-medium text-[#7FA7B4]">Las horas de la tarea son su total; no varían por el nivel de quien la ejecuta.</p>
               </div>
             </div>
             <div className="mt-3 flex gap-3">
@@ -265,9 +267,9 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
                 <input type="time" className="input" value={f.hora_fin} onChange={set('hora_fin')} />
               </div>
             </div>
-            <p className="mt-1 text-[11px] font-medium text-navy-300">Horas planificadas (se usan al descargar al calendario).</p>
+            <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">Horas planificadas (se usan al descargar al calendario).</p>
             {totalPrev > MAX_HORAS_DIA && (
-              <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+              <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-300">
                 El plan de ese día suma {totalPrev} h; el convenio limita a {MAX_HORAS_DIA} h ordinarias/día.
               </p>
             )}
@@ -278,8 +280,8 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-green-700">Ejecución real ({fmtNum(totalReal)} h)</p>
               <div className="flex gap-2">
-                <button type="button" onClick={copiar} className="chip border border-green-300 bg-white text-green-700 hover:bg-green-100">⤵ Previsto → real</button>
-                <button type="button" onClick={addEjec} className="chip border border-green-300 bg-white text-green-700 hover:bg-green-100">+ fecha</button>
+                <button type="button" onClick={copiar} className="chip border border-green-300 bg-[#10394A] text-green-700 hover:bg-green-100">⤵ Previsto → real</button>
+                <button type="button" onClick={addEjec} className="chip border border-green-300 bg-[#10394A] text-green-700 hover:bg-green-100">+ fecha</button>
               </div>
             </div>
             {f.ejecuciones.length === 0 ? (
@@ -305,7 +307,7 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
               {[['pendiente', 'Pendiente'], ['en_curso', 'En curso'], ['completada', 'Completada']].map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setF((x) => ({ ...x, estado: v }))}
                   className={`chip flex-1 justify-center border transition ${
-                    f.estado === v ? 'border-navy-800 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'
+                    f.estado === v ? 'border-navy-800 bg-navy-800 text-white' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'
                   }`}>{l}</button>
               ))}
             </div>
@@ -319,7 +321,7 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
 
         <div className="mt-5 flex items-center justify-between">
           {editando
-            ? <button onClick={() => onBorrar(tarea.id)} className="text-sm font-bold text-red-600 hover:underline">Eliminar tarea</button>
+            ? <button onClick={() => onBorrar(tarea.id)} className="text-sm font-bold text-red-300 hover:underline">Eliminar tarea</button>
             : <span />}
           <div className="flex gap-2">
             <button onClick={onCerrar} className="btn-ghost">Cancelar</button>
@@ -352,8 +354,8 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
       (porDia[t.fecha_efectiva] ??= []).push({ t, tipo: 'real' });
   }
   const estilo = {
-    pendiente: 'bg-brand-orange/15 text-navy-800',
-    en_curso: 'bg-navy-100 text-navy-800',
+    pendiente: 'bg-brand-orange/15 text-[#EAF4F7]',
+    en_curso: 'bg-[#123F52] text-[#EAF4F7]',
     completada: 'bg-green-100 text-green-800',
   };
 
@@ -366,7 +368,7 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
       </div>
 
       <div className="grid grid-cols-7 gap-1">
-        {DOW.map((d) => <div key={d} className="pb-1 text-center text-[11px] font-bold uppercase tracking-wider text-navy-300">{d}</div>)}
+        {DOW.map((d) => <div key={d} className="pb-1 text-center text-[11px] font-bold uppercase tracking-wider text-[#7FA7B4]">{d}</div>)}
         {Array.from({ length: offset }).map((_, i) => <div key={`v${i}`} />)}
 
         {dias.map((d) => {
@@ -380,10 +382,10 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
           const exceso = hPrev > MAX_HORAS_DIA || hReal > MAX_HORAS_DIA;
           const esHoy = iso === hoy;
 
-          let base = 'border-navy-100 bg-white';
-          if (!laborable && !festivo) base = 'border-navy-50 bg-navy-50/60 text-navy-300';
+          let base = 'border-[#1E5468] bg-[#10394A]';
+          if (!laborable && !festivo) base = 'border-navy-50 bg-navy-50/60 text-[#7FA7B4]';
           if (festivo) base = 'border-red-200 bg-red-50';
-          if (vacacion) base = 'border-navy-300 bg-navy-50';
+          if (vacacion) base = 'border-[#2A6480] bg-[#0D3242]';
 
           return (
             <div key={iso}
@@ -395,9 +397,9 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
                 ${esHoy ? 'ring-2 ring-brand-orange' : ''}
                 ${laborable && (modoVacaciones || !vacacion) ? 'cursor-pointer hover:border-navy-400' : ''}`}>
               <div className="flex items-start justify-between">
-                <span className={`text-xs font-bold ${esHoy ? 'text-brand-orangeDark' : ''}`}>{d.getDate()}</span>
+                <span className={`text-xs font-bold ${esHoy ? 'text-[#F9A83A]' : ''}`}>{d.getDate()}</span>
                 {laborable && !vacacion && (
-                  <span className={`text-[10px] font-bold ${exceso ? 'text-red-600' : 'text-navy-300'}`}>
+                  <span className={`text-[10px] font-bold ${exceso ? 'text-red-300' : 'text-[#7FA7B4]'}`}>
                     {hPrev > 0 || hReal > 0
                       ? <>{hPrev > 0 && `${hPrev}h`}{hReal > 0 && <span className="text-green-600"> ✓{hReal}h</span>}</>
                       : `· ${horasDia(d)}h`}
@@ -405,8 +407,8 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
                 )}
                 {vacacion && <span className="text-[10px]" title="Vacaciones">✈</span>}
               </div>
-              {festivo && <p className="mt-0.5 truncate text-[10px] leading-tight text-red-600">{festivo}</p>}
-              {exceso && <p className="text-[10px] font-bold text-red-600">&gt;9h/día</p>}
+              {festivo && <p className="mt-0.5 truncate text-[10px] leading-tight text-red-300">{festivo}</p>}
+              {exceso && <p className="text-[10px] font-bold text-red-300">&gt;9h/día</p>}
               <div className="mt-1 space-y-0.5">
                 {entradas.slice(0, 3).map(({ t, tipo }) => {
                   const hechaAqui = tipo === 'prev' && t.fecha_efectiva === t.fecha_prevista && t.horas_reales;
@@ -415,26 +417,26 @@ function Calendario({ year, mes, onCambiarMes, festivosMap, vacacionesSet, tarea
                       onClick={(e) => { e.stopPropagation(); onEditarTarea(t); }}
                       title={`${TIPO_BY_ID[t.tipo || 'produccion'].nombre} · ${t.titulo} · prev ${t.horas_previstas}h${t.horas_reales ? ` · real ${t.horas_reales}h` : ''}`}
                       className={`block w-full truncate rounded-md px-1 py-0.5 text-left text-[10px] font-bold
-                        ${tipo === 'real' ? 'border border-green-300 bg-white text-green-700' : estilo[t.estado] ?? estilo.pendiente}`}>
+                        ${tipo === 'real' ? 'border border-green-300 bg-[#10394A] text-green-700' : estilo[t.estado] ?? estilo.pendiente}`}>
                       {(t.tipo === 'gestion' || t.tipo === 'coordinacion' || t.tipo === 'proceso_interno') && <span className="mr-0.5 rounded bg-navy-800 px-0.5 text-[8px] text-white">{t.tipo === 'gestion' ? 'G' : t.tipo === 'coordinacion' ? 'C' : 'PI'}</span>}
                       {tipo === 'real' ? <>✓{t.horas_reales}h · {t.titulo}</> : <>{hechaAqui ? `✓${t.horas_reales}` : t.horas_previstas}h · {t.titulo}</>}
                     </button>
                   );
                 })}
-                {entradas.length > 3 && <p className="text-[10px] font-semibold text-navy-300">+{entradas.length - 3} más</p>}
+                {entradas.length > 3 && <p className="text-[10px] font-semibold text-[#7FA7B4]">+{entradas.length - 3} más</p>}
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-navy-400">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-[#9FC0CB]">
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-red-200 align-middle" />Festivo</span>
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-navy-200 align-middle" />Vacaciones</span>
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-brand-orange/30 align-middle" />Pendiente</span>
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-navy-100 align-middle" />En curso</span>
+        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-[#123F52] align-middle" />En curso</span>
         <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded bg-green-200 align-middle" />Completada</span>
-        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded border border-green-300 bg-white align-middle" />✓ Real en otro día</span>
+        <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded border border-green-300 bg-[#10394A] align-middle" />✓ Real en otro día</span>
       </div>
     </div>
   );
@@ -634,9 +636,9 @@ export default function Agenda() {
 
   const Kpi = ({ label, value, sub, alerta }) => (
     <div className="card !p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-navy-300">{label}</p>
-      <p className={`mt-1 text-xl font-extrabold ${alerta ? 'text-red-600' : 'text-navy-900'}`}>{value}</p>
-      {sub && <p className={`text-[11px] font-semibold ${alerta ? 'text-red-500' : 'text-navy-400'}`}>{sub}</p>}
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7FA7B4]">{label}</p>
+      <p className={`mt-1 text-xl font-extrabold ${alerta ? 'text-red-300' : 'text-[#EAF4F7]'}`}>{value}</p>
+      {sub && <p className={`text-[11px] font-semibold ${alerta ? 'text-red-500' : 'text-[#9FC0CB]'}`}>{sub}</p>}
     </div>
   );
 
@@ -655,11 +657,11 @@ export default function Agenda() {
             ✈ {modoVacaciones ? 'Marcando vacaciones — clic en los días' : 'Marcar vacaciones'}
           </button>
           {/* Reloj de vacaciones disfrutadas por este consultor */}
-          <div className="flex items-center gap-2 rounded-xl border border-navy-100 bg-navy-50/50 px-3 py-1.5" title="Días de vacaciones marcados este año">
+          <div className="flex items-center gap-2 rounded-xl border border-[#1E5468] bg-navy-50/50 px-3 py-1.5" title="Días de vacaciones marcados este año">
             <span className="text-lg">✈</span>
             <div className="leading-tight">
-              <div className="text-sm font-extrabold text-navy-900">{vacacionesSet.size} / {DIAS_VACACIONES} días</div>
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-navy-400">
+              <div className="text-sm font-extrabold text-[#EAF4F7]">{vacacionesSet.size} / {DIAS_VACACIONES} días</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-[#9FC0CB]">
                 {Math.max(0, DIAS_VACACIONES - vacacionesSet.size)} disponibles
               </div>
             </div>
@@ -674,11 +676,11 @@ export default function Agenda() {
         </div>
       </div>
 
-      {err && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{err}</div>}
+      {err && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-300">{err}</div>}
       {aviso && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-brand-orange/10 px-4 py-3 text-sm font-bold text-brand-orangeDark">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-brand-orange/10 px-4 py-3 text-sm font-bold text-[#F9A83A]">
           <span>⤴ {aviso}</span>
-          <button onClick={() => setAviso(null)} className="text-brand-orangeDark/60 hover:text-brand-orangeDark">✕</button>
+          <button onClick={() => setAviso(null)} className="text-brand-orangeDark/60 hover:text-[#F9A83A]">✕</button>
         </div>
       )}
 
@@ -707,9 +709,9 @@ export default function Agenda() {
       <div className="grid gap-6">
         <div className="card">
           <div className="mb-3 flex gap-2">
-            <button onClick={() => setVista('calendario')} className={`chip text-xs font-bold ${vista === 'calendario' ? 'bg-navy-800 text-white' : 'border border-navy-200 text-navy-500'}`}>📅 Calendario</button>
-            <button onClick={() => setVista('planning')} className={`chip text-xs font-bold ${vista === 'planning' ? 'bg-navy-800 text-white' : 'border border-navy-200 text-navy-500'}`}>🗓️ Planning</button>
-            <button onClick={() => setVista('lista')} className={`chip text-xs font-bold ${vista === 'lista' ? 'bg-navy-800 text-white' : 'border border-navy-200 text-navy-500'}`}>☰ Lista</button>
+            <button onClick={() => setVista('calendario')} className={`chip text-xs font-bold ${vista === 'calendario' ? 'bg-navy-800 text-white' : 'border border-[#1E5468] text-[#9FC0CB]'}`}>📅 Calendario</button>
+            <button onClick={() => setVista('planning')} className={`chip text-xs font-bold ${vista === 'planning' ? 'bg-navy-800 text-white' : 'border border-[#1E5468] text-[#9FC0CB]'}`}>🗓️ Planning</button>
+            <button onClick={() => setVista('lista')} className={`chip text-xs font-bold ${vista === 'lista' ? 'bg-navy-800 text-white' : 'border border-[#1E5468] text-[#9FC0CB]'}`}>☰ Lista</button>
           </div>
           {vista === 'planning' ? (
             <CalendarioPlanning
@@ -729,13 +731,13 @@ export default function Agenda() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-navy-300">Tareas de {MESES[mes]} ({tareasMes.length})</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">Tareas de {MESES[mes]} ({tareasMes.length})</p>
               {tareasMes.length === 0 ? (
-                <p className="text-sm font-medium text-navy-300">Sin tareas este mes.</p>
+                <p className="text-sm font-medium text-[#7FA7B4]">Sin tareas este mes.</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                       <th className="py-2">Fecha</th><th className="py-2">Tarea</th><th className="py-2">Tipo</th>
                       <th className="py-2 text-right">Prev.</th><th className="py-2 text-right">Real</th><th className="py-2">Estado</th>
                     </tr>
@@ -744,7 +746,7 @@ export default function Agenda() {
                     {tareasMes.map(t => (
                       <tr key={t.id} className="cursor-pointer hover:bg-navy-50/50" onClick={() => setModal({ tarea: t })}>
                         <td className="py-1.5 font-medium">{t.fecha_prevista}</td>
-                        <td className="py-1.5">{t.codigo && <span className="mr-1 font-bold text-brand-orangeDark text-xs">{t.codigo}</span>}{t.titulo}</td>
+                        <td className="py-1.5">{t.codigo && <span className="mr-1 font-bold text-[#F9A83A] text-xs">{t.codigo}</span>}{t.titulo}</td>
                         <td className="py-1.5">{TIPO_BY_ID[t.tipo]?.nombre || t.tipo}</td>
                         <td className="py-1.5 text-right">{Number(t.horas_previstas) || 0}h</td>
                         <td className="py-1.5 text-right">{t.horas_reales != null ? `${t.horas_reales}h` : '—'}</td>
@@ -760,22 +762,22 @@ export default function Agenda() {
 
         <div className="card">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-navy-300">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7FA7B4]">
               Reloj · {etiquetaMeses}
             </p>
             <details className="relative">
-              <summary className="chip cursor-pointer border border-navy-200 text-xs font-bold text-navy-500 list-none">Elegir meses ▾</summary>
-              <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-navy-100 bg-white p-2 shadow-lg">
+              <summary className="chip cursor-pointer border border-[#1E5468] text-xs font-bold text-[#9FC0CB] list-none">Elegir meses ▾</summary>
+              <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-[#1E5468] bg-[#10394A] p-2 shadow-lg">
                 <div className="mb-2 flex gap-2">
-                  <button onClick={() => setMesesReloj(new Set(MESES.map((_, i) => i)))} className="chip border border-navy-200 text-[11px] font-bold text-navy-500">Todos</button>
-                  <button onClick={() => setMesesReloj(new Set())} className="chip border border-navy-200 text-[11px] font-bold text-navy-500">Ninguno</button>
+                  <button onClick={() => setMesesReloj(new Set(MESES.map((_, i) => i)))} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Todos</button>
+                  <button onClick={() => setMesesReloj(new Set())} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Ninguno</button>
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {MESES.map((m, i) => {
                     const on = mesesReloj.has(i);
                     return (
                       <button key={m} onClick={() => setMesesReloj(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; })}
-                        className={`chip justify-center border text-[11px] font-bold ${on ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 text-navy-400'}`}>
+                        className={`chip justify-center border text-[11px] font-bold ${on ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] text-[#9FC0CB]'}`}>
                         {on ? '✓' : ''}{m.slice(0, 3)}
                       </button>
                     );
@@ -789,47 +791,47 @@ export default function Agenda() {
               proyeccion={rMesSel.previstas} ritmo={rMesSel.laborables > 0 ? rMesSel.reales / rMesSel.laborables : 0}
               capacidad={rMesSel.productivas} />
           </div>
-          <div className="mt-3 space-y-1 border-t border-navy-50 pt-3 text-xs font-medium text-navy-400">
-            <p className="font-bold text-navy-600">Sumatorio de: {nombresEquipoSel}</p>
-            <p>Meses: <strong className="text-navy-800">{etiquetaMeses}</strong> · {rMesSel.laborables} laborables</p>
-            <p>Jornada del periodo: <strong className="text-navy-800">{Math.round(rMesSel.objetivo)} h</strong></p>
-            <p>Capacidad productiva ({PCT_PRODUCTIVO * 100} %): <strong className="text-navy-800">{Math.round(rMesSel.productivas)} h</strong></p>
-            <p>Previstas: <strong className="text-navy-800">{Math.round(rMesSel.previstas)} h</strong> · Reales: <strong className="text-navy-800">{Math.round(rMesSel.reales)} h</strong></p>
+          <div className="mt-3 space-y-1 border-t border-navy-50 pt-3 text-xs font-medium text-[#9FC0CB]">
+            <p className="font-bold text-[#B9D2DA]">Sumatorio de: {nombresEquipoSel}</p>
+            <p>Meses: <strong className="text-[#EAF4F7]">{etiquetaMeses}</strong> · {rMesSel.laborables} laborables</p>
+            <p>Jornada del periodo: <strong className="text-[#EAF4F7]">{Math.round(rMesSel.objetivo)} h</strong></p>
+            <p>Capacidad productiva ({PCT_PRODUCTIVO * 100} %): <strong className="text-[#EAF4F7]">{Math.round(rMesSel.productivas)} h</strong></p>
+            <p>Previstas: <strong className="text-[#EAF4F7]">{Math.round(rMesSel.previstas)} h</strong> · Reales: <strong className="text-[#EAF4F7]">{Math.round(rMesSel.reales)} h</strong></p>
           </div>
 
-          <p className="mt-5 border-t border-navy-100 pt-4 text-xs font-bold uppercase tracking-[0.16em] text-navy-300">
+          <p className="mt-5 border-t border-[#1E5468] pt-4 text-xs font-bold uppercase tracking-[0.16em] text-[#7FA7B4]">
             Reloj anual · {nombresEquipoSel} {YEAR}
           </p>
           <div className="mt-2">
             <RelojAnual previstas={anual.total.previstas} reales={anual.total.reales}
               proyeccion={anual.proyeccion} ritmo={anual.ritmo} capacidad={anual.capProductiva} />
           </div>
-          <div className="mt-3 space-y-1 border-t border-navy-50 pt-3 text-xs font-medium text-navy-400">
-            <p>Calendario {YEAR} tras festivos y vacaciones: <strong className="text-navy-800">{Math.round(anual.total.horasConvenio - anual.total.horasVacaciones)} h</strong></p>
-            <p>Jornada anual real (con intensiva verano): <strong className="text-navy-800">{Math.round(anual.total.objetivo)} h</strong> de máx. {TOPE_ANUAL} h</p>
+          <div className="mt-3 space-y-1 border-t border-navy-50 pt-3 text-xs font-medium text-[#9FC0CB]">
+            <p>Calendario {YEAR} tras festivos y vacaciones: <strong className="text-[#EAF4F7]">{Math.round(anual.total.horasConvenio - anual.total.horasVacaciones)} h</strong></p>
+            <p>Jornada anual real (con intensiva verano): <strong className="text-[#EAF4F7]">{Math.round(anual.total.objetivo)} h</strong> de máx. {TOPE_ANUAL} h</p>
             {anual.margenTope > 0 && (
-              <p>Margen hasta el tope legal: <strong className="text-navy-800">{Math.round(anual.margenTope)} h</strong></p>
+              <p>Margen hasta el tope legal: <strong className="text-[#EAF4F7]">{Math.round(anual.margenTope)} h</strong></p>
             )}
             {anual.ajusteTope > 0 && (
-              <p className="font-bold text-red-600">⚠ El calendario supera el tope en {Math.round(anual.ajusteTope)} h; revisar festivos o intensiva.</p>
+              <p className="font-bold text-red-300">⚠ El calendario supera el tope en {Math.round(anual.ajusteTope)} h; revisar festivos o intensiva.</p>
             )}
-            <p>Reparto: <strong className="text-navy-800">{Math.round(anual.total.productivas)} h</strong> productivas ({PCT_PRODUCTIVO * 100} %) · {Math.round(anual.total.gestion)} h gestión ({PCT_GESTION * 100} %) · {Math.round(anual.total.coordinacion)} h coordinación ({PCT_COORDINACION * 100} %)</p>
-            <p>Desviación anual real vs plan: <strong className="text-navy-800">{r1(anual.total.reales - anual.total.previstas)} h</strong></p>
+            <p>Reparto: <strong className="text-[#EAF4F7]">{Math.round(anual.total.productivas)} h</strong> productivas ({PCT_PRODUCTIVO * 100} %) · {Math.round(anual.total.gestion)} h gestión ({PCT_GESTION * 100} %) · {Math.round(anual.total.coordinacion)} h coordinación ({PCT_COORDINACION * 100} %)</p>
+            <p>Desviación anual real vs plan: <strong className="text-[#EAF4F7]">{r1(anual.total.reales - anual.total.previstas)} h</strong></p>
           </div>
           <div className="mt-3 space-y-2 border-t border-navy-50 pt-3">
             {[
               ['Producción', anual.total.prevTipo.produccion, anual.total.productivas, '#F5A623'],
-              ['Gestión', anual.total.prevTipo.gestion, anual.total.gestion, '#4C6BB4'],
+              ['Gestión', anual.total.prevTipo.gestion, anual.total.gestion, '#8AB4F8'],
               ['Coordinación', anual.total.prevTipo.coordinacion, anual.total.coordinacion, '#061B45'],
             ].map(([nombre, usado, bolsa, color]) => {
               const pct = bolsa > 0 ? Math.round((usado / bolsa) * 100) : 0;
               return (
                 <div key={nombre}>
                   <div className="flex justify-between text-[11px] font-bold">
-                    <span className="text-navy-500">{nombre}</span>
-                    <span className={pct > 100 ? 'text-red-600' : 'text-navy-400'}>{Math.round(usado)} / {Math.round(bolsa)} h · {pct}%</span>
+                    <span className="text-[#9FC0CB]">{nombre}</span>
+                    <span className={pct > 100 ? 'text-red-300' : 'text-[#9FC0CB]'}>{Math.round(usado)} / {Math.round(bolsa)} h · {pct}%</span>
                   </div>
-                  <div className="mt-0.5 h-1.5 rounded-full bg-navy-50">
+                  <div className="mt-0.5 h-1.5 rounded-full bg-[#0D3242]">
                     <div className="h-1.5 rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: pct > 100 ? '#DC2626' : color }} />
                   </div>
                 </div>
@@ -840,7 +842,7 @@ export default function Agenda() {
       </div>
 
       <div className="card">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-navy-300">Horas por mes · jornada, capacidad productiva (70 %), previstas y reales</p>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7FA7B4]">Horas por mes · jornada, capacidad productiva (70 %), previstas y reales</p>
         <div className="mt-3 h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={grafico} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
@@ -852,7 +854,7 @@ export default function Agenda() {
               <ReferenceLine y={mediaProductiva} stroke="#DC2626" strokeDasharray="4 4"
                 label={{ value: `Media prod. ${mediaProductiva}h`, fontSize: 10, fill: '#DC2626', position: 'right' }} />
               <Bar dataKey="Jornada" fill="#D8E0F2" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Productivas" fill="#4C6BB4" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Productivas" fill="#8AB4F8" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Previstas" fill={ORANGE} radius={[4, 4, 0, 0]} />
               <Bar dataKey="Reales" fill={NAVY} radius={[4, 4, 0, 0]} />
             </BarChart>

@@ -70,7 +70,7 @@ export default function ConsultorPortal() {
       {grupos.map((g, gi) => (
         <div key={gi}>
           {g.label && (
-            <p className="px-3 mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-navy-300">{g.label}</p>
+            <p className="px-3 mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#7FA7B4]">{g.label}</p>
           )}
           <div className="flex flex-col gap-0.5">
             {g.items.map((t) => (
@@ -82,14 +82,14 @@ export default function ConsultorPortal() {
                 className={({ isActive }) =>
                   `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${
                     isActive
-                      ? 'bg-brand-orange/15 text-navy-900 ring-1 ring-brand-orange/40'
-                      : 'text-navy-400 hover:bg-navy-50 hover:text-navy-800'
+                      ? 'bg-brand-orange/15 text-[#EAF4F7] ring-1 ring-brand-orange/40'
+                      : 'text-[#9FC0CB] hover:bg-[#0D3242] hover:text-[#EAF4F7]'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <Icon name={t.icon} className={`h-5 w-5 shrink-0 ${isActive ? 'text-brand-orangeDark' : 'text-navy-300 group-hover:text-navy-500'}`} />
+                    <Icon name={t.icon} className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#F9A83A]' : 'text-[#7FA7B4] group-hover:text-[#9FC0CB]'}`} />
                     <span className="truncate">{t.label}</span>
                   </>
                 )}
@@ -112,12 +112,12 @@ export default function ConsultorPortal() {
             <p className="eyebrow">Operaciones Consultify</p>
             <h1 className="mt-1 text-xl font-extrabold tracking-tight">Orbita.PMTool</h1>
           </div>
-          <button onClick={() => setMovilAbierto(v => !v)} className="rounded-xl border border-navy-100 bg-white p-2.5 text-navy-600" aria-label="Menú">
+          <button onClick={() => setMovilAbierto(v => !v)} className="rounded-xl border border-[#1E5468] bg-[#10394A] p-2.5 text-[#B9D2DA]" aria-label="Menú">
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
         </div>
         {movilAbierto && (
-          <div className="mb-4 rounded-2xl border border-navy-100 bg-white p-3 lg:hidden">
+          <div className="mb-4 rounded-2xl border border-[#1E5468] bg-[#10394A] p-3 lg:hidden">
             <NavItems onNavigate={() => setMovilAbierto(false)} />
           </div>
         )}

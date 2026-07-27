@@ -135,7 +135,7 @@ export default function Sistemas() {
       <div>
         <p className="eyebrow">Configuración</p>
         <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight">Sistemas de gestión</h1>
-        <p className="mt-2 text-sm font-medium text-navy-400">Edita las horas del catálogo maestro. Cada tarea muestra los 4 modelos en columnas para ajustarlos rápido. Los cambios se sincronizan en los proyectos que no hayas tocado a mano.</p>
+        <p className="mt-2 text-sm font-medium text-[#9FC0CB]">Edita las horas del catálogo maestro. Cada tarea muestra los 4 modelos en columnas para ajustarlos rápido. Los cambios se sincronizan en los proyectos que no hayas tocado a mano.</p>
       </div>
 
       {/* Subpestañas por sistema */}
@@ -143,7 +143,7 @@ export default function Sistemas() {
         <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4">
           {NORMAS.map(n => (
             <button key={n.id} onClick={() => setNormaSel(n.id)}
-              className={`chip shrink-0 whitespace-nowrap border text-xs font-bold ${normaSel === n.id ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400'}`}>
+              className={`chip shrink-0 whitespace-nowrap border text-xs font-bold ${normaSel === n.id ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB]'}`}>
               {n.nombre}
             </button>
           ))}
@@ -154,8 +154,8 @@ export default function Sistemas() {
             <input className="input !w-64" placeholder="Buscar proceso o subproceso…" value={filtro} onChange={e => setFiltro(e.target.value)} />
           </div>
           <div className="flex items-center gap-3">
-            {msg && <span className="text-xs font-bold text-navy-600">{msg}</span>}
-            {pendiente && <button onClick={sincronizarAgendas} disabled={sincronizando} className="rounded-xl border border-navy-200 px-4 py-2 text-sm font-bold text-navy-600 hover:bg-navy-50 disabled:opacity-40">{sincronizando ? 'Sincronizando…' : '⟳ Sincronizar proyectos'}</button>}
+            {msg && <span className="text-xs font-bold text-[#B9D2DA]">{msg}</span>}
+            {pendiente && <button onClick={sincronizarAgendas} disabled={sincronizando} className="rounded-xl border border-[#1E5468] px-4 py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40">{sincronizando ? 'Sincronizando…' : '⟳ Sincronizar proyectos'}</button>}
             <button onClick={addTarea} className="btn-orange !px-4 !py-2">+ Añadir tarea</button>
           </div>
         </div>
@@ -164,14 +164,14 @@ export default function Sistemas() {
       {/* Tabla editable con 4 columnas de modelo */}
       <div className="card overflow-x-auto">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wider text-navy-300">{grupos.length} tareas · {NORMAS.find(n => n.id === normaSel)?.nombre}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">{grupos.length} tareas · {NORMAS.find(n => n.id === normaSel)?.nombre}</p>
         </div>
         {grupos.length === 0 ? (
-          <p className="text-sm font-medium text-navy-300">Sin tareas para esta norma. Añade la primera.</p>
+          <p className="text-sm font-medium text-[#7FA7B4]">Sin tareas para esta norma. Añade la primera.</p>
         ) : (
           <table className="w-full min-w-[820px] text-sm">
             <thead>
-              <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+              <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Proceso</th>
                 <th className="py-2">Subproceso</th>
                 {MODELOS_COL.map(m => <th key={m} className="py-2 text-right px-1">{m}</th>)}
@@ -197,7 +197,7 @@ export default function Sistemas() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-navy-100 font-bold text-navy-800">
+              <tr className="border-t-2 border-[#1E5468] font-bold text-[#EAF4F7]">
                 <td className="py-2" colSpan={2}>Total</td>
                 {MODELOS_COL.map(m => <td key={m} className="py-2 px-1 text-right">{fmtH(totales[m])} h</td>)}
                 <td></td>

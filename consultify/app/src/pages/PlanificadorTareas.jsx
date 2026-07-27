@@ -111,7 +111,7 @@ export default function PlanificadorTareas() {
       <div className="mb-8 max-w-2xl">
         <p className="eyebrow">Planificador de tareas</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Tareas y horas del proyecto</h1>
-        <p className="mt-3 text-navy-400 font-medium">
+        <p className="mt-3 text-[#9FC0CB] font-medium">
           Elige los sistemas, el modelo de relación y la duración. El planificador devuelve las tareas
           con sus horas totales y las reparte por meses (diagnóstico al inicio, auditoría al final).
         </p>
@@ -122,14 +122,14 @@ export default function PlanificadorTareas() {
         {PASOS.map((p, i) => (
           <li key={p} className="flex-1">
             <button onClick={() => i < paso && setPaso(i)}
-              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition ${i === paso ? 'bg-navy-800 text-white' : i < paso ? 'bg-navy-100 text-navy-700' : 'bg-white text-navy-300 border border-navy-100'}`}>
+              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition ${i === paso ? 'bg-navy-800 text-white' : i < paso ? 'bg-[#123F52] text-[#CFE3E9]' : 'bg-[#10394A] text-[#7FA7B4] border border-[#1E5468]'}`}>
               <span className="mr-2 opacity-60">{i + 1}</span>{p}
             </button>
           </li>
         ))}
       </ol>
 
-      {err && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{err}</p>}
+      {err && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">{err}</p>}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div>
@@ -137,7 +137,7 @@ export default function PlanificadorTareas() {
           {paso === 0 && (
             <section>
               <h2 className="mb-4 text-lg font-extrabold">¿Qué sistemas entran en el proyecto?</h2>
-              <p className="mb-4 text-sm font-medium text-navy-400">ISO 9001 va siempre incluida. Cada sistema aporta sus tareas de forma independiente.</p>
+              <p className="mb-4 text-sm font-medium text-[#9FC0CB]">ISO 9001 va siempre incluida. Cada sistema aporta sus tareas de forma independiente.</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {NORMAS.map(n => {
                   const on = sel.includes(n.id);
@@ -145,12 +145,12 @@ export default function PlanificadorTareas() {
                   const sinTareas = !NORMAS_CON_TAREAS.has(n.id);
                   return (
                     <button key={n.id} onClick={() => toggle(n.id)} aria-disabled={fija}
-                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-navy-300'} ${fija ? 'cursor-default' : ''}`}>
+                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-[#2A6480]'} ${fija ? 'cursor-default' : ''}`}>
                       <div className="flex items-start justify-between">
                         <span className="font-extrabold">{n.nombre}</span>
-                        <span className={`chip ${fija ? 'bg-navy-800 text-white' : on ? 'bg-brand-orange text-navy-900' : 'bg-navy-50 text-navy-300'}`}>{fija ? 'Siempre' : on ? '✓' : '+'}</span>
+                        <span className={`chip ${fija ? 'bg-navy-800 text-white' : on ? 'bg-brand-orange text-[#EAF4F7]' : 'bg-[#0D3242] text-[#7FA7B4]'}`}>{fija ? 'Siempre' : on ? '✓' : '+'}</span>
                       </div>
-                      <p className="mt-1 text-sm font-medium text-navy-400">{n.desc}</p>
+                      <p className="mt-1 text-sm font-medium text-[#9FC0CB]">{n.desc}</p>
                       {sinTareas && (
                         <p className="mt-2 text-xs font-bold text-amber-600">⚠ Sin catálogo de tareas todavía · el precio sí se calcula, pero el plan no incluirá sus tareas</p>
                       )}
@@ -173,7 +173,7 @@ export default function PlanificadorTareas() {
                   const on = modelo === mid;
                   return (
                     <button key={mid} onClick={() => setModelo(mid)}
-                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-navy-300'}`}>
+                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-[#2A6480]'}`}>
                       <span className="text-lg font-extrabold">{mid}</span>
                     </button>
                   );
@@ -183,7 +183,7 @@ export default function PlanificadorTareas() {
                 <label className="label" htmlFor="meses">Duración del proyecto (meses)</label>
                 <input id="meses" type="number" min="1" className="input" value={meses}
                   onChange={e => setMeses(e.target.value)} />
-                <p className="mt-1 text-xs font-medium text-navy-400">Las horas totales se reparten entre los meses por fases. La coordinación añade 0,5 h × sistema en cada mes.</p>
+                <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Las horas totales se reparten entre los meses por fases. La coordinación añade 0,5 h × sistema en cada mes.</p>
               </div>
               <div className="mt-6 flex gap-3">
                 <button onClick={() => setPaso(0)} className="btn-ghost">← Sistemas</button>
@@ -196,9 +196,9 @@ export default function PlanificadorTareas() {
           {paso === 2 && (
             <section className="space-y-6">
               {catalogo === null ? (
-                <p className="text-sm font-medium text-navy-400">Cargando catálogo…</p>
+                <p className="text-sm font-medium text-[#9FC0CB]">Cargando catálogo…</p>
               ) : tareas.length === 0 ? (
-                <p className="text-sm font-medium text-navy-400">No hay tareas para esta combinación de sistemas y modelo.</p>
+                <p className="text-sm font-medium text-[#9FC0CB]">No hay tareas para esta combinación de sistemas y modelo.</p>
               ) : (
                 porSistema.map(([norma, lista]) => {
                   const subtotal = lista.reduce((s, t) => s + t.neta, 0);
@@ -206,12 +206,12 @@ export default function PlanificadorTareas() {
                     <div key={norma} className="card">
                       <div className="mb-3 flex items-baseline justify-between">
                         <h3 className="text-base font-extrabold">{nombreNorma(norma)}</h3>
-                        <span className="text-sm font-bold text-navy-800">{fmtH(subtotal)}</span>
+                        <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(subtotal)}</span>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full min-w-[560px] text-sm">
                           <thead>
-                            <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                            <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                               <th className="py-2">Proceso</th>
                               <th className="py-2">Subproceso (tarea)</th>
                               <th className="py-2 text-right">Base</th>
@@ -222,10 +222,10 @@ export default function PlanificadorTareas() {
                           <tbody className="divide-y divide-navy-50">
                             {lista.map(t => (
                               <tr key={t.id}>
-                                <td className="py-2 font-semibold text-navy-400">{t.proceso}</td>
+                                <td className="py-2 font-semibold text-[#9FC0CB]">{t.proceso}</td>
                                 <td className="py-2 font-medium">{t.subproceso}</td>
-                                <td className="py-2 text-right text-navy-400">{fmtH(Number(t.horas_base) || 0)}</td>
-                                <td className="py-2 text-right text-navy-400">{(Number(t.reduccion_pct) || 0)} %</td>
+                                <td className="py-2 text-right text-[#9FC0CB]">{fmtH(Number(t.horas_base) || 0)}</td>
+                                <td className="py-2 text-right text-[#9FC0CB]">{(Number(t.reduccion_pct) || 0)} %</td>
                                 <td className="py-2 text-right font-bold">{fmtH(t.neta)}</td>
                               </tr>
                             ))}
@@ -240,13 +240,13 @@ export default function PlanificadorTareas() {
               {tareas.length > 0 && (
                 <div className="card">
                   <h3 className="mb-1 text-base font-extrabold">Reparto por meses</h3>
-                  <p className="mb-3 text-xs font-medium text-navy-400">
+                  <p className="mb-3 text-xs font-medium text-[#9FC0CB]">
                     Diagnóstico en el Mes 1, auditoría/certificación en el último mes, el resto repartido. La suma de los meses es el total del proyecto.
                   </p>
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[420px] text-sm">
                       <thead>
-                        <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                        <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                           <th className="py-2">Mes</th>
                           <th className="py-2 text-right">Tareas</th>
                           <th className="py-2 text-right">Coordinación</th>
@@ -258,21 +258,21 @@ export default function PlanificadorTareas() {
                           <tr key={m.mes}>
                             <td className="py-2 font-bold">
                               Mes {m.mes}
-                              {m.esPrimero && <span className="ml-2 chip bg-navy-50 text-navy-500">diagnóstico</span>}
-                              {m.esUltimo && <span className="ml-2 chip bg-navy-50 text-navy-500">auditoría</span>}
+                              {m.esPrimero && <span className="ml-2 chip bg-[#0D3242] text-[#9FC0CB]">diagnóstico</span>}
+                              {m.esUltimo && <span className="ml-2 chip bg-[#0D3242] text-[#9FC0CB]">auditoría</span>}
                             </td>
-                            <td className="py-2 text-right text-navy-500">{fmtH(m.tareas)}</td>
-                            <td className="py-2 text-right text-navy-400">{fmtH(m.coordinacion)}</td>
+                            <td className="py-2 text-right text-[#9FC0CB]">{fmtH(m.tareas)}</td>
+                            <td className="py-2 text-right text-[#9FC0CB]">{fmtH(m.coordinacion)}</td>
                             <td className="py-2 text-right font-extrabold">{fmtH(m.total)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t-2 border-navy-100">
+                        <tr className="border-t-2 border-[#1E5468]">
                           <td className="py-2 font-extrabold">Total</td>
                           <td className="py-2 text-right font-bold">{fmtH(totalTareas)}</td>
                           <td className="py-2 text-right font-bold">{fmtH(coordinacion)}</td>
-                          <td className="py-2 text-right font-extrabold text-brand-orangeDark">{fmtH(totalProyecto)}</td>
+                          <td className="py-2 text-right font-extrabold text-[#F9A83A]">{fmtH(totalProyecto)}</td>
                         </tr>
                       </tfoot>
                     </table>

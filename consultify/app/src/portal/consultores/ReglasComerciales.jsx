@@ -355,11 +355,11 @@ export default function ReglasComerciales() {
             <div className="flex flex-wrap gap-2">
               {NORMAS.map((n) => {
                 const on = simNormas.includes(n.id);
-                const fija = n.id === '9001';
+                const base = n.id === '9001';
                 return (
-                  <button key={n.id} type="button" disabled={fija}
+                  <button key={n.id} type="button"
                     onClick={() => setSimNormas((s) => s.includes(n.id) ? s.filter((x) => x !== n.id) : [...s, n.id])}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${on ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange'} ${fija ? 'cursor-default' : ''}`}>
+                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${on ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange'} ${base && !on ? 'opacity-70' : ''}`}>
                     {n.nombre}
                   </button>
                 );

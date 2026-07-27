@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>Confirma que eres tú</title>
+</head>
+<body style="margin:0;padding:0;background-color:#EEF3F6;">
+
+<div style="display:none;font-size:1px;color:#EEF3F6;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">{{ if eq .Data.idioma "en" }}Your verification code for a sensitive operation.{{ else if eq .Data.idioma "ar" }}رمز التحقق الخاص بعملية حسّاسة.{{ else }}Tu código de verificación para una operación sensible.{{ end }}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EEF3F6;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;border-collapse:collapse;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(10,43,58,0.08);">
+
+      <tr><td align="center" style="background-color:#0A2B3A;padding:26px 24px 20px 24px;">
+        <img src="https://www.tuconsultor.com/marca/orbita-pmtool-email.jpg" width="110" height="131" alt="Orbita 360" style="display:block;border:0;width:110px;height:auto;" />
+      </td></tr>
+
+{{ if eq .Data.idioma "en" }}
+      <tr><td style="background-color:#FFFFFF;padding:34px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+        <h1 style="margin:0 0 14px 0;font-size:23px;line-height:1.3;font-weight:bold;color:#0A2B3A;">Confirm it is you</h1>
+        <p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#33505E;">You are about to perform a sensitive operation in Orbita 360 with the account <strong>{{ .Email }}</strong>.<br /><br />Enter this code on the screen you have open.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 4px 0;">
+          <tr><td style="background-color:#F4F8FA;border:1px solid #DCE7ED;border-radius:10px;padding:16px 18px;text-align:left;">
+            <p style="margin:0 0 6px 0;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;color:#6B8795;">Your verification code</p>
+            <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:bold;letter-spacing:0.18em;color:#0A2B3A;direction:ltr;">{{ .Token }}</p>
+            <p style="margin:8px 0 0 0;font-size:12px;line-height:1.6;color:#6B8795;">It expires in a few minutes and works only once. Never share it: we will never ask for it by phone or email.</p>
+          </td></tr>
+        </table>
+
+        <p style="margin:20px 0 0 0;padding-top:18px;border-top:1px solid #E3EAEF;font-size:12.5px;line-height:1.7;color:#6B8795;">If you were not doing anything in Orbita 360, <strong>someone has your password</strong>. Do not use the code, change it right now and let us know.</p>
+      </td></tr>
+
+      <tr><td style="background-color:#0E1730;padding:22px 32px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+        <p style="margin:0 0 6px 0;font-size:12px;line-height:1.5;color:#9FB3C0;">
+          <strong style="color:#FFFFFF;">TRESCORE PROYECTOS ITE, S.L.</strong> &middot; CIF B84867670 &middot; Alcorcón, Madrid
+        </p>
+        <p style="margin:0;font-size:11.5px;line-height:1.7;color:#7A93A2;">This is an automatic message about your Orbita 360 account. If you have any questions, write to <a href="mailto:hola@tuconsultor.com" style="color:#F99001;text-decoration:none;">hola@tuconsultor.com</a>.<br />We process your data to manage your access. You may exercise your rights at <a href="mailto:rgpd@tuconsultor.com" style="color:#F99001;text-decoration:none;">rgpd@tuconsultor.com</a> &middot; <a href="https://www.tuconsultor.com/legal/privacidad.html" style="color:#F99001;text-decoration:none;">Privacy policy</a></p>
+      </td></tr>
+{{ else if eq .Data.idioma "ar" }}
+      <tr><td dir="rtl" style="background-color:#FFFFFF;padding:34px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;text-align:right;">
+        <h1 style="margin:0 0 14px 0;font-size:23px;line-height:1.3;font-weight:bold;color:#0A2B3A;">أكّد أنك أنت</h1>
+        <p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#33505E;">أنت على وشك تنفيذ عملية حسّاسة في Orbita 360 بالحساب <strong>{{ .Email }}</strong>.<br /><br />أدخل هذا الرمز في الشاشة المفتوحة أمامك.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 4px 0;">
+          <tr><td style="background-color:#F4F8FA;border:1px solid #DCE7ED;border-radius:10px;padding:16px 18px;text-align:right;">
+            <p style="margin:0 0 6px 0;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;color:#6B8795;">رمز التحقق الخاص بك</p>
+            <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:bold;letter-spacing:0.18em;color:#0A2B3A;direction:ltr;">{{ .Token }}</p>
+            <p style="margin:8px 0 0 0;font-size:12px;line-height:1.6;color:#6B8795;">تنتهي صلاحيته خلال دقائق ويعمل مرة واحدة. لا تشاركه مع أحد: لن نطلبه منك هاتفيًا أو بالبريد أبدًا.</p>
+          </td></tr>
+        </table>
+
+        <p style="margin:20px 0 0 0;padding-top:18px;border-top:1px solid #E3EAEF;font-size:12.5px;line-height:1.7;color:#6B8795;">إذا لم تكن تقوم بأي شيء في Orbita 360، فإن <strong>أحدهم يملك كلمة مرورك</strong>. لا تستخدم الرمز، غيّرها الآن وأخبرنا.</p>
+      </td></tr>
+
+      <tr><td dir="rtl" style="background-color:#0E1730;padding:22px 32px;font-family:Arial,Helvetica,sans-serif;text-align:right;">
+        <p style="margin:0 0 6px 0;font-size:12px;line-height:1.5;color:#9FB3C0;">
+          <strong style="color:#FFFFFF;">TRESCORE PROYECTOS ITE, S.L.</strong> &middot; CIF B84867670 &middot; Alcorcón, Madrid
+        </p>
+        <p style="margin:0;font-size:11.5px;line-height:1.7;color:#7A93A2;">هذه رسالة تلقائية بخصوص حسابك في Orbita 360. لأي استفسار راسلنا على <a href="mailto:hola@tuconsultor.com" style="color:#F99001;text-decoration:none;">hola@tuconsultor.com</a>.<br />نعالج بياناتك لإدارة وصولك. يمكنك ممارسة حقوقك عبر <a href="mailto:rgpd@tuconsultor.com" style="color:#F99001;text-decoration:none;">rgpd@tuconsultor.com</a> &middot; <a href="https://www.tuconsultor.com/legal/privacidad.html" style="color:#F99001;text-decoration:none;">سياسة الخصوصية</a></p>
+      </td></tr>
+{{ else }}
+      <tr><td style="background-color:#FFFFFF;padding:34px 32px 28px 32px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+        <h1 style="margin:0 0 14px 0;font-size:23px;line-height:1.3;font-weight:bold;color:#0A2B3A;">Confirma que eres tú</h1>
+        <p style="margin:0 0 22px 0;font-size:15px;line-height:1.7;color:#33505E;">Estás a punto de realizar una operación sensible en Orbita 360 con la cuenta <strong>{{ .Email }}</strong>.<br /><br />Introduce este código en la pantalla que tienes abierta.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 4px 0;">
+          <tr><td style="background-color:#F4F8FA;border:1px solid #DCE7ED;border-radius:10px;padding:16px 18px;text-align:left;">
+            <p style="margin:0 0 6px 0;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;color:#6B8795;">Tu código de verificación</p>
+            <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:bold;letter-spacing:0.18em;color:#0A2B3A;direction:ltr;">{{ .Token }}</p>
+            <p style="margin:8px 0 0 0;font-size:12px;line-height:1.6;color:#6B8795;">Caduca en unos minutos y solo sirve una vez. No se lo des a nadie: nunca te lo pediremos por teléfono ni por correo.</p>
+          </td></tr>
+        </table>
+
+        <p style="margin:20px 0 0 0;padding-top:18px;border-top:1px solid #E3EAEF;font-size:12.5px;line-height:1.7;color:#6B8795;">Si no estabas haciendo nada en Orbita 360, <strong>alguien tiene tu contraseña</strong>. No uses el código, cámbiala ahora mismo y avísanos.</p>
+      </td></tr>
+
+      <tr><td style="background-color:#0E1730;padding:22px 32px;font-family:Arial,Helvetica,sans-serif;text-align:left;">
+        <p style="margin:0 0 6px 0;font-size:12px;line-height:1.5;color:#9FB3C0;">
+          <strong style="color:#FFFFFF;">TRESCORE PROYECTOS ITE, S.L.</strong> &middot; CIF B84867670 &middot; Alcorcón, Madrid
+        </p>
+        <p style="margin:0;font-size:11.5px;line-height:1.7;color:#7A93A2;">Este es un correo automático de tu cuenta en Orbita 360. Si tienes dudas, escribe a <a href="mailto:hola@tuconsultor.com" style="color:#F99001;text-decoration:none;">hola@tuconsultor.com</a>.<br />Tratamos tus datos para gestionar tu acceso. Puedes ejercer tus derechos en <a href="mailto:rgpd@tuconsultor.com" style="color:#F99001;text-decoration:none;">rgpd@tuconsultor.com</a> &middot; <a href="https://www.tuconsultor.com/legal/privacidad.html" style="color:#F99001;text-decoration:none;">Política de privacidad</a></p>
+      </td></tr>
+{{ end }}
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

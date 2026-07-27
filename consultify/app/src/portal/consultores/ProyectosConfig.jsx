@@ -33,7 +33,7 @@ function EditorBloques({ tarea, bloquesIniciales, onPersistir, onAdd, onQuitar }
     <div className="space-y-1.5">
       {locales.map((b, bi) => (
         <div key={bi} className="flex items-center gap-2">
-          <span className="w-14 text-xs font-bold text-navy-400">Bloque {bi + 1}</span>
+          <span className="w-14 text-xs font-bold text-[#9FC0CB]">Bloque {bi + 1}</span>
           <input
             type="date"
             className="input !py-1 !text-xs !w-auto"
@@ -48,11 +48,11 @@ function EditorBloques({ tarea, bloquesIniciales, onPersistir, onAdd, onQuitar }
             onChange={e => setCampo(bi, 'horas', Number(e.target.value) || 0)}
             onBlur={() => persistir(locales)}
           />
-          <span className="text-xs text-navy-400">h</span>
+          <span className="text-xs text-[#9FC0CB]">h</span>
           <button onClick={() => onQuitar(tarea, bi)} className="text-xs font-bold text-red-400 hover:underline">×</button>
         </div>
       ))}
-      <button onClick={() => onAdd(tarea)} className="chip border border-brand-orange bg-brand-orange/10 text-[11px] font-bold text-brand-orangeDark">+ bloque</button>
+      <button onClick={() => onAdd(tarea)} className="chip border border-brand-orange bg-brand-orange/10 text-[11px] font-bold text-[#F9A83A]">+ bloque</button>
     </div>
   );
 }
@@ -388,10 +388,10 @@ export default function Proyectos() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <input className="input !w-auto !py-1.5 !text-sm" placeholder="Buscar proyecto…" value={buscaP} onChange={e => { setBuscaP(e.target.value); setPagP(0); }} />
-            <span className="text-xs font-medium text-navy-400">{proyectosFiltrados.length} proyectos</span>
+            <span className="text-xs font-medium text-[#9FC0CB]">{proyectosFiltrados.length} proyectos</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-navy-400">Mostrar</label>
+            <label className="text-xs font-bold text-[#9FC0CB]">Mostrar</label>
             <select className="input !w-auto !py-1.5 !text-sm" value={porPagP} onChange={e => { setPorPagP(e.target.value); setPagP(0); }}>
               {['10', '25', '50', '100', 'todos'].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -400,7 +400,7 @@ export default function Proyectos() {
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+              <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Cliente</th><th className="py-2">Proyecto</th><th className="py-2">Normas</th><th className="py-2">Modelo</th><th className="py-2">Estado</th><th className="py-2"></th>
               </tr>
             </thead>
@@ -409,10 +409,10 @@ export default function Proyectos() {
                 <tr key={p.id} className={`cursor-pointer hover:bg-navy-50/50 ${String(p.id) === String(sel) ? 'bg-brand-orange/5' : ''}`} onClick={() => setSel(String(p.id))}>
                   <td className="py-2 font-medium">{nombreCli(p.cliente_id)}</td>
                   <td className="py-2">{p.nombre}</td>
-                  <td className="py-2 text-xs text-navy-500">{(p.normas || []).join(', ') || '—'}</td>
+                  <td className="py-2 text-xs text-[#9FC0CB]">{(p.normas || []).join(', ') || '—'}</td>
                   <td className="py-2 text-xs">{p.modelo || '—'}</td>
-                  <td className="py-2"><span className={`chip text-[11px] font-bold ${p.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-navy-100 text-navy-500'}`}>{p.estado}</span></td>
-                  <td className="py-2 text-right"><span className="text-xs font-bold text-brand-orangeDark">Abrir →</span></td>
+                  <td className="py-2"><span className={`chip text-[11px] font-bold ${p.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{p.estado}</span></td>
+                  <td className="py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
                 </tr>
               ))}
             </tbody>
@@ -421,19 +421,19 @@ export default function Proyectos() {
         {porPagP !== 'todos' && totalPagsP > 1 && (
           <div className="mt-3 flex items-center justify-center gap-2">
             <button onClick={() => setPagP(p => Math.max(0, p - 1))} disabled={pagP === 0} className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-30">‹ Anterior</button>
-            <span className="text-xs font-medium text-navy-400">Página {pagP + 1} de {totalPagsP}</span>
+            <span className="text-xs font-medium text-[#9FC0CB]">Página {pagP + 1} de {totalPagsP}</span>
             <button onClick={() => setPagP(p => Math.min(totalPagsP - 1, p + 1))} disabled={pagP >= totalPagsP - 1} className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-30">Siguiente ›</button>
           </div>
         )}
       </div>
 
       {!proyecto ? (
-        <p className="card text-sm font-medium text-navy-400">Selecciona un proyecto. Los proyectos se crean desde la pestaña Clientes.</p>
+        <p className="card text-sm font-medium text-[#9FC0CB]">Selecciona un proyecto. Los proyectos se crean desde la pestaña Clientes.</p>
       ) : (
         <>
           {/* Cabecera */}
           <div className="card">
-            <p className="text-xs font-bold uppercase tracking-wider text-navy-300">Cliente matriz</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">Cliente matriz</p>
             <p className="text-lg font-extrabold">{cliente?.empresa || '—'}</p>
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[220px]">
@@ -449,20 +449,20 @@ export default function Proyectos() {
                 </select>
               </div>
               <button onClick={guardarCabecera} className="btn-ghost !px-4 !py-2">Guardar</button>
-              {msgCab && <span className="text-sm font-bold text-navy-600">{msgCab}</span>}
+              {msgCab && <span className="text-sm font-bold text-[#B9D2DA]">{msgCab}</span>}
             </div>
           </div>
 
           {/* Normas + modelo */}
           <div className="card">
             <h4 className="font-extrabold">Normas y modelo del proyecto</h4>
-            <p className="mt-1 text-sm font-medium text-navy-400">ISO 9001 va siempre. Solo se mostrarán las tareas de las normas y el modelo elegidos.</p>
+            <p className="mt-1 text-sm font-medium text-[#9FC0CB]">ISO 9001 va siempre. Solo se mostrarán las tareas de las normas y el modelo elegidos.</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {NORMAS.map(n => {
                 const on = normasSel.includes(n.id);
                 return (
                   <button key={n.id} onClick={() => toggleNorma(n.id)}
-                    className={`chip border transition ${on ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'}`}>
+                    className={`chip border transition ${on ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'}`}>
                     {n.nombre}{n.id === '9001' ? ' (base)' : ''}
                   </button>
                 );
@@ -480,7 +480,7 @@ export default function Proyectos() {
                 <input type="date" className="input !w-44" value={proyecto?.fecha_inicio || ''}
                   onChange={async e => { const v = e.target.value || null; await updateRow('proyectos_cliente', proyecto.id, { fecha_inicio: v }); setProyectos(ps => ps.map(p => p.id === proyecto.id ? { ...p, fecha_inicio: v } : p)); }} />
                 {proyecto?.fecha_inicio && (
-                  <p className="mt-1 text-xs font-medium text-navy-400">
+                  <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
                     La agenda se distribuye hasta {(() => { const d = new Date(proyecto.fecha_inicio); d.setMonth(d.getMonth() + (Number(meses) || 1)); return d.toLocaleDateString('es-ES'); })()} (inicio + {meses} meses).
                   </p>
                 )}
@@ -488,7 +488,7 @@ export default function Proyectos() {
               <div>
                 <label className="label">Duración (meses)</label>
                 <input type="number" min="1" className="input !w-28" value={meses} onChange={e => setMeses(Number(e.target.value) || 1)} />
-                <p className="mt-1 text-xs font-medium text-navy-400">
+                <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
                   Mínimo {mesesPorModelo(modelo, normasSel.length)} meses para {modelo}{modelo === 'Apoyo' ? ` con ${normasSel.length} sistema(s)` : ''}.
                 </p>
               </div>
@@ -502,11 +502,11 @@ export default function Proyectos() {
               <div className="flex items-center justify-between">
                 <h4 className="font-extrabold">Anidar tareas comunes ({clavesComunes.length})</h4>
                 <div className="flex gap-2">
-                  <button onClick={anidarTodas} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-brand-orangeDark">Anidar todas</button>
-                  <button onClick={anidarNinguna} className="chip border border-navy-200 text-xs font-bold text-navy-500">Ninguna</button>
+                  <button onClick={anidarTodas} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-[#F9A83A]">Anidar todas</button>
+                  <button onClick={anidarNinguna} className="chip border border-[#1E5468] text-xs font-bold text-[#9FC0CB]">Ninguna</button>
                 </div>
               </div>
-              <p className="mt-1 text-sm font-medium text-navy-400">Tareas que existen en varias normas. Al anidar, se funden en una tarea integrada con la suma de horas.</p>
+              <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Tareas que existen en varias normas. Al anidar, se funden en una tarea integrada con la suma de horas.</p>
               <div className="mt-3 space-y-1">
                 {clavesComunes.map(k => {
                   const [proc, sub] = k.split('|');
@@ -525,13 +525,13 @@ export default function Proyectos() {
           <div className="card">
             <div className="flex items-center justify-between">
               <h4 className="font-extrabold">Tareas resultantes ({candidatas.length})</h4>
-              <span className="text-sm font-bold text-navy-800">{fmtH(totalHoras)}</span>
+              <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(totalHoras)}</span>
             </div>
-            <p className="mt-1 text-xs font-medium text-navy-400">Arrastra una tarea sobre otra del mismo proceso y subproceso para anidarlas (fusionar e integrar sus horas).</p>
+            <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Arrastra una tarea sobre otra del mismo proceso y subproceso para anidarlas (fusionar e integrar sus horas).</p>
             <div className="mt-3 max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                <thead className="sticky top-0 bg-[#10394A]">
+                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                     <th className="py-2"></th><th className="py-2">Código</th><th className="py-2">Tipo</th><th className="py-2 text-right">Horas</th>
                   </tr>
                 </thead>
@@ -543,10 +543,10 @@ export default function Proyectos() {
                       onDragOver={(e) => { if (arrastra && puedeFusionar(arrastra, c._clave)) e.preventDefault(); }}
                       onDrop={() => { if (arrastra && puedeFusionar(arrastra, c._clave)) { setAnidar(s => new Set([...s, c._clave])); } setArrastra(null); }}
                       className={`${arrastra && puedeFusionar(arrastra, c._clave) ? 'bg-brand-orange/5' : ''} cursor-grab`}>
-                      <td className="py-1.5 text-navy-300">⠿</td>
+                      <td className="py-1.5 text-[#7FA7B4]">⠿</td>
                       <td className="py-1.5 font-medium">
                         {codigoTareaIntegrada(cliente?.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas)}
-                        {c.integrada && <span className="ml-2 chip bg-brand-orange/15 text-[10px] font-bold text-brand-orangeDark">integrada</span>}
+                        {c.integrada && <span className="ml-2 chip bg-brand-orange/15 text-[10px] font-bold text-[#F9A83A]">integrada</span>}
                       </td>
                       <td className="py-1.5">{TIPO_LABEL[tipoTarea(c)]}</td>
                       <td className="py-1.5 text-right">{fmtH(c.horas)}</td>
@@ -559,7 +559,7 @@ export default function Proyectos() {
               <button onClick={generarYDistribuir} disabled={!candidatas.length} className="btn-orange disabled:opacity-40">
                 Guardar y distribuir por meses
               </button>
-              {msg && <span className="text-sm font-bold text-navy-600">{msg}</span>}
+              {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
             </div>
           </div>
 
@@ -569,21 +569,21 @@ export default function Proyectos() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="font-extrabold">Tareas distribuidas ({tareasProyecto.length})</h4>
                 <div className="flex items-center gap-3">
-                  {msg && <span className="text-sm font-bold text-navy-600">{msg}</span>}
+                  {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
                   <button onClick={distribuirAgenda} disabled={distribuyendo} className="btn-orange !px-4 !py-2 disabled:opacity-40">
                     {distribuyendo ? 'Distribuyendo…' : '↻ Distribuir agenda'}
                   </button>
                 </div>
               </div>
-              <p className="mt-1 text-xs font-medium text-navy-400">Asigna consultor responsable. Las horas reales salen del seguimiento de la tarea. Pulsa «Distribuir agenda» tras aceptar las tareas.</p>
+              <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Asigna consultor responsable. Las horas reales salen del seguimiento de la tarea. Pulsa «Distribuir agenda» tras aceptar las tareas.</p>
 
               {/* Acciones masivas */}
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-navy-100 bg-navy-50/40 px-3 py-2">
-                <span className="text-xs font-bold text-navy-500">{selT.size ? `${selT.size} seleccionada(s)` : `${tareasProyecto.length} tareas`}</span>
-                <button onClick={() => setSelT(new Set(tareasProyecto.map(t => t.id)))} className="text-xs font-bold text-navy-500 hover:underline">Todas</button>
-                <button onClick={() => setSelT(new Set())} className="text-xs font-bold text-navy-500 hover:underline">Ninguna</button>
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-navy-50/40 px-3 py-2">
+                <span className="text-xs font-bold text-[#9FC0CB]">{selT.size ? `${selT.size} seleccionada(s)` : `${tareasProyecto.length} tareas`}</span>
+                <button onClick={() => setSelT(new Set(tareasProyecto.map(t => t.id)))} className="text-xs font-bold text-[#9FC0CB] hover:underline">Todas</button>
+                <button onClick={() => setSelT(new Set())} className="text-xs font-bold text-[#9FC0CB] hover:underline">Ninguna</button>
                 <span className="mx-1 h-4 w-px bg-navy-200" />
-                <label className="text-xs font-bold text-navy-500">Asignar consultor en lote</label>
+                <label className="text-xs font-bold text-[#9FC0CB]">Asignar consultor en lote</label>
                 <select className="input !w-auto !py-1.5 !text-sm" value="__" onChange={e => { if (e.target.value !== '__') { asignarLote(e.target.value === '__none' ? null : e.target.value); e.target.value = '__'; } }}>
                   <option value="__" disabled>Elegir…</option>
                   <option value="__none">Sin asignar</option>
@@ -598,20 +598,20 @@ export default function Proyectos() {
                   <option value="">Todos los consultores</option>
                   {consultores.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.apellidos || ''}</option>)}
                 </select>
-                {(filtroT || filtroConsultor) && <button onClick={() => { setFiltroT(''); setFiltroConsultor(''); }} className="text-xs font-bold text-brand-orangeDark hover:underline">Limpiar filtros</button>}
-                <span className="text-xs font-medium text-navy-400">Clic en una cabecera para ordenar.</span>
+                {(filtroT || filtroConsultor) && <button onClick={() => { setFiltroT(''); setFiltroConsultor(''); }} className="text-xs font-bold text-[#F9A83A] hover:underline">Limpiar filtros</button>}
+                <span className="text-xs font-medium text-[#9FC0CB]">Clic en una cabecera para ordenar.</span>
               </div>
 
               <div className="mt-3 max-h-[32rem] overflow-y-auto overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                  <thead className="sticky top-0 bg-[#10394A] z-10">
+                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                       <th className="py-2 w-8"><input type="checkbox" checked={selT.size === tareasProyecto.length && tareasProyecto.length > 0} onChange={e => e.target.checked ? setSelT(new Set(tareasProyecto.map(t => t.id))) : setSelT(new Set())} /></th>
-                      <th className="py-2 w-16 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
-                      <th className="py-2 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
-                      <th className="py-2 w-40 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('consultor')}>Consultor/a{flechaOrden('consultor')}</th>
-                      <th className="py-2 w-28 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('fecha')}>Fecha límite{flechaOrden('fecha')}</th>
-                      <th className="py-2 text-right w-16 cursor-pointer select-none hover:text-navy-500" onClick={() => ordenarPor('horas')}>Horas{flechaOrden('horas')}</th>
+                      <th className="py-2 w-16 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
+                      <th className="py-2 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
+                      <th className="py-2 w-40 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('consultor')}>Consultor/a{flechaOrden('consultor')}</th>
+                      <th className="py-2 w-28 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('fecha')}>Fecha límite{flechaOrden('fecha')}</th>
+                      <th className="py-2 text-right w-16 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('horas')}>Horas{flechaOrden('horas')}</th>
                       <th className="py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -625,10 +625,10 @@ export default function Proyectos() {
                       <>
                       <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${selT.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
                         <td className="py-1.5"><input type="checkbox" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
-                        <td className="py-1.5 font-bold text-navy-400 text-xs">{codigo}</td>
+                        <td className="py-1.5 font-bold text-[#9FC0CB] text-xs">{codigo}</td>
                         <td className="py-1.5">
                           <div className="font-medium leading-snug min-w-[220px] max-w-[420px] whitespace-normal break-words">{t.titulo}</div>
-                          {t.integrada && <span className="chip bg-brand-orange/15 text-[10px] font-bold text-brand-orangeDark">integrada</span>}
+                          {t.integrada && <span className="chip bg-brand-orange/15 text-[10px] font-bold text-[#F9A83A]">integrada</span>}
                         </td>
                         <td className="py-1.5">
                           <select className="input !py-1 !text-xs" value={t.consultor_id || ''} onChange={e => patchTarea(t, { consultor_id: e.target.value || null })}>
@@ -639,7 +639,7 @@ export default function Proyectos() {
                         <td className="py-1.5 text-xs">{fechaLimite || '—'}</td>
                         <td className="py-1.5 text-right">{fmtH(t.horas)}</td>
                         <td className="py-1.5 text-right">
-                          <button onClick={() => setExpandida(abierto ? null : t.id)} className="text-xs font-bold text-navy-500 hover:text-brand-orange" title="Bloques de ejecución">
+                          <button onClick={() => setExpandida(abierto ? null : t.id)} className="text-xs font-bold text-[#9FC0CB] hover:text-brand-orange" title="Bloques de ejecución">
                             {abierto ? '▾' : '▸'} {bloques.length || trocearEnBloques(t.horas).length}
                           </button>
                         </td>
@@ -648,7 +648,7 @@ export default function Proyectos() {
                         <tr className="bg-navy-50/40">
                           <td></td>
                           <td colSpan={6} className="py-2 pr-3">
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-navy-300">Bloques de ejecución (4h por defecto, editables)</p>
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">Bloques de ejecución (4h por defecto, editables)</p>
                             <EditorBloques
                               tarea={t}
                               bloquesIniciales={bloques.length ? bloques : trocearEnBloques(t.horas).map(h => ({ horas: h, fecha: t.fecha_estimada }))}

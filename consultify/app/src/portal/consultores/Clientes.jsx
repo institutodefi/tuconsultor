@@ -287,7 +287,7 @@ export default function Clientes() {
           </div>
           <div className="flex gap-2">
             <button onClick={nuevoCliente} className="btn-orange !px-4 !py-2">+ Nuevo cliente</button>
-            <button onClick={actualizarCobros} disabled={cobrosBusy} className="rounded-xl border border-navy-200 !px-4 !py-2 text-sm font-bold text-navy-600 hover:bg-navy-50 disabled:opacity-40" title="Consultar Holded y actualizar el semáforo de facturas de todos los clientes">{cobrosBusy ? 'Actualizando…' : '🔄 Actualizar cobros'}</button>
+            <button onClick={actualizarCobros} disabled={cobrosBusy} className="rounded-xl border border-[#1E5468] !px-4 !py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40" title="Consultar Holded y actualizar el semáforo de facturas de todos los clientes">{cobrosBusy ? 'Actualizando…' : '🔄 Actualizar cobros'}</button>
             {cliente && <button onClick={() => setForm({ ...VACIO, ...cliente })} className="btn-ghost !px-4 !py-2">✎ Editar cliente</button>}
             {cliente && <button onClick={() => navigate('/consultores/planificador', { state: { clientePrefill: cliente } })} className="btn-orange !px-4 !py-2" title="Crear una oferta con los datos de este cliente">📄 Lanzar oferta</button>}
             {cliente && puedeBorrar && <button onClick={() => borrarCliente(cliente)} className="rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50" title="Eliminar cliente (solo administradores)">🗑 Eliminar</button>}
@@ -300,10 +300,10 @@ export default function Clientes() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <input className="input !w-auto !py-1.5 !text-sm" placeholder="Buscar cliente…" value={busca} onChange={e => { setBusca(e.target.value); setPag(0); }} />
-            <span className="text-xs font-medium text-navy-400">{clientesFiltrados.length} clientes</span>
+            <span className="text-xs font-medium text-[#9FC0CB]">{clientesFiltrados.length} clientes</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-navy-400">Mostrar</label>
+            <label className="text-xs font-bold text-[#9FC0CB]">Mostrar</label>
             <select className="input !w-auto !py-1.5 !text-sm" value={porPagina} onChange={e => { setPorPagina(e.target.value); setPag(0); }}>
               {['10', '25', '50', '100', 'todos'].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -312,19 +312,19 @@ export default function Clientes() {
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+              <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">CIF</th><th className="py-2">Cliente</th><th className="py-2">Contacto</th><th className="py-2">Email</th><th className="py-2">Holded</th><th className="py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-50">
               {clientesPagina.map(c => (
                 <tr key={c.id} className={`cursor-pointer hover:bg-navy-50/50 ${String(c.id) === String(sel) ? 'bg-brand-orange/5' : ''}`} onClick={() => { setSel(String(c.id)); setForm(null); }}>
-                  <td className="py-2 font-bold text-navy-500">{c.cif_matriz || c.codigo || '—'}</td>
+                  <td className="py-2 font-bold text-[#9FC0CB]">{c.cif_matriz || c.codigo || '—'}</td>
                   <td className="py-2 font-medium"><span className="inline-flex items-center gap-2"><SemaforoCobros estado={c.estado_cobros} detalle={c.cobros_detalle} actualizado={c.cobros_actualizado_en} />{c.empresa}</span></td>
-                  <td className="py-2 text-navy-500">{c.contacto || '—'}</td>
-                  <td className="py-2 text-navy-500">{c.email || '—'}</td>
-                  <td className="py-2">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-navy-300">—</span>}</td>
-                  <td className="py-2 text-right"><span className="text-xs font-bold text-brand-orangeDark">Abrir →</span></td>
+                  <td className="py-2 text-[#9FC0CB]">{c.contacto || '—'}</td>
+                  <td className="py-2 text-[#9FC0CB]">{c.email || '—'}</td>
+                  <td className="py-2">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-[#7FA7B4]">—</span>}</td>
+                  <td className="py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
                 </tr>
               ))}
             </tbody>
@@ -333,7 +333,7 @@ export default function Clientes() {
         {porPagina !== 'todos' && totalPags > 1 && (
           <div className="mt-3 flex items-center justify-center gap-2">
             <button onClick={() => setPag(p => Math.max(0, p - 1))} disabled={pag === 0} className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-30">‹ Anterior</button>
-            <span className="text-xs font-medium text-navy-400">Página {pag + 1} de {totalPags}</span>
+            <span className="text-xs font-medium text-[#9FC0CB]">Página {pag + 1} de {totalPags}</span>
             <button onClick={() => setPag(p => Math.min(totalPags - 1, p + 1))} disabled={pag >= totalPags - 1} className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-30">Siguiente ›</button>
           </div>
         )}
@@ -351,7 +351,7 @@ export default function Clientes() {
               <div className="flex gap-2">
                 <input className="input font-bold" placeholder="B12345678" value={form.cif_matriz || ''} onChange={e => setForm({ ...form, cif_matriz: e.target.value.toUpperCase() })} />
                 <button type="button" onClick={buscarEnHolded} disabled={holdedBusy} title="Buscar este CIF en Holded y autocompletar"
-                  className="shrink-0 rounded-xl border border-navy-200 px-3 text-sm font-bold text-navy-500 hover:bg-navy-50 disabled:opacity-40">🔍</button>
+                  className="shrink-0 rounded-xl border border-[#1E5468] px-3 text-sm font-bold text-[#9FC0CB] hover:bg-[#0D3242] disabled:opacity-40">🔍</button>
               </div>
             </div>
             <div><label className="label">Nombre</label><input required className="input" value={form.empresa} onChange={e => setForm({ ...form, empresa: e.target.value })} /></div>
@@ -385,21 +385,21 @@ export default function Clientes() {
             <button className="btn-primary">{form.id ? 'Guardar cambios' : 'Crear cliente'}</button>
             <button type="button" onClick={() => setForm(null)} className="btn-ghost">Cancelar</button>
             <button type="button" onClick={sincronizarHolded} disabled={holdedBusy}
-              className="rounded-xl border border-navy-200 px-4 py-2 text-sm font-bold text-navy-600 hover:bg-navy-50 disabled:opacity-40">
+              className="rounded-xl border border-[#1E5468] px-4 py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40">
               {holdedBusy ? 'Sincronizando…' : '⟳ Sincronizar con Holded'}
             </button>
             <button type="button" onClick={diagnosticarCobros} disabled={cobrosBusy}
-              className="rounded-xl border border-dashed border-navy-200 px-3 py-2 text-xs font-bold text-navy-400 hover:bg-navy-50 disabled:opacity-40" title="Ver estado de cobros de este cliente (diagnóstico)">
+              className="rounded-xl border border-dashed border-[#1E5468] px-3 py-2 text-xs font-bold text-[#9FC0CB] hover:bg-[#0D3242] disabled:opacity-40" title="Ver estado de cobros de este cliente (diagnóstico)">
               🔍 Cobros
             </button>
-            {msg && <p className="text-sm font-bold text-red-600">{msg}</p>}
-            {holdedMsg && <p className={`text-sm font-bold ${holdedMsg.err ? 'text-red-600' : 'text-green-600'}`}>{holdedMsg.t}</p>}
+            {msg && <p className="text-sm font-bold text-red-300">{msg}</p>}
+            {holdedMsg && <p className={`text-sm font-bold ${holdedMsg.err ? 'text-red-300' : 'text-green-600'}`}>{holdedMsg.t}</p>}
           </div>
         </form>
       )}
 
       {!cliente && !form && (
-        <p className="card text-sm font-medium text-navy-400">Selecciona un cliente en el desplegable para ver sus CIF, centros y todas las tareas del proyecto.</p>
+        <p className="card text-sm font-medium text-[#9FC0CB]">Selecciona un cliente en el desplegable para ver sus CIF, centros y todas las tareas del proyecto.</p>
       )}
 
       {/* Detalle del cliente */}
@@ -411,10 +411,10 @@ export default function Clientes() {
                 <span className="chip bg-navy-800 text-white">{cliente.codigo || 'sin ID'}</span>
                 <div>
                   <p className="text-lg font-extrabold">{cliente.empresa}</p>
-                  <p className="text-xs font-medium text-navy-400">{[cliente.contacto, cliente.email, cliente.telefono].filter(Boolean).join(' · ') || 'Sin datos de contacto'}</p>
+                  <p className="text-xs font-medium text-[#9FC0CB]">{[cliente.contacto, cliente.email, cliente.telefono].filter(Boolean).join(' · ') || 'Sin datos de contacto'}</p>
                 </div>
               </div>
-              <div className="text-right text-xs font-medium text-navy-400">
+              <div className="text-right text-xs font-medium text-[#9FC0CB]">
                 <p>{emps.length} CIF · {normasCliente.length} norma{normasCliente.length !== 1 ? 's' : ''}</p>
                 <p>{totalTrabajadores} trabajador{totalTrabajadores !== 1 ? 'es' : ''} en plantilla</p>
               </div>
@@ -426,17 +426,17 @@ export default function Clientes() {
               <h4 className="font-extrabold">Empresas y centros de trabajo</h4>
               <button onClick={addEmpresa} className="btn-orange !px-4 !py-2">+ Añadir CIF</button>
             </div>
-            <p className="mt-1 text-sm font-medium text-navy-400">Cada empresa (CIF y razón social) y, dentro, sus centros con dirección y nº de trabajadores.</p>
-            {emps.length === 0 && <p className="mt-4 text-sm font-medium text-navy-300">Aún no hay empresas. Añade el primer CIF.</p>}
+            <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Cada empresa (CIF y razón social) y, dentro, sus centros con dirección y nº de trabajadores.</p>
+            {emps.length === 0 && <p className="mt-4 text-sm font-medium text-[#7FA7B4]">Aún no hay empresas. Añade el primer CIF.</p>}
 
             <div className="mt-4 space-y-4">
               {emps.map((emp, ei) => {
                 const cts = centros.filter(x => String(x.empresa_id) === String(emp.id));
                 const nrs = normasEmp.filter(x => String(x.empresa_id) === String(emp.id));
                 return (
-                  <div key={emp.id} className="rounded-2xl border border-navy-100 bg-navy-50/30 p-4">
+                  <div key={emp.id} className="rounded-2xl border border-[#1E5468] bg-navy-50/30 p-4">
                     <div className="flex items-center justify-between">
-                      <span className="chip bg-brand-orange/15 font-bold text-brand-orangeDark">Empresa {ei + 1}</span>
+                      <span className="chip bg-brand-orange/15 font-bold text-[#F9A83A]">Empresa {ei + 1}</span>
                       <button onClick={async () => { if (confirm(`¿Eliminar ${emp.cif || 'esta empresa'} con sus centros y normas?`)) { await deleteRow('cliente_empresas', emp.id); cargar(); } }}
                         className="text-xs font-bold text-red-500 hover:underline">Eliminar empresa</button>
                     </div>
@@ -448,14 +448,14 @@ export default function Clientes() {
                     <div className="mt-4">
                       <div className="flex items-center gap-2">
                         <p className="label !mb-0">Centros de trabajo</p>
-                        <button onClick={() => addCentro(emp.id)} className="chip border border-brand-orange bg-brand-orange/10 font-bold text-brand-orangeDark hover:bg-brand-orange/20">+ centro</button>
+                        <button onClick={() => addCentro(emp.id)} className="chip border border-brand-orange bg-brand-orange/10 font-bold text-[#F9A83A] hover:bg-brand-orange/20">+ centro</button>
                       </div>
-                      {cts.length === 0 && <p className="mt-2 text-xs font-medium text-navy-300">Sin centros aún.</p>}
+                      {cts.length === 0 && <p className="mt-2 text-xs font-medium text-[#7FA7B4]">Sin centros aún.</p>}
                       <div className="mt-2 space-y-2">
                         {cts.map((ct, ci) => (
-                          <div key={ct.id} className="rounded-xl border border-navy-100 bg-white p-3">
+                          <div key={ct.id} className="rounded-xl border border-[#1E5468] bg-[#10394A] p-3">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-navy-400">Centro {ci + 1}</span>
+                              <span className="text-xs font-bold text-[#9FC0CB]">Centro {ci + 1}</span>
                               <button onClick={async () => { await deleteRow('empresa_centros', ct.id); cargar(); }} className="text-xs font-bold text-red-500 hover:underline">Eliminar</button>
                             </div>
                             <div className="mt-2 grid gap-2 sm:grid-cols-[2fr_1fr]">
@@ -475,7 +475,7 @@ export default function Clientes() {
                           const on = nrs.some(x => x.norma_id === n.id);
                           return (
                             <button key={n.id} onClick={() => toggleNorma(emp.id, n.id)}
-                              className={`chip border transition ${on ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'}`}>
+                              className={`chip border transition ${on ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'}`}>
                               {n.nombre}
                             </button>
                           );
@@ -484,9 +484,9 @@ export default function Clientes() {
                       {nrs.length > 0 && (
                         <div className="mt-3 space-y-3">
                           {nrs.map(reg => (
-                            <div key={reg.id} className="rounded-xl border border-navy-100 bg-white p-3">
+                            <div key={reg.id} className="rounded-xl border border-[#1E5468] bg-[#10394A] p-3">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="chip w-24 justify-center bg-navy-50 text-navy-600">{NORMA_BY_ID[reg.norma_id]?.nombre || reg.norma_id}</span>
+                                <span className="chip w-24 justify-center bg-[#0D3242] text-[#B9D2DA]">{NORMA_BY_ID[reg.norma_id]?.nombre || reg.norma_id}</span>
                                 <input className="input !w-auto flex-1 min-w-[220px] !py-1.5" placeholder="Alcance de la certificación…"
                                   value={reg.alcance || ''} onChange={e => editarNorma(reg, { alcance: e.target.value })} />
                                 <button onClick={() => copiarAlcance(reg)} disabled={!reg.alcance}
@@ -494,17 +494,17 @@ export default function Clientes() {
                                   className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-40">⧉ Copiar</button>
                               </div>
                               <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <label className="text-xs font-bold text-navy-300">Responsable</label>
+                                <label className="text-xs font-bold text-[#7FA7B4]">Responsable</label>
                                 <select className="input !w-auto !py-1 !text-xs" value={reg.responsable_id || ''}
                                   onChange={e => editarNorma(reg, { responsable_id: e.target.value || null })}>
                                   <option value="">—</option>
                                   {equipo.filter(x => (x.tipo_equipo || 'consultor') === 'consultor').map(x =>
                                     <option key={x.id} value={x.id}>{x.nombre} {x.apellidos || ''}</option>)}
                                 </select>
-                                <label className="text-xs font-bold text-navy-300">Auditoría ext.</label>
+                                <label className="text-xs font-bold text-[#7FA7B4]">Auditoría ext.</label>
                                 <input type="date" className="input !w-auto !py-1 !text-xs" value={reg.fecha_auditoria || ''}
                                   onChange={e => editarNorma(reg, { fecha_auditoria: e.target.value || null })} />
-                                <label className="text-xs font-bold text-navy-300">Caduca</label>
+                                <label className="text-xs font-bold text-[#7FA7B4]">Caduca</label>
                                 <input type="date" className="input !w-auto !py-1 !text-xs" value={reg.fecha_caducidad || ''}
                                   onChange={e => editarNorma(reg, { fecha_caducidad: e.target.value || null })} />
                               </div>
@@ -525,14 +525,14 @@ export default function Clientes() {
               <button onClick={addContacto} className="btn-orange !px-4 !py-2">+ Añadir contacto</button>
             </div>
             {contactosCliente.length === 0 ? (
-              <p className="mt-4 text-sm font-medium text-navy-300">Sin contactos. Añade el primero y márcalo como principal.</p>
+              <p className="mt-4 text-sm font-medium text-[#7FA7B4]">Sin contactos. Añade el primero y márcalo como principal.</p>
             ) : (
               <div className="mt-4 space-y-3">
                 {contactosCliente.map(ct => (
-                  <div key={ct.id} className={`rounded-xl border p-3 ${ct.principal ? 'border-brand-orange bg-brand-orange/5' : 'border-navy-100 bg-white'}`}>
+                  <div key={ct.id} className={`rounded-xl border p-3 ${ct.principal ? 'border-brand-orange bg-brand-orange/5' : 'border-[#1E5468] bg-[#10394A]'}`}>
                     <div className="flex items-center justify-between gap-2">
                       <button onClick={() => marcarPrincipal(ct)}
-                        className={`chip text-[11px] font-bold ${ct.principal ? 'bg-brand-orange text-navy-900' : 'border border-navy-200 bg-white text-navy-400'}`}>
+                        className={`chip text-[11px] font-bold ${ct.principal ? 'bg-brand-orange text-[#EAF4F7]' : 'border border-[#1E5468] bg-[#10394A] text-[#9FC0CB]'}`}>
                         {ct.principal ? '★ Principal' : '☆ Marcar principal'}
                       </button>
                       <button onClick={() => quitarContacto(ct.id)} className="text-xs font-bold text-red-500 hover:underline">Eliminar</button>
@@ -554,17 +554,17 @@ export default function Clientes() {
               <h4 className="font-extrabold">Proyectos de este cliente</h4>
               <button type="button" onClick={() => navigate('/consultores/proyectos')} className="btn-ghost !px-4 !py-2 text-sm">Ir a Proyectos →</button>
             </div>
-            <p className="mt-1 text-sm font-medium text-navy-400">Los proyectos se crean y configuran en la pestaña Proyectos. Aquí solo se consultan.</p>
+            <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Los proyectos se crean y configuran en la pestaña Proyectos. Aquí solo se consultan.</p>
             {proyectosCliente.length === 0 ? (
-              <p className="mt-4 text-sm font-medium text-navy-300">Aún no hay proyectos. Crea el primero.</p>
+              <p className="mt-4 text-sm font-medium text-[#7FA7B4]">Aún no hay proyectos. Crea el primero.</p>
             ) : (
               <div className="mt-4 space-y-2">
                 {proyectosCliente.map(p => (
-                  <div key={p.id} className="flex items-center justify-between rounded-xl border border-navy-100 bg-white px-4 py-3">
+                  <div key={p.id} className="flex items-center justify-between rounded-xl border border-[#1E5468] bg-[#10394A] px-4 py-3">
                     <div>
-                      <p className="font-bold text-navy-800">{p.nombre}</p>
-                      <p className="text-xs font-medium text-navy-400">
-                        {(p.normas || []).join(', ') || 'sin normas'} · {p.modelo || 'sin modelo'} · <span className={p.estado === 'activo' ? 'text-green-600' : 'text-navy-400'}>{p.estado}</span>
+                      <p className="font-bold text-[#EAF4F7]">{p.nombre}</p>
+                      <p className="text-xs font-medium text-[#9FC0CB]">
+                        {(p.normas || []).join(', ') || 'sin normas'} · {p.modelo || 'sin modelo'} · <span className={p.estado === 'activo' ? 'text-green-600' : 'text-[#9FC0CB]'}>{p.estado}</span>
                       </p>
                     </div>
                     <button type="button" onClick={() => navigate(`/consultores/proyectos?proyecto=${p.id}`)} className="btn-ghost !px-3 !py-1.5 text-xs">Abrir →</button>

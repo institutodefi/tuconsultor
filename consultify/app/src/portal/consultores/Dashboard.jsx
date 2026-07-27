@@ -96,7 +96,7 @@ export default function Dashboard() {
     return carga.filter(c => equipoCargaSel.has(String(c.id)));
   }, [carga, equipoCargaSel]);
 
-  if (!ready) return <p className="font-semibold text-navy-400">Cargando…</p>;
+  if (!ready) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
 
   return (
     <div>
@@ -172,33 +172,33 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-1 text-xs font-medium text-navy-400">Objetivo de mezcla: 80 % Relación · 20 % Implicación.</p>
+          <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Objetivo de mezcla: 80 % Relación · 20 % Implicación.</p>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card">
-          <h3 className="font-extrabold">Equipo de consultoría <span className="chip ml-1 bg-navy-50 text-navy-500">{equipoConsultores.length}</span></h3>
+          <h3 className="font-extrabold">Equipo de consultoría <span className="chip ml-1 bg-[#0D3242] text-[#9FC0CB]">{equipoConsultores.length}</span></h3>
           <div className="mt-3 space-y-2">
             {equipoConsultores.map(c => (
               <div key={c.id} className="flex items-center justify-between border-b border-navy-50 pb-2 text-sm last:border-0">
                 <span className="font-bold">{c.nombre} {c.apellidos || ''}</span>
-                <span className="chip bg-navy-50 text-navy-600">{c.nivel} · {c.pct_jornada ?? 100}%</span>
+                <span className="chip bg-[#0D3242] text-[#B9D2DA]">{c.nivel} · {c.pct_jornada ?? 100}%</span>
               </div>
             ))}
-            {!equipoConsultores.length && <p className="text-sm font-medium text-navy-400">Sin consultores. Añádelos en Equipo.</p>}
+            {!equipoConsultores.length && <p className="text-sm font-medium text-[#9FC0CB]">Sin consultores. Añádelos en Equipo.</p>}
           </div>
         </div>
         <div className="card">
-          <h3 className="font-extrabold">Equipo de gestión <span className="chip ml-1 bg-navy-50 text-navy-500">{equipoGestion.length}</span></h3>
+          <h3 className="font-extrabold">Equipo de gestión <span className="chip ml-1 bg-[#0D3242] text-[#9FC0CB]">{equipoGestion.length}</span></h3>
           <div className="mt-3 space-y-2">
             {equipoGestion.map(c => (
               <div key={c.id} className="flex items-center justify-between border-b border-navy-50 pb-2 text-sm last:border-0">
                 <span className="font-bold">{c.nombre} {c.apellidos || ''}</span>
-                <span className="chip bg-brand-orange/15 text-brand-orangeDark capitalize">{c.subtipo || 'gestión'}</span>
+                <span className="chip bg-brand-orange/15 text-[#F9A83A] capitalize">{c.subtipo || 'gestión'}</span>
               </div>
             ))}
-            {!equipoGestion.length && <p className="text-sm font-medium text-navy-400">Sin equipo de gestión. Añádelo en Equipo.</p>}
+            {!equipoGestion.length && <p className="text-sm font-medium text-[#9FC0CB]">Sin equipo de gestión. Añádelo en Equipo.</p>}
           </div>
         </div>
       </div>
@@ -207,17 +207,17 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-extrabold">Carga del equipo de consultoría</h3>
           <div className="flex gap-2">
-            <button onClick={() => setEquipoCargaSel(new Set(equipoConsultores.map(c => String(c.id))))} className="chip border border-navy-200 text-[11px] font-bold text-navy-500">Todos</button>
-            <button onClick={() => setEquipoCargaSel(new Set())} className="chip border border-navy-200 text-[11px] font-bold text-navy-500">Ninguno</button>
+            <button onClick={() => setEquipoCargaSel(new Set(equipoConsultores.map(c => String(c.id))))} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Todos</button>
+            <button onClick={() => setEquipoCargaSel(new Set())} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Ninguno</button>
           </div>
         </div>
-        <p className="mt-1 text-xs font-medium text-navy-400">Marca los consultores que quieres incluir en la vista de carga.</p>
+        <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Marca los consultores que quieres incluir en la vista de carga.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {equipoConsultores.map(c => {
             const on = equipoCargaSel ? equipoCargaSel.has(String(c.id)) : true;
             return (
               <button key={c.id} onClick={() => setEquipoCargaSel(s => { const n = new Set(s); n.has(String(c.id)) ? n.delete(String(c.id)) : n.add(String(c.id)); return n; })}
-                className={`chip border text-xs font-bold ${on ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400'}`}>
+                className={`chip border text-xs font-bold ${on ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB]'}`}>
                 {on ? '✓ ' : ''}{c.nombre}
               </button>
             );
@@ -227,15 +227,15 @@ export default function Dashboard() {
           {cargaVisible.map(c => (
             <div key={c.id}>
               <div className="flex items-baseline justify-between text-sm">
-                <p className="font-bold">{c.nombre} <span className="chip ml-1 bg-navy-50 text-navy-500">{c.nivel}</span></p>
-                <p className="font-semibold text-navy-400">{c.nProyectos} proyectos · ~{c.horas}/{c.capProd} h productivas/mes</p>
+                <p className="font-bold">{c.nombre} <span className="chip ml-1 bg-[#0D3242] text-[#9FC0CB]">{c.nivel}</span></p>
+                <p className="font-semibold text-[#9FC0CB]">{c.nProyectos} proyectos · ~{c.horas}/{c.capProd} h productivas/mes</p>
               </div>
-              <div className="mt-1.5 h-2.5 rounded-full bg-navy-50">
+              <div className="mt-1.5 h-2.5 rounded-full bg-[#0D3242]">
                 <div className="h-2.5 rounded-full transition-all" style={{ width: `${c.pct}%`, background: c.pct > 90 ? '#DC2626' : c.pct > 70 ? ORANGE : NAVY }} />
               </div>
             </div>
           ))}
-          {!carga.length && <p className="text-sm font-medium text-navy-400">Sin consultores activos. Añádelos en la pestaña Equipo.</p>}
+          {!carga.length && <p className="text-sm font-medium text-[#9FC0CB]">Sin consultores activos. Añádelos en la pestaña Equipo.</p>}
         </div>
       </div>
     </div>
@@ -246,9 +246,9 @@ export default function Dashboard() {
 function Kpi({ label, value, sub, accent }) {
   return (
     <div className={`card ${accent ? '!bg-navy-900 !border-navy-900 text-white' : ''}`}>
-      <p className={`text-xs font-bold uppercase tracking-wider ${accent ? 'text-brand-orange' : 'text-navy-300'}`}>{label}</p>
+      <p className={`text-xs font-bold uppercase tracking-wider ${accent ? 'text-brand-orange' : 'text-[#7FA7B4]'}`}>{label}</p>
       <p className="mt-2 text-2xl font-extrabold tracking-tight">{value}</p>
-      {sub && <p className={`mt-0.5 text-xs font-semibold ${accent ? 'text-white/60' : 'text-navy-400'}`}>{sub}</p>}
+      {sub && <p className={`mt-0.5 text-xs font-semibold ${accent ? 'text-white/60' : 'text-[#9FC0CB]'}`}>{sub}</p>}
     </div>
   );
 }

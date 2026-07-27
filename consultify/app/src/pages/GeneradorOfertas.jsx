@@ -10,7 +10,7 @@ import { useAuth } from '../lib/auth.jsx';
 // precio en vivo (sin/con IVA) y exportación a PDF/PPTX vía la función serverless.
 export default function GeneradorOfertas({ publico = false }) {
   const { user } = useAuth();
-  const [sel, setSel] = useState(['9001']);          // 9001 base obligatoria
+  const [sel, setSel] = useState(['9001']);          // 9001 premarcada, pero se puede quitar
   const [modelo, setModelo] = useState('Implicación');
   const [meses, setMeses] = useState('');            // vacío = usa el mínimo del modelo
   const [tiene9001, setTiene9001] = useState(false); // "ya tengo la 9001" → −50% horas 9001
@@ -52,7 +52,7 @@ export default function GeneradorOfertas({ publico = false }) {
   const desde = prefijoPrecio(publico);
 
   const toggle = (id) => {
-    if (id === '9001') return;
+
     setSel(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   };
 
@@ -229,28 +229,47 @@ export default function GeneradorOfertas({ publico = false }) {
         <div className="space-y-5">
           {/* 1 · Normas */}
           <section className="card">
-            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark">1 · Normas a implantar</h2>
+            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#F9A83A]">1 · Normas a implantar</h2>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {NORMAS.map(n => {
                 const on = sel.includes(n.id);
                 const base = n.id === '9001';
+                const baseFuera = base && !on;   // premarcada pero desmarcada a mano
                 return (
-                  <button key={n.id} onClick={() => toggle(n.id)} aria-disabled={base}
+                  <button key={n.id} onClick={() => toggle(n.id)}
                     className={`flex items-start gap-3 rounded-xl border-[1.5px] p-3 text-left transition ${
-                      base ? 'border-brand-orange bg-brand-orange/15'
+                      base && on ? 'border-brand-orange bg-brand-orange/15'
                       : on ? 'border-brand-verde bg-brand-verde/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-verde'}`}>
                     <span className={`mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] text-[11px] text-white ${
-                      base ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]' : on ? 'border-brand-verde bg-brand-verde' : 'border-[#3F7D93] bg-transparent'}`}>
-                      {(on || base) ? '✓' : ''}
+                      base && on ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]' : on ? 'border-brand-verde bg-brand-verde' : 'border-[#3F7D93] bg-transparent'}`}>
+                      {on ? '✓' : ''}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-bold leading-tight text-[#EAF4F7]">{n.nombre}{base && <span className="ml-1.5 rounded bg-brand-orange px-1.5 py-px text-[9px] font-extrabold uppercase text-white align-middle">base</span>}</span>
+                      <span className="block text-sm font-bold leading-tight text-[#EAF4F7]">{n.nombre}{base && <span className={`ml-1.5 rounded px-1.5 py-px text-[9px] font-extrabold uppercase align-middle ${on ? 'bg-brand-orange text-[#0A2B3A]' : 'bg-white/15 text-[#9FC0CB]'}`}>{on ? 'base' : 'sin base'}</span>}</span>
                       <span className="mt-0.5 block text-[11.5px] leading-snug text-[#9FC0CB]">{n.desc}</span>
                     </span>
                   </button>
                 );
               })}
               {/* Otra norma · pide info → abre el formulario de solicitud */}
+            {/* Aviso de que falta el sistema base. No bloquea: informa. */}
+            {!sel.includes('9001') && (
+              <div className="mt-3 rounded-xl border-[1.5px] border-brand-orange/50 bg-brand-orange/10 p-3">
+                <p className="text-[13px] font-bold text-brand-orange">Has quitado la ISO 9001 del alcance</p>
+                <p className="mt-1 text-[12px] leading-relaxed text-[#B9D2DA]">
+                  La 9001 es el sistema base sobre el que se apoyan los demás: procesos, documentación,
+                  auditoría interna y revisión por la dirección se implantan una vez y los otros sistemas
+                  los heredan.
+                  {res?.sinBaseConDependientes && (
+                    <> <b className="text-brand-orange">Y has elegido normas que dependen de ella</b> —la 21001
+                    y la 9004 son complementarias de la 9001—, así que pierden el descuento por solape:
+                    hay que implantar de cero lo que normalmente se hereda y la oferta sale más cara, no más barata.</>
+                  )}
+                  {' '}Compruébalo antes de enviarla.
+                </p>
+              </div>
+            )}
+
               <button onClick={() => setPideInfo(v => !v)}
                 className={`flex items-start gap-3 rounded-xl border-[1.5px] border-dashed p-3 text-left transition ${pideInfo ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-orange'}`}>
                 <span className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border-[1.5px] border-brand-orange text-[13px] font-bold text-brand-orange">?</span>
@@ -281,7 +300,7 @@ export default function GeneradorOfertas({ publico = false }) {
                       <span>Acepto que TuConsultor trate mis datos para contactarme. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad</a> (RGPD).</span>
                     </label>
                     <button onClick={enviarSolicitudInfo} disabled={infoState === 'sending'}
-                      className="mt-3 rounded-xl bg-brand-orange px-5 py-2.5 text-sm font-extrabold text-white transition hover:bg-brand-orangeDark disabled:opacity-50">
+                      className="mt-3 rounded-xl bg-brand-orange px-5 py-2.5 text-sm font-extrabold text-[#0A2B3A] transition hover:bg-brand-orangeDark disabled:opacity-50">
                       {infoState === 'sending' ? 'Enviando…' : 'Solicitar información'}
                     </button>
                     {infoState === 'error' && <p className="mt-2 text-xs font-bold text-red-300">No se pudo enviar. Inténtalo de nuevo.</p>}
@@ -300,7 +319,7 @@ export default function GeneradorOfertas({ publico = false }) {
 
           {/* 2 · Modelo */}
           <section className="card">
-            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-brand-orangeDark">2 · Modelo de servicio</h2>
+            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#F9A83A]">2 · Modelo de servicio</h2>
             <div className="flex flex-wrap gap-2">
               {MODELO_IDS.map(mid => {
                 const on = modelo === mid;
@@ -420,7 +439,7 @@ export default function GeneradorOfertas({ publico = false }) {
                     <input required autoComplete="organization-title" className="col-span-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-brand-orange focus:outline-none" placeholder="Cargo *" value={cli.cargo} onChange={e => setCli({ ...cli, cargo: e.target.value })} />
                     <input autoComplete="street-address" className="col-span-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-brand-orange focus:outline-none" placeholder="Dirección (opcional, sale en la oferta)" value={cli.direccion} onChange={e => setCli({ ...cli, direccion: e.target.value })} />
                   </div>
-                  <p className="mt-1.5 text-[11px] font-medium text-white/40">Todos los campos son obligatorios.</p>
+                  <p className="mt-1.5 text-[11px] font-medium text-white/60">Todos los campos son obligatorios.</p>
                   <label className="mt-3 flex items-start gap-2 text-[11.5px] text-white/70 cursor-pointer">
                     <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
                     <span>Acepto que TuConsultor trate mis datos para gestionar esta solicitud. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad</a> (RGPD).</span>
@@ -428,7 +447,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 </div>
 
                 <div className="mt-4 flex gap-2">
-                  <button onClick={() => generar('pdf')} disabled={estado === 'gen' || plazoMal} className="flex-1 rounded-xl bg-white py-3 text-sm font-extrabold text-navy-900 transition hover:bg-white/90 disabled:opacity-50">
+                  <button onClick={() => generar('pdf')} disabled={estado === 'gen' || plazoMal} className="flex-1 rounded-xl bg-[#10394A] py-3 text-sm font-extrabold text-[#EAF4F7] transition hover:bg-white/90 disabled:opacity-50">
                     {estado === 'gen' ? 'Generando…' : plazoMal ? `Mínimo ${res.minMeses} meses` : (publico ? 'Recibir mi propuesta' : 'Generar oferta')}
                   </button>
                 </div>

@@ -13,7 +13,7 @@ function CampoPassword({ id, label, value, onChange, required, autoComplete, err
           className={`input pr-12 ${error ? '!border-red-400 focus:!ring-red-200' : ''}`} value={value} onChange={onChange} />
         <button type="button" onClick={() => setVisible(v => !v)}
           aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={visible}
-          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-navy-300 transition hover:text-navy-700">
+          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#7FA7B4] transition hover:text-[#CFE3E9]">
           {visible ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
@@ -27,7 +27,7 @@ function CampoPassword({ id, label, value, onChange, required, autoComplete, err
           )}
         </button>
       </div>
-      {error && <p className="mt-1 text-xs font-bold text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs font-bold text-red-300">{error}</p>}
     </div>
   );
 }
@@ -35,15 +35,15 @@ function CampoPassword({ id, label, value, onChange, required, autoComplete, err
 // Tarjeta de acceso reutilizable (consultores | clientes)
 function PanelAcceso({ acento, titulo, subtitulo, icono, children, footer }) {
   const ring = acento === 'navy' ? 'border-navy-800/15' : 'border-brand-orange/30';
-  const head = acento === 'navy' ? 'text-navy-900' : 'text-brand-orangeDark';
-  const chip = acento === 'navy' ? 'bg-navy-800 text-white' : 'bg-brand-orange text-navy-900';
+  const head = acento === 'navy' ? 'text-[#EAF4F7]' : 'text-[#F9A83A]';
+  const chip = acento === 'navy' ? 'bg-navy-800 text-white' : 'bg-brand-orange text-[#EAF4F7]';
   return (
     <div className={`card flex flex-col border ${ring}`}>
       <div className="mb-4 flex items-center gap-3">
         <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${chip}`}>{icono}</span>
         <div>
           <h2 className={`text-lg font-extrabold ${head}`}>{titulo}</h2>
-          <p className="text-xs font-semibold text-navy-400">{subtitulo}</p>
+          <p className="text-xs font-semibold text-[#9FC0CB]">{subtitulo}</p>
         </div>
       </div>
       {children}
@@ -144,7 +144,7 @@ export default function Acceso() {
           <form onSubmit={loginConsultor} className="space-y-4">
             <div><label className="label" htmlFor="c-email">Email corporativo</label><input id="c-email" type="email" required className="input" autoComplete="email" value={c.email} onChange={e => setC({ ...c, email: e.target.value })} /></div>
             <CampoPassword id="c-pass" label="Contraseña" value={c.password} onChange={e => setC({ ...c, password: e.target.value })} required={!demo} autoComplete="current-password" />
-            {cMsg && <p className="text-sm font-bold text-red-600">{cMsg}</p>}
+            {cMsg && <p className="text-sm font-bold text-red-300">{cMsg}</p>}
             <button disabled={cBusy} className="btn-primary w-full">{cBusy ? 'Un momento…' : 'Entrar como consultor'}</button>
           </form>
         </PanelAcceso>
@@ -153,7 +153,7 @@ export default function Acceso() {
         <PanelAcceso acento="orange" titulo="Clientes" subtitulo={registro ? 'Crear cuenta para seguir tus servicios' : 'Seguimiento de servicios y presupuestos'} icono={iconoCliente}
           footer={
             <button onClick={() => { setModo(m => m === 'login' ? 'register' : 'login'); setKMsg(null); setK(p => ({ ...p, password: '', password2: '' })); }}
-              className="mt-4 w-full text-center text-sm font-bold text-brand-orangeDark hover:underline">
+              className="mt-4 w-full text-center text-sm font-bold text-[#F9A83A] hover:underline">
               {registro ? '¿Ya tienes cuenta? Entrar' : '¿Aún no tienes cuenta? Crear cuenta de cliente'}
             </button>
           }>
@@ -167,7 +167,7 @@ export default function Acceso() {
             <div><label className="label" htmlFor="k-email">Email</label><input id="k-email" type="email" required className="input" autoComplete="email" value={k.email} onChange={e => setK({ ...k, email: e.target.value })} /></div>
             <CampoPassword id="k-pass" label="Contraseña" value={k.password} onChange={e => setK({ ...k, password: e.target.value })} required={!demo} autoComplete={registro ? 'new-password' : 'current-password'} error={passCorta ? mensajePassword(k.password) : null} />
             {registro && <CampoPassword id="k-pass2" label="Confirmar contraseña" value={k.password2} onChange={e => setK({ ...k, password2: e.target.value })} required={!demo} autoComplete="new-password" error={noCoinciden ? 'Las contraseñas no coinciden.' : null} />}
-            {kMsg && <p className={`text-sm font-bold ${kMsg.ok ? 'text-green-700' : 'text-red-600'}`}>{kMsg.text}</p>}
+            {kMsg && <p className={`text-sm font-bold ${kMsg.ok ? 'text-green-700' : 'text-red-300'}`}>{kMsg.text}</p>}
             <button disabled={kBusy || (registroInvalido && !demo)} className="btn-orange w-full">{kBusy ? 'Un momento…' : registro ? 'Crear cuenta' : 'Entrar como cliente'}</button>
           </form>
         </PanelAcceso>

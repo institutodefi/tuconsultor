@@ -26,7 +26,7 @@ const nombreCompleto = (c) => `${c.nombre || ''} ${c.apellidos || ''}`.trim();
 function SelectResponsable({ equipo, value, onChange, className = '' }) {
   return (
     <select value={value || ''} onChange={e => onChange(e.target.value)}
-      className={`rounded border border-navy-100 px-2 py-1 text-[11px] ${className}`}>
+      className={`rounded border border-[#1E5468] px-2 py-1 text-[11px] ${className}`}>
       <option value="">— Responsable —</option>
       {equipo.map(c => {
         const n = nombreCompleto(c);
@@ -186,28 +186,28 @@ export default function ProcesosInternos() {
         <div>
           <p className="eyebrow">Organización</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Mapa de procesos</h1>
-          <p className="mt-1 max-w-2xl text-sm font-medium text-navy-400">
+          <p className="mt-1 max-w-2xl text-sm font-medium text-[#9FC0CB]">
             Diagrama de procesos por bandas. Los códigos se generan solos.
             {puedeEditar && <> Arrastra para mover de banda, ✎ para editar, y despliega cada proceso para gestionar subprocesos y riesgos.</>}
           </p>
         </div>
-        <div className="flex overflow-hidden rounded-xl border border-navy-200 text-sm font-bold">
-          <button onClick={() => setVista('mapa')} className={`px-4 py-2 ${vista === 'mapa' ? 'bg-navy-900 text-white' : 'text-navy-500'}`}>🧬 Diagrama</button>
-          <button onClick={() => setVista('lista')} className={`px-4 py-2 ${vista === 'lista' ? 'bg-navy-900 text-white' : 'text-navy-500'}`}>☰ Lista</button>
+        <div className="flex overflow-hidden rounded-xl border border-[#1E5468] text-sm font-bold">
+          <button onClick={() => setVista('mapa')} className={`px-4 py-2 ${vista === 'mapa' ? 'bg-navy-900 text-white' : 'text-[#9FC0CB]'}`}>🧬 Diagrama</button>
+          <button onClick={() => setVista('lista')} className={`px-4 py-2 ${vista === 'lista' ? 'bg-navy-900 text-white' : 'text-[#9FC0CB]'}`}>☰ Lista</button>
         </div>
       </div>
 
-      {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orangeDark">Modo demo: los cambios no se guardan.</div>}
-      {msg && <div className={`rounded-xl p-3 text-sm font-bold ${msg.err ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`} onClick={() => setMsg(null)}>{msg.t}</div>}
+      {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-[#F9A83A]">Modo demo: los cambios no se guardan.</div>}
+      {msg && <div className={`rounded-xl p-3 text-sm font-bold ${msg.err ? 'bg-red-50 text-red-300' : 'bg-green-50 text-green-700'}`} onClick={() => setMsg(null)}>{msg.t}</div>}
 
-      {cargando ? <p className="py-10 text-center text-navy-400">Cargando…</p> : vista === 'mapa' ? (
+      {cargando ? <p className="py-10 text-center text-[#9FC0CB]">Cargando…</p> : vista === 'mapa' ? (
         <div className="space-y-4">
           {bandas.map(banda => (
             <div key={banda.id}
               onDragOver={e => { if (dragId) { e.preventDefault(); setDropB(banda.id); } }}
               onDragLeave={() => setDropB(d => d === banda.id ? null : d)}
               onDrop={() => moverProceso(banda)}
-              className={`rounded-2xl border bg-white p-4 transition ${dropB === banda.id ? 'ring-2 ring-brand-orange' : 'border-navy-100'}`}
+              className={`rounded-2xl border bg-[#10394A] p-4 transition ${dropB === banda.id ? 'ring-2 ring-brand-orange' : 'border-[#1E5468]'}`}
               style={{ borderLeft: `6px solid ${banda.color}` }}>
 
               {/* Cabecera de banda (editable) */}
@@ -219,8 +219,8 @@ export default function ProcesosInternos() {
                     <h3 className="text-sm font-extrabold uppercase tracking-wide" style={{ color: banda.color }}>{banda.titulo}</h3>
                     <span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold text-white" style={{ background: banda.color }}>{banda.prefijo}</span>
                     {puedeEditar && <>
-                      <button onClick={() => setEditBanda(banda.id)} className="text-[11px] text-navy-300 hover:text-navy-700" title="Editar banda">✎</button>
-                      <button onClick={() => eliminarBanda(banda)} className="text-[11px] text-navy-300 hover:text-red-600" title="Eliminar banda">✕</button>
+                      <button onClick={() => setEditBanda(banda.id)} className="text-[11px] text-[#7FA7B4] hover:text-[#CFE3E9]" title="Editar banda">✎</button>
+                      <button onClick={() => eliminarBanda(banda)} className="text-[11px] text-[#7FA7B4] hover:text-red-300" title="Eliminar banda">✕</button>
                       <button onClick={() => addProceso(banda)} className="ml-auto rounded-lg border border-dashed px-3 py-1 text-xs font-bold" style={{ borderColor: banda.color, color: banda.color }}>+ proceso</button>
                     </>}
                   </>
@@ -228,7 +228,7 @@ export default function ProcesosInternos() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {procsDe(banda.id).length === 0 && <p className="py-2 text-sm text-navy-300">Sin procesos{puedeEditar ? ' — pulsa «+ proceso» o arrastra uno aquí.' : '.'}</p>}
+                {procsDe(banda.id).length === 0 && <p className="py-2 text-sm text-[#7FA7B4]">Sin procesos{puedeEditar ? ' — pulsa «+ proceso» o arrastra uno aquí.' : '.'}</p>}
                 {procsDe(banda.id).map(p => (
                   <ProcesoCard key={p.id} p={p} banda={banda} puedeEditar={puedeEditar}
                     editando={editProc?.id === p.id} editProc={editProc} setEditProc={setEditProc}
@@ -254,7 +254,7 @@ export default function ProcesosInternos() {
           ))}
 
           {puedeEditar && (
-            <button onClick={addBanda} className="w-full rounded-2xl border-2 border-dashed border-navy-200 py-3 text-sm font-bold text-navy-400 hover:border-brand-orange hover:text-brand-orangeDark">
+            <button onClick={addBanda} className="w-full rounded-2xl border-2 border-dashed border-[#1E5468] py-3 text-sm font-bold text-[#9FC0CB] hover:border-brand-orange hover:text-[#F9A83A]">
               + Añadir banda (tipo de proceso)
             </button>
           )}
@@ -277,7 +277,7 @@ function BandaEditor({ banda, onGuardar, onCancelar }) {
       <input value={pre} onChange={e => setPre(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} className="input !py-1.5 !w-24" placeholder="PREFIJO" />
       <div className="flex gap-1">{PALETA.map(c => <button key={c} onClick={() => setCol(c)} className={`h-6 w-6 rounded border-2 ${col === c ? 'border-navy-900' : 'border-transparent'}`} style={{ background: c }} />)}</div>
       <button onClick={() => onGuardar({ titulo: t, prefijo: pre || 'B', color: col })} className="rounded-lg bg-navy-900 px-3 py-1.5 text-xs font-bold text-white">Guardar</button>
-      <button onClick={onCancelar} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-bold text-navy-500">Cancelar</button>
+      <button onClick={onCancelar} className="rounded-lg border border-[#1E5468] px-3 py-1.5 text-xs font-bold text-[#9FC0CB]">Cancelar</button>
     </div>
   );
 }
@@ -286,36 +286,36 @@ function BandaEditor({ banda, onGuardar, onCancelar }) {
 function ProcesoCard({ p, banda, puedeEditar, editando, editProc, setEditProc, onEdit, onGuardar, onCancelar, onEliminar, onDragStart, onDragEnd, bandas, equipo, subN, onAbrirPanel, panelAbierto }) {
   if (editando) {
     return (
-      <div className="w-full max-w-md rounded-xl border-2 bg-white p-3" style={{ borderColor: banda.color }}>
+      <div className="w-full max-w-md rounded-xl border-2 bg-[#10394A] p-3" style={{ borderColor: banda.color }}>
         <div className="flex flex-col gap-2">
-          <div className="text-[10px] font-extrabold" style={{ color: banda.color }}>{editProc.codigo} <span className="font-medium text-navy-300">(código automático)</span></div>
-          <label className="text-[10px] font-bold uppercase text-navy-400">Nombre
+          <div className="text-[10px] font-extrabold" style={{ color: banda.color }}>{editProc.codigo} <span className="font-medium text-[#7FA7B4]">(código automático)</span></div>
+          <label className="text-[10px] font-bold uppercase text-[#9FC0CB]">Nombre
             <input className="input !mt-1 !py-1.5" value={editProc.nombre} onChange={e => setEditProc({ ...editProc, nombre: e.target.value })} /></label>
-          <label className="text-[10px] font-bold uppercase text-navy-400">Responsable
+          <label className="text-[10px] font-bold uppercase text-[#9FC0CB]">Responsable
             <SelectResponsable equipo={equipo} value={editProc.responsable} onChange={v => setEditProc({ ...editProc, responsable: v })} className="!mt-1 w-full !text-[12px] !py-1.5" /></label>
-          <label className="text-[10px] font-bold uppercase text-navy-400">Banda
+          <label className="text-[10px] font-bold uppercase text-[#9FC0CB]">Banda
             <select className="input !mt-1 !py-1.5" value={editProc.banda_id} onChange={e => setEditProc({ ...editProc, banda_id: e.target.value })}>
               {bandas.map(b => <option key={b.id} value={b.id}>{b.titulo}</option>)}
             </select></label>
           <div>
-            <span className="text-[10px] font-bold uppercase text-navy-400">Fases del proceso</span>
+            <span className="text-[10px] font-bold uppercase text-[#9FC0CB]">Fases del proceso</span>
             <div className="mt-1 flex gap-1.5">
               {FASES.map(f => {
                 const on = (editProc.fases || []).includes(f.id);
                 return (
                   <button key={f.id} type="button"
                     onClick={() => setEditProc({ ...editProc, fases: on ? (editProc.fases || []).filter(x => x !== f.id) : [...(editProc.fases || []), f.id] })}
-                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${on ? 'text-white' : 'text-navy-400'}`}
+                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${on ? 'text-white' : 'text-[#9FC0CB]'}`}
                     style={on ? { background: f.color, borderColor: f.color } : { borderColor: '#cbd5e1' }}
                     title={f.desc}>{f.label}</button>
                 );
               })}
             </div>
           </div>
-          <label className="text-[10px] font-bold uppercase text-navy-400">Descripción
+          <label className="text-[10px] font-bold uppercase text-[#9FC0CB]">Descripción
             <textarea className="input !mt-1 !py-1.5" rows={2} value={editProc.descripcion} onChange={e => setEditProc({ ...editProc, descripcion: e.target.value })} /></label>
           <div className="flex justify-end gap-2">
-            <button onClick={onCancelar} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-bold text-navy-500">Cancelar</button>
+            <button onClick={onCancelar} className="rounded-lg border border-[#1E5468] px-3 py-1.5 text-xs font-bold text-[#9FC0CB]">Cancelar</button>
             <button onClick={onGuardar} className="rounded-lg bg-navy-900 px-3 py-1.5 text-xs font-bold text-white">Guardar</button>
           </div>
         </div>
@@ -324,12 +324,12 @@ function ProcesoCard({ p, banda, puedeEditar, editando, editProc, setEditProc, o
   }
   return (
     <div draggable={puedeEditar} onDragStart={onDragStart} onDragEnd={onDragEnd}
-      className={`relative w-[190px] rounded-xl border-[1.5px] bg-white p-3 shadow-sm ${panelAbierto ? 'ring-2 ring-brand-orange' : ''}`}
+      className={`relative w-[190px] rounded-xl border-[1.5px] bg-[#10394A] p-3 shadow-sm ${panelAbierto ? 'ring-2 ring-brand-orange' : ''}`}
       style={{ borderColor: banda.color, cursor: puedeEditar ? 'grab' : 'default' }}>
       {puedeEditar && (
         <div className="absolute right-1.5 top-1.5 flex gap-1">
-          <button onClick={onEdit} title="Editar" className="text-[11px] text-navy-300 hover:text-navy-700">✎</button>
-          <button onClick={onEliminar} title="Eliminar" className="text-[11px] text-navy-300 hover:text-red-600">✕</button>
+          <button onClick={onEdit} title="Editar" className="text-[11px] text-[#7FA7B4] hover:text-[#CFE3E9]">✎</button>
+          <button onClick={onEliminar} title="Eliminar" className="text-[11px] text-[#7FA7B4] hover:text-red-300">✕</button>
         </div>
       )}
       <div className="flex items-center justify-between gap-1">
@@ -341,10 +341,10 @@ function ProcesoCard({ p, banda, puedeEditar, editando, editProc, setEditProc, o
           })}
         </div>
       </div>
-      <div className="pr-8 text-[13px] font-extrabold leading-tight text-navy-900">{p.nombre}</div>
+      <div className="pr-8 text-[13px] font-extrabold leading-tight text-[#EAF4F7]">{p.nombre}</div>
       {p.responsable && <div className="mt-1 text-[10.5px] font-bold" style={{ color: banda.color }}>{p.responsable}</div>}
-      {p.descripcion && <div className="mt-1.5 border-t border-dashed border-navy-100 pt-1.5 text-[10.5px] leading-snug text-navy-400">{p.descripcion}</div>}
-      <button onClick={onAbrirPanel} className="mt-2 w-full rounded-lg border border-dashed border-navy-200 py-1 text-[10px] font-bold text-navy-400 hover:border-navy-400 hover:text-navy-700">
+      {p.descripcion && <div className="mt-1.5 border-t border-dashed border-[#1E5468] pt-1.5 text-[10.5px] leading-snug text-[#9FC0CB]">{p.descripcion}</div>}
+      <button onClick={onAbrirPanel} className="mt-2 w-full rounded-lg border border-dashed border-[#1E5468] py-1 text-[10px] font-bold text-[#9FC0CB] hover:border-navy-400 hover:text-[#CFE3E9]">
         {panelAbierto ? '▾ ocultar' : '▸ subprocesos y riesgos'} ({subN})
       </button>
     </div>
@@ -354,36 +354,36 @@ function ProcesoCard({ p, banda, puedeEditar, editando, editProc, setEditProc, o
 // ---------- Panel de subprocesos con sus riesgos ----------
 function PanelSubprocesos({ proc, banda, puedeEditar, equipo, subs, riesgosDe, onAddSub, onGuardarSub, onDelSub, onAddRiesgo, onGuardarRiesgo, onDelRiesgo }) {
   return (
-    <div className="mt-4 rounded-xl border border-navy-100 bg-navy-50/40 p-4">
+    <div className="mt-4 rounded-xl border border-[#1E5468] bg-navy-50/40 p-4">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-extrabold" style={{ color: banda.color }}>{proc.codigo}</span>
-        <h4 className="text-sm font-extrabold text-navy-900">{proc.nombre} · subprocesos y riesgos</h4>
+        <h4 className="text-sm font-extrabold text-[#EAF4F7]">{proc.nombre} · subprocesos y riesgos</h4>
         {puedeEditar && <button onClick={onAddSub} className="ml-auto rounded-lg border border-dashed px-3 py-1 text-xs font-bold" style={{ borderColor: banda.color, color: banda.color }}>+ subproceso</button>}
       </div>
-      {subs.length === 0 && <p className="text-sm text-navy-300">Sin subprocesos todavía.</p>}
+      {subs.length === 0 && <p className="text-sm text-[#7FA7B4]">Sin subprocesos todavía.</p>}
       <div className="space-y-3">
         {subs.map(s => (
-          <div key={s.id} className="rounded-lg border border-navy-100 bg-white p-3">
+          <div key={s.id} className="rounded-lg border border-[#1E5468] bg-[#10394A] p-3">
             <div className="flex items-center gap-2">
-              <span className="rounded bg-navy-100 px-1.5 py-0.5 text-[9.5px] font-extrabold text-navy-600">{s.codigo}</span>
+              <span className="rounded bg-[#123F52] px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#B9D2DA]">{s.codigo}</span>
               {puedeEditar ? (
                 <input defaultValue={s.nombre} onBlur={e => e.target.value !== s.nombre && onGuardarSub(s.id, { nombre: e.target.value })}
-                  className="flex-1 rounded border border-navy-100 px-2 py-1 text-[12px] font-semibold" placeholder="Nombre del subproceso" />
-              ) : <span className="flex-1 text-[12px] font-semibold text-navy-800">{s.nombre}</span>}
+                  className="flex-1 rounded border border-[#1E5468] px-2 py-1 text-[12px] font-semibold" placeholder="Nombre del subproceso" />
+              ) : <span className="flex-1 text-[12px] font-semibold text-[#EAF4F7]">{s.nombre}</span>}
               {puedeEditar && <>
                 <SelectResponsable equipo={equipo} value={s.responsable || ''} onChange={v => onGuardarSub(s.id, { responsable: v })} className="w-32" />
-                <button onClick={() => onDelSub(s.id)} className="text-[11px] text-navy-300 hover:text-red-600">✕</button>
+                <button onClick={() => onDelSub(s.id)} className="text-[11px] text-[#7FA7B4] hover:text-red-300">✕</button>
               </>}
             </div>
 
             {/* Riesgos del subproceso */}
             <div className="mt-2 pl-2">
               <div className="mb-1 flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wide text-navy-400">Riesgos</span>
-                {puedeEditar && <button onClick={() => onAddRiesgo(s.id)} className="text-[10px] font-bold text-brand-orangeDark hover:underline">+ riesgo</button>}
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">Riesgos</span>
+                {puedeEditar && <button onClick={() => onAddRiesgo(s.id)} className="text-[10px] font-bold text-[#F9A83A] hover:underline">+ riesgo</button>}
               </div>
               <div className="space-y-1.5">
-                {riesgosDe(s.id).length === 0 && <p className="text-[11px] text-navy-300">Sin riesgos identificados.</p>}
+                {riesgosDe(s.id).length === 0 && <p className="text-[11px] text-[#7FA7B4]">Sin riesgos identificados.</p>}
                 {riesgosDe(s.id).map(r => <FilaRiesgo key={r.id} r={r} puedeEditar={puedeEditar} onGuardar={onGuardarRiesgo} onDel={onDelRiesgo} />)}
               </div>
             </div>
@@ -403,27 +403,27 @@ function FilaRiesgo({ r, puedeEditar, onGuardar, onDel }) {
     return (
       <div className="flex items-center gap-2 text-[11px]">
         <span className="rounded px-2 py-0.5 font-bold" style={{ color: n.color, background: n.bg }}>{n.txt} ({n.v})</span>
-        <span className="flex-1 text-navy-700">{r.descripcion || '—'}</span>
-        {r.control && <span className="text-navy-400">→ {r.control}</span>}
+        <span className="flex-1 text-[#CFE3E9]">{r.descripcion || '—'}</span>
+        {r.control && <span className="text-[#9FC0CB]">→ {r.control}</span>}
       </div>
     );
   }
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto_1fr_auto] items-center gap-1.5 rounded-md bg-navy-50/60 p-1.5">
       <input defaultValue={r.descripcion} onBlur={e => e.target.value !== r.descripcion && onGuardar(r.id, { descripcion: e.target.value })}
-        className="rounded border border-navy-100 px-2 py-1 text-[11px]" placeholder="Descripción del riesgo" />
-      <label className="flex items-center gap-1 text-[9px] font-bold text-navy-400">P
-        <select value={prob} onChange={e => { const v = +e.target.value; setProb(v); onGuardar(r.id, { probabilidad: v }); }} className="rounded border border-navy-100 py-1 text-[11px]">
+        className="rounded border border-[#1E5468] px-2 py-1 text-[11px]" placeholder="Descripción del riesgo" />
+      <label className="flex items-center gap-1 text-[9px] font-bold text-[#9FC0CB]">P
+        <select value={prob} onChange={e => { const v = +e.target.value; setProb(v); onGuardar(r.id, { probabilidad: v }); }} className="rounded border border-[#1E5468] py-1 text-[11px]">
           {[1, 2, 3, 4, 5].map(x => <option key={x} value={x}>{x}</option>)}
         </select></label>
-      <label className="flex items-center gap-1 text-[9px] font-bold text-navy-400">I
-        <select value={imp} onChange={e => { const v = +e.target.value; setImp(v); onGuardar(r.id, { impacto: v }); }} className="rounded border border-navy-100 py-1 text-[11px]">
+      <label className="flex items-center gap-1 text-[9px] font-bold text-[#9FC0CB]">I
+        <select value={imp} onChange={e => { const v = +e.target.value; setImp(v); onGuardar(r.id, { impacto: v }); }} className="rounded border border-[#1E5468] py-1 text-[11px]">
           {[1, 2, 3, 4, 5].map(x => <option key={x} value={x}>{x}</option>)}
         </select></label>
       <span className="rounded px-2 py-0.5 text-[10px] font-bold" style={{ color: n.color, background: n.bg }}>{n.txt} ({n.v})</span>
       <input defaultValue={r.control || ''} onBlur={e => e.target.value !== (r.control || '') && onGuardar(r.id, { control: e.target.value })}
-        className="rounded border border-navy-100 px-2 py-1 text-[11px]" placeholder="Medida de control" />
-      <button onClick={() => onDel(r.id)} className="text-[11px] text-navy-300 hover:text-red-600">✕</button>
+        className="rounded border border-[#1E5468] px-2 py-1 text-[11px]" placeholder="Medida de control" />
+      <button onClick={() => onDel(r.id)} className="text-[11px] text-[#7FA7B4] hover:text-red-300">✕</button>
     </div>
   );
 }
@@ -440,30 +440,30 @@ function ListaProcesos({ bandas, procs, subs, riesgos, subsDe, riesgosDe }) {
           <div key={p.id} className="card">
             <div className="flex items-center gap-2">
               <span className="rounded px-2 py-0.5 text-[10px] font-extrabold text-white" style={{ background: b?.color || '#0A2A6C' }}>{p.codigo}</span>
-              <h3 className="text-base font-extrabold text-navy-900">{p.nombre}</h3>
+              <h3 className="text-base font-extrabold text-[#EAF4F7]">{p.nombre}</h3>
               {(p.fases || ['ongoing']).map(fid => {
                 const f = FASE_BY_ID[fid]; if (!f) return null;
                 return <span key={fid} className="rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white" style={{ background: f.color }}>{f.label}</span>;
               })}
-              {b && <span className="text-xs font-bold text-navy-400">{b.titulo}</span>}
-              {p.responsable && <span className="ml-auto text-xs font-bold text-navy-500">{p.responsable}</span>}
+              {b && <span className="text-xs font-bold text-[#9FC0CB]">{b.titulo}</span>}
+              {p.responsable && <span className="ml-auto text-xs font-bold text-[#9FC0CB]">{p.responsable}</span>}
             </div>
             {ss.length > 0 && (
               <div className="mt-3 space-y-2">
                 {ss.map(s => (
-                  <div key={s.id} className="rounded-lg border border-navy-100 p-2">
+                  <div key={s.id} className="rounded-lg border border-[#1E5468] p-2">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="rounded bg-navy-100 px-1.5 py-0.5 text-[9.5px] font-extrabold text-navy-600">{s.codigo}</span>
-                      <span className="font-semibold text-navy-800">{s.nombre}</span>
-                      {s.responsable && <span className="text-xs text-navy-400">· {s.responsable}</span>}
+                      <span className="rounded bg-[#123F52] px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#B9D2DA]">{s.codigo}</span>
+                      <span className="font-semibold text-[#EAF4F7]">{s.nombre}</span>
+                      {s.responsable && <span className="text-xs text-[#9FC0CB]">· {s.responsable}</span>}
                     </div>
                     {riesgosDe(s.id).map(r => {
                       const n = nivelRiesgo(r.probabilidad, r.impacto);
                       return (
                         <div key={r.id} className="mt-1 flex items-center gap-2 pl-6 text-[11px]">
                           <span className="rounded px-1.5 py-0.5 font-bold" style={{ color: n.color, background: n.bg }}>{n.txt}</span>
-                          <span className="text-navy-700">{r.descripcion || '—'}</span>
-                          {r.control && <span className="text-navy-400">→ {r.control}</span>}
+                          <span className="text-[#CFE3E9]">{r.descripcion || '—'}</span>
+                          {r.control && <span className="text-[#9FC0CB]">→ {r.control}</span>}
                         </div>
                       );
                     })}

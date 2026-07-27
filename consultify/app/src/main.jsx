@@ -13,7 +13,7 @@ import './index.css';
 
 function Protected({ allow, children }) {
   const { user, role, loading } = useAuth();
-  if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-navy-400 font-semibold">Cargando…</div>;
+  if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-[#9FC0CB] font-semibold">Cargando…</div>;
   if (!user) return <Navigate to="/acceso" replace />;
   if (allow && !allow.includes(role)) return <Navigate to="/acceso" replace />;
   return children;

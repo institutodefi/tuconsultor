@@ -3,6 +3,7 @@ import { listTable, updateRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { registrar } from '../../lib/registro.js';
 import { generarDeclaracion } from '../../lib/declaracionAccesibilidad.js';
+import { FICHA_CRITERIO, enlaceWcag } from '../../lib/criteriosWcag.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AUDITORÍA INTERNA DE ACCESIBILIDAD · UNE 139803:2012
@@ -320,6 +321,31 @@ export default function Accesibilidad() {
 
                   {ab && (
                     <div className="space-y-3 border-t border-[#1E5468] p-3">
+                      {/* Qué exige el criterio y con qué se cumple. Primero esto:
+                          decidir si aplica sin saber qué pide es como firmar sin leer. */}
+                      {FICHA_CRITERIO[c.codigo] && (
+                        <div className="rounded-xl bg-[#0D3242] p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-extrabold uppercase tracking-wide text-brand-orange">Qué exige</p>
+                              <p className="mt-1 text-[13px] leading-relaxed text-[#EAF4F7]">{FICHA_CRITERIO[c.codigo].requisito}</p>
+                            </div>
+                            <a href={enlaceWcag(c.codigo)} target="_blank" rel="noreferrer"
+                              className="shrink-0 rounded-lg border border-[#1E5468] px-2.5 py-1 text-[11px] font-bold text-[#9FC0CB] hover:border-brand-verde hover:text-[#EAF4F7]">
+                              Ver en WCAG ↗
+                            </a>
+                          </div>
+                          <p className="mt-3 text-[10px] font-extrabold uppercase tracking-wide text-brand-verdeTexto">Mecanismos de cumplimiento</p>
+                          <ul className="mt-1.5 space-y-1">
+                            {FICHA_CRITERIO[c.codigo].comoSeCumple.map((x, i) => (
+                              <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-[#B9D2DA]">
+                                <span className="shrink-0 text-brand-verdeTexto">·</span>{x}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Aplicabilidad</span>
                         {[['true', 'Aplicable'], ['false', 'No aplicable'], ['null', 'Sin decidir']].map(([v, l]) => {

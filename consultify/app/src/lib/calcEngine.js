@@ -137,12 +137,21 @@ export function calcular(normaIds, modeloId, opts = {}) {
     id: r.id, nombre: r.nombre, tipo: r.tipo, efecto: describirEfecto(r), detalle,
   });
 
+  // ── ¿Va la ISO 9001 en esta oferta? ──
+  // La 21001 y la 9004 cuestan la mitad porque se apoyan en la 9001. Si la 9001
+  // NO está, ese descuento no se sostiene: hay que implantar de cero lo que
+  // normalmente se hereda. Sin esto, quitar la 9001 abarataba la oferta en vez
+  // de encarecerla, que es justo lo contrario de lo que pasa en el proyecto.
+  const llevaBase = normaIds.includes('9001');
+  const solapeDe = (n) => (llevaBase ? (n.solape9001 ?? 1) : 1);
+  const sinBaseConDependientes = !llevaBase && normas.some((n) => n.solape9001 != null);
+
   const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
 
   if (m.tipo === 'bolsa') {
     for (const n of normas) raw[n.nivel] += n.hApoyo * (n.id === '9001' ? f9001 : 1);
   } else {
-    for (const n of normas) raw[n.nivel] += m.hSist * (n.solape9001 ?? 1) * (n.id === '9001' ? f9001 : 1);
+    for (const n of normas) raw[n.nivel] += m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
     if (m.hPres > 0) {
       const lider = normas.some(n => n.nivel === 'J3') ? 'J3' : 'J2';
       raw[lider] += m.hPres; // por cliente, no por sistema
@@ -257,6 +266,8 @@ export function calcular(normaIds, modeloId, opts = {}) {
     margen,
     tarifa,
     reglas: traza,
+    llevaBase,
+    sinBaseConDependientes,
     iva,
     totalConIva,
     fraccionado,

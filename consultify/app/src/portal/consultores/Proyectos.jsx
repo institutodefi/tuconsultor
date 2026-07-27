@@ -4,7 +4,7 @@ import { NORMAS, NORMA_BY_ID, MODELO_IDS, calcular, fmtEUR } from '../../lib/cal
 import { useAuth } from '../../lib/auth.jsx';
 
 const ESTADOS = ['implantación', 'activo', 'pausado', 'cerrado'];
-const COLOR_ESTADO = { activo: 'bg-green-100 text-green-800', 'implantación': 'bg-brand-orange/20 text-brand-orangeDark', pausado: 'bg-navy-100 text-navy-500', cerrado: 'bg-navy-50 text-navy-300' };
+const COLOR_ESTADO = { activo: 'bg-green-100 text-green-800', 'implantación': 'bg-brand-orange/20 text-[#F9A83A]', pausado: 'bg-[#123F52] text-[#9FC0CB]', cerrado: 'bg-[#0D3242] text-[#7FA7B4]' };
 const VACIO = { cliente_id: '', normas: ['9001'], modelo: 'Implicación', consultor_id: '', estado: 'implantación', fecha_inicio: '', fecha_auditoria: '', notas: '' };
 
 export default function Proyectos() {
@@ -56,7 +56,7 @@ export default function Proyectos() {
     await deleteRow('proyectos', id); load();
   }
 
-  if (!proyectos) return <p className="font-semibold text-navy-400">Cargando…</p>;
+  if (!proyectos) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
 
   const nombreCliente = id => clientes.find(c => c.id === id)?.empresa || '—';
   const nombreConsultor = id => consultores.find(c => c.id === id)?.nombre || 'Sin asignar';
@@ -69,7 +69,7 @@ export default function Proyectos() {
 
       {form && (
         <form onSubmit={guardar} className="card space-y-5">
-          <h3 className="font-extrabold">{form.id ? 'Editar proyecto' : 'Nuevo proyecto'} <span className="ml-2 text-sm font-semibold text-navy-300">la calculadora aplica el catálogo v2026</span></h3>
+          <h3 className="font-extrabold">{form.id ? 'Editar proyecto' : 'Nuevo proyecto'} <span className="ml-2 text-sm font-semibold text-[#7FA7B4]">la calculadora aplica el catálogo v2026</span></h3>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -88,7 +88,7 @@ export default function Proyectos() {
           </div>
 
           <div>
-            <p className="label">Normas del proyecto <span className="normal-case text-navy-300">(ISO 9001 siempre incluida)</span></p>
+            <p className="label">Normas del proyecto <span className="normal-case text-[#7FA7B4]">(ISO 9001 siempre incluida)</span></p>
             <div className="flex flex-wrap gap-2">
               {NORMAS.map(n => {
                 const on = form.normas.includes(n.id);
@@ -96,7 +96,7 @@ export default function Proyectos() {
                 return (
                   <button type="button" key={n.id} aria-disabled={fija}
                     onClick={() => { if (fija) return; setForm({ ...form, normas: on ? form.normas.filter(x => x !== n.id) : [...form.normas, n.id], consultor_id: '' }); }}
-                    className={`chip border transition ${fija ? 'border-navy-800 bg-navy-800 text-white cursor-default' : on ? 'border-brand-orange bg-brand-orange/15 text-navy-900' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'}`}>
+                    className={`chip border transition ${fija ? 'border-navy-800 bg-navy-800 text-white cursor-default' : on ? 'border-brand-orange bg-brand-orange/15 text-[#EAF4F7]' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'}`}>
                     {n.nombre}{fija ? ' ✓' : ''}
                   </button>
                 );
@@ -116,7 +116,7 @@ export default function Proyectos() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label className="label" htmlFor="p-consultor">Consultor/a {form.normas.length > 0 && <span className="normal-case text-navy-300">({consultoresAptos.length} disponibles)</span>}</label>
+              <label className="label" htmlFor="p-consultor">Consultor/a {form.normas.length > 0 && <span className="normal-case text-[#7FA7B4]">({consultoresAptos.length} disponibles)</span>}</label>
               <select id="p-consultor" className="input" value={form.consultor_id} onChange={e => setForm({ ...form, consultor_id: e.target.value })}>
                 <option value="">Sin asignar</option>
                 {consultoresAptos.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.nivel})</option>)}
@@ -133,12 +133,12 @@ export default function Proyectos() {
           </div>
 
           {form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) < 60 && (
-            <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">⚠ Apoyo no es contratable a menos de 60 días de la auditoría externa ({diasHasta(form.fecha_auditoria)} días). Cambia el modelo o la fecha.</p>
+            <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">⚠ Apoyo no es contratable a menos de 60 días de la auditoría externa ({diasHasta(form.fecha_auditoria)} días). Cambia el modelo o la fecha.</p>
           )}
 
           <div><label className="label" htmlFor="p-notas">Notas</label><textarea id="p-notas" rows="2" className="input" value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
 
-          {err && <p className="text-sm font-bold text-red-600">{err}</p>}
+          {err && <p className="text-sm font-bold text-red-300">{err}</p>}
           <div className="flex gap-3">
             <button className="btn-primary" disabled={form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) < 60}>Guardar</button>
             <button type="button" onClick={() => setForm(null)} className="btn-ghost">Cancelar</button>
@@ -148,25 +148,25 @@ export default function Proyectos() {
 
       <div className="card overflow-x-auto !p-0">
         <table className="w-full min-w-[860px] text-sm">
-          <thead><tr className="border-b border-navy-100 text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+          <thead><tr className="border-b border-[#1E5468] text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
             <th className="px-5 py-3">Cliente</th><th className="px-5 py-3">Normas</th><th className="px-5 py-3">Modelo</th><th className="px-5 py-3">Consultor/a</th><th className="px-5 py-3">Estado</th>{verEconomico && <th className="px-5 py-3 text-right">Precio</th>}<th className="px-5 py-3 text-right">Acciones</th>
           </tr></thead>
           <tbody className="divide-y divide-navy-50">
             {proyectos.map(p => (
               <tr key={p.id}>
                 <td className="px-5 py-3 font-extrabold">{nombreCliente(p.cliente_id)}</td>
-                <td className="px-5 py-3 font-medium text-navy-400">{(p.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}</td>
+                <td className="px-5 py-3 font-medium text-[#9FC0CB]">{(p.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}</td>
                 <td className="px-5 py-3 font-semibold">{p.modelo}</td>
                 <td className="px-5 py-3 font-medium">{nombreConsultor(p.consultor_id)}</td>
                 <td className="px-5 py-3"><span className={`chip ${COLOR_ESTADO[p.estado] || COLOR_ESTADO.pausado}`}>{p.estado}</span></td>
                 {verEconomico && <td className="px-5 py-3 text-right font-extrabold">{p.precio_mes ? `${fmtEUR(p.precio_mes)}/mes` : p.precio_total ? fmtEUR(p.precio_total) : '—'}</td>}
                 <td className="px-5 py-3 text-right">
-                  <button onClick={() => setForm({ ...VACIO, ...p, normas: [...new Set(['9001', ...(p.normas || [])])], consultor_id: p.consultor_id || '', cliente_id: p.cliente_id || '' })} className="font-bold text-navy-700 hover:underline">Editar</button>
-                  <button onClick={() => borrar(p.id)} className="ml-4 font-bold text-red-600 hover:underline">Eliminar</button>
+                  <button onClick={() => setForm({ ...VACIO, ...p, normas: [...new Set(['9001', ...(p.normas || [])])], consultor_id: p.consultor_id || '', cliente_id: p.cliente_id || '' })} className="font-bold text-[#CFE3E9] hover:underline">Editar</button>
+                  <button onClick={() => borrar(p.id)} className="ml-4 font-bold text-red-300 hover:underline">Eliminar</button>
                 </td>
               </tr>
             ))}
-            {!proyectos.length && <tr><td colSpan="7" className="px-5 py-8 text-center font-medium text-navy-400">Sin proyectos todavía.</td></tr>}
+            {!proyectos.length && <tr><td colSpan="7" className="px-5 py-8 text-center font-medium text-[#9FC0CB]">Sin proyectos todavía.</td></tr>}
           </tbody>
         </table>
       </div>

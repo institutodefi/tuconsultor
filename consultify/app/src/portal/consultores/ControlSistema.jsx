@@ -8,8 +8,8 @@ const TIPOS = [
   { id: 'coordinacion', nombre: 'Coordinación' },
 ];
 const TIPO_CHIP = {
-  produccion: 'bg-brand-orange/15 text-brand-orangeDark',
-  gestion: 'bg-navy-100 text-navy-700',
+  produccion: 'bg-brand-orange/15 text-[#F9A83A]',
+  gestion: 'bg-[#123F52] text-[#CFE3E9]',
   coordinacion: 'bg-green-100 text-green-800',
 };
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
@@ -67,7 +67,7 @@ export default function ControlSistema() {
         <div className="flex flex-wrap gap-2">
           {NORMAS.map((n) => (
             <button key={n.id} onClick={() => setNormaSel(n.id)}
-              className={`chip border transition ${normaSel === n.id ? 'border-navy-800 bg-navy-800 text-white' : 'border-navy-200 bg-white text-navy-400 hover:border-navy-400'}`}>
+              className={`chip border transition ${normaSel === n.id ? 'border-navy-800 bg-navy-800 text-white' : 'border-[#1E5468] bg-[#10394A] text-[#9FC0CB] hover:border-navy-400'}`}>
               {n.nombre}
             </button>
           ))}
@@ -75,20 +75,20 @@ export default function ControlSistema() {
       </div>
 
       <div>
-        <h2 className="text-xl font-extrabold text-navy-900">{norma?.nombre} · tareas por norma</h2>
-        <p className="text-sm font-medium text-navy-400">
+        <h2 className="text-xl font-extrabold text-[#EAF4F7]">{norma?.nombre} · tareas por norma</h2>
+        <p className="text-sm font-medium text-[#9FC0CB]">
           Casuísticas del catálogo por modelo de relación. Las horas son el total de cada tarea (no mensuales). Edita nombre, descripción, horas y tipo; añade o elimina tareas. Es la plantilla que se usa al planificar cada proyecto.
         </p>
       </div>
 
-      {err && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{err}</div>}
-      {!catalogo && <p className="font-semibold text-navy-400">Cargando…</p>}
+      {err && <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-300">{err}</div>}
+      {!catalogo && <p className="font-semibold text-[#9FC0CB]">Cargando…</p>}
 
       {catalogo && !catalogoNorma.length && !err && (
         <div className="card text-center">
-          <p className="font-bold text-navy-700">No hay casuísticas cargadas para {norma?.nombre}.</p>
-          <p className="mt-1 text-sm font-medium text-navy-400">
-            Si esperabas ver el catálogo del Excel, ejecuta <code className="rounded bg-navy-50 px-1">seed-tareas.sql</code> en Supabase. También puedes añadir casuísticas a mano con «+ Añadir» en cada modelo.
+          <p className="font-bold text-[#CFE3E9]">No hay casuísticas cargadas para {norma?.nombre}.</p>
+          <p className="mt-1 text-sm font-medium text-[#9FC0CB]">
+            Si esperabas ver el catálogo del Excel, ejecuta <code className="rounded bg-[#0D3242] px-1">seed-tareas.sql</code> en Supabase. También puedes añadir casuísticas a mano con «+ Añadir» en cada modelo.
           </p>
         </div>
       )}
@@ -98,16 +98,16 @@ export default function ControlSistema() {
         const totalHoras = r2(items.reduce((s, t) => s + Number(t.horas_base || 0), 0));
         return (
           <div key={modelo} className="card !p-0 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-navy-100 bg-navy-50/60 px-5 py-3">
+            <div className="flex items-center justify-between border-b border-[#1E5468] bg-navy-50/60 px-5 py-3">
               <div>
-                <h3 className="font-extrabold text-navy-800">Modelo {modelo}</h3>
-                <p className="text-xs font-semibold text-navy-400">{items.length} casuística(s) · {totalMes} h</p>
+                <h3 className="font-extrabold text-[#EAF4F7]">Modelo {modelo}</h3>
+                <p className="text-xs font-semibold text-[#9FC0CB]">{items.length} casuística(s) · {totalMes} h</p>
               </div>
               <button onClick={() => setEdit(VACIA(normaSel, modelo))} className="btn-ghost !px-3 !py-1.5 text-sm">+ Añadir</button>
             </div>
             {items.length > 0 ? (
               <table className="w-full min-w-[760px] text-sm">
-                <thead><tr className="border-b border-navy-100 text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                <thead><tr className="border-b border-[#1E5468] text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                   <th className="px-5 py-2.5">Proceso - Subproceso</th><th className="px-5 py-2.5">Descripción</th>
                   <th className="px-5 py-2.5">Tipo</th><th className="px-5 py-2.5 text-right">Horas</th><th className="px-5 py-2.5 text-right">Acciones</th>
                 </tr></thead>
@@ -115,19 +115,19 @@ export default function ControlSistema() {
                   {items.map((c) => (
                     <tr key={c.id}>
                       <td className="px-5 py-2.5 font-bold">{c.titulo || `${c.proceso} - ${c.subproceso}`}</td>
-                      <td className="px-5 py-2.5 text-navy-400">{c.descripcion || <span className="text-navy-200">—</span>}</td>
+                      <td className="px-5 py-2.5 text-[#9FC0CB]">{c.descripcion || <span className="text-navy-200">—</span>}</td>
                       <td className="px-5 py-2.5"><span className={`chip ${TIPO_CHIP[c.tipo || 'produccion']}`}>{TIPOS.find((x) => x.id === (c.tipo || 'produccion'))?.nombre}</span></td>
                       <td className="px-5 py-2.5 text-right font-semibold">{r2(c.horas_base)} h</td>
                       <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                        <button onClick={() => setEdit({ ...c })} className="font-bold text-navy-700 hover:underline">Editar</button>
-                        <button onClick={() => borrar(c.id)} className="ml-3 font-bold text-red-600 hover:underline">Eliminar</button>
+                        <button onClick={() => setEdit({ ...c })} className="font-bold text-[#CFE3E9] hover:underline">Editar</button>
+                        <button onClick={() => borrar(c.id)} className="ml-3 font-bold text-red-300 hover:underline">Eliminar</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p className="px-5 py-6 text-center text-sm font-medium text-navy-400">Sin casuísticas para este modelo. Usa «Añadir».</p>
+              <p className="px-5 py-6 text-center text-sm font-medium text-[#9FC0CB]">Sin casuísticas para este modelo. Usa «Añadir».</p>
             )}
           </div>
         );
@@ -136,10 +136,10 @@ export default function ControlSistema() {
       {/* Modal alta/edición de casuística */}
       {edit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4" onClick={() => setEdit(null)}>
-          <form onSubmit={guardar} className="w-full max-w-lg rounded-[22px] bg-white p-6 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
+          <form onSubmit={guardar} className="w-full max-w-lg rounded-[22px] bg-[#10394A] p-6 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
             <div>
               <h3 className="text-lg font-extrabold">{edit.id ? 'Editar casuística' : 'Nueva casuística'}</h3>
-              <p className="text-xs font-semibold text-navy-400">{norma?.nombre} · modelo {edit.modelo}</p>
+              <p className="text-xs font-semibold text-[#9FC0CB]">{norma?.nombre} · modelo {edit.modelo}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Proceso *</label><input required className="input" placeholder="PE1 PLANIFICACIÓN ESTRATÉGICA" value={edit.proceso || ''} onChange={(e) => setEdit({ ...edit, proceso: e.target.value })} /></div>
@@ -154,7 +154,7 @@ export default function ControlSistema() {
               </div>
               <div><label className="label">Horas</label><input type="number" min="0" step="0.01" className="input" value={edit.horas_base ?? ''} onChange={(e) => setEdit({ ...edit, horas_base: e.target.value })} /></div>
             </div>
-            {err && <p className="text-sm font-bold text-red-600">{err}</p>}
+            {err && <p className="text-sm font-bold text-red-300">{err}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setEdit(null)} className="btn-ghost">Cancelar</button>
               <button className="btn-orange">{edit.id ? 'Guardar' : 'Crear'}</button>

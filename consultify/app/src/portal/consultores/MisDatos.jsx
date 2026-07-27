@@ -36,14 +36,14 @@ export default function MisDatos() {
       <div>
         <p className="eyebrow">Mi cuenta</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight">Mis datos</h1>
-        <p className="mt-1 text-sm font-medium text-navy-400">Edita tu información personal y gestiona tu contraseña.</p>
+        <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Edita tu información personal y gestiona tu contraseña.</p>
       </div>
 
-      {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orangeDark">Modo demo: los cambios no se guardan.</div>}
+      {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-[#F9A83A]">Modo demo: los cambios no se guardan.</div>}
 
       {/* Datos personales */}
       <form onSubmit={guardar} className="card space-y-4">
-        <h2 className="text-lg font-extrabold text-navy-900">Información personal</h2>
+        <h2 className="text-lg font-extrabold text-[#EAF4F7]">Información personal</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div><label className="label">Nombre</label><input className="input" value={nombre} onChange={e => setNombre(e.target.value)} /></div>
           <div><label className="label">Apellidos</label><input className="input" value={apellidos} onChange={e => setApellidos(e.target.value)} /></div>
@@ -51,29 +51,29 @@ export default function MisDatos() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label">Email</label>
-            <input className="input bg-navy-50/60 text-navy-500" value={user?.email || ''} disabled />
-            <p className="mt-1 text-xs text-navy-300">El email no se puede cambiar aquí.</p>
+            <input className="input bg-navy-50/60 text-[#9FC0CB]" value={user?.email || ''} disabled />
+            <p className="mt-1 text-xs text-[#7FA7B4]">El email no se puede cambiar aquí.</p>
           </div>
           <div>
             <label className="label">Rol</label>
-            <input className="input bg-navy-50/60 text-navy-500" value={ROL_LABEL[role] || role || ''} disabled />
+            <input className="input bg-navy-50/60 text-[#9FC0CB]" value={ROL_LABEL[role] || role || ''} disabled />
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button disabled={busy} className="btn-primary">{busy ? 'Guardando…' : 'Guardar cambios'}</button>
-          {msg && <p className={`text-sm font-bold ${msg.ok ? 'text-green-600' : 'text-red-600'}`}>{msg.t}</p>}
+          {msg && <p className={`text-sm font-bold ${msg.ok ? 'text-green-600' : 'text-red-300'}`}>{msg.t}</p>}
         </div>
       </form>
 
       {/* Contraseña */}
       <div className="card space-y-3">
-        <h2 className="text-lg font-extrabold text-navy-900">Contraseña</h2>
-        <p className="text-sm text-navy-500">Por seguridad, el cambio de contraseña se hace por email: recibirás un enlace para elegir una nueva.</p>
+        <h2 className="text-lg font-extrabold text-[#EAF4F7]">Contraseña</h2>
+        <p className="text-sm text-[#9FC0CB]">Por seguridad, el cambio de contraseña se hace por email: recibirás un enlace para elegir una nueva.</p>
         <div className="flex items-center gap-3">
-          <button onClick={cambiarPassword} disabled={pwBusy} className="rounded-xl border border-navy-200 px-4 py-2 text-sm font-bold text-navy-600 hover:bg-navy-50 disabled:opacity-40">
+          <button onClick={cambiarPassword} disabled={pwBusy} className="rounded-xl border border-[#1E5468] px-4 py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40">
             {pwBusy ? 'Enviando…' : 'Enviarme enlace para cambiar contraseña'}
           </button>
-          {pwMsg && <p className={`text-sm font-bold ${pwMsg.ok ? 'text-green-600' : 'text-red-600'}`}>{pwMsg.t}</p>}
+          {pwMsg && <p className={`text-sm font-bold ${pwMsg.ok ? 'text-green-600' : 'text-red-300'}`}>{pwMsg.t}</p>}
         </div>
       </div>
     </div>

@@ -83,7 +83,7 @@ export default function Calculadora() {
       <div className="mb-8 max-w-2xl">
         <p className="eyebrow">Calculadora de precios</p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">Tu sistema de gestión, con precio cerrado en 60 segundos</h1>
-        <p className="mt-3 text-navy-400 font-medium">Elige tus normas, elige cuánto quieres que hagamos nosotros, y mira el precio. Sin sorpresas: lo que ves es lo que firmas.</p>
+        <p className="mt-3 text-[#9FC0CB] font-medium">Elige tus normas, elige cuánto quieres que hagamos nosotros, y mira el precio. Sin sorpresas: lo que ves es lo que firmas.</p>
       </div>
 
       {/* Pasos */}
@@ -91,7 +91,7 @@ export default function Calculadora() {
         {PASOS.map((p, i) => (
           <li key={p} className="flex-1">
             <button onClick={() => i < paso && setPaso(i)}
-              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition ${i === paso ? 'bg-navy-800 text-white' : i < paso ? 'bg-navy-100 text-navy-700' : 'bg-white text-navy-300 border border-navy-100'}`}>
+              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition ${i === paso ? 'bg-navy-800 text-white' : i < paso ? 'bg-[#123F52] text-[#CFE3E9]' : 'bg-[#10394A] text-[#7FA7B4] border border-[#1E5468]'}`}>
               <span className="mr-2 opacity-60">{i + 1}</span>{p}
             </button>
           </li>
@@ -103,19 +103,19 @@ export default function Calculadora() {
           {paso === 0 && (
             <section>
               <h2 className="mb-4 text-lg font-extrabold">¿Qué normas necesitas?</h2>
-              <p className="mb-4 text-sm font-medium text-navy-400">ISO 9001 es la columna vertebral de todo sistema de gestión Consultify: va siempre incluida. Añade las normas que quieras integrar sobre ella.</p>
+              <p className="mb-4 text-sm font-medium text-[#9FC0CB]">ISO 9001 es la columna vertebral de todo sistema de gestión Consultify: va siempre incluida. Añade las normas que quieras integrar sobre ella.</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {NORMAS.map(n => {
                   const on = sel.includes(n.id);
                   const fija = n.id === '9001';
                   return (
                     <button key={n.id} onClick={() => toggle(n.id)} aria-disabled={fija}
-                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-navy-300'} ${fija ? 'cursor-default' : ''}`}>
+                      className={`card text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-[#2A6480]'} ${fija ? 'cursor-default' : ''}`}>
                       <div className="flex items-start justify-between">
                         <span className="font-extrabold">{n.nombre}</span>
-                        <span className={`chip ${fija ? 'bg-navy-800 text-white' : on ? 'bg-brand-orange text-navy-900' : 'bg-navy-50 text-navy-300'}`}>{fija ? 'Incluida siempre' : on ? '✓' : '+'}</span>
+                        <span className={`chip ${fija ? 'bg-navy-800 text-white' : on ? 'bg-brand-orange text-[#EAF4F7]' : 'bg-[#0D3242] text-[#7FA7B4]'}`}>{fija ? 'Incluida siempre' : on ? '✓' : '+'}</span>
                       </div>
-                      <p className="mt-1 text-sm font-medium text-navy-400">{n.desc}</p>
+                      <p className="mt-1 text-sm font-medium text-[#9FC0CB]">{n.desc}</p>
                     </button>
                   );
                 })}
@@ -136,22 +136,22 @@ export default function Calculadora() {
                   const r = calcular(sel, mid);
                   return (
                     <button key={mid} onClick={() => setModelo(mid)}
-                      className={`card relative text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-navy-300'}`}>
+                      className={`card relative text-left transition ${on ? '!border-brand-orange ring-2 ring-brand-orange/30' : 'hover:border-[#2A6480]'}`}>
                       {m.destacado && <span className="absolute -top-2 right-4 chip bg-navy-800 text-white">Recomendado</span>}
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-lg font-extrabold">{m.titulo}</span>
-                        <span className="font-extrabold text-navy-800">
+                        <span className="font-extrabold text-[#EAF4F7]">
                           {r?.fraccionado
-                            ? <>{fmtEUR(r.fraccionado.totalConIva)} <span className="text-xs font-bold text-navy-400">total</span></>
+                            ? <>{fmtEUR(r.fraccionado.totalConIva)} <span className="text-xs font-bold text-[#9FC0CB]">total</span></>
                             : <>{fmtEUR(r.precioCatalogo)}{r.tipo === 'mes' ? '/mes' : ' único'}</>}
                         </span>
                       </div>
-                      <p className="mt-1 text-sm font-semibold text-brand-orangeDark">
+                      <p className="mt-1 text-sm font-semibold text-[#F9A83A]">
                         {r?.fraccionado
                           ? `50% al inicio (${fmtEUR(r.fraccionado.cuota1)}) · 50% antes de auditoría (${fmtEUR(r.fraccionado.cuota2)})`
                           : m.claim}
                       </p>
-                      <p className="mt-2 text-xs font-medium leading-relaxed text-navy-400">{m.leyenda}</p>
+                      <p className="mt-2 text-xs font-medium leading-relaxed text-[#9FC0CB]">{m.leyenda}</p>
                     </button>
                   );
                 })}
@@ -169,45 +169,45 @@ export default function Calculadora() {
                 <h2 className="text-lg font-extrabold">Desglose de tu propuesta</h2>
                 <table className="mt-4 w-full text-sm">
                   <tbody className="divide-y divide-navy-50">
-                    <tr><td className="py-2 font-semibold text-navy-400">Normas</td><td className="py-2 text-right font-bold">{sel.map(id => NORMAS.find(n => n.id === id)?.nombre).join(' + ')}</td></tr>
-                    <tr><td className="py-2 font-semibold text-navy-400">Modelo</td><td className="py-2 text-right font-bold">{modelo}</td></tr>
+                    <tr><td className="py-2 font-semibold text-[#9FC0CB]">Normas</td><td className="py-2 text-right font-bold">{sel.map(id => NORMAS.find(n => n.id === id)?.nombre).join(' + ')}</td></tr>
+                    <tr><td className="py-2 font-semibold text-[#9FC0CB]">Modelo</td><td className="py-2 text-right font-bold">{modelo}</td></tr>
                     {modelo !== 'Implantación' && (
-                      <tr><td className="py-2 font-semibold text-navy-400">Dedicación del equipo</td><td className="py-2 text-right font-bold">{res.hTotal} h{res.tipo === 'mes' ? '/mes' : ' totales'}</td></tr>
+                      <tr><td className="py-2 font-semibold text-[#9FC0CB]">Dedicación del equipo</td><td className="py-2 text-right font-bold">{res.hTotal} h{res.tipo === 'mes' ? '/mes' : ' totales'}</td></tr>
                     )}
                     {res.fraccionado ? (
                       <>
-                        <tr><td className="py-2 font-semibold text-navy-400">Duración implantación</td><td className="py-2 text-right font-bold">{res.fraccionado.meses} meses</td></tr>
-                        <tr><td className="py-2 font-semibold text-navy-400">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalSinIva)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-navy-400">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalConIva - res.fraccionado.totalSinIva)}</td></tr>
-                        <tr><td className="py-3 text-base font-extrabold">Total</td><td className="py-3 text-right text-base font-extrabold text-navy-800">{fmtEUR(res.fraccionado.totalConIva)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-navy-400">50% por adelantado</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota1)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-navy-400">50% antes de auditoría externa</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota2)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">Duración implantación</td><td className="py-2 text-right font-bold">{res.fraccionado.meses} meses</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalSinIva)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalConIva - res.fraccionado.totalSinIva)}</td></tr>
+                        <tr><td className="py-3 text-base font-extrabold">Total</td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.fraccionado.totalConIva)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% por adelantado</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota1)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% antes de auditoría externa</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota2)}</td></tr>
                       </>
                     ) : (
                       <>
-                        <tr><td className="py-2 font-semibold text-navy-400">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.precioCatalogo)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-navy-400">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.iva)}</td></tr>
-                        <tr><td className="py-3 text-base font-extrabold">Total{res.tipo === 'mes' ? ' / mes' : ''}</td><td className="py-3 text-right text-base font-extrabold text-navy-800">{fmtEUR(res.totalConIva)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.precioCatalogo)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.iva)}</td></tr>
+                        <tr><td className="py-3 text-base font-extrabold">Total{res.tipo === 'mes' ? ' / mes' : ''}</td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.totalConIva)}</td></tr>
                       </>
                     )}
                   </tbody>
                 </table>
-                <p className="mt-3 rounded-xl bg-navy-50 p-3 text-xs font-medium leading-relaxed text-navy-700">{res.leyenda} Acompañamiento a auditoría: {fmtEUR(ACOMPANAMIENTO_AUDITORIA_DIA)}/jornada, siempre aparte.</p>
-                <button onClick={() => setComparar(c => !c)} className="mt-4 text-sm font-bold text-brand-orangeDark hover:underline">
+                <p className="mt-3 rounded-xl bg-[#0D3242] p-3 text-xs font-medium leading-relaxed text-[#CFE3E9]">{res.leyenda} Acompañamiento a auditoría: {fmtEUR(ACOMPANAMIENTO_AUDITORIA_DIA)}/jornada, siempre aparte.</p>
+                <button onClick={() => setComparar(c => !c)} className="mt-4 text-sm font-bold text-[#F9A83A] hover:underline">
                   {comparar ? 'Ocultar comparativa' : 'Comparar los 5 modelos →'}
                 </button>
                 {comparar && (
                   <div className="mt-3 overflow-x-auto">
                     <table className="w-full min-w-[520px] text-sm">
-                      <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-navy-300">
+                      <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                         <th className="py-2">Modelo</th><th className="py-2">Dedicación</th><th className="py-2 text-right">Precio catálogo</th>
                       </tr></thead>
                       <tbody className="divide-y divide-navy-50">
                         {comparativa.map(c => (
                           <tr key={c.modelo} className={c.modelo === modelo ? 'bg-brand-orange/10' : ''}>
                             <td className="py-2 font-bold">{c.modelo}</td>
-                            <td className="py-2 font-medium text-navy-400">{c.modelo === 'Implantación' ? '—' : <>{c.hTotal} h{c.tipo === 'mes' ? '/mes' : ''}</>}</td>
-                            <td className="py-2 text-right font-extrabold">{c.fraccionado ? <>{fmtEUR(c.fraccionado.totalConIva)} <span className="text-[11px] font-medium text-navy-400">total</span></> : <>{fmtEUR(c.precioCatalogo)}{c.tipo === 'mes' ? '/mes' : ''}</>}</td>
+                            <td className="py-2 font-medium text-[#9FC0CB]">{c.modelo === 'Implantación' ? '—' : <>{c.hTotal} h{c.tipo === 'mes' ? '/mes' : ''}</>}</td>
+                            <td className="py-2 text-right font-extrabold">{c.fraccionado ? <>{fmtEUR(c.fraccionado.totalConIva)} <span className="text-[11px] font-medium text-[#9FC0CB]">total</span></> : <>{fmtEUR(c.precioCatalogo)}{c.tipo === 'mes' ? '/mes' : ''}</>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -222,7 +222,7 @@ export default function Calculadora() {
                   <div className="py-4 text-center">
                     <p className="text-2xl">✅</p>
                     <h3 className="mt-2 text-lg font-extrabold">Propuesta guardada</h3>
-                    <p className="mt-1 text-sm font-medium text-navy-400">Te llamamos en menos de 24 h laborables para cerrar los detalles.</p>
+                    <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Te llamamos en menos de 24 h laborables para cerrar los detalles.</p>
                   </div>
                 ) : (
                   <form onSubmit={enviarLead}>
@@ -236,11 +236,11 @@ export default function Calculadora() {
                       <div><label className="label" htmlFor="l-email">Email</label><input id="l-email" type="email" required className="input" value={lead.email} onChange={e => setLead({ ...lead, email: e.target.value })} /></div>
                       <div className="sm:col-span-2"><label className="label" htmlFor="l-tel">Teléfono</label><input id="l-tel" className="input" value={lead.telefono} onChange={e => setLead({ ...lead, telefono: e.target.value })} /></div>
                     </div>
-                    <label className="mt-4 flex items-start gap-2 text-xs font-medium text-navy-400">
+                    <label className="mt-4 flex items-start gap-2 text-xs font-medium text-[#9FC0CB]">
                       <input type="checkbox" checked={lead.consent} onChange={e => setLead({ ...lead, consent: e.target.checked })} className="mt-0.5" />
-                      <span>Acepto que los responsables de TuConsultor traten mis datos para contactarme sobre esta propuesta. He leído la <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orangeDark underline">política de privacidad</a> (RGPD). Puedo retirar el consentimiento en cualquier momento.</span>
+                      <span>Acepto que los responsables de TuConsultor traten mis datos para contactarme sobre esta propuesta. He leído la <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-[#F9A83A] underline">política de privacidad</a> (RGPD). Puedo retirar el consentimiento en cualquier momento.</span>
                     </label>
-                    {leadState === 'error' && <p className="mt-2 text-sm font-bold text-red-600">No se pudo enviar. Revisa la conexión e inténtalo de nuevo.</p>}
+                    {leadState === 'error' && <p className="mt-2 text-sm font-bold text-red-300">No se pudo enviar. Revisa la conexión e inténtalo de nuevo.</p>}
                     <div className="mt-5 flex gap-3">
                       <button type="button" onClick={() => setPaso(1)} className="btn-ghost">← Modelo</button>
                       <button type="submit" disabled={!lead.consent || leadState === 'sending'} className="btn-orange">
