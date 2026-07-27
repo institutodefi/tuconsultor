@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { registrar } from './registro.js';
 import { supabase, DEMO } from './supabase';
 import { can } from './permisos';
 
@@ -33,6 +34,7 @@ export function AuthProvider({ children }) {
     const { data } = await supabase.from('perfiles').select('rol, activo, politicas_aceptadas_en, nombre, apellidos').eq('id', u.id).single();
     // Usuario desactivado: cerrar sesión de inmediato.
     if (data && data.activo === false) {
+      registrar('salida', { detalle: 'cuenta desactivada' });
       await supabase.auth.signOut();
       setUser(null); setRealRole(null); setViewAs(null); setLoading(false);
       return;
@@ -94,6 +96,11 @@ export function AuthProvider({ children }) {
       throw new Error('La aplicación no está conectada a la base de datos (faltan las variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY en el despliegue). Avisa al administrador.');
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Rastro de acceso (ENS op.exp.8 / ISO 27001 A.8.15). Nunca bloquea el login.
+    registrar(error ? 'entrada_fallida' : 'entrada', {
+      email, perfil_id: error ? null : (data?.user?.id || null),
+      detalle: error ? String(error.message || '').slice(0, 120) : null,
+    });
     if (error) throw error;
     const { data: p } = await supabase.from('perfiles').select('rol, activo').eq('id', data.user.id).single();
     if (p && p.activo === false) {
@@ -124,7 +131,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    if (!DEMO) await supabase.auth.signOut();
+    if (!DEMO) { await registrar('salida'); await supabase.auth.signOut(); }
     setUser(null); setRealRole(null); setViewAs(null);
   }
 

@@ -10,6 +10,9 @@ import Agenda from './consultores/Agenda.jsx';
 import MiAgenda from './consultores/MiAgenda.jsx';
 import Sistemas from './consultores/Sistemas.jsx';
 import ReglasComerciales from './consultores/ReglasComerciales.jsx';
+import Versiones from './consultores/Versiones.jsx';
+import RegistroAccesos from './consultores/RegistroAccesos.jsx';
+import Accesibilidad from './consultores/Accesibilidad.jsx';
 import GatePoliticas from './GatePoliticas.jsx';
 import MisDatos from './consultores/MisDatos.jsx';
 import Accesos from './consultores/Accesos.jsx';
@@ -37,6 +40,9 @@ const Icon = ({ name, className = 'h-5 w-5' }) => {
     'building': <><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" /></>,
     'contact': <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="M15 8h3M15 12h3M7 16h10" /></>,
     'sliders-horizontal': <><path d="M3 6h18M3 12h18M3 18h18" /><circle cx="9" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="7" cy="18" r="2" /></>,
+    'git-branch': <><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></>,
+    'shield-alert': <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M12 8v4M12 16h.01" /></>,
+    'accessibility': <><circle cx="12" cy="4.5" r="1.6" /><path d="M5 8.5l7 1.5 7-1.5M12 10v4M12 14l-2.5 6M12 14l2.5 6" /></>,
   };
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -140,6 +146,9 @@ export default function ConsultorPortal() {
               <Route path="mis-datos" element={<MisDatos />} />
               <Route path="sistemas" element={<Guard ok={verEquipo}><Sistemas /></Guard>} />
               <Route path="reglas" element={<Guard ok={['superadmin','admin','director'].includes(role)}><ReglasComerciales /></Guard>} />
+              <Route path="versiones" element={<Guard ok={['superadmin','admin','director'].includes(role)}><Versiones /></Guard>} />
+              <Route path="registro" element={<Guard ok={role === 'superadmin'}><RegistroAccesos /></Guard>} />
+              <Route path="accesibilidad" element={<Guard ok={['superadmin','admin','director'].includes(role)}><Accesibilidad /></Guard>} />
               {/* Fusionadas en «Empresas» (v56): se mantienen como redirección
                   para que no se rompan enlaces ni marcadores antiguos. */}
               <Route path="clientes" element={<Navigate to="../empresas" replace />} />

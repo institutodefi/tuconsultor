@@ -9,6 +9,10 @@ function demo() {
     proyectos: demoClone('proyectos'), presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
     reglas_comerciales: [],
+    versiones: [],
+    registro_accesos: [],
+    accesibilidad_criterios: [],
+    accesibilidad_conformidad: [],
     procesos_subprocesos: [],
     procesos_bandas: [],
     procesos_riesgos: [],
@@ -213,9 +217,11 @@ export async function upsertClienteDesdeFormulario({ empresa, contacto, email, t
   catch { return null; }
 }
 
-export async function updateRow(table, id, patch) {
-  if (DEMO) { const t = demo()[table]; const i = t.findIndex(r => r.id === id); if (i >= 0) t[i] = { ...t[i], ...patch }; return t[i]; }
-  const { data, error } = await supabase.from(table).update(patch).eq('id', id).select().single();
+// `clave` permite tablas cuya primaria no es `id`: el checklist de accesibilidad
+// usa el código del criterio (1.4.3) como clave, no un uuid.
+export async function updateRow(table, id, patch, clave = 'id') {
+  if (DEMO) { const t = demo()[table]; const i = t.findIndex(r => r[clave] === id); if (i >= 0) t[i] = { ...t[i], ...patch }; return t[i]; }
+  const { data, error } = await supabase.from(table).update(patch).eq(clave, id).select().single();
   if (error) throw error;
   return data;
 }

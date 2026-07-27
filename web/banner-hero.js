@@ -35,6 +35,7 @@
     tuconsultor: '/marca/horizontal-dark.svg',
     consultify: '/marca/consultify-horizontal-blanco.svg',
     orbita: '/marca/orbita-esfera-anim.svg',
+    magic: '/marca/magic-blanco.png',
     isotipo: '/marca/isotipo-dark.svg',
   };
 
@@ -81,6 +82,26 @@
         rotulo: 'Tu proyecto ahora',
         tareas: [['Análisis de contexto', 'hecho'], ['Mapa de procesos', 'en curso'], ['Auditoría interna', 'planificada']],
         estados: { hecho: 'hecho', 'en curso': 'en curso', planificada: 'planificada' },
+      },
+      magic: {
+        pre: 'MODELO MAGIC® · INSTITUTO DE EXCELENCIA EUROPEA',
+        h: [['Tu gestión,', ''], ['medida sobre', 'strong'], ['1000 puntos.', 'accent']],
+        sub: 'MAGIC® no es una norma que se cumple: es un espejo en el que la organización se contempla para crecer. Siete criterios ponderados, evidencias verificables y una puntuación comparable en el tiempo.',
+        cta: [['Conoce el Modelo MAGIC®', 'https://modelo-magic.com/', 'btn-orange'], ['El Instituto', '/grupo/instituto-excelencia.html', 'btn-primary']],
+        marcador: '1000', marcadorPie: 'puntos de madurez',
+        rotulo: 'Siete criterios estratégicos',
+        criterios: ['Propósito y estrategia', 'Cultura y liderazgo', 'Talento', 'Partners y proveedores', 'Clientes', 'Sostenibilidad y RS', 'Funcionamiento y transformación'],
+        pie: 'Ciclo de cuatro fases: autoevaluación, diagnóstico, plan de acción y mejora continua.',
+      },
+      token: {
+        pre: 'BLOCKCHAIN · WEB3 · TOKENIZACIÓN',
+        h: [['Tokeniza activos', ''], ['con método,', 'strong'], ['no con humo.', 'accent']],
+        sub: 'Qué se puede tokenizar, con qué estructura y cómo encaja en el marco europeo de criptoactivos. Formación, asesoramiento técnico Web3 y acompañamiento en el diseño.',
+        cta: [['Instituto DeFi', '/grupo/instituto-defi.html', 'btn-orange'], ['Servicios tecnológicos', '/servicios-tecnologicos.html', 'btn-primary']],
+        rotulo: 'Del activo al registro',
+        pasos: [['Activo real', 'Inmueble, deuda, participación'], ['Token', 'Estructura jurídica y técnica'], ['Registro distribuido', 'Trazable y verificable']],
+        sello: 'MiCA', selloPie: 'Reglamento UE de criptoactivos',
+        pie: 'Contenido formativo. No es asesoramiento de inversión.',
       },
       eco: {
         pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
@@ -131,6 +152,26 @@
         tareas: [['Context analysis', 'hecho'], ['Process map', 'en curso'], ['Internal audit', 'planificada']],
         estados: { hecho: 'done', 'en curso': 'in progress', planificada: 'planned' },
       },
+      magic: {
+        pre: 'MAGIC® MODEL · INSTITUTO DE EXCELENCIA EUROPEA',
+        h: [['Your management,', ''], ['measured across', 'strong'], ['1000 points.', 'accent']],
+        sub: 'MAGIC® is not a standard to comply with: it is a mirror in which the organisation looks at itself in order to grow. Seven weighted criteria, verifiable evidence and a score comparable over time.',
+        cta: [['Discover the MAGIC® Model', 'https://modelo-magic.com/', 'btn-orange'], ['The Institute', '/grupo/instituto-excelencia.html', 'btn-primary']],
+        marcador: '1000', marcadorPie: 'maturity points',
+        rotulo: 'Seven strategic criteria',
+        criterios: ['Purpose and strategy', 'Culture and leadership', 'Talent', 'Partners and suppliers', 'Customers', 'Sustainability and CSR', 'Operations and transformation'],
+        pie: 'Four-phase cycle: self-assessment, diagnosis, action plan and continuous improvement.',
+      },
+      token: {
+        pre: 'BLOCKCHAIN · WEB3 · TOKENISATION',
+        h: [['Tokenise assets', ''], ['with method,', 'strong'], ['not with hype.', 'accent']],
+        sub: 'What can be tokenised, with what structure, and how it fits the European crypto-asset framework. Training, Web3 technical advisory and design support.',
+        cta: [['Instituto DeFi', '/grupo/instituto-defi.html', 'btn-orange'], ['Technology services', '/servicios-tecnologicos.html', 'btn-primary']],
+        rotulo: 'From asset to ledger',
+        pasos: [['Real asset', 'Property, debt, equity'], ['Token', 'Legal and technical structure'], ['Distributed ledger', 'Traceable and verifiable']],
+        sello: 'MiCA', selloPie: 'EU crypto-asset regulation',
+        pie: 'Educational content. Not investment advice.',
+      },
       eco: {
         pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
         h: [['The human', ''], ['ecosystem', 'strong'], ['powered by AI.', 'accent']],
@@ -175,6 +216,26 @@
         rotulo: 'Votre projet maintenant',
         tareas: [['Analyse du contexte', 'hecho'], ['Cartographie des processus', 'en curso'], ['Audit interne', 'planificada']],
         estados: { hecho: 'fait', 'en curso': 'en cours', planificada: 'planifié' },
+      },
+      magic: {
+        pre: 'MODÈLE MAGIC® · INSTITUTO DE EXCELENCIA EUROPEA',
+        h: [['Votre gestion,', ''], ['mesurée sur', 'strong'], ['1000 points.', 'accent']],
+        sub: "MAGIC® n'est pas une norme à respecter : c'est un miroir dans lequel l'organisation se regarde pour grandir. Sept critères pondérés, des preuves vérifiables et un score comparable dans le temps.",
+        cta: [['Découvrir le Modèle MAGIC®', 'https://modelo-magic.com/', 'btn-orange'], ["L'Institut", '/grupo/instituto-excelencia.html', 'btn-primary']],
+        marcador: '1000', marcadorPie: 'points de maturité',
+        rotulo: 'Sept critères stratégiques',
+        criterios: ['Raison d\'être et stratégie', 'Culture et leadership', 'Talent', 'Partenaires et fournisseurs', 'Clients', 'Durabilité et RSE', 'Fonctionnement et transformation'],
+        pie: "Cycle en quatre phases : auto-évaluation, diagnostic, plan d'action et amélioration continue.",
+      },
+      token: {
+        pre: 'BLOCKCHAIN · WEB3 · TOKENISATION',
+        h: [['Tokenisez vos actifs', ''], ['avec méthode,', 'strong'], ['pas avec du vent.', 'accent']],
+        sub: "Ce qui peut être tokenisé, avec quelle structure et comment cela s'inscrit dans le cadre européen des crypto-actifs. Formation, conseil technique Web3 et accompagnement.",
+        cta: [['Instituto DeFi', '/grupo/instituto-defi.html', 'btn-orange'], ['Services technologiques', '/servicios-tecnologicos.html', 'btn-primary']],
+        rotulo: "De l'actif au registre",
+        pasos: [['Actif réel', 'Immobilier, dette, parts'], ['Token', 'Structure juridique et technique'], ['Registre distribué', 'Traçable et vérifiable']],
+        sello: 'MiCA', selloPie: 'Règlement UE sur les crypto-actifs',
+        pie: "Contenu pédagogique. Pas un conseil en investissement.",
       },
       eco: {
         pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
@@ -221,6 +282,26 @@
         tareas: [['Kontextanalyse', 'hecho'], ['Prozesslandkarte', 'en curso'], ['Internes Audit', 'planificada']],
         estados: { hecho: 'erledigt', 'en curso': 'läuft', planificada: 'geplant' },
       },
+      magic: {
+        pre: 'MAGIC®-MODELL · INSTITUTO DE EXCELENCIA EUROPEA',
+        h: [['Ihr Management,', ''], ['gemessen auf', 'strong'], ['1000 Punkten.', 'accent']],
+        sub: 'MAGIC® ist keine Norm, die man erfüllt: es ist ein Spiegel, in dem sich die Organisation betrachtet, um zu wachsen. Sieben gewichtete Kriterien, überprüfbare Nachweise und ein über die Zeit vergleichbarer Wert.',
+        cta: [['MAGIC®-Modell entdecken', 'https://modelo-magic.com/', 'btn-orange'], ['Das Institut', '/grupo/instituto-excelencia.html', 'btn-primary']],
+        marcador: '1000', marcadorPie: 'Reifepunkte',
+        rotulo: 'Sieben strategische Kriterien',
+        criterios: ['Zweck und Strategie', 'Kultur und Führung', 'Talent', 'Partner und Lieferanten', 'Kunden', 'Nachhaltigkeit und CSR', 'Betrieb und Transformation'],
+        pie: 'Vier Phasen: Selbstbewertung, Diagnose, Aktionsplan und kontinuierliche Verbesserung.',
+      },
+      token: {
+        pre: 'BLOCKCHAIN · WEB3 · TOKENISIERUNG',
+        h: [['Vermögenswerte tokenisieren', ''], ['mit Methode,', 'strong'], ['nicht mit Hype.', 'accent']],
+        sub: 'Was tokenisiert werden kann, mit welcher Struktur und wie es in den europäischen Rahmen für Kryptowerte passt. Schulung, technische Web3-Beratung und Begleitung.',
+        cta: [['Instituto DeFi', '/grupo/instituto-defi.html', 'btn-orange'], ['Technologiedienste', '/servicios-tecnologicos.html', 'btn-primary']],
+        rotulo: 'Vom Wert zum Register',
+        pasos: [['Realer Vermögenswert', 'Immobilie, Forderung, Anteil'], ['Token', 'Rechtliche und technische Struktur'], ['Verteiltes Register', 'Nachvollziehbar und prüfbar']],
+        sello: 'MiCA', selloPie: 'EU-Verordnung über Kryptowerte',
+        pie: 'Bildungsinhalt. Keine Anlageberatung.',
+      },
       eco: {
         pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
         h: [['Das menschliche', ''], ['Ökosystem,', 'strong'], ['angetrieben von KI.', 'accent']],
@@ -266,6 +347,26 @@
         tareas: [['تحليل السياق', 'hecho'], ['خريطة العمليات', 'en curso'], ['تدقيق داخلي', 'planificada']],
         estados: { hecho: 'منجز', 'en curso': 'جارٍ', planificada: 'مُخطَّط' },
       },
+      magic: {
+        pre: 'نموذج MAGIC® · INSTITUTO DE EXCELENCIA EUROPEA',
+        h: [['إدارتك،', ''], ['مقاسة على', 'strong'], ['١٠٠٠ نقطة.', 'accent']],
+        sub: 'MAGIC® ليس معيارًا يُلتزم به: إنه مرآة تنظر فيها المؤسسة إلى نفسها لتنمو. سبعة معايير مرجّحة، وأدلة قابلة للتحقق، ودرجة قابلة للمقارنة عبر الزمن.',
+        cta: [['تعرّف على نموذج MAGIC®', 'https://modelo-magic.com/', 'btn-orange'], ['المعهد', '/grupo/instituto-excelencia.html', 'btn-primary']],
+        marcador: '١٠٠٠', marcadorPie: 'نقطة نضج',
+        rotulo: 'سبعة معايير استراتيجية',
+        criterios: ['الغاية والاستراتيجية', 'الثقافة والقيادة', 'المواهب', 'الشركاء والموردون', 'العملاء', 'الاستدامة والمسؤولية', 'التشغيل والتحول'],
+        pie: 'دورة من أربع مراحل: تقييم ذاتي، تشخيص، خطة عمل، وتحسين مستمر.',
+      },
+      token: {
+        pre: 'بلوكتشين · ويب٣ · ترميز الأصول',
+        h: [['رمّز أصولك', ''], ['بمنهجية،', 'strong'], ['لا بالضجيج.', 'accent']],
+        sub: 'ما الذي يمكن ترميزه، وبأي هيكل، وكيف يندرج ضمن الإطار الأوروبي للأصول المشفّرة. تدريب واستشارات تقنية في ويب٣ ومواكبة في التصميم.',
+        cta: [['Instituto DeFi', '/grupo/instituto-defi.html', 'btn-orange'], ['الخدمات التقنية', '/servicios-tecnologicos.html', 'btn-primary']],
+        rotulo: 'من الأصل إلى السجل',
+        pasos: [['أصل حقيقي', 'عقار، دين، حصة'], ['رمز', 'هيكل قانوني وتقني'], ['سجل موزّع', 'قابل للتتبع والتحقق']],
+        sello: 'MiCA', selloPie: 'لائحة الاتحاد الأوروبي للأصول المشفّرة',
+        pie: 'محتوى تعليمي. ليس استشارة استثمارية.',
+      },
       eco: {
         pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
         h: [['المنظومة', ''], ['الإنسانية', 'strong'], ['المدعومة بالذكاء الاصطناعي.', 'accent']],
@@ -283,27 +384,45 @@
   // ── Estilos ───────────────────────────────────────────────────────────────
   var css = [
     /* rejilla: texto a la izquierda, creatividad a la derecha */
-    '.tc-b-slide{display:none}',
-    '.tc-b-slide.tc-viva{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);',
-    'gap:clamp(24px,4vw,54px);align-items:center;animation:tc-b-entra .5s ease both}',
-    '@media(max-width:960px){.tc-b-slide.tc-viva{grid-template-columns:1fr;gap:22px}}',
-    '@keyframes tc-b-entra{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}',
-    '.tc-b-texto{min-width:0}',
+    '.tc-b-pista{display:grid}',
+    '.tc-b-slide{grid-area:1/1;display:grid;grid-template-columns:minmax(0,1.38fr) minmax(0,1fr);',
+    'gap:clamp(22px,3.4vw,46px);align-items:stretch;',
+    'visibility:hidden;opacity:0;transform:translateY(10px);pointer-events:none;',
+    'transition:opacity .45s ease,transform .45s ease,visibility .45s}',
+    '.tc-b-slide.tc-viva{visibility:visible;opacity:1;transform:none;pointer-events:auto}',
+    '@media(max-width:960px){.tc-b-slide{grid-template-columns:1fr;gap:20px}}',
+    '.tc-b-texto{min-width:0;display:flex;flex-direction:column;justify-content:center}',
+    '.hero .tc-b-slide .sub{font-size:15px;line-height:1.55;margin-bottom:20px;max-width:52ch}',
+
+    /* Titular común: mismo cuerpo, mismo interlineado y mismas tres líneas en
+       los siete anuncios. `.hero .tc-b-titulo` gana a `.hero h2` del sitio. */
+    '.hero .tc-b-titulo{margin:0 0 18px;font-family:"Rubik","Manrope",system-ui,sans-serif;',
+    'font-weight:500;font-size:clamp(25px,2.3vw,33px);line-height:1.12;letter-spacing:-.015em;',
+    'text-wrap:balance;color:#fff}',
+    '.hero .tc-b-titulo span{display:block}',
+    '.hero .tc-b-titulo .strong{font-weight:600;color:var(--tc-verde-claro,#7FD9DD)}',
+    '.hero .tc-b-titulo .accent{font-weight:600;color:var(--tc-naranja,#F99001)}',
+    '.hero .tc-b-titulo b{font-weight:600;color:var(--tc-naranja,#F99001)}',
 
     /* panel de la creatividad */
     '.tc-b-panel{--acento:#F99001;position:relative;border-radius:20px;padding:22px;min-width:0;',
-    'background:linear-gradient(150deg,rgba(255,255,255,.075),rgba(255,255,255,.025));',
-    'border:1px solid rgba(255,255,255,.13);box-shadow:0 22px 60px rgba(0,0,0,.32)}',
+    'height:100%;display:flex;flex-direction:column;justify-content:center;',
+    'background:linear-gradient(157deg,rgba(255,255,255,.085),rgba(255,255,255,.022));',
+    'border:1px solid rgba(255,255,255,.12);',
+    'box-shadow:0 24px 64px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.14)}',
     '.tc-b-panel::before{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;',
     'background:radial-gradient(120% 90% at 85% 0%,rgba(255,255,255,.07),transparent 62%);',
-    'background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--acento) 22%,transparent),transparent 62%)}',
+    'background:radial-gradient(115% 85% at 88% -6%,color-mix(in srgb,var(--acento) 26%,transparent),transparent 58%)}',
     '.tc-b-panel>*{position:relative}',
     '@media(max-width:960px){.tc-b-panel{padding:18px}}',
 
     '.tc-b-logo{height:26px;width:auto;max-width:180px;display:block;margin-bottom:16px}',
-    '.tc-b-rotulo{margin:0 0 12px;font:700 10px/1 "Rubik",system-ui,sans-serif;letter-spacing:.2em;',
+    '.tc-b-logo-magic{height:30px;max-width:120px;margin-bottom:14px}',
+    '.tc-b-rotulo{display:flex;align-items:center;gap:8px;margin:0 0 12px;',
+    'font:600 10px/1 "Rubik",system-ui,sans-serif;letter-spacing:.19em;',
     'text-transform:uppercase;color:var(--acento)}',
-    '.tc-b-pie{margin:14px 0 0;font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.45)}',
+    '.tc-b-rotulo::before{content:"";width:16px;height:1.5px;border-radius:2px;background:var(--acento);flex:0 0 auto}',
+    '.tc-b-pie{margin:14px 0 0;font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.62)}',
 
     /* lista de modelos y de papeles */
     '.tc-b-lista{list-style:none;margin:0;padding:0;display:grid;gap:7px}',
@@ -312,7 +431,7 @@
     '.tc-b-lista li.tc-destacada{border-color:var(--acento);background:rgba(249,144,1,.14);',
     'background:color-mix(in srgb,var(--acento) 14%,transparent)}',
     '.tc-b-lista b{font:600 13.5px/1.2 "Rubik",system-ui,sans-serif;color:#fff;white-space:nowrap}',
-    '.tc-b-lista span{flex:1 1 auto;min-width:0;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.62)}',
+    '.tc-b-lista span{flex:1 1 auto;min-width:0;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.7)}',
     '.tc-b-marca-mini{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9.5px;font-weight:700;',
     'letter-spacing:.08em;text-transform:uppercase;background:var(--acento);color:#0A1024;margin-inline-start:auto;white-space:nowrap}',
 
@@ -320,8 +439,8 @@
     '.tc-b-sellos{display:grid;gap:8px}',
     '.tc-b-sello{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;',
     'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}',
-    '.tc-b-sello i{flex:0 0 auto;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;',
-    'font:700 10px/1 "Rubik",system-ui,sans-serif;letter-spacing:.02em;font-style:normal;',
+    '.tc-b-sello i{flex:0 0 auto;min-width:56px;height:34px;padding:0 9px;border-radius:9px;display:grid;place-items:center;',
+    'font:600 9.5px/1 "Rubik",system-ui,sans-serif;letter-spacing:.04em;font-style:normal;white-space:nowrap;',
     'border:1.5px solid var(--acento);color:var(--acento);background:rgba(255,255,255,.08);',
     'background:color-mix(in srgb,var(--acento) 12%,transparent)}',
     '.tc-b-sello span{font-size:12px;line-height:1.35;color:rgba(255,255,255,.72)}',
@@ -333,7 +452,7 @@
     '.tc-b-precio strong{font:600 clamp(38px,5.4vw,54px)/1 "Rubik",system-ui,sans-serif;color:#fff;letter-spacing:-.02em}',
     '.tc-b-precio i{font-style:normal;font-size:15px;font-weight:600;color:var(--acento)}',
     '.tc-b-checks{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:6px}',
-    '.tc-b-checks li{display:flex;gap:8px;font-size:12px;line-height:1.4;color:rgba(255,255,255,.7)}',
+    '.tc-b-checks li{display:flex;gap:8px;font-size:12px;line-height:1.4;color:rgba(255,255,255,.76)}',
     '.tc-b-checks li::before{content:"✓";color:var(--acento);font-weight:700;flex:0 0 auto}',
 
     /* mini panel de Orbita */
@@ -353,8 +472,37 @@
     '.tc-b-marcas div{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;',
     'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}',
     '.tc-b-marcas img{height:20px;width:auto;max-width:104px;flex:0 0 auto}',
-    '.tc-b-marcas p{margin:0;font-size:11.5px;line-height:1.35;color:rgba(255,255,255,.6)}',
+    '.tc-b-marcas p{margin:0;font-size:11.5px;line-height:1.35;color:rgba(255,255,255,.68)}',
     '.tc-b-marcas .tc-b-nombre{font:600 13px/1 "Rubik",system-ui,sans-serif;color:#fff;flex:0 0 auto;min-width:96px}',
+
+    /* MAGIC®: marcador grande y los siete criterios numerados */
+    '.tc-b-marcador{display:flex;align-items:baseline;gap:10px;margin:0 0 4px}',
+    '.tc-b-marcador strong{font:500 clamp(42px,5.6vw,58px)/.9 "Rubik",system-ui,sans-serif;',
+    'color:#fff;letter-spacing:-.035em}',
+    '.tc-b-marcador em{font-style:normal;font-size:12px;font-weight:600;letter-spacing:.1em;',
+    'text-transform:uppercase;color:var(--acento)}',
+    '.tc-b-criterios{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:5px;',
+    'grid-template-columns:1fr 1fr}',
+    '.tc-b-criterios li{display:flex;gap:7px;align-items:baseline;font-size:11.5px;line-height:1.35;',
+    'color:rgba(255,255,255,.68)}',
+    '.tc-b-criterios li:last-child{grid-column:1/-1}',
+    '.tc-b-criterios i{font-style:normal;flex:0 0 auto;font:600 9.5px/1.5 "Rubik",system-ui,sans-serif;',
+    'color:var(--acento);opacity:.85;letter-spacing:.04em}',
+    '@media(max-width:520px){.tc-b-criterios{grid-template-columns:1fr}}',
+
+    /* Tokenización: el recorrido del activo al registro */
+    '.tc-b-pasos{list-style:none;margin:0;padding:0;display:grid;gap:0}',
+    '.tc-b-pasos li{position:relative;padding:9px 0 9px 26px}',
+    '.tc-b-pasos li::before{content:"";position:absolute;inset-inline-start:5px;top:16px;',
+    'width:9px;height:9px;border-radius:50%;border:2px solid var(--acento);background:#0A1024}',
+    '.tc-b-pasos li:not(:last-child)::after{content:"";position:absolute;inset-inline-start:9px;',
+    'top:27px;bottom:-2px;width:1px;background:linear-gradient(var(--acento),transparent)}',
+    '.tc-b-pasos b{display:block;font:500 13.5px/1.25 "Rubik",system-ui,sans-serif;color:#fff}',
+    '.tc-b-pasos span{display:block;margin-top:2px;font-size:11.5px;line-height:1.35;color:rgba(255,255,255,.68)}',
+    '.tc-b-sellonorma{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:6px 12px;',
+    'border-radius:999px;border:1px solid var(--acento);background:rgba(255,255,255,.05)}',
+    '.tc-b-sellonorma b{font:600 12px/1 "Rubik",system-ui,sans-serif;color:var(--acento);letter-spacing:.04em}',
+    '.tc-b-sellonorma span{font-size:10.5px;color:rgba(255,255,255,.66)}',
 
     /* mandos */
     '.tc-b-mandos{display:flex;align-items:center;gap:14px;margin:18px 0 22px;flex-wrap:wrap}',
@@ -454,7 +602,7 @@
   function panelEco() {
     var e = t.eco;
     var logos = [LOGO.tuconsultor, LOGO.consultify, null];
-    return panel('#1FA1A6',
+    return panel('#5FD3D8',
       '<div class="tc-b-marcas">' + e.papeles.map(function (x, i) {
           var marca = logos[i] ? img(logos[i], 20, '') : '<span class="tc-b-nombre">' + esc(x[0]) + '</span>';
           return '<div>' + marca + '<p>' + esc(x[1]) + '</p></div>';
@@ -462,11 +610,35 @@
       + '<p class="tc-b-pie">' + esc(e.pre) + '</p>');
   }
 
+  function panelMagic() {
+    var m = t.magic;
+    return panel('#E5BC46',
+      img(LOGO.magic, 30, 'tc-b-logo tc-b-logo-magic')
+      + '<p class="tc-b-marcador"><strong>' + esc(m.marcador) + '</strong><em>' + esc(m.marcadorPie) + '</em></p>'
+      + '<p class="tc-b-rotulo" style="margin-top:12px">' + esc(m.rotulo) + '</p>'
+      + '<ul class="tc-b-criterios">' + m.criterios.map(function (c, i) {
+          return '<li><i>' + ('0' + (i + 1)).slice(-2) + '</i>' + esc(c) + '</li>';
+        }).join('') + '</ul>'
+      + '<p class="tc-b-pie">' + esc(m.pie) + '</p>');
+  }
+
+  function panelToken() {
+    var k = t.token;
+    return panel('#AFA3FF',
+      '<p class="tc-b-rotulo">' + esc(k.rotulo) + '</p>'
+      + '<ul class="tc-b-pasos">' + k.pasos.map(function (x) {
+          return '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>';
+        }).join('') + '</ul>'
+      + '<p class="tc-b-sellonorma"><b>' + esc(k.sello) + '</b><span>' + esc(k.selloPie) + '</span></p>'
+      + '<p class="tc-b-pie">' + esc(k.pie) + '</p>');
+  }
+
   // ── Anuncio 1: el hero real, envuelto en la rejilla ───────────────────────
   var cifras = hero.querySelector('.stats-row');
   if (cifras) cifras.remove();
 
   var pista = document.createElement('div');
+  pista.className = 'tc-b-pista';
   var primero = document.createElement('div');
   primero.className = 'tc-b-slide tc-viva';
   var texto1 = document.createElement('div');
@@ -481,6 +653,8 @@
     { d: t.ens, panel: panelEns },
     { d: t.consultify, panel: panelConsultify },
     { d: t.orbita, panel: panelOrbita },
+    { d: t.magic, panel: panelMagic },
+    { d: t.token, panel: panelToken },
     { d: t.eco, panel: panelEco },
   ];
   anuncios.forEach(function (a) {
@@ -488,7 +662,7 @@
     d.className = 'tc-b-slide';
     d.innerHTML = '<div class="tc-b-texto">'
       + '<div class="pre-tag">' + esc(a.d.pre) + '</div>'
-      + '<h2 class="tc-b-titular">' + a.d.h.map(function (l) {
+      + '<h2 class="tc-b-titulo">' + a.d.h.map(function (l) {
           return '<span' + (l[1] ? ' class="' + l[1] + '"' : '') + '>' + esc(l[0]) + '</span>';
         }).join('') + '</h2>'
       + '<p class="sub">' + esc(a.d.sub) + '</p>'
@@ -501,18 +675,10 @@
     pista.appendChild(d);
   });
 
-  // El titular añadido hereda el tamaño del H1, pero es un H2: solo puede haber
-  // un H1 por página.
-  var h1 = hero.querySelector('h1') || texto1.querySelector('h1');
-  if (h1) {
-    var e1 = window.getComputedStyle(h1);
-    var reglaH2 = document.createElement('style');
-    reglaH2.textContent = '.tc-b-titular{font-size:' + e1.fontSize + ';line-height:' + e1.lineHeight
-      + ';font-weight:' + e1.fontWeight + ';letter-spacing:' + e1.letterSpacing
-      + ';margin:0 0 ' + e1.marginBottom + ';color:' + e1.color + '}'
-      + '.tc-b-titular span{display:block}';
-    document.head.appendChild(reglaH2);
-  }
+  // El H1 real usa la misma clase que los titulares añadidos: así los siete
+  // anuncios comparten cuerpo, interlineado y salto de línea.
+  var h1 = texto1.querySelector('h1');
+  if (h1) h1.classList.add('tc-b-titulo');
 
   hero.appendChild(pista);
 
