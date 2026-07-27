@@ -432,8 +432,9 @@
     'background:color-mix(in srgb,var(--acento) 14%,transparent)}',
     '.tc-b-lista b{font:600 13.5px/1.2 "Rubik",system-ui,sans-serif;color:#fff;white-space:nowrap}',
     '.tc-b-lista span{flex:1 1 auto;min-width:0;font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.7)}',
-    '.tc-b-marca-mini{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9.5px;font-weight:700;',
-    'letter-spacing:.08em;text-transform:uppercase;background:var(--acento);color:#0A1024;margin-inline-start:auto;white-space:nowrap}',
+    '.tc-b-lista span.tc-b-marca-mini,.tc-b-marca-mini{display:inline-block;padding:2px 7px;border-radius:999px;font-size:9.5px;',
+    'letter-spacing:.08em;text-transform:uppercase;background:var(--acento);color:#0A1024;margin-inline-start:auto;',
+    'white-space:nowrap;font-weight:800}',
 
     /* sellos de categoría del ENS */
     '.tc-b-sellos{display:grid;gap:8px}',
@@ -516,10 +517,10 @@
     '.tc-b-punto[aria-current="true"]::after{background:var(--tc-naranja,#F99001);transform:scale(1.25);',
     'box-shadow:0 0 0 4px rgba(249,144,1,.22)}',
     '.tc-b-flecha{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;cursor:pointer;',
-    'border:1px solid rgba(255,255,255,.18);background:transparent;color:rgba(255,255,255,.6);',
+    'border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.78);',
     'font:700 14px/1 "Manrope",system-ui,sans-serif;transition:border-color .2s,color .2s}',
     '.tc-b-flecha:hover,.tc-b-flecha:focus-visible{border-color:var(--tc-naranja,#F99001);color:#fff;outline:none}',
-    '.tc-b-cuenta{font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.35)}',
+    '.tc-b-cuenta{font-size:11px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.62)}',
     /* ── Móvil: el panel se aprieta sin desaparecer ── */
     '@media(max-width:640px){',
     '.tc-b-slide.tc-viva{gap:16px}',

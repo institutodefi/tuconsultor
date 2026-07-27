@@ -37,6 +37,7 @@ export default function Empresas() {
   const [filtro, setFiltro] = useState('todas');
   const [nueva, setNueva] = useState(false);
   const [diagBd, setDiagBd] = useState(null);   // comprobación de escritura en la base
+  const [errorCarga, setErrorCarga] = useState(null);  // motivo real si la lectura falla
 
   async function comprobarBd() {
     setDiagBd({ cargando: true });
@@ -51,7 +52,7 @@ export default function Empresas() {
     setCargando(true);
     try {
       const [e, c, v] = await Promise.all([
-        listTable('empresas').catch(() => []),
+        listTable('empresas').catch((e) => { setErrorCarga(e?.message || String(e)); return []; }),
         listTable('contactos').catch(() => []),
         listTable('empresa_contactos').catch(() => []),
       ]);
@@ -217,7 +218,29 @@ export default function Empresas() {
               <tbody>
                 {lista.length === 0 && (
                   <tr><td colSpan={4} className="px-5 py-10 text-center text-[#7FA7B4]">
-                    {empresas.length === 0 ? 'Sin empresas. ¿Has ejecutado las migraciones v48 y v56?' : 'Ninguna empresa con ese filtro.'}
+                    {empresas.length === 0 ? (
+                      errorCarga ? (
+                        <>
+                          <b className="text-red-300">No se pudo leer la tabla de empresas.</b>
+                          <span className="mt-1 block text-[11.5px] text-[#7FA7B4]">{errorCarga}</span>
+                          <span className="mt-1 block text-[11.5px] text-[#7FA7B4]">
+                            Si dice que la relación no existe, faltan las migraciones v48 y v56.
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Todavía no hay ninguna empresa.
+                          {puedeEditar && <> Crea la primera con <b className="text-[#EAF4F7]">+ Nueva empresa</b>.</>}
+                          {['superadmin', 'admin'].includes(role) && (
+                            <span className="mt-2 block text-[11.5px] text-[#7FA7B4]">
+                              ¿Has intentado crear una y no se guarda? Pulsa
+                              {' '}<button onClick={comprobarBd} className="font-bold text-brand-orange underline">Comprobar base de datos</button>:
+                              {' '}escribe con tu sesión y te dice el motivo exacto.
+                            </span>
+                          )}
+                        </>
+                      )
+                    ) : 'Ninguna empresa con ese filtro.'}
                   </td></tr>
                 )}
                 {lista.map((e) => {
