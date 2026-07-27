@@ -25,6 +25,16 @@ export const NORMAS = [
   { id: 'igualdad',   nombre: 'Plan de Igualdad',   desc: 'Plan de igualdad de empresa', nivel: 'J3', hApoyo: 101 },
   { id: 'diversidad', nombre: 'Plan de Diversidad', desc: 'Diversidad, equidad e inclusión · se integra con el Plan de Igualdad', nivel: 'J3', hApoyo: 147,
     solapeCon: 'igualdad', solapeFactor: 0.62 },
+
+  // Variantes CON SEGUIMIENTO: el plan más el acompañamiento del primer año.
+  // El seguimiento de un plan de igualdad no es opcional en la práctica: la
+  // comisión tiene que reunirse, revisar indicadores y dejar acta. Son 24 h que
+  // hoy se hacen y no se cobran.
+  //   2 comisiones de seguimiento (4 h)  ·  revisión de indicadores (6 h)
+  //   informe anual de seguimiento (8 h) ·  actualización del registro (6 h)
+  { id: 'igualdad-seg',   nombre: 'Plan de Igualdad con seguimiento',   desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 125 },
+  { id: 'diversidad-seg', nombre: 'Plan de Diversidad con seguimiento', desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 171,
+    solapeCon: 'igualdad-seg', solapeFactor: 0.67 },
   { id: 'madridexcelente', nombre: 'Madrid Excelente', desc: 'Marca de garantía de la Comunidad de Madrid', nivel: 'J3', hApoyo: 30 },
 ];
 

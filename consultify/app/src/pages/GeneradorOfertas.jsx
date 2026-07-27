@@ -329,7 +329,7 @@ export default function GeneradorOfertas({ publico = false }) {
           </section>
 
           {/* Planes de Igualdad y Diversidad: proyecto por fases, no cuota mensual */}
-          {sel.some((x) => x === 'igualdad' || x === 'diversidad') && (
+          {sel.some((x) => x.startsWith('igualdad') || x.startsWith('diversidad')) && (
             <div className="mt-4"><FasesPlanes planes={sel} /></div>
           )}
 

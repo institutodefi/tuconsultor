@@ -144,6 +144,25 @@ export const FASES = {
   ],
 };
 
+// Las variantes «con seguimiento» comparten las fases del plan base y añaden
+// una séptima: el acompañamiento del primer año.
+export const FASE_SEGUIMIENTO = {
+  id: 'seg', nombre: '7. Seguimiento del primer año', horas: 24,
+  compartible: 0.75, motivoCompartible: 'Una sola comisión y un solo informe pueden cubrir los dos planes.',
+  tareas: [
+    { t: 'Dos comisiones de seguimiento', h: 4, nueva: false },
+    { t: 'Revisión de indicadores', h: 6, nueva: false },
+    { t: 'Informe anual de seguimiento', h: 8, nueva: false },
+    { t: 'Actualización del registro', h: 6, nueva: false },
+  ],
+};
+
+FASES['igualdad-seg'] = [...FASES.igualdad, FASE_SEGUIMIENTO];
+FASES['diversidad-seg'] = [...FASES.diversidad, FASE_SEGUIMIENTO];
+
+/** Plan base del que cuelga cada variante, para la regla de integración. */
+export const PLAN_BASE = { 'igualdad-seg': 'igualdad', 'diversidad-seg': 'diversidad' };
+
 /** Horas de una fase que ya existen en el Plan de Igualdad (no marcadas como nuevas). */
 const horasComunes = (fase) => fase.tareas.filter((t) => !t.nueva).reduce((a, t) => a + t.h, 0);
 
@@ -151,8 +170,8 @@ const horasComunes = (fase) => fase.tareas.filter((t) => !t.nueva).reduce((a, t)
  * Ahorro al contratar los dos planes, fase a fase.
  * Devuelve las horas que NO hay que repetir y el detalle de cómo salen.
  */
-export function ahorroIntegracion(fasesIds = null) {
-  const detalle = FASES.diversidad
+export function ahorroIntegracion(fasesIds = null, plan = 'diversidad') {
+  const detalle = (FASES[plan] || FASES.diversidad)
     .filter((f) => !fasesIds || fasesIds.includes(f.id))
     .map((f) => {
       const comunes = horasComunes(f);
@@ -190,9 +209,12 @@ export function calcularFases(planes, seleccion = {}, opts = {}) {
 
   // La integración solo aplica si van los dos planes, y solo sobre las fases
   // de Diversidad efectivamente seleccionadas.
-  const losDos = planes.includes('igualdad') && planes.includes('diversidad');
-  const integracion = losDos
-    ? ahorroIntegracion(seleccion.diversidad || FASES.diversidad.map((f) => f.id))
+  // Hay integración si van un plan de igualdad y uno de diversidad, en
+  // cualquiera de sus dos variantes.
+  const tieneIg = planes.some((p) => p.startsWith('igualdad'));
+  const tieneDiv = planes.find((p) => p.startsWith('diversidad'));
+  const integracion = (tieneIg && tieneDiv)
+    ? ahorroIntegracion(seleccion[tieneDiv] || FASES[tieneDiv].map((f) => f.id), tieneDiv)
     : { detalle: [], ahorro: 0, importe: 0 };
 
   const horasFinales = Math.round((horas - integracion.ahorro) * 10) / 10;
@@ -211,8 +233,9 @@ export function calcularFases(planes, seleccion = {}, opts = {}) {
 }
 
 /** Factor global del Plan de Diversidad cuando va con el de Igualdad. */
-export function factorIntegracionGlobal() {
-  const total = FASES.diversidad.reduce((a, f) => a + f.horas, 0);
-  const { ahorro } = ahorroIntegracion();
+export function factorIntegracionGlobal(plan = 'diversidad') {
+  const fases = FASES[plan] || FASES.diversidad;
+  const total = fases.reduce((a, f) => a + f.horas, 0);
+  const { ahorro } = ahorroIntegracion(null, plan);
   return Math.round(((total - ahorro) / total) * 100) / 100;
 }

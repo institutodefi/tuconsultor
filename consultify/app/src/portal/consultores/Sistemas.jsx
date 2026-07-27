@@ -3,9 +3,10 @@ import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { sincronizarTareaAgenda } from '../../lib/sincroAgenda.js';
 import { NORMAS } from '../../lib/calcEngine.js';
 
-// Modelos que se editan lado a lado (4 columnas). Implantación es un precio
-// cerrado derivado de Implicación, no se edita tarea a tarea aquí.
-const MODELOS_COL = ['Apoyo', 'Relación', 'Implicación', 'Compromiso'];
+// Modelos que se editan lado a lado. Implantación ERA un precio cerrado derivado
+// de Implicación, pero desde que es un proyecto con horas propias tiene que
+// poder editarse aquí como los demás: si no, sus tareas existen y no se ven.
+const MODELOS_COL = ['Apoyo', 'Implantación', 'Relación', 'Implicación', 'Compromiso'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')}`;
 
 export default function Sistemas() {
@@ -169,7 +170,7 @@ export default function Sistemas() {
         {grupos.length === 0 ? (
           <p className="text-sm font-medium text-[#7FA7B4]">Sin tareas para esta norma. Añade la primera.</p>
         ) : (
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Proceso</th>

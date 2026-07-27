@@ -12,7 +12,12 @@ import { FASES, calcularFases, TARIFA_PROYECTO } from '../lib/fases.js';
 // las horas comunes según lo compartible que es cada fase de verdad.
 // ════════════════════════════════════════════════════════════════════════════
 
-const PLAN_LABEL = { igualdad: 'Plan de Igualdad', diversidad: 'Plan de Diversidad' };
+const PLAN_LABEL = {
+  igualdad: 'Plan de Igualdad',
+  'igualdad-seg': 'Plan de Igualdad con seguimiento',
+  diversidad: 'Plan de Diversidad',
+  'diversidad-seg': 'Plan de Diversidad con seguimiento',
+};
 
 const eur = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 

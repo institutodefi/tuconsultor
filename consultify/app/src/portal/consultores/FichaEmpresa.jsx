@@ -7,6 +7,7 @@ import {
 import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
 import HomologacionProveedor from './HomologacionProveedor.jsx';
+import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha de empresa (una sola entidad para cliente / proveedor / potencial).
@@ -80,6 +81,18 @@ export default function FichaEmpresa({
   const [diag, setDiag] = useState(null);
   const [brevoOcupado, setBrevoOcupado] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const cajaAviso = useRef(null);          // para llevar el foco al error
+  const [diagAuto, setDiagAuto] = useState(null);  // diagnóstico lanzado al fallar
+
+  // Un fallo al guardar no puede quedarse en un mensajito que se pierde: se
+  // lleva la vista al aviso y se anuncia a los lectores de pantalla.
+  function fallar(texto, extra = {}) {
+    setMsg({ err: true, t: texto, ...extra });
+    setTimeout(() => {
+      cajaAviso.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cajaAviso.current?.focus?.();
+    }, 50);
+  }
 
   async function probarHolded() {
     setDiag({ cargando: true });
@@ -147,11 +160,11 @@ export default function FichaEmpresa({
   async function guardar() {
     // El CIF va primero: es la llave de la ficha y de la sincronización con Holded.
     const cifNorm = normalizarCif(form.cif);
-    if (!cifNorm) { setMsg({ err: true, t: 'El CIF es obligatorio: es el dato con el que se identifica la empresa y se cruza con Holded.' }); return; }
-    if (!validarCif(cifNorm).valido) { setMsg({ err: true, t: `El CIF «${cifNorm}» no es válido. Revisa la letra de control.` }); return; }
-    if (duplicada) { setMsg({ err: true, t: `Ese CIF ya está en «${duplicada.nombre}».`, irA: duplicada.id }); return; }
-    if (!form.nombre?.trim()) { setMsg({ err: true, t: 'Falta el nombre o razón social.' }); return; }
-    if (form.email && !emailValido(form.email)) { setMsg({ err: true, t: 'El email de la empresa no es válido.' }); return; }
+    if (!cifNorm) { fallar('El CIF es obligatorio: es el dato con el que se identifica la empresa y se cruza con Holded.'); return; }
+    if (!validarCif(cifNorm).valido) { fallar(`El CIF «${cifNorm}» no es válido. Revisa la letra de control.`); return; }
+    if (duplicada) { fallar(`Ese CIF ya está en «${duplicada.nombre}».`, { irA: duplicada.id }); return; }
+    if (!form.nombre?.trim()) { fallar('Falta el nombre o razón social.'); return; }
+    if (form.email && !emailValido(form.email)) { fallar('El email de la empresa no es válido.'); return; }
 
     const payload = {
       nombre: form.nombre.trim(),
@@ -220,9 +233,16 @@ export default function FichaEmpresa({
       if (onCambio) await onCambio(id);
       if (!form.id && id) onSeleccionar && onSeleccionar(id);
     } catch (e) {
-      // El motivo real de la base de datos, sin adornos: es lo que hace falta para arreglarlo.
+      // El motivo real de la base de datos, sin adornos. Y como un mensaje suelto
+      // no ha bastado las veces anteriores, se lanza además el diagnóstico: así
+      // el motivo y la causa aparecen juntos sin tener que ir a buscarlos.
       const m = e?.message || e?.details || e?.hint || String(e);
-      setMsg({ err: true, t: `No se pudo guardar: ${m}` });
+      const cod = e?.code ? ` [${e.code}]` : '';
+      fallar(`No se pudo guardar${cod}: ${m}`);
+      setDiagAuto({ cargando: true });
+      diagnosticarCrm()
+        .then((d) => setDiagAuto(d))
+        .catch((x) => setDiagAuto({ conclusion: `El diagnóstico también falló: ${x?.message || x}` }));
     } finally { setGuardando(false); }
   }
 
@@ -263,12 +283,35 @@ export default function FichaEmpresa({
   }
 
   const aviso = msg ? (
-    <div className={`rounded-lg px-3 py-2 text-[12.5px] font-bold ${msg.err ? 'bg-red-500/12 text-red-300' : 'bg-emerald-500/12 text-emerald-300'}`}>
+    <div ref={cajaAviso} tabIndex={-1} role={msg.err ? 'alert' : 'status'}
+      className={`sticky top-0 z-20 rounded-lg px-3 py-2.5 text-[12.5px] font-bold shadow-lg outline-none ${msg.err ? 'bg-[#3B1518] text-red-200 ring-1 ring-red-500/60' : 'bg-[#123A2C] text-emerald-200 ring-1 ring-emerald-500/40'}`}>
       <button onClick={() => setMsg(null)} className="float-right pl-2 text-[#7FA7B4] hover:text-white">×</button>
       {msg.t}
       {msg.irA && (
         <button onClick={() => { setMsg(null); onSeleccionar && onSeleccionar(msg.irA); }}
           className="ml-2 underline hover:text-white">abrir esa ficha</button>
+      )}
+      {diagAuto && (
+        <div className="mt-2 space-y-1 rounded-lg bg-[#0D3242] p-2.5 text-[11.5px] font-medium text-[#B9D2DA]">
+          {diagAuto.cargando ? <p>Comprobando la base de datos…</p> : (
+            <>
+              <p className="font-bold text-[#EAF4F7]">{diagAuto.conclusion}</p>
+              {diagAuto.perfil?.fila && (
+                <p>Tu perfil: rol <b className="text-[#EAF4F7]">{diagAuto.perfil.fila.rol}</b>, activo{' '}
+                  <b className={diagAuto.perfil.fila.activo === true ? 'text-emerald-300' : 'text-red-300'}>
+                    {String(diagAuto.perfil.fila.activo)}</b></p>
+              )}
+              {Object.entries(diagAuto.tablas || {}).map(([t, x]) => (
+                <p key={t}><b className="text-[#EAF4F7]">{t}</b>: escritura{' '}
+                  <span className={x.escritura?.ok ? 'text-emerald-300' : 'text-red-300'}>
+                    {x.escritura?.ok ? 'ok' : `${x.escritura?.code || ''} ${x.escritura?.message || 'no'}`}</span>
+                  {x.columnasAusentes?.length > 0 && <> · faltan: <code className="text-red-300">{x.columnasAusentes.join(', ')}</code></>}
+                </p>
+              ))}
+              {(diagAuto.problemas || []).map((pr, i) => <p key={i} className="text-red-300">· {pr}</p>)}
+            </>
+          )}
+        </div>
       )}
     </div>
   ) : null;
@@ -434,7 +477,6 @@ export default function FichaEmpresa({
 
         {/* Barra de guardado · el aviso también AQUÍ, junto al botón */}
         <div className="sticky bottom-0 space-y-2 rounded-xl bg-[#0A2B3A]/95 py-2 backdrop-blur">
-          {aviso}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="mr-auto text-[11px] text-[#7FA7B4]">Obligatorios: CIF y nombre. Se guarda sin contactos, en rojo.</span>
             <button onClick={() => (form.id ? setForm(null) : onCerrar && onCerrar())} className="btn-ghost !px-3 !py-1.5 text-[11px]">Cancelar</button>
