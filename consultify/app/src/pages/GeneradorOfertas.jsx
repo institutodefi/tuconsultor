@@ -43,6 +43,8 @@ export default function GeneradorOfertas({ publico = false }) {
   const [complejidad, setComplejidad] = useState('media');
   const [sedes, setSedes] = useState(1);
   const [equipo, setEquipo] = useState(EQUIPO_VACIO());
+  const [formaPago, setFormaPago] = useState('unico');      // 'unico' | 'dos'
+  const [modeloDespues, setModeloDespues] = useState('Implicación');  // mantenimiento al terminar
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
   // lo que esté vigente el día en que se calcula.
@@ -156,6 +158,8 @@ export default function GeneradorOfertas({ publico = false }) {
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
+          forma_pago: modelo === 'Implantación' ? formaPago : null,
+          modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
           // Resultado con reglas comerciales aplicadas (manda el motor del cliente)
           override: {
@@ -354,6 +358,22 @@ export default function GeneradorOfertas({ publico = false }) {
                   </p>
                 </div>
 
+                {modelo === 'Implantación' && (
+                  <div>
+                    <label className="label" htmlFor="g-despues">Mantenimiento al terminar</label>
+                    <select id="g-despues" className="input !py-1.5 !text-[13px]" value={modeloDespues}
+                      onChange={(e) => setModeloDespues(e.target.value)}>
+                      {MODELO_IDS.filter((x) => x !== 'Implantación' && x !== 'Apoyo').map((x) => (
+                        <option key={x} value={x}>{x}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                      La implantación termina; el sistema sigue. Este es el modelo al que se pasa después,
+                      y va escrito en la oferta para que no haya sorpresas.
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="label" htmlFor="g-sedes">Sedes o alcances</label>
                   <input id="g-sedes" type="number" min="1" className="input !py-1.5 !text-[13px] !w-24"
@@ -459,6 +479,30 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 {res.tiene9001 && (
                   <p className="mt-3 rounded-xl bg-brand-orange/20 p-2.5 text-xs font-bold text-brand-orange">ISO 9001 ya certificada: −50 % en sus horas aplicado.</p>
+                )}
+
+                {/* Condiciones de pago de la implantación · las dos, para comparar */}
+                {res.formasPago && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">Condiciones de pago</p>
+                    {[res.formasPago.unico, res.formasPago.dos].map((f) => {
+                      const on = formaPago === f.id;
+                      return (
+                        <button key={f.id} onClick={() => setFormaPago(f.id)}
+                          className={`w-full rounded-xl border p-2.5 text-left transition ${on ? 'border-brand-orange bg-brand-orange/15' : 'border-white/15 hover:border-brand-orange/50'}`}>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[13px] font-bold text-white">{on ? '✓ ' : ''}{f.titulo}</span>
+                            <span className="text-[13px] font-extrabold text-white">{fmtEUR(f.total)}<span className="text-[10px] font-bold text-white/60"> con IVA</span></span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] leading-snug text-white/70">{f.condicion}</p>
+                          {f.id === 'unico'
+                            ? <p className="mt-0.5 text-[11px] font-bold text-brand-verdeTexto">Ahorras {fmtEUR(f.ahorro)}</p>
+                            : <p className="mt-0.5 text-[11px] text-white/60">{fmtEUR(f.cuota1)} + {fmtEUR(f.cuota2)}</p>}
+                        </button>
+                      );
+                    })}
+                    <p className="text-[10.5px] leading-snug text-white/50">{res.formasPago.nota}</p>
+                  </div>
                 )}
 
                 {/* Reglas comerciales aplicadas a esta oferta */}

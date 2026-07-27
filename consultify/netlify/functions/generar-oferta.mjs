@@ -114,16 +114,31 @@ function calcular(normaIds, modeloId, opts = {}) {
   const iva = Math.round(precioCatalogo * IVA * 100) / 100;
   const totalConIva = Math.round((precioCatalogo + iva) * 100) / 100;
   let fraccionado = null;
+  let formasPago = null;
   if (modeloId === 'Implantación') {
     const meses = Math.max(parseInt(opts.meses, 10) || MESES_IMPL, 1);
     const totalSinIva = precioCatalogo * meses;
     const totalConIvaFrac = Math.round(totalSinIva * (1 + IVA) * 100) / 100;
     const r2 = (x) => Math.round(x * 100) / 100;
-    const cuota1 = r2(totalConIvaFrac * 0.50), cuota2 = r2(totalConIvaFrac * 0.25);
-    const cuota3 = r2(totalConIvaFrac - cuota1 - cuota2);
-    fraccionado = { meses, totalSinIva, totalConIva: totalConIvaFrac, cuota1, cuota2, cuota3, plan: '50 % por adelantado · 25 % a mitad de proyecto · 25 % al finalizar' };
+    // Dos únicas formas de pago de la implantación.
+    const DTO = 0.05;
+    const unicoSinIva = r2(totalSinIva * (1 - DTO));
+    const c = r2(totalConIvaFrac / 2);
+    fraccionado = {
+      meses, totalSinIva, totalConIva: totalConIvaFrac,
+      cuota1: c, cuota2: r2(totalConIvaFrac - c), cuota3: 0,
+      plan: '50 % a la firma y 50 % antes del inicio de las auditorías',
+    };
+    formasPago = {
+      descuentoUnico: DTO,
+      unico: { titulo: 'Pago único', sinIva: unicoSinIva, total: r2(unicoSinIva * (1 + IVA)), ahorro: r2(totalSinIva - unicoSinIva),
+               condicion: 'Un solo pago al inicio del proyecto, con un 5 % de descuento.' },
+      dos:   { titulo: 'Dos cuotas', sinIva: totalSinIva, total: totalConIvaFrac, cuota1: c, cuota2: r2(totalConIvaFrac - c),
+               condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.' },
+      nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
+    };
   }
-  return { modelo: modeloId, tipo: m.tipo, normas: normas.map((n) => n.id), nSistemas: normas.length, tiene9001: !!opts.tiene9001, horas: h, hTotal, coste, precioExacto, precioCatalogo, iva, totalConIva, fraccionado, leyenda: m.leyenda };
+  return { modelo: modeloId, tipo: m.tipo, normas: normas.map((n) => n.id), nSistemas: normas.length, tiene9001: !!opts.tiene9001, horas: h, hTotal, coste, precioExacto, precioCatalogo, iva, totalConIva, fraccionado, formasPago, leyenda: m.leyenda };
 }
 
 // ======================= GENERADORES =======================
@@ -435,6 +450,8 @@ export default async (req) => {
     }
   }
   r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;
+  r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
+  r.modeloMantenimiento = body.modelo_mantenimiento || null;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
   r.normaNombres = normas.map((id) => (NORMA_BY_ID[id]?.nombre || id));
   r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || 3, 1);

@@ -33,6 +33,9 @@ export const NORMA_BY_ID = Object.fromEntries(NORMAS.map(n => [n.id, n]));
 export const TARIFA = { J1: 30, J2: 40, J3: 55, Senior: 75 };
 export const MARGEN = 0.60;
 export const IVA = 0.21;
+// Descuento por pago único de la implantación. Es la única rebaja estructural
+// del modelo: el resto de ajustes van por reglas comerciales.
+export const DTO_PAGO_UNICO = 0.05;
 export const ACOMPANAMIENTO_AUDITORIA_DIA = 600; // €/jornada, siempre aparte
 
 // ── Eficiencia por categoría (coeficiente de tiempo sobre tarea base) ──
@@ -81,10 +84,15 @@ export const MODELOS = {
     leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.',
   },
   Implantación: {
-    id: 'Implantación', tipo: 'mes', hSist: 2.4, hPres: 1.2, paso: 25, suelo: 350,
+    // La implantación es un PROYECTO, no una cuota: se dimensiona con las horas
+    // planificadas de cada norma, las mismas que el fondo de Apoyo toma como
+    // referencia. Si hay que ajustarlas, se cambia `hApoyo` de la norma o se
+    // crea una regla comercial de optimización.
+    id: 'Implantación', tipo: 'proyecto', hSist: null, hPres: 0, paso: 25, suelo: 0,
+    usaHorasProyecto: true,
     titulo: 'Implantación',
-    claim: 'Implicación × 0,6 durante la implantación',
-    leyenda: 'Cuota durante la fase de implantación (3–6 meses). Al finalizar, se pasa a un modelo de mantenimiento.',
+    claim: 'Proyecto completo, horas planificadas',
+    leyenda: 'Pago único con 5 % de descuento, o en dos cuotas: 50 % al inicio y 50 % antes de auditorías.',
   },
 };
 
@@ -168,7 +176,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
 
   const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
 
-  if (m.tipo === 'bolsa') {
+  if (m.usaHorasProyecto) {
+    // Horas planificadas completas: la implantación hace el trabajo entero.
+    for (const n of normas) raw[n.nivel] += n.hApoyo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+  } else if (m.tipo === 'bolsa') {
     const fFondo = m.factorFondo ?? 1;
     for (const n of normas) raw[n.nivel] += n.hApoyo * fFondo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else {
@@ -253,20 +264,49 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // Implantación: pago único fraccionado en 3 tramos:
   // 50% por adelantado, 25% a mitad del proyecto, 25% al final.
   // El importe total es la cuota mensual × meses de implantación.
+  // ── Formas de pago de la implantación ──
+  // Solo hay dos, y se calculan las dos para poder enseñarlas juntas en la
+  // oferta: quien decide es el cliente, y verlas al lado hace la decisión fácil.
   let fraccionado = null;
+  let formasPago = null;
   if (modeloId === 'Implantación') {
-    const totalSinIva = precioCatalogo * mesesProyecto;
-    const totalConIvaFrac = Math.round(totalSinIva * (1 + IVA) * 100) / 100;
     const r2 = (x) => Math.round(x * 100) / 100;
-    const cuota1 = r2(totalConIvaFrac * 0.50);   // 50% por adelantado
-    const cuota2 = r2(totalConIvaFrac * 0.25);   // 25% a mitad de proyecto
-    const cuota3 = r2(totalConIvaFrac - cuota1 - cuota2); // 25% al final (ajuste de redondeo)
+    const base = precioCatalogo;                       // proyecto completo, sin IVA
+
+    // A · Cuota única con 5 % de descuento
+    const unicoSinIva = r2(base * (1 - DTO_PAGO_UNICO));
+    // B · Dos cuotas del 50 %, sin descuento
+    const dosSinIva = base;
+    const cuota = r2(dosSinIva / 2);
+
+    formasPago = {
+      descuentoUnico: DTO_PAGO_UNICO,
+      unico: {
+        id: 'unico', titulo: 'Pago único',
+        sinIva: unicoSinIva, iva: r2(unicoSinIva * IVA), total: r2(unicoSinIva * (1 + IVA)),
+        ahorro: r2(base - unicoSinIva),
+        condicion: `Un solo pago al inicio del proyecto, con un ${Math.round(DTO_PAGO_UNICO * 100)} % de descuento sobre el importe del proyecto.`,
+      },
+      dos: {
+        id: 'dos', titulo: 'Dos cuotas',
+        sinIva: dosSinIva, iva: r2(dosSinIva * IVA), total: r2(dosSinIva * (1 + IVA)),
+        cuota1: r2(cuota * (1 + IVA)),
+        cuota2: r2(dosSinIva * (1 + IVA) - r2(cuota * (1 + IVA))),
+        condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
+      },
+      nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
+    };
+
+    // Se mantiene `fraccionado` con la opción de dos cuotas para no romper lo
+    // que ya lo lee (documentos y presupuestos anteriores).
     fraccionado = {
       meses: mesesProyecto,
-      totalSinIva,
-      totalConIva: totalConIvaFrac,
-      cuota1, cuota2, cuota3,
-      plan: '50 % por adelantado · 25 % a mitad de proyecto · 25 % al finalizar',
+      totalSinIva: dosSinIva,
+      totalConIva: r2(dosSinIva * (1 + IVA)),
+      cuota1: formasPago.dos.cuota1,
+      cuota2: formasPago.dos.cuota2,
+      cuota3: 0,
+      plan: formasPago.dos.condicion,
     };
   }
 
@@ -301,6 +341,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
     iva,
     totalConIva,
     fraccionado,
+    formasPago,
     leyenda: m.leyenda,
   };
 }
