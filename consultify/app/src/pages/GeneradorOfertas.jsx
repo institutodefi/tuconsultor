@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
+import FasesPlanes from '../components/FasesPlanes.jsx';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 
@@ -316,6 +317,11 @@ export default function GeneradorOfertas({ publico = false }) {
               </span>
             </label>
           </section>
+
+          {/* Planes de Igualdad y Diversidad: proyecto por fases, no cuota mensual */}
+          {sel.some((x) => x === 'igualdad' || x === 'diversidad') && (
+            <div className="mt-4"><FasesPlanes planes={sel} /></div>
+          )}
 
           {/* 2 · Modelo */}
           <section className="card">

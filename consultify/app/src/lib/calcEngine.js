@@ -14,12 +14,16 @@ export const NORMAS = [
   { id: '27001',    nombre: 'ISO 27001', desc: 'Seguridad de la información',    nivel: 'J2', hApoyo: 81 },
   { id: '42001',    nombre: 'ISO 42001', desc: 'Inteligencia artificial',        nivel: 'J3', hApoyo: 42 },
   { id: '56001',    nombre: 'ISO 56001', desc: 'Gestión de la innovación',       nivel: 'J3', hApoyo: 75 },
-  { id: '21001',    nombre: 'ISO 21001', desc: 'Organizaciones educativas · complementaria a ISO 9001', nivel: 'J3', hApoyo: 19, solape9001: 0.5 },
-  { id: '9004',     nombre: 'ISO 9004',  desc: 'Calidad sostenible · complementaria a ISO 9001', nivel: 'J3', hApoyo: 11, solape9001: 0.5 },
+  { id: '21001',    nombre: 'ISO 21001', desc: 'Organizaciones educativas · complementaria a ISO 9001', nivel: 'J3', hApoyo: 19, solapeCon: '9001', solapeFactor: 0.5 },
+  { id: '9004',     nombre: 'ISO 9004',  desc: 'Calidad sostenible · complementaria a ISO 9001', nivel: 'J3', hApoyo: 11, solapeCon: '9001', solapeFactor: 0.5 },
   { id: 'une93200', nombre: 'UNE 93200', desc: 'Cartas de Servicios',            nivel: 'J3', hApoyo: 25 },
   { id: 'une158101', nombre: 'UNE 158101', desc: 'Gestión de centros residenciales', nivel: 'J3', hApoyo: 91 },
   { id: 'une66181', nombre: 'UNE 66181', desc: 'Calidad de la formación virtual', nivel: 'J3', hApoyo: 30 },
-  { id: 'igualdad', nombre: 'Plan de Igualdad', desc: 'Plan de igualdad de empresa', nivel: 'J3', hApoyo: 30 },
+  // Horas del desglose de tareas facilitado (101 h Igualdad · 147 h Diversidad).
+  // El Plan de Diversidad solapa con el de Igualdad: ver `solapeCon` más abajo.
+  { id: 'igualdad',   nombre: 'Plan de Igualdad',   desc: 'Plan de igualdad de empresa', nivel: 'J3', hApoyo: 101 },
+  { id: 'diversidad', nombre: 'Plan de Diversidad', desc: 'Diversidad, equidad e inclusión · se integra con el Plan de Igualdad', nivel: 'J3', hApoyo: 147,
+    solapeCon: 'igualdad', solapeFactor: 0.62 },
   { id: 'madridexcelente', nombre: 'Madrid Excelente', desc: 'Marca de garantía de la Comunidad de Madrid', nivel: 'J3', hApoyo: 30 },
 ];
 
@@ -47,9 +51,13 @@ export const horasPorNivel = (horasBase, nivel) => horasBase * (EFICIENCIA[nivel
 
 export const MODELOS = {
   Apoyo: {
+    // El fondo de horas cubre el 60 % de lo planificado: en este modelo la
+    // organización ejecuta parte del trabajo y la consultoría acompaña. Las
+    // horas de `hApoyo` son el proyecto completo; aquí se factura esa fracción.
     id: 'Apoyo', tipo: 'bolsa', hSist: null, hPres: 0, paso: 100, suelo: 0,
+    factorFondo: 0.6,
     titulo: 'Apoyo',
-    claim: 'Bolsa de horas prepagada',
+    claim: 'Bolsa de horas · 60 % de lo planificado',
     leyenda: 'Pago único prepagado al 100 %. No contratable a menos de 60 días de una auditoría externa. Acompañamiento a auditoría aparte (600 €/jornada).',
   },
   Relación: {
@@ -143,13 +151,20 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // normalmente se hereda. Sin esto, quitar la 9001 abarataba la oferta en vez
   // de encarecerla, que es justo lo contrario de lo que pasa en el proyecto.
   const llevaBase = normaIds.includes('9001');
-  const solapeDe = (n) => (llevaBase ? (n.solape9001 ?? 1) : 1);
-  const sinBaseConDependientes = !llevaBase && normas.some((n) => n.solape9001 != null);
+  // Una norma con `solapeCon` cuesta menos SOLO si aquella con la que solapa
+  // está también en la oferta. Si no está, se paga entera: hay que implantar de
+  // cero lo que normalmente se hereda.
+  const solapeDe = (n) => (n.solapeCon && normaIds.includes(n.solapeCon) ? (n.solapeFactor ?? 1) : 1);
+  const sinBaseConDependientes = normas.some((n) => n.solapeCon && !normaIds.includes(n.solapeCon));
+  const integraciones = normas
+    .filter((n) => n.solapeCon && normaIds.includes(n.solapeCon))
+    .map((n) => ({ norma: n.id, con: n.solapeCon, factor: n.solapeFactor }));
 
   const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
 
   if (m.tipo === 'bolsa') {
-    for (const n of normas) raw[n.nivel] += n.hApoyo * (n.id === '9001' ? f9001 : 1);
+    const fFondo = m.factorFondo ?? 1;
+    for (const n of normas) raw[n.nivel] += n.hApoyo * fFondo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else {
     for (const n of normas) raw[n.nivel] += m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
     if (m.hPres > 0) {
@@ -268,6 +283,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
     reglas: traza,
     llevaBase,
     sinBaseConDependientes,
+    integraciones,
     iva,
     totalConIva,
     fraccionado,
