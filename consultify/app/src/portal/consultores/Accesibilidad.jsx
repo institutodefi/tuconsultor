@@ -32,6 +32,35 @@ const ESTADOS = [
 const ESTADO = Object.fromEntries(ESTADOS.map((e) => [e.k, e]));
 const NIVELES = ['A', 'AA', 'AAA'];
 
+// De dónde viene cada criterio. Importa para saber qué es exigible: en España el
+// RD 1112/2018 remite a EN 301 549, que apunta a WCAG 2.1 AA. Lo que solo está en
+// la 2.2 es mejora voluntaria.
+const ORIGENES = [
+  { k: 'une',    label: 'UNE 139803',  corto: 'UNE',     tono: 'bg-brand-orange/15 text-brand-orange',
+    ayuda: 'Está en UNE 139803:2012, es decir en WCAG 2.0. Exigible.' },
+  { k: 'wcag21', label: 'WCAG 2.1',    corto: 'WCAG 2.1', tono: 'bg-sky-400/15 text-sky-300',
+    ayuda: 'Añadido en WCAG 2.1. Lo referencia EN 301 549, que es lo que aplica el RD 1112/2018.' },
+  { k: 'wcag22', label: 'WCAG 2.2',    corto: 'WCAG 2.2', tono: 'bg-violet-400/15 text-violet-300',
+    ayuda: 'Añadido en WCAG 2.2. Mejora voluntaria, todavía no exigida por norma en España.' },
+];
+const ORIGEN = Object.fromEntries(ORIGENES.map((o) => [o.k, o]));
+
+// Las cinco vías por las que un criterio puede quedar fuera. WCAG no tiene un
+// «no aplica» genérico: cada vía se justifica de forma distinta.
+const MECANISMOS = [
+  { k: 'condicion_no_se_da', label: 'La condición no se da',
+    ayuda: 'El disparo del criterio no ocurre (no hay audio, no hay atajos…). Se declara CUMPLIDO, no «no aplicable».' },
+  { k: 'excepcion_del_criterio', label: 'Excepción del propio criterio',
+    ayuda: 'El texto del criterio lo exime: texto grande, decoración, logotipos, objetivos en línea…' },
+  { k: 'esencial', label: 'Es esencial',
+    ayuda: 'Quitarlo cambiaría la información o la función, y no hay otra vía conforme. Hay que justificar el «no hay otra vía».' },
+  { k: 'agente_de_usuario', label: 'Lo decide el navegador',
+    ayuda: 'La apariencia la determina el agente de usuario y el autor no la modifica.' },
+  { k: 'fuera_de_alcance', label: 'Fuera del alcance declarado',
+    ayuda: 'No entra en las páginas o procesos que declara la evaluación.' },
+];
+const MECANISMO = Object.fromEntries(MECANISMOS.map((m) => [m.k, m]));
+
 export default function Accesibilidad() {
   const { role, demo } = useAuth();
   const puedeEditar = ['superadmin', 'admin', 'director'].includes(role);
@@ -41,6 +70,7 @@ export default function Accesibilidad() {
   const [cargando, setCargando] = useState(true);
   const [nivel, setNivel] = useState('AAA');
   const [estadoF, setEstadoF] = useState('todos');
+  const [origenF, setOrigenF] = useState('todos');
   const [abierto, setAbierto] = useState(null);
   const [msg, setMsg] = useState(null);
 
@@ -76,10 +106,11 @@ export default function Accesibilidad() {
 
   const visibles = useMemo(() => filas.filter((f) => {
     if (nivel !== 'todos' && f.nivel !== nivel) return false;
+    if (origenF !== 'todos' && (f.origen || 'une') !== origenF) return false;
     if (estadoF === 'no_aplicables') return f.aplicable === false;
     if (estadoF !== 'todos' && (f.estado !== estadoF || f.aplicable === false)) return false;
     return true;
-  }), [filas, nivel, estadoF]);
+  }), [filas, nivel, estadoF, origenF]);
 
   const porPrincipio = useMemo(() => {
     const m = {};
@@ -93,10 +124,14 @@ export default function Accesibilidad() {
       setMsg({ err: true, t: `${c.codigo}: para marcarlo como no aplicable hace falta justificarlo. Es lo primero que mira una revisión externa.` });
       return;
     }
+    if (fila.aplicable === false && !fila.mecanismo) {
+      setMsg({ err: true, t: `${c.codigo}: elige por qué vía queda fuera. WCAG no tiene un «no aplica» genérico: son cinco mecanismos distintos y cada uno se justifica de otra forma.` });
+      return;
+    }
     try {
       await updateRow('accesibilidad_criterios', c.codigo, {
         aplicable: fila.aplicable, justificacion: fila.justificacion?.trim() || null,
-        metodos: fila.metodos || [], estado: fila.estado,
+        metodos: fila.metodos || [], estado: fila.estado, mecanismo: fila.mecanismo || null,
         observaciones: fila.observaciones?.trim() || null,
         evidencia: fila.evidencia?.trim() || null,
         revisado_en: new Date().toISOString(),
@@ -111,7 +146,7 @@ export default function Accesibilidad() {
   }
 
   function exportar() {
-    const cab = ['codigo', 'nivel', 'principio', 'titulo', 'aplicable', 'justificacion', 'metodos', 'estado', 'observaciones', 'evidencia', 'revisado_en'];
+    const cab = ['codigo', 'nivel', 'origen', 'principio', 'titulo', 'aplicable', 'mecanismo', 'justificacion', 'metodos', 'estado', 'observaciones', 'evidencia', 'revisado_en'];
     const esc = (v) => `"${String(Array.isArray(v) ? v.join(' / ') : (v ?? '')).replace(/"/g, '""')}"`;
     const csv = [cab.join(';')].concat(filas.map((f) => cab.map((k) => esc(f[k])).join(';'))).join('\n');
     const url = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
@@ -176,6 +211,14 @@ export default function Accesibilidad() {
           </button>
         ))}
         <span className="mx-1 text-[#1E5468]">|</span>
+        {[{ k: 'todos', label: 'Todo el origen' }, ...ORIGENES].map((o) => (
+          <button key={o.k} onClick={() => setOrigenF(o.k)} title={o.ayuda}
+            className={`rounded-full border px-3 py-1 text-[11px] font-bold transition ${
+              origenF === o.k ? 'border-sky-400 bg-sky-400/15 text-sky-300' : 'border-[#1E5468] text-[#9FC0CB] hover:border-sky-400/60'}`}>
+            {o.label}
+          </button>
+        ))}
+        <span className="mx-1 text-[#1E5468]">|</span>
         {[{ k: 'todos', label: 'Todos' }, ...ESTADOS, { k: 'no_aplicables', label: 'No aplicables' }].map((e) => (
           <button key={e.k} onClick={() => setEstadoF(e.k)}
             className={`rounded-full border px-3 py-1 text-[11px] font-bold transition ${
@@ -202,6 +245,9 @@ export default function Accesibilidad() {
                     className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-left hover:bg-[#12455A]">
                     <span className="font-mono text-[12px] font-bold text-[#7FA7B4]">{c.codigo}</span>
                     <span className="chip !px-1.5 !py-0 bg-white/8 text-[10px] text-[#9FC0CB]">{c.nivel}</span>
+                    <span className={`chip !px-1.5 !py-0 text-[10px] ${ORIGEN[c.origen || 'une']?.tono}`}
+                      title={ORIGEN[c.origen || 'une']?.ayuda}>{ORIGEN[c.origen || 'une']?.corto}</span>
+                    {c.obsoleto && <span className="chip !px-1.5 !py-0 bg-white/8 text-[10px] text-[#7FA7B4]" title="Retirado en WCAG 2.2, pero sigue en UNE 139803:2012">obsoleto</span>}
                     <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-[#EAF4F7]">{c.titulo}</span>
                     {c.aplicable === false
                       ? <span className="chip !px-2 !py-0 bg-white/8 text-[10px] text-[#7FA7B4]">No aplicable</span>
@@ -227,6 +273,27 @@ export default function Accesibilidad() {
                           );
                         })}
                       </div>
+
+                      {(c.aplicable === false || c.mecanismo) && (
+                        <div>
+                          <p className="label !mb-1.5">
+                            Mecanismo de aplicabilidad {c.aplicable === false && <span className="text-brand-orange">*</span>}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {MECANISMOS.map((m) => (
+                              <button key={m.k} disabled={!puedeEditar} title={m.ayuda}
+                                onClick={() => guardar(c, { mecanismo: c.mecanismo === m.k ? null : m.k })}
+                                className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold transition ${
+                                  c.mecanismo === m.k ? 'border-sky-400 bg-sky-400/20 text-sky-300' : 'border-[#1E5468] text-[#9FC0CB] hover:border-sky-400/60'}`}>
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                          {c.mecanismo && (
+                            <p className="mt-1.5 text-[11px] leading-relaxed text-[#7FA7B4]">{MECANISMO[c.mecanismo]?.ayuda}</p>
+                          )}
+                        </div>
+                      )}
 
                       {c.aplicable === false && (
                         <div>
@@ -335,7 +402,9 @@ export default function Accesibilidad() {
       )}
 
       <p className="text-[11px] leading-relaxed text-[#7FA7B4]">
-        El porcentaje se calcula <strong>sobre los criterios aplicables</strong>: contar los no aplicables como
+        <strong>Un criterio cuya condición no se da se declara CUMPLIDO, no «no aplicable»:</strong> en una
+        declaración formal de conformidad la categoría «no aplicable» no existe. Por eso hay que elegir el mecanismo.
+        {' '}El porcentaje se calcula <strong>sobre los criterios aplicables</strong>: contar los no aplicables como
         incumplimientos falsearía el resultado a la baja. Un criterio marcado como no aplicable exige justificación
         escrita, y la base de datos lo impide si falta.
       </p>
