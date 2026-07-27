@@ -63,6 +63,9 @@ export const TIPO_REGLA = Object.fromEntries(TIPOS_REGLA.map((t) => [t.k, t]));
 
 export const NIVELES = ['J1', 'J2', 'J3', 'Senior'];
 
+// Características del proyecto sobre las que se puede condicionar una regla.
+export const COMPLEJIDADES_REGLA = ['baja', 'media', 'alta'];
+
 export const CANALES = [
   { k: 'todos',   label: 'Web e interno' },
   { k: 'web',     label: 'Solo web (pública)' },
@@ -133,6 +136,27 @@ export function reglaAplica(r, ctx = {}) {
   if (r.solo_si_tiene_9001 === true && !ctx.tiene9001) return false;
   if (r.solo_si_tiene_9001 === false && ctx.tiene9001) return false;
 
+  // ── Características del proyecto ──
+  // Complejidad: vacío = cualquiera.
+  const compl = aLista(r.complejidad);
+  if (compl.length && ctx.complejidad && !compl.includes(ctx.complejidad)) return false;
+
+  // Sedes o alcances.
+  const sedes = Number(ctx.sedes || 1);
+  if (r.min_sedes != null && r.min_sedes !== '' && sedes < Number(r.min_sedes)) return false;
+  if (r.max_sedes != null && r.max_sedes !== '' && sedes > Number(r.max_sedes)) return false;
+
+  // Equipo: si la regla exige perfiles, TODOS deben estar en el equipo estimado.
+  const perfiles = aLista(r.perfiles);
+  if (perfiles.length) {
+    const enEquipo = new Set(aLista(ctx.perfiles));
+    if (!perfiles.every((x) => enEquipo.has(x))) return false;
+  }
+  // Tamaño del equipo.
+  const nEquipo = Number(ctx.personasEquipo || 0);
+  if (r.min_personas != null && r.min_personas !== '' && nEquipo < Number(r.min_personas)) return false;
+  if (r.max_personas != null && r.max_personas !== '' && nEquipo > Number(r.max_personas)) return false;
+
   return true;
 }
 
@@ -189,6 +213,14 @@ export function describirCondiciones(r) {
   const normas = aLista(r.normas);
   if (modelos.length) partes.push(`modelo ${modelos.join(' / ')}`);
   if (normas.length) partes.push(`con ${normas.join(' + ')}`);
+  const compl = aLista(r.complejidad);
+  if (compl.length) partes.push(`complejidad ${compl.join(' / ')}`);
+  if (r.min_sedes) partes.push(`≥ ${r.min_sedes} sedes`);
+  if (r.max_sedes) partes.push(`≤ ${r.max_sedes} sedes`);
+  const perf = aLista(r.perfiles);
+  if (perf.length) partes.push(`equipo con ${perf.join(' + ')}`);
+  if (r.min_personas) partes.push(`equipo ≥ ${r.min_personas} personas`);
+  if (r.max_personas) partes.push(`equipo ≤ ${r.max_personas} personas`);
   if (r.min_sistemas) partes.push(`≥ ${r.min_sistemas} sistemas`);
   if (r.max_sistemas) partes.push(`≤ ${r.max_sistemas} sistemas`);
   if (r.solo_si_tiene_9001 === true) partes.push('ya certificada en 9001');
@@ -223,6 +255,9 @@ export function validarRegla(r) {
   if (d && h && h < d) e.push('La fecha de fin es anterior a la de inicio.');
   const min = r?.min_sistemas, max = r?.max_sistemas;
   if (min && max && Number(max) < Number(min)) e.push('El máximo de sistemas es menor que el mínimo.');
+  if (r?.min_sedes && r?.max_sedes && Number(r.max_sedes) < Number(r.min_sedes)) e.push('El máximo de sedes es menor que el mínimo.');
+  if (r?.min_personas && r?.max_personas && Number(r.max_personas) < Number(r.min_personas)) e.push('El máximo de personas del equipo es menor que el mínimo.');
+  if (r?.max_personas && Number(r.max_personas) > 3) e.push('El equipo estimado no puede pasar de 3 personas.');
   return e;
 }
 
@@ -230,6 +265,7 @@ export function validarRegla(r) {
 export const REGLA_NUEVA = () => ({
   nombre: '', tipo: 'descuento', activa: true, prioridad: 100,
   modelos: [], normas: [], min_sistemas: '', max_sistemas: '',
+  complejidad: [], min_sedes: '', max_sedes: '', perfiles: [], min_personas: '', max_personas: '',
   solo_si_tiene_9001: null, vigente_desde: '', vigente_hasta: '', canal: 'todos',
   valor: '', unidad: 'porcentaje', nivel: '', notas: '',
 });

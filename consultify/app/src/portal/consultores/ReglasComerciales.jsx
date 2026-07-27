@@ -6,6 +6,7 @@ import {
   describirEfecto, describirCondiciones, validarRegla, reglaVigente, aLista,
 } from '../../lib/reglas.js';
 import { NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
+import { COMPLEJIDADES, PERFILES, MAX_EQUIPO } from '../../lib/proyecto.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // REGLAS COMERCIALES
@@ -59,6 +60,9 @@ export default function ReglasComerciales() {
     setForm({
       ...r,
       modelos: aLista(r.modelos), normas: aLista(r.normas),
+      complejidad: aLista(r.complejidad), perfiles: aLista(r.perfiles),
+      min_sedes: r.min_sedes ?? '', max_sedes: r.max_sedes ?? '',
+      min_personas: r.min_personas ?? '', max_personas: r.max_personas ?? '',
       vigente_desde: r.vigente_desde ? String(r.vigente_desde).slice(0, 10) : '',
       vigente_hasta: r.vigente_hasta ? String(r.vigente_hasta).slice(0, 10) : '',
       min_sistemas: r.min_sistemas ?? '', max_sistemas: r.max_sistemas ?? '',
@@ -78,6 +82,12 @@ export default function ReglasComerciales() {
       prioridad: Number(form.prioridad) || 100,
       modelos: aLista(form.modelos),
       normas: aLista(form.normas),
+      complejidad: aLista(form.complejidad),
+      min_sedes: form.min_sedes === '' ? null : Number(form.min_sedes),
+      max_sedes: form.max_sedes === '' ? null : Number(form.max_sedes),
+      perfiles: aLista(form.perfiles),
+      min_personas: form.min_personas === '' ? null : Number(form.min_personas),
+      max_personas: form.max_personas === '' ? null : Number(form.max_personas),
       min_sistemas: form.min_sistemas === '' ? null : Number(form.min_sistemas),
       max_sistemas: form.max_sistemas === '' ? null : Number(form.max_sistemas),
       solo_si_tiene_9001: form.solo_si_tiene_9001 === '' ? null : form.solo_si_tiene_9001,
@@ -223,6 +233,61 @@ export default function ReglasComerciales() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* ── Características del proyecto ── */}
+            <div className="mb-4 rounded-xl bg-[#0D3242] p-3">
+              <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-brand-orange">Características del proyecto</p>
+
+              <p className="label !mb-1.5">Complejidad</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {COMPLEJIDADES.map((c) => {
+                  const on = aLista(form.complejidad).includes(c.k);
+                  return (
+                    <button key={c.k} type="button" title={c.ayuda} onClick={() => toggleEnLista('complejidad', c.k)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${on ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange'}`}>
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="label !mb-1.5">El equipo debe incluir</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {PERFILES.map((pf) => {
+                  const on = aLista(form.perfiles).includes(pf.k);
+                  return (
+                    <button key={pf.k} type="button" title={`${pf.tarifa} €/h`} onClick={() => toggleEnLista('perfiles', pf.k)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${on ? 'border-brand-verde bg-brand-verde/20 text-brand-verdeTexto' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde'}`}>
+                      {pf.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label className="label" htmlFor="r-minsedes">Mínimo de sedes</label>
+                  <input id="r-minsedes" type="number" min="1" className="input !py-1.5 !text-[13px]" value={form.min_sedes}
+                    onChange={(e) => setForm({ ...form, min_sedes: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="r-maxsedes">Máximo de sedes</label>
+                  <input id="r-maxsedes" type="number" min="1" className="input !py-1.5 !text-[13px]" value={form.max_sedes}
+                    onChange={(e) => setForm({ ...form, max_sedes: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="r-minper">Equipo mínimo</label>
+                  <input id="r-minper" type="number" min="0" max={MAX_EQUIPO} className="input !py-1.5 !text-[13px]" value={form.min_personas}
+                    onChange={(e) => setForm({ ...form, min_personas: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="r-maxper">Equipo máximo</label>
+                  <input id="r-maxper" type="number" min="0" max={MAX_EQUIPO} className="input !py-1.5 !text-[13px]" value={form.max_personas}
+                    onChange={(e) => setForm({ ...form, max_personas: e.target.value })} />
+                  <p className="mt-1 text-[10.5px] text-[#7FA7B4]">Tope: {MAX_EQUIPO} personas</p>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

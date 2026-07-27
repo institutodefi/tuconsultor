@@ -6,6 +6,7 @@
 // ============================================================
 
 import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.js';
+import { tarifaEquipo, perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
 
 export const NORMAS = [
   { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
@@ -138,6 +139,11 @@ export function calcular(normaIds, modeloId, opts = {}) {
   const ctx = {
     modelo: modeloId, normas: normaIds, nSistemas: normas.length,
     tiene9001, canal: opts.canal || 'interno', fecha: opts.fecha,
+    // Características del proyecto, para condicionar reglas
+    complejidad: opts.complejidad || null,
+    sedes: normalizarSedes(opts.sedes),
+    perfiles: perfilesDe(opts.equipo || {}),
+    personasEquipo: totalEquipo(opts.equipo || {}),
   };
   const reglas = reglasAplicables(opts.reglas, ctx);
   const traza = [];
@@ -197,6 +203,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
 
   // ── Regla 2 · PRECIO/HORA: sustituye la tarifa de catálogo ──
   const tarifa = { ...TARIFA };
+  // Si se ha estimado el equipo, el coste sale de ESE equipo, no del nivel
+  // teórico de cada norma. No es una decisión comercial: es aritmética.
+  const tEquipo = tarifaEquipo(opts.equipo || {});
+  if (tEquipo) for (const k of Object.keys(tarifa)) tarifa[k] = tEquipo;
   for (const r of reglas.filter((x) => x.tipo === 'precio_hora')) {
     const v = Number(r.valor);
     if (!Number.isFinite(v) || v <= 0) continue;
@@ -284,6 +294,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
     llevaBase,
     sinBaseConDependientes,
     integraciones,
+    complejidad: ctx.complejidad,
+    sedes: ctx.sedes,
+    equipo: opts.equipo || null,
+    tarifaEquipo: tEquipo,
     iva,
     totalConIva,
     fraccionado,

@@ -4,6 +4,7 @@ import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
+import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 
@@ -38,6 +39,10 @@ export default function GeneradorOfertas({ publico = false }) {
   const [pideInfo, setPideInfo] = useState(false);   // "Otra norma · pide info": abre formulario de solicitud
   const [infoState, setInfoState] = useState('idle');// idle | sending | ok | error
   const [reglas, setReglas] = useState([]);          // reglas comerciales vigentes
+  // ── Características del proyecto ──
+  const [complejidad, setComplejidad] = useState('media');
+  const [sedes, setSedes] = useState(1);
+  const [equipo, setEquipo] = useState(EQUIPO_VACIO());
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
   // lo que esté vigente el día en que se calcula.
@@ -58,8 +63,8 @@ export default function GeneradorOfertas({ publico = false }) {
   };
 
   const res = useMemo(
-    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno' }),
-    [sel, modelo, meses, tiene9001, reglas, publico],
+    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo }),
+    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -150,6 +155,7 @@ export default function GeneradorOfertas({ publico = false }) {
           normas: sel, modelo, empresa: cli.empresa, contacto: contactoCompleto,
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
+          complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
           email: cli.email, presupuesto_id: fila?.id,
           // Resultado con reglas comerciales aplicadas (manda el motor del cliente)
           override: {
@@ -321,6 +327,72 @@ export default function GeneradorOfertas({ publico = false }) {
           {/* Planes de Igualdad y Diversidad: proyecto por fases, no cuota mensual */}
           {sel.some((x) => x === 'igualdad' || x === 'diversidad') && (
             <div className="mt-4"><FasesPlanes planes={sel} /></div>
+          )}
+
+          {/* Características del proyecto · solo en el generador interno */}
+          {!publico && (
+            <div className="mt-4 rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0D3242] p-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">Características del proyecto</h3>
+              <p className="mt-1 text-[11.5px] text-[#9FC0CB]">
+                No cambian el precio por sí solas: las usan las reglas comerciales. El equipo sí afecta,
+                porque de él sale la tarifa real.
+              </p>
+
+              <div className="mt-3 grid gap-4 lg:grid-cols-3">
+                <div>
+                  <p className="label !mb-1.5">Complejidad</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COMPLEJIDADES.map((c) => (
+                      <button key={c.k} type="button" title={c.ayuda} onClick={() => setComplejidad(c.k)}
+                        className={`rounded-lg border px-3 py-1.5 text-[12px] font-bold transition ${complejidad === c.k ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange/60'}`}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                    {COMPLEJIDADES.find((c) => c.k === complejidad)?.ayuda}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label" htmlFor="g-sedes">Sedes o alcances</label>
+                  <input id="g-sedes" type="number" min="1" className="input !py-1.5 !text-[13px] !w-24"
+                    value={sedes} onChange={(e) => setSedes(Math.max(1, parseInt(e.target.value, 10) || 1))} />
+                  <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                    Centros de trabajo o alcances distintos dentro del sistema. Cada uno añade visitas y evidencias propias.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="label !mb-1.5">
+                    Equipo consultor estimado
+                    <span className={`ml-2 font-bold ${totalEquipo(equipo) > MAX_EQUIPO ? 'text-red-300' : 'text-[#7FA7B4]'}`}>
+                      {totalEquipo(equipo)}/{MAX_EQUIPO}
+                    </span>
+                  </p>
+                  <div className="space-y-1">
+                    {PERFILES.map((pf) => (
+                      <div key={pf.k} className="flex items-center gap-2">
+                        <span className="w-16 text-[12px] font-bold text-[#EAF4F7]">{pf.label}</span>
+                        <span className="w-14 text-[11px] text-[#7FA7B4]">{pf.tarifa} €/h</span>
+                        <button type="button" aria-label={`Quitar ${pf.label}`}
+                          onClick={() => setEquipo((e) => ({ ...e, [pf.k]: Math.max(0, (e[pf.k] || 0) - 1) }))}
+                          className="grid h-6 w-6 place-items-center rounded border border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde">−</button>
+                        <span className="w-5 text-center text-[13px] font-bold text-[#EAF4F7]">{equipo[pf.k] || 0}</span>
+                        <button type="button" aria-label={`Añadir ${pf.label}`} disabled={!cabeMas(equipo)}
+                          onClick={() => setEquipo((e) => (cabeMas(e) ? { ...e, [pf.k]: (e[pf.k] || 0) + 1 } : e))}
+                          className="grid h-6 w-6 place-items-center rounded border border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde disabled:opacity-30">+</button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                    {totalEquipo(equipo)
+                      ? <>Tarifa aplicada: <b className="text-brand-verdeTexto">{describirEquipo(equipo)}</b></>
+                      : 'Sin definir: se usa la tarifa del nivel de cada norma.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* 2 · Modelo */}
