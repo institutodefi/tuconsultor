@@ -27,7 +27,7 @@ export const GRUPOS_PORTAL = [
   {
     label: 'Operación',
     items: [
-      { to: '',       label: 'Dashboard', icon: 'layout-dashboard', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'panel',  label: 'Dashboard', icon: 'layout-dashboard', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       { to: 'agenda', label: 'Agenda',    icon: 'calendar-days',    roles: ['superadmin', 'admin', 'director', 'consultor'] },
     ],
   },

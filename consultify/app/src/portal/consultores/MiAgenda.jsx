@@ -3,6 +3,7 @@ import { listTable } from '../../lib/data.js';
 import { getTareasAgenda, TIPO_BY_ID } from '../../lib/agenda.js';
 import { useAuth } from '../../lib/auth.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
+import ResumenAgenda from './ResumenAgenda.jsx';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const YEAR = new Date().getFullYear();
@@ -98,6 +99,9 @@ export default function MiAgenda() {
 
   return (
     <div className="space-y-6">
+      {/* Lo urgente primero: vencimientos, clientes y foto del mes */}
+      <ResumenAgenda tareas={tareas} yo={yo} />
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Mi agenda</p>

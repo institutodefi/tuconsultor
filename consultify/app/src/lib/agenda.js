@@ -199,7 +199,24 @@ export function resumenAnual(year, festivosSet, vacacionesSet, tareas, pctJornad
 // ── Capa de datos (Supabase real o DEMO en memoria) ──────────────
 let demoAgenda = null;
 function demoState() {
-  if (!demoAgenda) demoAgenda = { vacaciones: [], agenda_tareas: [] };
+  if (!demoAgenda) {
+    // Semilla de demo: tareas repartidas por los cuatro tramos del semáforo,
+    // para que la cabecera de Mi agenda se pueda enseñar sin base de datos.
+    const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    demoAgenda = {
+      vacaciones: [],
+      agenda_tareas: [
+        { id: 'at1', consultor_id: 'c1', proyecto_id: 'p1', titulo: 'Auditoría interna · preparación', fecha_prevista: d(-9),  horas_previstas: 6, tipo: 'produccion',   estado: 'pendiente' },
+        { id: 'at2', consultor_id: 'c1', proyecto_id: 'p1', titulo: 'Revisión por la dirección',        fecha_prevista: d(-2),  horas_previstas: 4, tipo: 'gestion',      estado: 'pendiente' },
+        { id: 'at3', consultor_id: 'c1', proyecto_id: 'p2', titulo: 'Mapa de procesos · sesión 2',      fecha_prevista: d(0),   horas_previstas: 5, tipo: 'produccion',   estado: 'en_curso' },
+        { id: 'at4', consultor_id: 'c1', proyecto_id: 'p2', titulo: 'Análisis de riesgos',              fecha_prevista: d(3),   horas_previstas: 6, tipo: 'produccion',   estado: 'pendiente' },
+        { id: 'at5', consultor_id: 'c1', proyecto_id: 'p1', titulo: 'Formación a personas trabajadoras',fecha_prevista: d(6),   horas_previstas: 4, tipo: 'coordinacion', estado: 'pendiente' },
+        { id: 'at6', consultor_id: 'c1', proyecto_id: 'p3', titulo: 'Plan de adecuación ENS',           fecha_prevista: d(20),  horas_previstas: 8, tipo: 'produccion',   estado: 'pendiente' },
+        { id: 'at7', consultor_id: 'c1', proyecto_id: 'p1', titulo: 'Documentación del sistema',        fecha_prevista: d(-25), horas_previstas: 7, horas_reales: 8.5, fecha_efectiva: d(-24), tipo: 'produccion', estado: 'completada' },
+        { id: 'at8', consultor_id: 'c1', proyecto_id: 'p2', titulo: 'Reunión de arranque',              fecha_prevista: d(-40), horas_previstas: 3, horas_reales: 3,   fecha_efectiva: d(-40), tipo: 'gestion',    estado: 'completada' },
+      ],
+    };
+  }
   return demoAgenda;
 }
 const uid = () => Math.random().toString(36).slice(2, 10);

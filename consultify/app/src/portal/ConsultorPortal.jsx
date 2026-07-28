@@ -135,7 +135,11 @@ export default function ConsultorPortal() {
           {/* Contenido */}
           <main className="min-w-0 flex-1">
             <Routes>
-              <Route index element={<Dashboard />} />
+              {/* Al entrar se aterriza en Mi agenda: lo primero es saber qué
+                  toca hoy. Quien no tenga acceso a agenda (gestión, cliente)
+                  sigue cayendo en el panel. */}
+              <Route index element={verPlanAgendaSist ? <Navigate to="mi-agenda" replace /> : <Dashboard />} />
+              <Route path="panel" element={<Dashboard />} />
               <Route path="proyectos" element={<Guard ok={verClientes}><ProyectosConfig /></Guard>} />
               <Route path="agenda" element={<Guard ok={verPlanAgendaSist}><Agenda /></Guard>} />
               <Route path="mi-agenda" element={<Guard ok={verPlanAgendaSist}><MiAgenda /></Guard>} />

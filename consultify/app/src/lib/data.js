@@ -81,7 +81,12 @@ function demo() {
       { id: 'hom-2', empresa_id: 'emp-prov', concepto: 'Póliza de responsabilidad civil', estado: 'pendiente',
         obligatorio: true, orden: 20, creado: '2026-02-02T09:05:00Z' },
     ],
-    tareas_catalogo: catalogoFilas(), agenda_tareas: [], cliente_tareas: [], proyectos_cliente: [], cliente_contactos: [], vacaciones: [], festivos: [],
+    tareas_catalogo: catalogoFilas(), agenda_tareas: [], cliente_tareas: [], proyectos_cliente: [],
+    proyectos: [
+      { id: 'p1', nombre: 'ISO 9001 · ACADEMIA AXON', empresa_id: 'e1', consultor_id: 'c1' },
+      { id: 'p2', nombre: 'ISO 14001 · GRUPO MERIDIA', empresa_id: 'e2', consultor_id: 'c1' },
+      { id: 'p3', nombre: 'ENS · AYUNTAMIENTO DE ALCORCÓN', empresa_id: 'e3', consultor_id: 'c1' },
+    ], cliente_contactos: [], vacaciones: [], festivos: [],
   };
   return demoState;
 }
