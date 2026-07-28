@@ -17,7 +17,7 @@ export default function Shell({ children }) {
       {/* ── Barra lateral Orbita (manual A5: 248px, #061F2B, logo vertical) ── */}
       <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 z-40 w-[248px] bg-[#061F2B] border-r border-white/10">
         <a href="/app/" className="flex justify-center pt-8 pb-6">
-          <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado w-40 h-auto" />
+          <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita PMTool" className="tc-logo-animado w-40 h-auto" />
         </a>
         <nav className="flex flex-col gap-1 px-4 text-sm font-semibold">
           <a href="/" className="rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]">Web</a>
@@ -49,7 +49,7 @@ export default function Shell({ children }) {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#061F2B]/95 backdrop-blur md:hidden">
         <div className="flex h-[60px] items-center justify-between px-4">
           <a href="/app/" className="flex items-center">
-            <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="tc-logo-animado h-9 w-auto" />
+            <img src="/app/marca/orbita-horizontal.svg" alt="Orbita PMTool" className="tc-logo-animado h-9 w-auto" />
           </a>
           <div className="flex items-center gap-2">
             {user && esCliente && <NavLink to="/clientes" className="text-xs font-bold text-[#EAF4F7]">Zona clientes</NavLink>}
@@ -64,7 +64,7 @@ export default function Shell({ children }) {
       <div className="flex min-h-screen flex-1 flex-col md:ml-[248px]">
         <main className="flex-1">{children}</main>
         <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
-        <img src="/app/marca/orbita-horizontal.svg" alt="Orbita 360" className="mx-auto mb-3 h-8 w-auto opacity-90" />
+        <img src="/app/marca/orbita-horizontal.svg" alt="Orbita PMTool" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
         <p className="mt-1">Precios sin IVA salvo indicación · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
         <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
@@ -75,7 +75,7 @@ export default function Shell({ children }) {
         </p>
         <p className="mt-3 text-[11px] font-semibold italic text-brand-orange/90">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</p>
       </footer>
-      <a href="/app/acceso" aria-label="Orbita 360" title="Orbita 360"
+      <a href="/app/acceso" aria-label="Orbita PMTool" title="Orbita PMTool"
          className="tc-logo-animado fixed bottom-5 right-5 z-30 hidden md:block opacity-80 transition hover:opacity-100"
          style={{ width: 72, height: 72 }}>
         <img src="/app/marca/orbita-isotipo-anim.svg" alt="" style={{ width: '100%', height: '100%' }} />

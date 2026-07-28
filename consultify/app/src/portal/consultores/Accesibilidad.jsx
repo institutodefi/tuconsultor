@@ -153,7 +153,7 @@ export default function Accesibilidad() {
     const texto = generarDeclaracion(filas, conf, {
       nivelObjetivo,
       sitio: 'https://www.tuconsultor.com',
-      alcance: 'Todas las páginas bajo el dominio, en sus cinco versiones idiomáticas (es, en, fr, de, ar), y la aplicación Orbita 360 en consultify.tuconsultor.com/app.',
+      alcance: 'Todas las páginas bajo el dominio, en sus cinco versiones idiomáticas (es, en, fr, de, ar), y la aplicación Orbita PMTool en consultify.tuconsultor.com/app.',
       tecnologias: 'HTML, CSS, JavaScript, SVG',
     });
     setDecl({ texto, nivel: nivelObjetivo });

@@ -224,7 +224,7 @@ export function generarDeclaracion(criterios, conformidad, ctx = {}) {
   l('- **AAA completo no es un objetivo razonable para un sitio entero.** WCAG advierte que no se recomienda exigir el nivel AAA como política general, porque para algunos contenidos no es posible satisfacer todos sus criterios. Lo habitual es declarar AA y documentar qué criterios AAA se cumplen además.');
   l('- **La conformidad se evalúa por página completa y por proceso completo.** Un formulario accesible dentro de un proceso con un paso inaccesible no da conformidad.');
   l();
-  l(`*Documento generado el ${new Date().toISOString().slice(0, 16).replace('T', ' ')} desde el registro de accesibilidad de Orbita 360.*`);
+  l(`*Documento generado el ${new Date().toISOString().slice(0, 16).replace('T', ' ')} desde el registro de accesibilidad de Orbita PMTool.*`);
 
   return L.join('\n');
 }

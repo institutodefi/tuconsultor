@@ -4,10 +4,9 @@
    Saluda a TuConsultor mientras carga la portada, con los cinco idiomas del
    sitio a la vista para poder elegir desde el primer segundo.
 
-   La animación es el isotipo de la órbita SIN el logotipo «Orbita 360»
+   La animación es el isotipo de la órbita SIN el logotipo «Orbita PMTool»
    (marca/orbita-esfera-anim.svg): quien entra en tuconsultor.com viene a
-   TuConsultor, y cambiarle la marca en la primera pantalla despista. Orbita
-   360 se presenta más abajo, en su anuncio del banner.
+   TuConsultor, y cambiarle la marca en la primera pantalla despista. Orbita PMTool se presenta más abajo, en su anuncio del banner.
 
    Reglas de sensatez, porque una pantalla de carga mal hecha es una barrera:
      · Solo en la primera visita de la sesión (sessionStorage).

@@ -127,7 +127,7 @@ export default function Acceso() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <div className="mb-8 text-center">
-        <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita 360" className="tc-logo-animado mx-auto mb-3 h-24 w-auto" />
+        <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita PMTool" className="tc-logo-animado mx-auto mb-3 h-24 w-auto" />
         <h1 className="font-orbita text-2xl font-extrabold text-[#EAF4F7]">El ecosistema digital de TuConsultor</h1>
         <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Elige tu tipo de acceso.</p>
         {demo && (

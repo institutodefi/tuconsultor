@@ -1,5 +1,5 @@
 /* Flotante Orbita.PMTool · identidad v4.0 · presente en todas las webs.
-   Círculo #061F2B con el isotipo Orbita 360 animado; lleva al acceso. */
+   Círculo #061F2B con el isotipo Orbita PMTool animado; lleva al acceso. */
 (function () {
   if (document.getElementById('orbita-flotante')) return;
   var DESTINO = 'https://consultify.tuconsultor.com/app/acceso';

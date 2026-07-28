@@ -12,7 +12,15 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["pdf-lib", "pptxgenjs"]
+  external_node_modules = ["pdf-lib", "pptxgenjs", "@pdf-lib/fontkit"]
+  # esbuild solo empaqueta lo que puede seguir por los imports. La tipografía y
+  # los logotipos del PDF se leen del disco en tiempo de ejecución, así que hay
+  # que declararlos: sin esto, la función se despliega sin ellos y el documento
+  # sale sin logos (o falla al no encontrar la fuente).
+  included_files = [
+    "consultify/netlify/functions/fuentes/**",
+    "consultify/netlify/functions/marca/**"
+  ]
 
 [functions."cobros-diario"]
   schedule = "0 6 * * *"

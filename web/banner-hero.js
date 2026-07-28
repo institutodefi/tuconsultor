@@ -10,7 +10,7 @@
      2 · ENS          · teal     · los tres niveles de categoría y qué exige
                                    cada uno (RD 311/2022)
      3 · Consultify   · azul     · la tarjeta de precio, desde 350 €/mes
-     4 · Orbita 360   · teal     · la esfera animada y el estado del proyecto
+     4 · Orbita PMTool   · teal     · la esfera animada y el estado del proyecto
      5 · Ecosistema   · degradado· las tres marcas y el papel de cada una
 
    Mejora progresiva: el anuncio 1 es el hero real del HTML —no se reconstruye,
@@ -75,10 +75,10 @@
         bullets: ['9 normas en la calculadora', 'Propuesta en PDF al momento', 'Permanencia mínima 12 meses'],
       },
       orbita: {
-        pre: 'ORBITA 360 · PM TOOL',
+        pre: 'ORBITA PMTOOL · PM TOOL',
         h: [['Tu proyecto,', ''], ['en tiempo real,', 'strong'], ['sin correos perdidos.', 'accent']],
         sub: 'Portal de cliente y panel del equipo consultor: tareas con responsable y fecha, documentos del sistema y agenda compartida en un solo sitio.',
-        cta: [['Entrar en Orbita 360', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['Cómo funciona', '/servicios-tecnologicos.html', 'btn-primary']],
+        cta: [['Entrar en Orbita PMTool', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['Cómo funciona', '/servicios-tecnologicos.html', 'btn-primary']],
         rotulo: 'Tu proyecto ahora',
         tareas: [['Análisis de contexto', 'hecho'], ['Mapa de procesos', 'en curso'], ['Auditoría interna', 'planificada']],
         estados: { hecho: 'hecho', 'en curso': 'en curso', planificada: 'planificada' },
@@ -104,14 +104,14 @@
         pie: 'Contenido formativo. No es asesoramiento de inversión.',
       },
       eco: {
-        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
+        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA PMTOOL',
         h: [['El ecosistema', ''], ['humano', 'strong'], ['impulsado por IA.', 'accent']],
         sub: 'Personas que conocen tu sector y tecnología que se come el trabajo repetitivo. Tres marcas, un mismo equipo y una sola forma de trabajar.',
         cta: [['Conócenos', '/quienes-somos.html', 'btn-orange'], ['Pide tu cita', '/contacto.html', 'btn-primary']],
         papeles: [
           ['TuConsultor', 'La consultoría, con acompañamiento a medida'],
           ['Consultify', 'El producto por suscripción, con precio cerrado'],
-          ['Orbita 360', 'La herramienta donde vive tu proyecto'],
+          ['Orbita PMTool', 'La herramienta donde vive tu proyecto'],
         ],
       },
     },
@@ -144,10 +144,10 @@
         bullets: ['9 standards in the calculator', 'PDF proposal right away', '12-month minimum term'],
       },
       orbita: {
-        pre: 'ORBITA 360 · PM TOOL',
+        pre: 'ORBITA PMTOOL · PM TOOL',
         h: [['Your project,', ''], ['in real time,', 'strong'], ['no lost emails.', 'accent']],
         sub: 'Client portal and consulting-team dashboard: tasks with owner and date, system documents and a shared calendar in one place.',
-        cta: [['Enter Orbita 360', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['How it works', '/servicios-tecnologicos.html', 'btn-primary']],
+        cta: [['Enter Orbita PMTool', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['How it works', '/servicios-tecnologicos.html', 'btn-primary']],
         rotulo: 'Your project right now',
         tareas: [['Context analysis', 'hecho'], ['Process map', 'en curso'], ['Internal audit', 'planificada']],
         estados: { hecho: 'done', 'en curso': 'in progress', planificada: 'planned' },
@@ -173,11 +173,11 @@
         pie: 'Educational content. Not investment advice.',
       },
       eco: {
-        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
+        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA PMTOOL',
         h: [['The human', ''], ['ecosystem', 'strong'], ['powered by AI.', 'accent']],
         sub: 'People who know your sector and technology that eats the repetitive work. Three brands, one team, one way of working.',
         cta: [['About us', '/quienes-somos.html', 'btn-orange'], ['Book a meeting', '/contacto.html', 'btn-primary']],
-        papeles: [['TuConsultor', 'The consultancy, tailored support'], ['Consultify', 'The subscription product, fixed price'], ['Orbita 360', 'The tool where your project lives']],
+        papeles: [['TuConsultor', 'The consultancy, tailored support'], ['Consultify', 'The subscription product, fixed price'], ['Orbita PMTool', 'The tool where your project lives']],
       },
     },
     fr: {
@@ -209,10 +209,10 @@
         bullets: ['9 normes dans le calculateur', 'Proposition PDF immédiate', 'Engagement minimum 12 mois'],
       },
       orbita: {
-        pre: 'ORBITA 360 · PM TOOL',
+        pre: 'ORBITA PMTOOL · PM TOOL',
         h: [['Votre projet,', ''], ['en temps réel,', 'strong'], ['sans e-mails perdus.', 'accent']],
         sub: "Portail client et tableau de bord de l'équipe : tâches avec responsable et date, documents du système et agenda partagé au même endroit.",
-        cta: [['Entrer dans Orbita 360', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['Comment ça marche', '/servicios-tecnologicos.html', 'btn-primary']],
+        cta: [['Entrer dans Orbita PMTool', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['Comment ça marche', '/servicios-tecnologicos.html', 'btn-primary']],
         rotulo: 'Votre projet maintenant',
         tareas: [['Analyse du contexte', 'hecho'], ['Cartographie des processus', 'en curso'], ['Audit interne', 'planificada']],
         estados: { hecho: 'fait', 'en curso': 'en cours', planificada: 'planifié' },
@@ -238,11 +238,11 @@
         pie: "Contenu pédagogique. Pas un conseil en investissement.",
       },
       eco: {
-        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
+        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA PMTOOL',
         h: [["L'écosystème", ''], ['humain', 'strong'], ['propulsé par IA.', 'accent']],
         sub: 'Des personnes qui connaissent votre secteur et une technologie qui avale le travail répétitif. Trois marques, une équipe.',
         cta: [['Qui sommes-nous', '/quienes-somos.html', 'btn-orange'], ['Prenez rendez-vous', '/contacto.html', 'btn-primary']],
-        papeles: [['TuConsultor', 'Le conseil, accompagnement sur mesure'], ['Consultify', 'Le produit par abonnement, prix fixe'], ['Orbita 360', 'Là où vit votre projet']],
+        papeles: [['TuConsultor', 'Le conseil, accompagnement sur mesure'], ['Consultify', 'Le produit par abonnement, prix fixe'], ['Orbita PMTool', 'Là où vit votre projet']],
       },
     },
     de: {
@@ -274,10 +274,10 @@
         bullets: ['9 Normen im Rechner', 'PDF-Angebot sofort', 'Mindestlaufzeit 12 Monate'],
       },
       orbita: {
-        pre: 'ORBITA 360 · PM TOOL',
+        pre: 'ORBITA PMTOOL · PM TOOL',
         h: [['Ihr Projekt,', ''], ['in Echtzeit,', 'strong'], ['ohne verlorene Mails.', 'accent']],
         sub: 'Kundenportal und Dashboard des Beratungsteams: Aufgaben mit Verantwortung und Termin, Systemdokumente und gemeinsamer Kalender an einem Ort.',
-        cta: [['Zu Orbita 360', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['So funktioniert es', '/servicios-tecnologicos.html', 'btn-primary']],
+        cta: [['Zu Orbita PMTool', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['So funktioniert es', '/servicios-tecnologicos.html', 'btn-primary']],
         rotulo: 'Ihr Projekt jetzt',
         tareas: [['Kontextanalyse', 'hecho'], ['Prozesslandkarte', 'en curso'], ['Internes Audit', 'planificada']],
         estados: { hecho: 'erledigt', 'en curso': 'läuft', planificada: 'geplant' },
@@ -303,11 +303,11 @@
         pie: 'Bildungsinhalt. Keine Anlageberatung.',
       },
       eco: {
-        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
+        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA PMTOOL',
         h: [['Das menschliche', ''], ['Ökosystem,', 'strong'], ['angetrieben von KI.', 'accent']],
         sub: 'Menschen, die Ihre Branche kennen, und Technik, die die Routinearbeit schluckt. Drei Marken, ein Team.',
         cta: [['Über uns', '/quienes-somos.html', 'btn-orange'], ['Termin anfragen', '/contacto.html', 'btn-primary']],
-        papeles: [['TuConsultor', 'Die Beratung, maßgeschneidert'], ['Consultify', 'Das Abo-Produkt, Festpreis'], ['Orbita 360', 'Das Werkzeug für Ihr Projekt']],
+        papeles: [['TuConsultor', 'Die Beratung, maßgeschneidert'], ['Consultify', 'Das Abo-Produkt, Festpreis'], ['Orbita PMTool', 'Das Werkzeug für Ihr Projekt']],
       },
     },
     ar: {
@@ -339,10 +339,10 @@
         bullets: ['٩ معايير في الحاسبة', 'عرض PDF فوري', 'مدة لا تقل عن ١٢ شهرًا'],
       },
       orbita: {
-        pre: 'ORBITA 360 · PM TOOL',
+        pre: 'ORBITA PMTOOL · PM TOOL',
         h: [['مشروعك،', ''], ['في الوقت الحقيقي،', 'strong'], ['بلا رسائل ضائعة.', 'accent']],
         sub: 'بوابة العميل ولوحة الفريق الاستشاري: مهام بمسؤول وتاريخ، ومستندات النظام، وتقويم مشترك في مكان واحد.',
-        cta: [['ادخل إلى Orbita 360', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['كيف يعمل', '/servicios-tecnologicos.html', 'btn-primary']],
+        cta: [['ادخل إلى Orbita PMTool', 'https://consultify.tuconsultor.com/app/acceso', 'btn-orange'], ['كيف يعمل', '/servicios-tecnologicos.html', 'btn-primary']],
         rotulo: 'مشروعك الآن',
         tareas: [['تحليل السياق', 'hecho'], ['خريطة العمليات', 'en curso'], ['تدقيق داخلي', 'planificada']],
         estados: { hecho: 'منجز', 'en curso': 'جارٍ', planificada: 'مُخطَّط' },
@@ -368,11 +368,11 @@
         pie: 'محتوى تعليمي. ليس استشارة استثمارية.',
       },
       eco: {
-        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA 360',
+        pre: 'TUCONSULTOR · CONSULTIFY · ORBITA PMTOOL',
         h: [['المنظومة', ''], ['الإنسانية', 'strong'], ['المدعومة بالذكاء الاصطناعي.', 'accent']],
         sub: 'أشخاص يعرفون قطاعك وتقنية تتولى العمل المتكرر. ثلاث علامات وفريق واحد.',
         cta: [['من نحن', '/quienes-somos.html', 'btn-orange'], ['احجز موعدًا', '/contacto.html', 'btn-primary']],
-        papeles: [['TuConsultor', 'الاستشارات بمواكبة مخصّصة'], ['Consultify', 'المنتج بالاشتراك وبسعر مغلق'], ['Orbita 360', 'الأداة التي يعيش فيها مشروعك']],
+        papeles: [['TuConsultor', 'الاستشارات بمواكبة مخصّصة'], ['Consultify', 'المنتج بالاشتراك وبسعر مغلق'], ['Orbita PMTool', 'الأداة التي يعيش فيها مشروعك']],
       },
     },
   };

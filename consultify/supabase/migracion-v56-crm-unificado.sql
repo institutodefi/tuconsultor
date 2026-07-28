@@ -1,5 +1,5 @@
 -- =============================================================================
--- CONSULTIFY / ORBITA 360 · Migración v56 · CRM UNIFICADO
+-- CONSULTIFY / ORBITA PMTOOL · Migración v56 · CRM UNIFICADO
 -- -----------------------------------------------------------------------------
 -- Unifica en UNA sola entidad (empresas) lo que antes eran tres pestañas:
 --   Empresas · Clientes · Clientes potenciales (leads)

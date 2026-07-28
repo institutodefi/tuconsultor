@@ -12,7 +12,9 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import PptxGenJS from 'pptxgenjs';
 import { CATALOGO_ANEXO } from './catalogo-anexo.mjs';
-import { generarPDFOferta } from './documento-oferta.mjs';
+// PDF premium. Para volver a la versión anterior, cambiar por
+// './documento-oferta.mjs': la función expuesta es la misma.
+import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).

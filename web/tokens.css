@@ -79,7 +79,7 @@
   --sitio-acento:     var(--tc-azul-marca);
   --sitio-borde:      #DCE6F4;
 }
-/* Orbita 360 — entorno de clientes, barra lateral y acento verde */
+/* Orbita PMTool — entorno de clientes, barra lateral y acento verde */
 [data-sitio="orbita"]{
   --sitio-fondo:      var(--tc-navy);
   --sitio-superficie: #10394A;
