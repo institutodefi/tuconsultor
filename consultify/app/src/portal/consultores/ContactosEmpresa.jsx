@@ -120,16 +120,54 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
     catch { setError('No se pudo quitar.'); }
   }
 
+  /** MOVER: la persona cambia de rol y deja libre el anterior. */
   async function cambiarRol(x, rol) {
+    if (rol === x.vinc.rol) return;
     try {
+      // Si ya ocupa ese rol por otra vía, mover sería duplicar: se avisa.
+      const yaLoTiene = vinculos.some((v) =>
+        String(v.contacto_id) === String(x.c.id) && v.rol === rol && v.id !== x.vinc.id);
+      if (yaLoTiene) {
+        setError(`${x.c.nombre} ya figura como ${etiquetaRol(rol).toLowerCase()} en esta empresa.`);
+        return;
+      }
+      // Quien ocupaba ese rol pasa a secundario: los roles nombrados son únicos.
       if (rol !== 'secundario') {
         const previo = porRol(rol);
-        if (previo && previo.vinc.id !== x.vinc.id) await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
+        if (previo && previo.vinc.id !== x.vinc.id) {
+          await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
+        }
       }
       await updateRow('empresa_contactos', x.vinc.id, { rol, principal: rol === 'directivo' });
       onCambio && onCambio();
     } catch (e) { setError('No se pudo cambiar el rol: ' + (e.message || '')); }
   }
+
+  /** COPIAR: la misma persona pasa a ocupar TAMBIÉN otro rol, sin dejar el suyo.
+      En una pyme lo normal es que quien manda sea también quien firma facturas. */
+  async function copiarARol(x, rol) {
+    try {
+      const yaLoTiene = vinculos.some((v) =>
+        String(v.contacto_id) === String(x.c.id) && v.rol === rol);
+      if (yaLoTiene) {
+        setError(`${x.c.nombre} ya figura como ${etiquetaRol(rol).toLowerCase()}.`);
+        return;
+      }
+      if (rol !== 'secundario') {
+        const previo = porRol(rol);
+        if (previo) await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
+      }
+      await insertRow('empresa_contactos', {
+        empresa_id: empresa.id, contacto_id: x.c.id, rol,
+        principal: false,          // el principal sigue siendo el que ya lo era
+        cargo: x.vinc.cargo || null,
+      });
+      onCambio && onCambio();
+    } catch (e) { setError('No se pudo copiar: ' + (e.message || '')); }
+  }
+
+  const etiquetaRol = (k) =>
+    k === 'secundario' ? 'Secundario' : (ROLES_CONTACTO.find((r) => r.k === k)?.corto || k);
 
   // ── Tarjeta de un contacto asignado ──────────────────────────────────────
   // OJO: función invocada, no componente. Si se declara como componente dentro
@@ -156,11 +194,20 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
             <div className="flex shrink-0 items-center gap-1">
               {compacta && (
                 <select value={x.vinc.rol} onChange={(e) => cambiarRol(x, e.target.value)}
-                  className="input !w-32 !py-1 text-[11px]" aria-label="Rol del contacto">
+                  className="input !w-32 !py-1 text-[11px]" aria-label={`Mover a ${x.c.nombre} de rol`}>
                   <option value="secundario">Secundario</option>
                   {ROLES_CONTACTO.map((r) => <option key={r.k} value={r.k}>{r.corto}</option>)}
                 </select>
               )}
+              {/* Copiar a otro rol sin dejar el actual */}
+              <select value="" onChange={(e) => e.target.value && copiarARol(x, e.target.value)}
+                className="input !w-24 !py-1 text-[11px]" aria-label={`Copiar a ${x.c.nombre} en otro rol`}
+                title="La misma persona puede ocupar varios roles">
+                <option value="">+ copiar…</option>
+                {[...ROLES_CONTACTO.map((r) => [r.k, r.corto]), ['secundario', 'Secundario']]
+                  .filter(([k]) => k !== x.vinc.rol && !vinculos.some((v) => String(v.contacto_id) === String(x.c.id) && v.rol === k))
+                  .map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
               <button onClick={() => quitar(x)} className="px-1 text-xs text-[#7FA7B4] hover:text-red-400" title="Quitar de la empresa">✕</button>
             </div>
           )}

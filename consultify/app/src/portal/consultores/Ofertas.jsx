@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { listAll, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { NORMA_BY_ID, NORMAS, fmtEUR } from '../../lib/calcEngine.js';
+import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
+import { COMPLEJIDADES } from '../../lib/proyecto.js';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 
 // Histórico interno de ofertas (todas las del equipo).
@@ -12,8 +13,10 @@ export default function Ofertas() {
   const [q, setQ] = useState('');
   const [genId, setGenId] = useState(null);
   const [editNormas, setEditNormas] = useState(null); // { oferta, normas:[] } cuando se editan normas
+  const [edicion, setEdicion] = useState(null);       // edición completa de la oferta
 
-  useEffect(() => { listAll('presupuestos', 'creado').then(setRows).catch(() => setRows([])); }, []);
+  const cargar = () => listAll('presupuestos', 'creado').then(setRows).catch(() => setRows([]));
+  useEffect(() => { cargar(); }, []);
 
   const [msg, setMsg] = useState(null);
 
@@ -80,6 +83,46 @@ export default function Ofertas() {
     setGenId(null);
   }
 
+  // ── Edición completa ──────────────────────────────────────────────────────
+  // Se edita lo que define el encargo, se recalcula con el mismo motor que la
+  // calculadora y se regeneran los documentos. Guardar sin regenerar deja el PDF
+  // del cliente diciendo una cosa y el CRM otra, así que se avisa.
+  async function guardarEdicion(regenerar) {
+    const e = edicion;
+    if (!e.empresa?.trim()) { setMsg('Falta el nombre de la empresa.'); return; }
+    if (!e.normas.length)   { setMsg('Elige al menos un sistema.'); return; }
+    setMsg(null);
+    try {
+      const calc = calcular(e.normas, e.modelo, { meses: e.meses, complejidad: e.complejidad, sedes: e.sedes });
+      const patch = {
+        empresa: e.empresa.trim(), nombre: e.nombre?.trim() || null,
+        email: e.email?.trim() || null, telefono: e.telefono?.trim() || null,
+        normas: e.normas, modelo: e.modelo, tipo: calc.tipo, precio: calc.precioCatalogo,
+        complejidad: e.complejidad || null, sedes: e.sedes || 1,
+      };
+      await updateRow('presupuestos', e.id, patch);
+      setRows((rs) => rs.map((x) => (x.id === e.id ? { ...x, ...patch } : x)));
+      setEdicion(null);
+      setMsg(`Oferta actualizada · ${fmtEUR(calc.precioCatalogo)}${calc.tipo === 'mes' ? '/mes' : ''}.`);
+      if (regenerar) {
+        setGenId(e.id);
+        const resp = await fetch('/.netlify/functions/generar-oferta', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            normas: e.normas, modelo: e.modelo, meses: e.meses,
+            empresa: patch.empresa, contacto: patch.nombre || '', cif: e.cif || '',
+            ref: e.numero_oferta || '', email: patch.email || '', telefono: patch.telefono || '',
+            complejidad: e.complejidad, sedes: e.sedes, presupuesto_id: e.id,
+          }),
+        });
+        const j = await resp.json().catch(() => null);
+        setGenId(null);
+        setMsg(j?.ok ? 'Oferta actualizada y documentos regenerados.' : `Guardada, pero los documentos no se regeneraron: ${j?.error || 'error de red'}`);
+        if (j?.ok) cargar();
+      }
+    } catch (err) { setMsg('No se pudo guardar: ' + (err?.message || err)); setGenId(null); }
+  }
+
   // Guarda las normas editadas en la oferta y la regenera con ellas.
   async function guardarNormasYRegenerar() {
     const { oferta, normas } = editNormas;
@@ -124,6 +167,76 @@ export default function Ofertas() {
         <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
+      {/* ── Edición completa de la oferta ── */}
+      {edicion && (
+        <section className="card mb-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
+              Editar oferta {edicion.numero_oferta || ''}
+            </h2>
+            <button onClick={() => setEdicion(null)} className="text-xs font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Cancelar</button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div><label className="label" htmlFor="of-empresa">Empresa <span className="text-brand-orange">*</span></label>
+              <input id="of-empresa" className="input !py-1.5 !text-[13px]" value={edicion.empresa || ''} onChange={(e) => setEdicion({ ...edicion, empresa: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-contacto">Persona de contacto</label>
+              <input id="of-contacto" className="input !py-1.5 !text-[13px]" value={edicion.nombre || ''} onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-email">Correo</label>
+              <input id="of-email" type="email" className="input !py-1.5 !text-[13px]" value={edicion.email || ''} onChange={(e) => setEdicion({ ...edicion, email: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-tel">Teléfono</label>
+              <input id="of-tel" type="tel" className="input !py-1.5 !text-[13px]" value={edicion.telefono || ''} onChange={(e) => setEdicion({ ...edicion, telefono: e.target.value })} /></div>
+          </div>
+          <div>
+            <p className="label !mb-1.5">Sistemas</p>
+            <div className="flex flex-wrap gap-1.5">
+              {NORMAS.map((n) => {
+                const on = edicion.normas.includes(n.id);
+                return (
+                  <button key={n.id} type="button"
+                    onClick={() => setEdicion({ ...edicion, normas: on ? edicion.normas.filter((x) => x !== n.id) : [...edicion.normas, n.id] })}
+                    className={`rounded-full border px-3 py-1 text-[11.5px] font-bold transition ${on ? 'border-brand-verde bg-brand-verde/20 text-brand-verdeTexto' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde/60'}`}>
+                    {on ? '✓ ' : ''}{n.nombre}
+                  </button>
+                );
+              })}
+            </div>
+            {!edicion.normas.includes('9001') && (
+              <p className="mt-2 rounded-lg bg-brand-orange/10 px-3 py-2 text-[11.5px] text-brand-orange">
+                Sin la ISO 9001, las normas que se apoyan en ella pierden el descuento por solape y la oferta sube.
+              </p>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div><label className="label" htmlFor="of-modelo">Modelo</label>
+              <select id="of-modelo" className="input !py-1.5 !text-[13px]" value={edicion.modelo} onChange={(e) => setEdicion({ ...edicion, modelo: e.target.value })}>
+                {MODELO_IDS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select></div>
+            <div><label className="label" htmlFor="of-compl">Complejidad</label>
+              <select id="of-compl" className="input !py-1.5 !text-[13px]" value={edicion.complejidad || 'media'} onChange={(e) => setEdicion({ ...edicion, complejidad: e.target.value })}>
+                {COMPLEJIDADES.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}
+              </select></div>
+            <div><label className="label" htmlFor="of-sedes">Sedes</label>
+              <input id="of-sedes" type="number" min="1" className="input !py-1.5 !text-[13px]" value={edicion.sedes || 1} onChange={(e) => setEdicion({ ...edicion, sedes: Math.max(1, parseInt(e.target.value, 10) || 1) })} /></div>
+            <div><p className="label">Precio recalculado</p>
+              <p className="mt-1 text-lg font-extrabold text-[#EAF4F7]">
+                {edicion.normas.length
+                  ? (() => { const c = calcular(edicion.normas, edicion.modelo, { meses: edicion.meses, complejidad: edicion.complejidad, sedes: edicion.sedes });
+                             return `${fmtEUR(c.precioCatalogo)}${c.tipo === 'mes' ? '/mes' : ''}`; })()
+                  : '—'}
+              </p>
+              {edicion.precio != null && <p className="text-[11px] text-[#7FA7B4]">antes: {fmtEUR(edicion.precio)}</p>}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => guardarEdicion(true)} className="btn-orange !px-4 !py-1.5 text-xs">Guardar y regenerar documentos</button>
+            <button onClick={() => guardarEdicion(false)} className="btn-ghost !px-3 !py-1.5 text-xs">Guardar solo en el CRM</button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[#7FA7B4]">
+            Si guardas sin regenerar, el PDF que tiene el cliente dejará de coincidir con lo que dice el CRM.
+          </p>
+        </section>
+      )}
+
       {msg && <div className="mb-4 rounded-xl bg-[#0D3242] px-4 py-2.5 text-sm font-bold text-[#CFE3E9]">{msg}</div>}
 
       {!lista.length ? (
@@ -146,7 +259,8 @@ export default function Ofertas() {
                   <td className="py-2.5 font-semibold">
                     <span className="inline-flex items-center gap-1.5">
                       {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
-                      <button onClick={() => setEditNormas({ oferta: r, normas: [...(r.normas || ['9001'])] })} className="text-xs font-bold text-[#7FA7B4] hover:text-[#F9A83A]" title="Editar normas y regenerar">✎</button>
+                      <button onClick={() => { setEdicion({ ...r, normas: [...(r.normas || [])], sedes: r.sedes || 1, complejidad: r.complejidad || 'media' }); setMsg(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="text-xs font-bold text-[#7FA7B4] hover:text-[#F9A83A]" title="Editar la oferta completa">✎</button>
                     </span>
                   </td>
                   <td className="py-2.5 font-semibold">{r.modelo}</td>

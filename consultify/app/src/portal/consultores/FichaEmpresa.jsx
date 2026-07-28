@@ -8,6 +8,7 @@ import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
 import HomologacionProveedor from './HomologacionProveedor.jsx';
 import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
+import ContactosAlta from './ContactosAlta.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha de empresa (una sola entidad para cliente / proveedor / potencial).
@@ -83,6 +84,7 @@ export default function FichaEmpresa({
   const [guardando, setGuardando] = useState(false);
   const cajaAviso = useRef(null);          // para llevar el foco al error
   const [diagAuto, setDiagAuto] = useState(null);  // diagnóstico lanzado al fallar
+  const [contactosNuevos, setContactosNuevos] = useState([]);   // contactos apuntados durante el alta
 
   // Un fallo al guardar no puede quedarse en un mensajito que se pierde: se
   // lleva la vista al aviso y se anuncia a los lectores de pantalla.
@@ -197,6 +199,34 @@ export default function FichaEmpresa({
       if (id) await updateRow('empresas', id, payload);
       else id = (await insertRow('empresas', payload))?.id;
 
+      // Contactos apuntados durante el alta: se crean ahora, con la empresa ya
+      // existente. Si uno falla, se anota y se sigue: no se pierde la empresa
+      // ni el resto de contactos por un correo repetido.
+      let altas = 0; const fallidos = [];
+      if (id && contactosNuevos.length) {
+        for (const c of contactosNuevos) {
+          try {
+            let contactoId = contactos.find((x) => (x.email || '').toLowerCase() === c.email)?.id;
+            if (!contactoId) {
+              contactoId = (await insertRow('contactos', {
+                nombre: c.nombre, apellidos: c.apellidos || null,
+                email: c.email, movil: c.movil || null,
+              }))?.id;
+            }
+            if (contactoId) {
+              await insertRow('empresa_contactos', {
+                empresa_id: id, contacto_id: contactoId, rol: c.rol,
+                principal: c.rol === 'directivo',
+              });
+              altas++;
+            }
+          } catch (e) {
+            fallidos.push(`${c.email}: ${e?.message || e}`);
+          }
+        }
+        setContactosNuevos([]);
+      }
+
       // Personas de contacto traídas de Holded: se crean y vinculan si el email es válido.
       let importados = 0, saltados = 0;
       const personas = form._holded_contactos || [];
@@ -229,7 +259,7 @@ export default function FichaEmpresa({
       setForm(null);
       const extra = importados ? ` · ${importados} contacto(s) importados de Holded` : '';
       const aviso = saltados ? ` · ${saltados} sin email válido, no importados` : '';
-      setMsg({ t: `Empresa guardada${extra}${aviso}. Asígnale ahora sus contactos.` });
+      setMsg({ t: `Empresa guardada.${altas ? ` ${altas} contacto${altas === 1 ? '' : 's'} creado${altas === 1 ? '' : 's'}.` : ' Asígnale ahora sus contactos.'}${fallidos.length ? ` No se pudo con: ${fallidos.join(' · ')}` : ''}` });
       if (onCambio) await onCambio(id);
       if (!form.id && id) onSeleccionar && onSeleccionar(id);
     } catch (e) {
@@ -469,10 +499,11 @@ export default function FichaEmpresa({
             />
           </Caja>
         ) : (
-          <p className="rounded-xl border border-dashed border-[#1E5468] px-3 py-2 text-[11.5px] text-[#7FA7B4]">
-            Los contactos (directivo, facturación, proyecto y secundarios) se asignan en cuanto la crees: al guardar
-            se abre su ficha con el bloque desplegado. Si viene de Holded, sus personas se importan solas.
-          </p>
+          <Caja titulo="Contactos de la empresa" abiertaPorDefecto
+            insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${contactosNuevos.length ? 'bg-brand-verde/15 text-brand-verdeTexto' : 'bg-white/5 text-[#9FC0CB]'}`}>
+              {contactosNuevos.length || 'ninguno'}</span>}>
+            <ContactosAlta lista={contactosNuevos} setLista={setContactosNuevos} />
+          </Caja>
         )}
 
         {/* Barra de guardado · el aviso también AQUÍ, junto al botón */}
