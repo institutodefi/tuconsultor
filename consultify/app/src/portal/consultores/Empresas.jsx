@@ -18,6 +18,7 @@ const FILTROS = [
   ['proveedor',  'Proveedores'],
   ['potencial',  'Potenciales'],
   ['incidencia', 'Con incidencias'],
+  ['sin_revisar', 'Alta automática'],
 ];
 
 const PUNTO = { rojo: 'bg-red-500', ambar: 'bg-brand-orange', verde: 'bg-emerald-400' };
@@ -80,6 +81,9 @@ export default function Empresas() {
       if (filtro === 'proveedor' && !e.es_proveedor) return false;
       if (filtro === 'potencial' && e.estado_comercial !== 'potencial') return false;
       if (filtro === 'incidencia' && semaforos.get(String(e.id))?.color !== 'rojo') return false;
+      // Fichas creadas solas al pedir una oferta desde la web: los datos los
+      // tecleó el cliente y nadie del equipo los ha mirado todavía.
+      if (filtro === 'sin_revisar' && e.revisado !== false) return false;
       if (!t) return true;
       return [e.nombre, e.nombre_comercial, e.cif, e.poblacion, e.email, e.web]
         .filter(Boolean).join(' ').toLowerCase().includes(t);
@@ -87,6 +91,7 @@ export default function Empresas() {
   }, [empresas, q, filtro, semaforos]);
 
   const empresa = sel ? empresas.find((e) => String(e.id) === String(sel)) : null;
+  const sinRevisar = empresas.filter((e) => e.revisado === false).length;
   const rojas = useMemo(() => [...semaforos.values()].filter((s) => s.color === 'rojo').length, [semaforos]);
   const huerfanos = useMemo(
     () => contactos.filter((c) => !vinculos.some((v) => String(v.contacto_id) === String(c.id))).length,
@@ -196,7 +201,7 @@ export default function Empresas() {
           {FILTROS.map(([k, l]) => (
             <button key={k} onClick={() => setFiltro(k)}
               className={`px-3 py-2 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
-              {l}{k === 'incidencia' && rojas > 0 ? ` (${rojas})` : ''}
+              {l}{k === 'incidencia' && rojas > 0 ? ` (${rojas})` : ''}{k === 'sin_revisar' && sinRevisar > 0 ? ` (${sinRevisar})` : ''}
             </button>
           ))}
         </div>

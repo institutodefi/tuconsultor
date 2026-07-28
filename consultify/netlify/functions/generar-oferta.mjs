@@ -16,6 +16,9 @@ import { CATALOGO_ANEXO } from './catalogo-anexo.mjs';
 // './documento-oferta.mjs': la función expuesta es la misma.
 import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
+import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
+import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
+import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga } from './contenido-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
 const BLOQUES = {
@@ -156,149 +159,195 @@ async function generarPDF(r, cli, anexo) {
 }
 
 async function generarPPTX(r, cli, anexo) {
-  const NAVY = '061B45', ORANGE = 'F5A623', MUTED = '5B6B86', INK = '0C1424', SOFT = 'F3F6FB';
-  const normNames = r.normaNombres.join(' + ');
-  const esImpl = r.modelo === 'Implantación', esMes = r.tipo === 'mes' && !esImpl;
-  const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
-  const p = new PptxGenJS(); p.defineLayout({ name: 'W', width: 10, height: 5.63 }); p.layout = 'W';
+  // ── Reflejo del PDF: misma paleta, mismas secciones, mismos textos ──
+  // Todo lo que se escribe aquí sale de contenido-oferta.mjs, que es la misma
+  // fuente que usa el PDF. Si cambia una cláusula, cambia en los dos.
+  const C = HEX;
+  const esImpl = r.modelo === 'Implantación';
+  const esMes = r.tipo === 'mes' && !esImpl;
+  const normNames = (r.normaNombres || r.normasNombres || r.normas || []);
 
-  // --- Slide 1: portada ---
-  let s = p.addSlide(); s.background = { color: 'FFFFFF' };
-  // Logo Consultify (imagen real) en lugar del texto.
-  s.addImage({ data: 'image/png;base64,' + LOGO_CONSULTIFY, x: 0.6, y: 0.45, w: 1.9, h: 1.9 * 135 / 400 });
-  s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.12, fill: { color: ORANGE } });
-  s.addText('OFERTA DE SERVICIO', { x: 0.6, y: 1.7, w: 9, h: 0.7, fontFace: 'Arial', fontSize: 32, bold: true, color: NAVY });
-  s.addText(`${normNames}  ·  Modelo ${r.modelo}${esImpl ? `  ·  Cronograma ${r.meses} meses` : ''}`, { x: 0.6, y: 2.5, w: 9, h: 0.4, fontFace: 'Arial', fontSize: 15, bold: true, color: 'D8910E' });
-  s.addText([{ text: cli.empresa || '—', options: { fontSize: 22, bold: true, color: INK, breakLine: true } },
-    { text: `Nº oferta ${cli.ref || '—'}  ·  ${HOY()}  ·  Comercial: ${cli.comercial || 'Alejandro'}`, options: { fontSize: 12, color: MUTED } }], { x: 0.6, y: 3.4, w: 9, h: 1.0, fontFace: 'Arial' });
-  s.addText('Consultify, una empresa de TuConsultor · CIF B84867670 · hola@tuconsultor.com', { x: 0.6, y: 5.15, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
+  const p = new PptxGenJS();
+  p.defineLayout({ name: 'W', width: 10, height: 5.63 }); p.layout = 'W';
+  p.author = EMISOR.marca; p.company = EMISOR.marca;
+  p.title = ('Oferta ' + (r.numero || '') + ' · ' + (cli?.empresa || '')).trim();
 
-  // --- Slide 2: objeto + presupuesto ---
-  s = p.addSlide(); s.background = { color: 'FFFFFF' };
-  s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 0.12, h: 5.63, fill: { color: NAVY } });
-  s.addText('Objeto y condiciones económicas', { x: 0.6, y: 0.4, w: 9, h: 0.5, fontFace: 'Arial', fontSize: 22, bold: true, color: NAVY });
-  const objeto = esImpl
-    ? `Implantación del sistema de gestión ${normNames}. Programa completo ejecutado por el equipo consultor en ${r.meses} meses, hasta dejar la organización lista para la auditoría externa.`
-    : `Consultoría para el sistema de gestión ${normNames}, en modelo ${r.modelo}.`;
-  s.addText(objeto, { x: 0.6, y: 1.0, w: 9, h: 0.9, fontFace: 'Arial', fontSize: 12, color: INK, valign: 'top' });
+  const F = 'Arial';   // Rubik no está instalada en el equipo de quien lo abra
 
-  s.addText(r.disclaimer || DISCLAIMER_OFERTA, { x: 0.6, y: 4.55, w: 8.8, h: 0.6, fontFace: 'Arial', fontSize: 7.5, color: '8896AD', valign: 'top' });
-  s.addText('Consultify, una empresa de TuConsultor · CIF B84867670 · hola@tuconsultor.com', { x: 0.6, y: 5.2, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
-
-  // --- Slide: INVERSIÓN (protagonista, mismo lenguaje visual que el PDF) ---
-  s = p.addSlide(); s.background = { color: 'FFFFFF' };
-  s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.12, fill: { color: ORANGE } });
-  s.addText('Inversión', { x: 0.6, y: 0.32, w: 9, h: 0.5, fontFace: 'Arial', fontSize: 24, bold: true, color: NAVY });
-  s.addText(`${normNames}  ·  Modelo ${r.modelo}`, { x: 0.6, y: 0.82, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 11, bold: true, color: 'D8910E' });
-
-  // Panel navy con la cifra grande
-  const cifra = esImpl ? eur(r.fraccionado.totalConIva) : eur(r.totalConIva);
-  const etiqCifra = esImpl ? 'INVERSIÓN TOTAL DEL PROGRAMA' : (esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN TOTAL');
-  s.addShape(p.ShapeType.rect, { x: 0.6, y: 1.25, w: 8.8, h: 1.35, fill: { color: NAVY } });
-  s.addShape(p.ShapeType.rect, { x: 0.6, y: 1.25, w: 8.8, h: 0.06, fill: { color: ORANGE } });
-  s.addText(etiqCifra, { x: 0.85, y: 1.42, w: 5, h: 0.25, fontFace: 'Arial', fontSize: 9, bold: true, color: 'F5A623' });
-  s.addText(cifra + (esMes && !esImpl ? '/mes' : ''), { x: 0.85, y: 1.68, w: 5, h: 0.6, fontFace: 'Arial', fontSize: 32, bold: true, color: 'FFFFFF' });
-  s.addText('IVA incluido', { x: 0.85, y: 2.26, w: 3, h: 0.25, fontFace: 'Arial', fontSize: 10, color: '9DB4E0' });
-
-  // Dato secundario a la derecha
-  const secTit = esImpl ? 'DURACIÓN' : (esMes ? 'COMPROMISO' : 'MODALIDAD');
-  const secVal = esImpl ? `${r.fraccionado.meses} meses` : (esMes ? '12 meses' : 'Pago único');
-  const secTit2 = esImpl ? 'EQUIVALE A' : (esMes ? 'ANUAL EQUIVALENTE' : 'BOLSA DE HORAS');
-  const secVal2 = esImpl ? `${eur(r.fraccionado.totalConIva / r.fraccionado.meses)}/mes`
-    : (esMes ? eur(r.totalConIva * 12) : `${r.hTotal} horas`);
-  s.addText(secTit, { x: 6.6, y: 1.42, w: 2.6, h: 0.22, fontFace: 'Arial', fontSize: 8, bold: true, color: 'F5A623' });
-  s.addText(secVal, { x: 6.6, y: 1.62, w: 2.6, h: 0.3, fontFace: 'Arial', fontSize: 15, bold: true, color: 'FFFFFF' });
-  s.addText(secTit2, { x: 6.6, y: 1.95, w: 2.6, h: 0.22, fontFace: 'Arial', fontSize: 8, bold: true, color: 'F5A623' });
-  s.addText(secVal2, { x: 6.6, y: 2.15, w: 2.6, h: 0.28, fontFace: 'Arial', fontSize: 11, bold: true, color: '9DB4E0' });
-
-  // Desglose (tabla limpia)
-  const base = esImpl ? r.fraccionado.totalSinIva : r.precioCatalogo;
-  const ivaImp = esImpl ? (r.fraccionado.totalConIva - r.fraccionado.totalSinIva) : r.iva;
-  const totImp = esImpl ? r.fraccionado.totalConIva : r.totalConIva;
-  const suf = esMes && !esImpl ? '/mes' : '';
-  const filas = [
-    [{ text: esImpl ? 'Programa completo (base imponible)' : (esMes ? 'Cuota mensual (base imponible)' : 'Bolsa de horas (base imponible)'), options: { color: INK } },
-     { text: eur(base) + suf, options: { color: INK, bold: true, align: 'right' } }],
-    [{ text: 'IVA (21%)', options: { color: INK } }, { text: eur(ivaImp), options: { color: INK, bold: true, align: 'right' } }],
-    [{ text: esImpl ? 'TOTAL DEL PROGRAMA' : (esMes ? 'TOTAL MENSUAL' : 'TOTAL'), options: { color: NAVY, bold: true, fill: { color: SOFT } } },
-     { text: eur(totImp) + suf, options: { color: NAVY, bold: true, align: 'right', fill: { color: SOFT } } }],
-  ];
-  s.addText('DESGLOSE', { x: 0.6, y: 2.78, w: 3, h: 0.2, fontFace: 'Arial', fontSize: 9, bold: true, color: MUTED });
-  s.addTable(filas, { x: 0.6, y: 3.02, w: 8.8, colW: [6.0, 2.8], fontFace: 'Arial', fontSize: 11, border: { type: 'solid', color: 'EEF2F8', pt: 1 }, rowH: 0.32, valign: 'middle' });
-
-  // Plan de pago
-  s.addText('PLAN DE PAGO', { x: 0.6, y: 4.25, w: 3, h: 0.2, fontFace: 'Arial', fontSize: 9, bold: true, color: MUTED });
-  if (esImpl) {
-    const hitos = [['50%', 'Al inicio', eur(r.fraccionado.cuota1)], ['25%', 'A mitad del proyecto', eur(r.fraccionado.cuota2)], ['25%', 'Al finalizar', eur(r.fraccionado.cuota3)]];
-    hitos.forEach(([pct, cuando, imp], i) => {
-      const x = 0.6 + i * 2.95;
-      s.addShape(p.ShapeType.rect, { x, y: 4.5, w: 2.75, h: 0.62, fill: { color: SOFT } });
-      s.addShape(p.ShapeType.rect, { x, y: 4.5, w: 2.75, h: 0.05, fill: { color: ORANGE } });
-      s.addText(pct, { x: x + 0.12, y: 4.6, w: 0.8, h: 0.3, fontFace: 'Arial', fontSize: 15, bold: true, color: NAVY });
-      s.addText(cuando, { x: x + 0.85, y: 4.62, w: 1.8, h: 0.2, fontFace: 'Arial', fontSize: 8, color: MUTED });
-      s.addText(imp, { x: x + 0.85, y: 4.82, w: 1.8, h: 0.22, fontFace: 'Arial', fontSize: 10, bold: true, color: 'D8910E' });
-    });
-  } else {
-    const txtPago = esMes ? 'Cuota mensual recurrente · permanencia mínima de 12 meses.' : 'Pago único del 100% al inicio del proyecto.';
-    s.addShape(p.ShapeType.rect, { x: 0.6, y: 4.5, w: 8.8, h: 0.5, fill: { color: SOFT } });
-    s.addShape(p.ShapeType.rect, { x: 0.6, y: 4.5, w: 0.05, h: 0.5, fill: { color: ORANGE } });
-    s.addText(txtPago, { x: 0.85, y: 4.6, w: 8.3, h: 0.3, fontFace: 'Arial', fontSize: 11, color: INK });
-  }
-  s.addImage({ data: 'image/png;base64,' + LOGO_TUCONSULTOR, x: 0.6, y: 5.15, w: 1.0, h: 1.0 * 49 / 300 });
-  s.addText('IVA incluido · No incluye tasas de certificación', { x: 1.75, y: 5.2, w: 7.5, h: 0.25, fontFace: 'Arial', fontSize: 8.5, color: '8896AD' });
-
-  // --- Slide 3: bloques de proceso (Anexo resumido) ---
-  if (anexo && anexo.length) {
-    s = p.addSlide(); s.background = { color: 'FFFFFF' };
-    s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 0.12, h: 5.63, fill: { color: NAVY } });
-    s.addText('Plan de trabajo · bloques de proceso', { x: 0.6, y: 0.4, w: 9, h: 0.5, fontFace: 'Arial', fontSize: 22, bold: true, color: NAVY });
-    const items = anexo.map(b => ({ text: b.bloque, options: { fontSize: 13, bold: true, color: NAVY, bullet: { code: '2022' }, breakLine: true, paraSpaceAfter: 6 } }));
-    s.addText(items, { x: 0.7, y: 1.1, w: 8.6, h: 4.0, fontFace: 'Arial', valign: 'top' });
-    s.addText('Detalle de subprocesos en el Anexo I del PDF.', { x: 0.7, y: 5.2, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
-  }
-
-  // --- Slide 4: confidencialidad y protección de datos ---
-  s = p.addSlide(); s.background = { color: 'FFFFFF' };
-  s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 0.12, h: 5.63, fill: { color: NAVY } });
-  s.addText('Confidencialidad y protección de datos', { x: 0.6, y: 0.4, w: 9, h: 0.5, fontFace: 'Arial', fontSize: 22, bold: true, color: NAVY });
-  const clausulasPpt = [
-    'Deber de secreto sin límite temporal, que subsiste tras finalizar el contrato.',
-    'La información se usa exclusivamente para este proyecto; no se cede a terceros.',
-    'Encargo de tratamiento conforme al art. 28 del RGPD y a la LOPDGDD.',
-    'Medidas de seguridad: control de accesos, cifrado y trazabilidad.',
-    'Personal sujeto a compromiso de confidencialidad por escrito.',
-    'Al finalizar: devolución o supresión segura de la información, a tu elección.',
-    'La documentación del sistema es propiedad del cliente.',
-  ].map(t => ({ text: t, options: { fontSize: 12, color: INK, bullet: { code: '2022' }, breakLine: true, paraSpaceAfter: 8 } }));
-  s.addText(clausulasPpt, { x: 0.7, y: 1.1, w: 8.6, h: 3.9, fontFace: 'Arial', valign: 'top' });
-  s.addImage({ data: 'image/png;base64,' + LOGO_TUCONSULTOR, x: 0.6, y: 5.05, w: 1.1, h: 1.1 * 54 / 300 });
-  s.addText('CIF B84867670 · hola@tuconsultor.com', { x: 1.85, y: 5.13, w: 7, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
-
-  // --- Slide 5: otros sistemas que podemos implantar (comercial) ---
-  const CAT_PPT = [
-    ['9001', 'ISO 9001 · Calidad', 'Procesos bajo control y mejora continua. Requisito habitual en licitaciones.'],
-    ['14001', 'ISO 14001 · Medio ambiente', 'Compromiso ambiental demostrable. Cada vez más exigida en contratación pública.'],
-    ['45001', 'ISO 45001 · Seguridad y salud', 'Menos siniestralidad y seguridad jurídica en prevención.'],
-    ['27001', 'ISO 27001 · Seguridad de la información', 'Protección frente a ciberataques. Clave con administraciones públicas.'],
-    ['42001', 'ISO 42001 · Inteligencia artificial', 'IA responsable, alineada con el Reglamento Europeo de IA.'],
-    ['56001', 'ISO 56001 · Innovación', 'De las ideas sueltas a una cartera gestionada. Facilita ayudas a la I+D+i.'],
-    ['21001', 'ISO 21001 · Organizaciones educativas', 'El estudiante en el centro. Diferenciación para centros formativos.'],
-    ['9004', 'ISO 9004 · Éxito sostenido', 'El siguiente nivel tras la 9001: excelencia y sostenibilidad del negocio.'],
-  ];
-  const otrasPpt = CAT_PPT.filter(([id]) => !(r.normas || []).includes(id));
-  if (otrasPpt.length) {
-    s = p.addSlide(); s.background = { color: 'FFFFFF' };
-    s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.12, fill: { color: ORANGE } });
-    s.addText('Otros sistemas que podemos implantar', { x: 0.6, y: 0.35, w: 9, h: 0.5, fontFace: 'Arial', fontSize: 22, bold: true, color: NAVY });
-    s.addText('Integrarlos con un único socio ahorra tiempo y coste frente a hacerlo por separado.', { x: 0.6, y: 0.85, w: 9, h: 0.3, fontFace: 'Arial', fontSize: 11, color: 'D8910E' });
-    const its = [];
-    for (const [, titulo, desc] of otrasPpt.slice(0, 7)) {
-      its.push({ text: titulo, options: { fontSize: 12, bold: true, color: NAVY, bullet: { code: '2022' }, breakLine: true } });
-      its.push({ text: desc, options: { fontSize: 9.5, color: MUTED, breakLine: true, paraSpaceAfter: 7, indentLevel: 1 } });
+  // Pie con las tres marcas, igual que en el PDF.
+  const pie = (s, legal) => {
+    s.addShape(p.ShapeType.rect, { x: 0, y: 5.05, w: 10, h: 0.58, fill: { color: C.navy } });
+    s.addShape(p.ShapeType.rect, { x: 0, y: 5.05, w: 4.2, h: 0.028, fill: { color: C.teal } });
+    s.addShape(p.ShapeType.rect, { x: 4.2, y: 5.05, w: 5.8, h: 0.028, fill: { color: C.naranja } });
+    const alto = 0.26; let x = 0.6;
+    for (const par of [[PIE_TUCONSULTOR, 2484 / 560], [PIE_CONSULTIFY, 1524 / 560], [PIE_ORBITA, 494 / 150]]) {
+      const w = alto * par[1];
+      s.addImage({ data: 'image/png;base64,' + par[0], x: x, y: 5.22, w: w, h: alto });
+      x += w + 0.22;
     }
-    s.addText(its, { x: 0.7, y: 1.3, w: 8.6, h: 3.7, fontFace: 'Arial', valign: 'top' });
-    s.addImage({ data: 'image/png;base64,' + LOGO_TUCONSULTOR, x: 0.6, y: 5.05, w: 1.1, h: 1.1 * 54 / 300 });
-    s.addText(`Escríbenos a hola@tuconsultor.com y lo estudiamos contigo.`, { x: 1.85, y: 5.13, w: 7, h: 0.3, fontFace: 'Arial', fontSize: 9, color: '8896AD' });
+    s.addText(legal || EMISOR.legalPie,
+      { x: 5.3, y: 5.22, w: 4.1, h: 0.26, fontFace: F, fontSize: 8, color: C.claro, align: 'right', valign: 'middle' });
+  };
+
+  const seccion = (s, rotulo, titulo) => {
+    s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 10, h: 0.06, fill: { color: C.naranja } });
+    s.addText(rotulo.toUpperCase(), { x: 0.6, y: 0.42, w: 9, h: 0.24, fontFace: F, fontSize: 9, bold: true, color: C.naranja, charSpacing: 2 });
+    s.addShape(p.ShapeType.rect, { x: 0.6, y: 0.72, w: 0.36, h: 0.022, fill: { color: C.naranja } });
+    if (titulo) s.addText(titulo, { x: 0.6, y: 0.92, w: 8.8, h: 0.6, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
+  };
+
+  // ══════════ 1 · Portada ══════════
+  let s = p.addSlide();
+  s.background = { color: C.navy };
+  s.addShape(p.ShapeType.rect, { x: 0, y: 0, w: 4.2, h: 0.07, fill: { color: C.teal } });
+  s.addShape(p.ShapeType.rect, { x: 4.2, y: 0, w: 5.8, h: 0.07, fill: { color: C.naranja } });
+  s.addImage({ data: 'image/png;base64,' + LOGO_TUCONSULTOR_BLANCO, x: 0.6, y: 0.5, w: 2.0, h: 2.0 * 49 / 300 });
+  s.addText('PROPUESTA DE SERVICIOS', { x: 0.6, y: 1.35, w: 9, h: 0.28, fontFace: F, fontSize: 10, bold: true, color: C.naranja, charSpacing: 2.4 });
+  s.addText(cli?.empresa || 'Propuesta', { x: 0.6, y: 1.75, w: 8.8, h: 0.9, fontFace: F, fontSize: 30, bold: true, color: C.blanco });
+  s.addText(normNames.join('  ·  '), { x: 0.6, y: 2.65, w: 8.8, h: 0.5, fontFace: F, fontSize: 12, color: C.claro });
+
+  const impPortada = esImpl ? ((r.formasPago && r.formasPago.unico.sinIva) || r.precioCatalogo) : r.precioCatalogo;
+  s.addText(esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN', { x: 0.6, y: 3.45, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.teal, charSpacing: 2 });
+  s.addText([
+    { text: fmtEur0(impPortada), options: { fontSize: 38, bold: true, color: C.blanco } },
+    { text: esMes ? '  /mes · sin IVA' : '  sin IVA', options: { fontSize: 11, color: C.claro } },
+  ], { x: 0.6, y: 3.7, w: 8.8, h: 0.7, fontFace: F });
+  if (esImpl && r.formasPago) {
+    s.addText('con ' + Math.round(r.formasPago.descuentoUnico * 100) + ' % de descuento por pago único',
+      { x: 0.6, y: 4.35, w: 8.8, h: 0.26, fontFace: F, fontSize: 10, color: C.naranja });
+  }
+  s.addText('Oferta ' + (r.numero || '') + '  ·  ' + fechaLarga(), { x: 0.6, y: 4.65, w: 5, h: 0.26, fontFace: F, fontSize: 9, color: C.claro });
+  pie(s, EMISOR.marca + ' · CIF ' + EMISOR.cif);
+
+  // ══════════ 2 · La propuesta ══════════
+  const prop = propuesta(r, cli);
+  s = p.addSlide(); s.background = { color: C.blanco };
+  seccion(s, 'La propuesta', prop.titulo);
+  s.addText(prop.texto, { x: 0.6, y: 1.6, w: 8.8, h: 0.8, fontFace: F, fontSize: 12, color: C.tinta, lineSpacingMultiple: 1.3 });
+  const datos = [
+    ['Cliente', cli?.empresa || '—'], ['CIF', cli?.cif || '—'],
+    ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ' · ' + r.meses + ' meses' : '')],
+    ['Dedicación estimada', r.hTotal + ' h'],
+  ];
+  if (r.complejidad) datos.push(['Complejidad', r.complejidad]);
+  if (r.sedes && r.sedes > 1) datos.push(['Sedes o alcances', String(r.sedes)]);
+  datos.forEach(function (par, i) {
+    const x = 0.6 + (i % 3) * 3.0, y = 2.6 + Math.floor(i / 3) * 0.95;
+    s.addText(par[0].toUpperCase(), { x: x, y: y, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
+    s.addText(String(par[1]), { x: x, y: y + 0.24, w: 2.8, h: 0.4, fontFace: F, fontSize: 13, bold: true, color: C.tinta });
+  });
+  pie(s);
+
+  // ══════════ 3 · Alcance e inversión ══════════
+  s = p.addSlide(); s.background = { color: C.blanco };
+  seccion(s, 'Alcance e inversión');
+  normNames.forEach(function (n, i) {
+    s.addShape(p.ShapeType.rect, { x: 0.6, y: 1.15 + i * 0.42, w: 0.1, h: 0.1, fill: { color: C.teal } });
+    s.addText(String(n), { x: 0.9, y: 1.05 + i * 0.42, w: 5.2, h: 0.32, fontFace: F, fontSize: 12, bold: true, color: C.tinta });
+  });
+  s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 3.1, h: 1.6, fill: { color: C.suave } });
+  s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 0.05, h: 1.6, fill: { color: C.naranja } });
+  s.addText(esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO', { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
+  s.addText(fmtEur(esImpl ? ((r.formasPago && r.formasPago.dos.sinIva) || r.precioCatalogo) : r.precioCatalogo),
+    { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
+  s.addText('IVA 21 % · ' + fmtEur(r.iva) + '\nTotal ' + fmtEur(r.totalConIva) + (esMes ? '/mes' : ''),
+    { x: 6.55, y: 2.0, w: 2.8, h: 0.5, fontFace: F, fontSize: 10, color: C.apagado });
+
+  if (r.formasPago) {
+    s.addText('FORMAS DE PAGO', { x: 0.6, y: 2.95, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.naranja, charSpacing: 2 });
+    [r.formasPago.unico, r.formasPago.dos].forEach(function (f, i) {
+      const x = 0.6 + i * 4.6;
+      const elegida = r.formaPagoElegida === f.id || (!r.formaPagoElegida && i === 0);
+      s.addShape(p.ShapeType.rect, { x: x, y: 3.25, w: 4.3, h: 1.55, fill: { color: C.blanco },
+        line: { color: elegida ? C.naranja : C.linea, width: elegida ? 1.6 : 1 } });
+      s.addText(String.fromCharCode(65 + i) + ' · ' + f.titulo, { x: x + 0.2, y: 3.38, w: 4, h: 0.3, fontFace: F, fontSize: 13, bold: true, color: C.tinta });
+      s.addText(fmtEur(f.total) + '  con IVA', { x: x + 0.2, y: 3.7, w: 4, h: 0.34, fontFace: F, fontSize: 15, bold: true, color: C.tinta });
+      s.addText(f.id === 'unico' ? 'Ahorras ' + fmtEur(f.ahorro) : fmtEur(f.cuota1) + ' + ' + fmtEur(f.cuota2),
+        { x: x + 0.2, y: 4.04, w: 4, h: 0.24, fontFace: F, fontSize: 10, bold: true, color: f.id === 'unico' ? C.teal : C.apagado });
+      s.addText(f.condicion, { x: x + 0.2, y: 4.28, w: 3.95, h: 0.45, fontFace: F, fontSize: 8.5, color: C.apagado });
+    });
+  }
+  pie(s);
+
+  // ══════════ 4 · Condiciones ══════════
+  s = p.addSlide(); s.background = { color: C.blanco };
+  seccion(s, 'Condiciones');
+  condiciones(r).forEach(function (c, i) {
+    s.addShape(p.ShapeType.rect, { x: 0.6, y: 1.2 + i * 0.72, w: 0.07, h: 0.24, fill: { color: C.naranja } });
+    s.addText(c, { x: 0.85, y: 1.12 + i * 0.72, w: 8.5, h: 0.62, fontFace: F, fontSize: 10.5, color: C.apagado, lineSpacingMultiple: 1.25 });
+  });
+  pie(s);
+
+  // ══════════ 5 · Aceptación ══════════
+  s = p.addSlide(); s.background = { color: C.blanco };
+  seccion(s, 'Aceptación', 'Conformidad de las partes');
+  s.addText('La firma de este documento supone la aceptación de la propuesta y de las condiciones recogidas en los anexos.',
+    { x: 0.6, y: 1.6, w: 8.8, h: 0.4, fontFace: F, fontSize: 11, color: C.tinta });
+  const firmas = [
+    ['POR TUCONSULTOR', EMISOR.firmante, EMISOR.cargo, C.suave, null],
+    ['POR LA ORGANIZACIÓN', cli?.empresa || '', cli?.contacto || 'Persona con capacidad de firma', C.blanco, C.linea],
+  ];
+  firmas.forEach(function (f, i) {
+    const x = 0.6 + i * 4.6;
+    const forma = { x: x, y: 2.2, w: 4.3, h: 2.3, fill: { color: f[3] } };
+    if (f[4]) forma.line = { color: f[4], width: 1 };
+    s.addShape(p.ShapeType.rect, forma);
+    s.addText(f[0], { x: x + 0.25, y: 2.38, w: 3.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
+    s.addText(f[1], { x: x + 0.25, y: 2.66, w: 3.8, h: 0.34, fontFace: F, fontSize: 14, bold: true, color: C.tinta });
+    s.addText(f[2], { x: x + 0.25, y: 3.0, w: 3.8, h: 0.28, fontFace: F, fontSize: 10, color: C.apagado });
+    s.addShape(p.ShapeType.line, { x: x + 0.25, y: 4.0, w: 3.8, h: 0, line: { color: C.linea, width: 1 } });
+    s.addText('Firma y fecha', { x: x + 0.25, y: 4.06, w: 3.8, h: 0.22, fontFace: F, fontSize: 8, color: C.apagado });
+  });
+  pie(s);
+
+  // ══════════ 6 · Anexo I · tareas ══════════
+  if (Array.isArray(anexo) && anexo.length) {
+    const bloques = anexo.slice();
+    while (bloques.length) {
+      const tanda = bloques.splice(0, 3);
+      s = p.addSlide(); s.background = { color: C.blanco };
+      seccion(s, 'Anexo I', 'Tareas incluidas');
+      tanda.forEach(function (g, i) {
+        const x = 0.6 + i * 3.0;
+        s.addText(String(g.bloque || '').toUpperCase(), { x: x, y: 1.6, w: 2.8, h: 0.3, fontFace: F, fontSize: 8.5, bold: true, color: C.teal, charSpacing: 1 });
+        s.addShape(p.ShapeType.line, { x: x, y: 1.92, w: 2.8, h: 0, line: { color: C.linea, width: 1 } });
+        const items = (g.subs || []).map(function (t) {
+          return { text: String(t), options: { bullet: { code: '2022' }, color: C.tinta, fontSize: 10, breakLine: true, paraSpaceAfter: 4 } };
+        });
+        if (items.length) s.addText(items, { x: x, y: 2.0, w: 2.8, h: 2.9, fontFace: F, valign: 'top' });
+      });
+      pie(s);
+    }
+  }
+
+  // ══════════ 7 · Anexo II · requisitos legales ══════════
+  for (let i = 0; i < REQUISITOS_LEGALES.length; i += 4) {
+    s = p.addSlide(); s.background = { color: C.blanco };
+    seccion(s, 'Anexo II', i === 0 ? 'Requisitos legales aplicables' : 'Requisitos legales (continuación)');
+    REQUISITOS_LEGALES.slice(i, i + 4).forEach(function (par, j) {
+      const y = 1.6 + j * 0.85;
+      s.addText(par[0], { x: 0.6, y: y, w: 8.8, h: 0.25, fontFace: F, fontSize: 11.5, bold: true, color: C.tinta });
+      s.addText(par[1], { x: 0.6, y: y + 0.26, w: 8.8, h: 0.5, fontFace: F, fontSize: 9.5, color: C.apagado, lineSpacingMultiple: 1.15 });
+    });
+    if (i === 0) {
+      s.addText('No es una lista exhaustiva ni sustituye al asesoramiento jurídico.',
+        { x: 0.6, y: 4.72, w: 8.8, h: 0.22, fontFace: F, fontSize: 8.5, italic: true, color: C.apagado });
+    }
+    pie(s);
+  }
+
+  // ══════════ 8 · Anexo III · cláusulas ══════════
+  const CL = clausulas(r);
+  for (let i = 0; i < CL.length; i += 2) {
+    s = p.addSlide(); s.background = { color: C.blanco };
+    seccion(s, 'Anexo III', i === 0 ? 'Qué se contrata exactamente' : 'Qué se contrata (continuación)');
+    CL.slice(i, i + 2).forEach(function (par, j) {
+      const y = 1.65 + j * 1.55;
+      s.addShape(p.ShapeType.rect, { x: 0.6, y: y, w: 0.07, h: 0.3, fill: { color: C.naranja } });
+      s.addText(par[0], { x: 0.85, y: y - 0.04, w: 8.5, h: 0.34, fontFace: F, fontSize: 13, bold: true, color: C.tinta });
+      s.addText(par[1], { x: 0.85, y: y + 0.34, w: 8.5, h: 1.0, fontFace: F, fontSize: 10.5, color: C.tinta, lineSpacingMultiple: 1.25 });
+    });
+    pie(s);
   }
 
   return await p.write({ outputType: 'nodebuffer' });
@@ -476,6 +525,26 @@ export default async (req) => {
   if (!numeroOferta) numeroOferta = `OFE-${new Date().getFullYear()}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 
   const cli = { empresa, cif, contacto, cargo, ref: numeroOferta, comercial, direccion, email };
+
+  // ── Alta automática de empresa y contacto ──────────────────────────────────
+  // Si quien pide la oferta no está en el CRM, se da de alta con el CIF como
+  // clave. Se hace por RPC y no aquí a mano porque la función va en una
+  // transacción: dos peticiones simultáneas del mismo CIF no crean dos fichas.
+  // Entra como POTENCIAL y SIN REVISAR: los datos los teclea el cliente.
+  let alta = null;
+  if (cif) {
+    try {
+      const rp = await fetch(`${base}/rest/v1/rpc/alta_desde_oferta`, {
+        method: 'POST',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          p_cif: cif, p_empresa: empresa || '', p_email: email || null,
+          p_contacto: contacto || null, p_telefono: body.telefono || null,
+        }),
+      });
+      if (rp.ok) alta = await rp.json();
+    } catch { /* el alta no puede impedir que salga la oferta */ }
+  }
   const slug = (ref || empresa || 'oferta').toString().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40) || 'oferta';
   const stamp = Date.now();
   const carpeta = `${new Date().toISOString().slice(0, 7)}`; // YYYY-MM
@@ -492,7 +561,11 @@ export default async (req) => {
       await fetch(`${base}/rest/v1/presupuestos?id=eq.${presupuesto_id}`, {
         method: 'PATCH',
         headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ url_pdf, url_pptx, numero_oferta: numeroOferta }),
+        body: JSON.stringify({
+          url_pdf, url_pptx, numero_oferta: numeroOferta,
+          ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
+          ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),
+        }),
       }).catch(() => {});
     }
 
@@ -506,7 +579,7 @@ export default async (req) => {
       envio_cliente = await enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email }).catch((e) => ({ ok: false, motivo: String(e) }));
     }
 
-    return Response.json({ ok: true, url_pdf, url_pptx, numero_oferta: numeroOferta, precio: r.precioCatalogo, tipo: r.tipo, envio_cliente });
+    return Response.json({ ok: true, alta, url_pdf, url_pptx, numero_oferta: numeroOferta, precio: r.precioCatalogo, tipo: r.tipo, envio_cliente });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 502 });
   }

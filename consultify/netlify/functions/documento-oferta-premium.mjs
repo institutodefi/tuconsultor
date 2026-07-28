@@ -18,22 +18,23 @@
 
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { LOGO_TUCONSULTOR_BLANCO, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
+import {
+  FUENTE_RUBIK_400, FUENTE_RUBIK_500, FUENTE_RUBIK_700,
+  PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA,
+} from './assets-oferta.mjs';
+// Mismos textos y misma paleta que el PPTX: fuente única.
+import {
+  RGB01, EMISOR, condiciones as condicionesComunes,
+  REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
+} from './contenido-oferta.mjs';
 
-const AQUI = dirname(fileURLToPath(import.meta.url));
+const b64 = (s) => Buffer.from(s, 'base64');
 
 // ── Paleta de marca ─────────────────────────────────────────────────────────
-const NAVY      = rgb(0.039, 0.169, 0.227);   // #0A2B3A
-const NAVY_HOND = rgb(0.024, 0.075, 0.106);   // #06131B
-const TEAL      = rgb(0.122, 0.631, 0.651);   // #1FA1A6
-const NARANJA   = rgb(0.976, 0.565, 0.004);   // #F99001
-const TINTA     = rgb(0.071, 0.188, 0.239);   // #12303D
-const APAGADO   = rgb(0.42, 0.53, 0.58);      // #6B8795
-const LINEA     = rgb(0.886, 0.918, 0.937);   // #E2EAEF
-const SUAVE     = rgb(0.957, 0.973, 0.98);    // #F4F8FA
+const c = (k) => rgb(...RGB01[k]);
+const NAVY = c('navy'), NAVY_HOND = c('navyHondo'), TEAL = c('teal'), NARANJA = c('naranja');
+const TINTA = c('tinta'), APAGADO = c('apagado'), LINEA = c('linea'), SUAVE = c('suave');
 const BLANCO    = rgb(1, 1, 1);
 
 // ── Retícula ────────────────────────────────────────────────────────────────
@@ -50,21 +51,16 @@ export async function generarPDFOferta(r, cli, anexo) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
 
-  const [f400, f500, f700] = await Promise.all([
-    readFile(join(AQUI, 'fuentes', 'Rubik-400.ttf')),
-    readFile(join(AQUI, 'fuentes', 'Rubik-500.ttf')),
-    readFile(join(AQUI, 'fuentes', 'Rubik-700.ttf')),
-  ]);
-  const reg = await pdf.embedFont(f400, { subset: true });
-  const med = await pdf.embedFont(f500, { subset: true });
-  const bold = await pdf.embedFont(f700, { subset: true });
+  const reg  = await pdf.embedFont(b64(FUENTE_RUBIK_400), { subset: true });
+  const med  = await pdf.embedFont(b64(FUENTE_RUBIK_500), { subset: true });
+  const bold = await pdf.embedFont(b64(FUENTE_RUBIK_700), { subset: true });
 
   // Los tres logotipos del grupo, para el pie. Se leen de disco como las
   // fuentes: pesan 4,5 KB entre los tres y así no engordan el módulo en base64.
   const pieLogos = {};
-  for (const nombre of ['tuconsultor', 'consultify', 'orbita']) {
-    try { pieLogos[nombre] = await pdf.embedPng(await readFile(join(AQUI, 'marca', `${nombre}.png`))); }
-    catch { /* si falta uno, el pie se dibuja con los que haya */ }
+  for (const [nombre, datos] of [['tuconsultor', PIE_TUCONSULTOR], ['consultify', PIE_CONSULTIFY], ['orbita', PIE_ORBITA]]) {
+    try { pieLogos[nombre] = await pdf.embedPng(b64(datos)); }
+    catch { /* si uno falla, el pie se dibuja con los demás */ }
   }
 
   let logoBlanco = null, logoColor = null;
@@ -297,13 +293,7 @@ export async function generarPDFOferta(r, cli, anexo) {
 
   // ── 6 · Condiciones ──
   seccion('Condiciones', 14);
-  const condiciones = [
-    'Precios sin IVA salvo indicación expresa. IVA del 21 % aplicable.',
-    'Validez de la oferta: 30 días naturales desde su fecha de emisión.',
-    'No incluye las tasas de la entidad de certificación ni los gastos de desplazamiento fuera de la Comunidad de Madrid.',
-    ...(r.modeloMantenimiento ? [`Al finalizar la implantación, el sistema pasa al modelo de mantenimiento ${r.modeloMantenimiento}, que se contrata aparte.`] : []),
-    r.disclaimer || '',
-  ].filter(Boolean);
+  const condiciones = condicionesComunes(r);
   for (const c of condiciones) {
     const lineas = partir(c, reg, 9, ANCHO - U * 2.5);
     asegurar(lineas.length * 1.6 + 1);
@@ -328,8 +318,8 @@ export async function generarPDFOferta(r, cli, anexo) {
     // Por TuConsultor
     p.drawRectangle({ x: MG, y: yFirmas - alto, width: colAncho, height: alto, color: SUAVE });
     p.drawText('POR TUCONSULTOR', { x: MG + U * 1.5, y: yFirmas - U * 2, size: 7, font: med, color: APAGADO, characterSpacing: 1.2 });
-    p.drawText('Alejandro San Nicolás', { x: MG + U * 1.5, y: yFirmas - U * 4.4, size: 11.5, font: bold, color: TINTA });
-    p.drawText('CEO de TuConsultor', { x: MG + U * 1.5, y: yFirmas - U * 6.2, size: 9, font: reg, color: APAGADO });
+    p.drawText(EMISOR.firmante, { x: MG + U * 1.5, y: yFirmas - U * 4.4, size: 11.5, font: bold, color: TINTA });
+    p.drawText(EMISOR.cargo, { x: MG + U * 1.5, y: yFirmas - U * 6.2, size: 9, font: reg, color: APAGADO });
     p.drawLine({ start: { x: MG + U * 1.5, y: yFirmas - U * 9 }, end: { x: MG + colAncho - U * 1.5, y: yFirmas - U * 9 }, thickness: 0.8, color: LINEA });
     p.drawText('Firma y fecha', { x: MG + U * 1.5, y: yFirmas - U * 10.3, size: 7, font: reg, color: APAGADO });
 
@@ -392,22 +382,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   titulo2('Requisitos legales aplicables', 15);
   parrafo('Marco normativo que enmarca los servicios de esta propuesta. No es una lista exhaustiva ni sustituye al asesoramiento jurídico: el marco aplicable a cada organización depende de su sector, su tamaño y su actividad.');
 
-  const LEGAL = [
-    ['Protección de datos',
-     'Reglamento (UE) 2016/679 (RGPD) y Ley Orgánica 3/2018 (LOPDGDD). Las partes actúan como responsables independientes salvo que se firme un encargo de tratamiento. Los datos de contacto se tratan para gestionar la relación contractual.'],
-    ['Accesibilidad digital',
-     'Real Decreto 1112/2018 para el sector público y Ley 11/2023, transposición del Acta Europea de Accesibilidad, con aplicación desde el 28 de junio de 2025 para determinados productos y servicios del sector privado. Norma técnica de referencia: EN 301 549, que remite a WCAG en nivel AA.'],
-    ['Igualdad y diversidad',
-     'Ley Orgánica 3/2007 y Real Decreto 901/2020 sobre planes de igualdad, con registro obligatorio. Real Decreto 1026/2024 sobre medidas planificadas LGTBI para empresas de más de 50 personas trabajadoras. Real Decreto Legislativo 1/2013 sobre la cuota de reserva del 2 %.'],
-    ['Seguridad de la información',
-     'Real Decreto 311/2022, Esquema Nacional de Seguridad, para quien presta servicios al sector público. Directiva (UE) 2022/2555 (NIS2) en los sectores incluidos en su ámbito.'],
-    ['Prevención de riesgos laborales',
-     'Ley 31/1995 y su normativa de desarrollo. La implantación de ISO 45001 no sustituye las obligaciones preventivas de la organización ni la actividad del servicio de prevención.'],
-    ['Contratación y facturación',
-     'Ley 37/1992 del IVA. Ley 15/2010 de lucha contra la morosidad en las operaciones comerciales. Facturación electrónica según la Ley 18/2022 en los plazos que fije su desarrollo reglamentario.'],
-    ['Propiedad intelectual',
-     'Real Decreto Legislativo 1/1996. La documentación del sistema elaborada para la organización es de su propiedad. Las plantillas, metodologías y herramientas de TuConsultor, incluida Orbita.PMTools, siguen siendo de TuConsultor.'],
-  ];
+  const LEGAL = LEGAL_COMUN;
   for (const [tit, txt] of LEGAL) {
     const lineas = partir(txt, reg, 9.5, ANCHO - U * 2);
     asegurar(lineas.length * 1.7 + 4);
@@ -426,19 +401,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   titulo2('Qué se contrata exactamente', 15);
   parrafo('Este anexo explica en lenguaje claro cómo funciona el modelo contratado. Está aquí para que no haya interpretaciones distintas dentro de seis meses.');
 
-  const CLAUSULAS = [
-    ['1 · El modelo que se contrata',
-     `Se contrata el modelo ${r.modelo}${esImpl && r.meses ? `, con un cronograma de ${r.meses} meses` : ''}. ` +
-     (esImpl
-       ? 'La implantación es un proyecto con principio y fin: termina cuando el sistema queda listo para la auditoría externa de certificación. No es una cuota indefinida.'
-       : 'Es un modelo de acompañamiento recurrente, con una dedicación mensual pactada y permanencia mínima de doce meses.')],
-    ['2 · El modelo se basa en horas al mes y en tareas',
-     'Lo que se contrata son dos cosas a la vez: una dedicación expresada en horas al mes y un conjunto de tareas concretas, las que figuran en el Anexo I. Las horas dimensionan el esfuerzo; las tareas definen el resultado. Ninguna de las dos por separado describe el servicio.'],
-    ['3 · Cumplidas las tareas y los objetivos, no hay obligación de más horas',
-     'Cuando las tareas del periodo están hechas y los objetivos alcanzados, el trabajo del periodo está completo. No existe obligación de consumir horas restantes en trabajo adicional. Lo que sí se mantiene es la asistencia técnica: resolución de dudas, apoyo ante incidencias y acompañamiento del sistema, sin coste añadido dentro del modelo contratado.'],
-    ['4 · Todo trabajo ajeno al alcance se presupuesta y factura aparte',
-     'Cualquier encargo que no figure en el Anexo I —nuevos sistemas, sedes adicionales, auditorías no previstas, formación específica, respuesta a requerimientos de terceros o adaptaciones fuera del alcance— se presupuesta por separado antes de ejecutarse y se factura aparte. Nunca se ejecuta trabajo fuera de alcance sin presupuesto aceptado.'],
-  ];
+  const CLAUSULAS = clausulasComunes(r);
   for (const [tit, txt] of CLAUSULAS) {
     const lineas = partir(txt, reg, 10, ANCHO - U * 2);
     asegurar(lineas.length * 1.8 + 5);
@@ -485,7 +448,7 @@ export async function generarPDFOferta(r, cli, anexo) {
     }
 
     // Datos legales, a la derecha de los logotipos
-    const legal = 'TuConsultor · CIF B84867670 · hola@tuconsultor.com';
+    const legal = EMISOR.legalPie;
     const anchoLegal = reg.widthOfTextAtSize(legal, 7);
     const num = `${i + 1} / ${total}`;
     const anchoNum = med.widthOfTextAtSize(num, 7.5);
