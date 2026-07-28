@@ -65,12 +65,12 @@ Las seis del panel, numeradas en el mismo orden en que aparecen:
 
 | Archivo | Pestaña del panel | Asunto sugerido |
 |---|---|---|
-| `1-confirmacion.html` | Confirm sign up | Confirma tu correo · Orbita PMTool |
-| `2-invitacion.html` | Invite user | Te damos acceso a Orbita PMTool |
-| `3-enlace-magico.html` | Magic link or OTP | Tu enlace de acceso · Orbita PMTool |
-| `4-cambio-de-correo.html` | Change email address | Confirma tu correo nuevo · Orbita PMTool |
-| `5-recuperar-password.html` | Reset password | Cambia tu contraseña · Orbita PMTool |
-| `6-reautenticacion.html` | Reauthentication | Tu código de verificación · Orbita PMTool |
+| `1-confirmacion.html` | Confirm sign up | Confirma tu correo · Orbita.PMTools |
+| `2-invitacion.html` | Invite user | Te damos acceso a Orbita.PMTools |
+| `3-enlace-magico.html` | Magic link or OTP | Tu enlace de acceso · Orbita.PMTools |
+| `4-cambio-de-correo.html` | Change email address | Confirma tu correo nuevo · Orbita.PMTools |
+| `5-recuperar-password.html` | Reset password | Cambia tu contraseña · Orbita.PMTools |
+| `6-reautenticacion.html` | Reauthentication | Tu código de verificación · Orbita.PMTools |
 
 ### Tres idiomas en un solo archivo
 
@@ -127,7 +127,7 @@ contraseña, pero si no lo usas, no toques nada en esa pestaña.
 Tablas de 600 px con todo el CSS en línea, sin `<style>`: es lo único que
 sobrevive a Outlook y a Gmail. Botón construido con una celda de tabla con
 `bgcolor`, no con un enlace con relleno, por el mismo motivo. Cabecera en `#0A2B3A` con el
-logotipo de **Orbita PMTool**, rasterizado a JPEG desde el SVG animado: los correos
+logotipo de **Orbita.PMTools**, rasterizado a JPEG desde el SVG animado: los correos
 no renderizan SVG, así que hay que servir un mapa de bits. Va sobre el mismo
 navy que lleva incrustado, así que empasta sin bordes. Cuerpo claro para que se lea en cualquier cliente y en modo
 oscuro.

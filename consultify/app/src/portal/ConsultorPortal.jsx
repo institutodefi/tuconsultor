@@ -110,7 +110,7 @@ export default function ConsultorPortal() {
         <div className="mb-4 flex items-center justify-between lg:hidden">
           <div>
             <p className="eyebrow">Operaciones Consultify</p>
-            <h1 className="mt-1 text-xl font-extrabold tracking-tight">Orbita.PMTool</h1>
+            <h1 className="mt-1 text-xl font-extrabold tracking-tight">Orbita.PMTools</h1>
           </div>
           <button onClick={() => setMovilAbierto(v => !v)} className="rounded-xl border border-[#1E5468] bg-[#10394A] p-2.5 text-[#B9D2DA]" aria-label="Menú">
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -127,7 +127,7 @@ export default function ConsultorPortal() {
           <aside className="hidden lg:block w-60 shrink-0">
             <div className="sticky top-24">
               <p className="eyebrow px-3">Operaciones</p>
-              <h1 className="mt-1 mb-6 px-3 text-2xl font-extrabold tracking-tight">Orbita.PMTool</h1>
+              <h1 className="mt-1 mb-6 px-3 text-2xl font-extrabold tracking-tight">Orbita.PMTools</h1>
               <NavItems />
             </div>
           </aside>

@@ -43,7 +43,7 @@ export default async (req) => {
       }
     });
   } catch {}
-  // Lead a Orbita.PMTool (Supabase) — no bloquea la respuesta si falla
+  // Lead a Orbita.PMTools (Supabase) — no bloquea la respuesta si falla
   try {
     const SB = process.env.SUPABASE_URL;
     const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;

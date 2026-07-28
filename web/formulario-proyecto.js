@@ -4,7 +4,7 @@
    Un único fichero para las 288 páginas y los cinco idiomas del sitio: el
    idioma se toma de <html lang>. Envía a /api/contacto, que ya hace tres cosas
    (netlify/functions/contacto.mjs): correo a hola@tuconsultor.com, alta del
-   contacto en Brevo y alta del lead en Orbita.PMTool como cliente potencial.
+   contacto en Brevo y alta del lead en Orbita.PMTools como cliente potencial.
 
    Redacción con perspectiva de género en los cinco idiomas: sin masculino
    genérico, tratamiento directo en segunda persona.

@@ -74,7 +74,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   pdf.setTitle(`Oferta ${r.numero || ''} · ${cli?.empresa || ''}`.trim());
   pdf.setAuthor('TuConsultor');
   pdf.setSubject('Propuesta de servicios de consultoría de sistemas de gestión');
-  pdf.setProducer('Orbita PMTool');
+  pdf.setProducer('Orbita.PMTools');
 
   const esImpl = r.modelo === 'Implantación';
   const esMes = r.tipo === 'mes' && !esImpl;
@@ -406,7 +406,7 @@ export async function generarPDFOferta(r, cli, anexo) {
     ['Contratación y facturación',
      'Ley 37/1992 del IVA. Ley 15/2010 de lucha contra la morosidad en las operaciones comerciales. Facturación electrónica según la Ley 18/2022 en los plazos que fije su desarrollo reglamentario.'],
     ['Propiedad intelectual',
-     'Real Decreto Legislativo 1/1996. La documentación del sistema elaborada para la organización es de su propiedad. Las plantillas, metodologías y herramientas de TuConsultor, incluida Orbita PMTool, siguen siendo de TuConsultor.'],
+     'Real Decreto Legislativo 1/1996. La documentación del sistema elaborada para la organización es de su propiedad. Las plantillas, metodologías y herramientas de TuConsultor, incluida Orbita.PMTools, siguen siendo de TuConsultor.'],
   ];
   for (const [tit, txt] of LEGAL) {
     const lineas = partir(txt, reg, 9.5, ANCHO - U * 2);
