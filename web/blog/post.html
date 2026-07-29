@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/gtm.js" defer></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Blog · TuConsultor</title>
+<meta name="robots" content="index,follow" />
+<link rel="icon" href="/favicon.ico" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/estilo-base.css?v=5" />
+<style>
+  .post-wrap { max-width: 820px; margin: 0 auto; }
+  .post-img { width:100%; max-width:480px; border-radius:20px; margin: 8px 0 30px; }
+  .post-body p { font-size:17px; line-height:1.75; color: var(--ink); margin-bottom: 20px; }
+  .post-body h2 { font-family: Manrope, sans-serif; font-size:26px; letter-spacing:-0.02em; margin: 34px 0 14px; }
+  .post-body a { color: var(--acento-texto); text-decoration: underline; font-weight: 700; }
+  .post-meta { font-size:13px; color:var(--muted); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Saltar al contenido</a>
+<nav aria-label="Navegación principal">
+  <div class="container nav-inner">
+    <a href="/" class="nav-logo"><img src="/marca/horizontal-dark.svg" alt="TuConsultor" /></a>
+    <div class="nav-mid">
+      <a href="/consultoria-estrategica.html">Consultoría Estratégica</a>
+      <a href="/consultoria-como-servicio.html">Consultify</a>
+      <a href="/formacion.html">Formación</a>
+      <a href="/servicios-tecnologicos.html">Servicios Tecnológicos</a>
+      <a href="/blog/">Blog</a>
+      <a href="/contacto.html">Contacto</a>
+    </div>
+    <div class="nav-right"><a href="/contacto.html" class="btn btn-orange">Pide tu cita</a></div>
+  </div>
+</nav>
+
+<main id="main">
+<section class="norms" style="padding-top:70px">
+  <div class="container post-wrap" style="position:relative">
+    <img src="/marca/casita-anim.svg" alt="" class="tc-logo-animado" aria-hidden="true"
+         style="position:absolute;right:-40px;top:-10px;width:120px;height:120px;opacity:.85" id="casita-post" />
+    <style>@media (max-width:1100px){ #casita-post{ display:none } }</style>
+    <div class="post-meta"><a href="/blog/" style="color:var(--acento-texto);font-weight:700">← Volver al blog</a></div>
+    <div class="post-meta" id="meta"></div>
+    <h1 id="titulo" style="font-family:Manrope,sans-serif;font-size:clamp(28px,4vw,44px);letter-spacing:-0.03em;line-height:1.12;margin:10px 0 22px"></h1>
+    <img class="post-img" id="imagen" alt="" style="display:none" />
+    <div class="post-body" id="cuerpo"><p>Cargando artículo…</p></div>
+  </div>
+</section>
+<section class="final-cta">
+  <div class="final-cta-inner container">
+    <h2>Hablemos de <span class="accent">tu proyecto.</span></h2>
+    <p>Cuéntanos qué necesita tu gestión y te proponemos el camino más simple para conseguirlo.</p>
+    <div class="hero-actions" style="justify-content:center">
+      <a href="mailto:hola@tuconsultor.com" class="btn btn-orange">hola@tuconsultor.com</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-bot" style="border-top:none;padding-top:0">
+      <span>© 2026 TuConsultor · TRESCORE PROYECTOS ITE, S.L. · <span class="heart">❤</span> Gestión con corazón desde 2006</span>
+      <span><a href="/blog/" style="color:inherit;text-decoration:none">Blog</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const SB_URL = '__SUPABASE_URL__';
+const SB_KEY = '__SUPABASE_ANON_KEY__';
+const H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
+
+(async () => {
+  const slug = new URLSearchParams(location.search).get('p');
+  if (!slug) { location.href = '/blog/'; return; }
+  const r = await fetch(`${SB_URL}/rest/v1/blog_tuconsultor?slug=eq.${encodeURIComponent(slug)}&select=*`, { headers: H });
+  const rows = await r.json();
+  if (!rows.length) {
+    document.getElementById('cuerpo').innerHTML = '<p>Este artículo aún no está publicado. <a href="/blog/">Vuelve al blog</a>.</p>';
+    return;
+  }
+  const p = rows[0];
+  document.title = p.titulo + ' · Blog TuConsultor';
+  document.getElementById('titulo').textContent = p.titulo;
+  document.getElementById('meta').textContent =
+    (p.serie === 'EFQM' ? 'Serie Modelo EFQM · ' : 'Normas de gestión · ') +
+    new Date(p.fecha_publicacion + 'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' });
+  const img = document.getElementById('imagen');
+  if (p.imagen) { img.src = p.imagen; img.style.display = 'block'; }
+  document.getElementById('cuerpo').innerHTML = p.contenido;  // contenido generado por nosotros (confiable)
+})();
+</script>
+<script src="/orbita-flotante.js" defer></script>
+<script src="/whatsapp-widget.js" defer></script>
+<script src="/cookies-banner.js" defer></script>
+<script src="/formulario-proyecto.js" defer></script>
+</body>
+</html>

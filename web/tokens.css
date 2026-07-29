@@ -1,0 +1,111 @@
+/* ============================================================
+   Sistema de identidad TUCONSULTOR — design tokens · v2.0
+   Valores cromáticos medidos sobre los archivos de marca originales.
+   ============================================================ */
+
+:root {
+  /* --- Paleta TUCONSULTOR --------------------------------- */
+  --tc-naranja:   #F99001;
+  --tc-verde:     #1FA1A6;
+  --tc-petroleo:  #1E5C72;
+  --tc-navy:      #0A2B3A;
+  --tc-azul-web:  #0E1730;   /* fondo de tuconsultor.com */
+
+  /* --- Paleta Consultify ---------------------------------- */
+  --tc-azul-marca: #013886;
+  --tc-azul-texto: #014695;
+  --tc-navy-consultify: #04173F;
+
+  /* --- Tintas y neutros ----------------------------------- */
+  --tc-tinta-clara: #EAF4F7;
+  --tc-n0:  #FFFFFF;  --tc-n50: #F6FAFB;  --tc-n100:#EDF3F5;
+  --tc-n200:#DFE9EC;  --tc-n300:#C6D9DF;  --tc-n500:#6D8A96;
+  --tc-n700:#3C6070;  --tc-n900:#12303D;
+
+  /* --- Degradado de órbita (exclusivo de Orbita) ----------- */
+  --tc-degradado: linear-gradient(135deg,
+      var(--tc-verde) 0%, var(--tc-verde) 58%, var(--tc-naranja) 100%);
+
+  /* --- Acento activo: lo sobreescribe cada marca ----------- */
+  --marca-acento: var(--tc-naranja);
+  --marca-fondo:  var(--tc-n0);
+  --marca-tinta:  var(--tc-petroleo);
+  --marca-oscuro: var(--tc-navy);
+
+  /* --- Tipografía de interfaz ------------------------------ */
+  --tc-font: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --tc-font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --tc-peso-titulo: 600; --tc-peso-texto: 400;
+  --tc-t-xs:.78rem; --tc-t-sm:.88rem; --tc-t-base:1rem; --tc-t-lg:1.25rem;
+  --tc-t-xl:1.45rem; --tc-t-2xl:1.85rem; --tc-t-3xl:2.3rem; --tc-t-4xl:2.85rem;
+  --tc-lh-titulo:1.1; --tc-lh-texto:1.62; --tc-medida:76ch;
+
+  /* --- Espaciado, radios, sombras ------------------------- */
+  --tc-e1:4px; --tc-e2:8px; --tc-e3:12px; --tc-e4:16px;
+  --tc-e6:24px; --tc-e8:32px; --tc-e12:48px; --tc-e16:64px; --tc-e24:96px;
+  --tc-r-sm:8px; --tc-r-md:14px; --tc-r-lg:22px; --tc-r-full:999px;
+  --tc-sombra-1: 0 1px 2px rgba(18,48,61,.06), 0 2px 8px rgba(18,48,61,.05);
+  --tc-sombra-2: 0 4px 12px rgba(18,48,61,.08), 0 12px 32px rgba(18,48,61,.07);
+
+  /* --- Movimiento ----------------------------------------- */
+  --tc-curva: cubic-bezier(.42, 0, .58, 1);
+  --tc-dur-ui: 180ms;
+}
+
+/* === Acento por marca ====================================== */
+[data-marca="tuconsultor"]{ --marca-acento:var(--tc-naranja); --marca-oscuro:var(--tc-navy);
+                             --marca-tinta:var(--tc-petroleo); }
+[data-marca="consultify"] { --marca-acento:var(--tc-azul-marca); --marca-oscuro:var(--tc-navy-consultify);
+                             --marca-tinta:var(--tc-azul-texto); }
+[data-marca="orbita"]     { --marca-acento:var(--tc-verde); --marca-oscuro:var(--tc-navy);
+                             --marca-tinta:var(--tc-petroleo); }
+
+/* === Tema de sitio: uno por dominio ======================== */
+/* tuconsultor.com — fondo azul profundo, letras blancas, acento naranja */
+[data-sitio="tuconsultor"]{
+  --sitio-fondo:      #0E1730;
+  --sitio-superficie: #17233F;
+  --sitio-tinta:      #FFFFFF;
+  --sitio-tinta-suave:#A5B1CB;
+  --sitio-acento:     var(--tc-naranja);
+  --sitio-borde:      #25314F;
+}
+/* consultify.pro — fondo blanco, letras en el azul de la marca */
+[data-sitio="consultify"]{
+  --sitio-fondo:      #FFFFFF;
+  --sitio-superficie: #F3F7FC;
+  --sitio-tinta:      var(--tc-azul-texto);
+  --sitio-tinta-suave:#5C7BA8;
+  --sitio-acento:     var(--tc-azul-marca);
+  --sitio-borde:      #DCE6F4;
+}
+/* Orbita.PMTools — entorno de clientes, barra lateral y acento verde */
+[data-sitio="orbita"]{
+  --sitio-fondo:      var(--tc-navy);
+  --sitio-superficie: #10394A;
+  --sitio-lateral:    #061F2B;
+  --sitio-tinta:      var(--tc-tinta-clara);
+  --sitio-tinta-suave:#7FA7B4;
+  --sitio-acento:     var(--tc-verde);
+  --sitio-borde:      #1E5468;
+  --sitio-lateral-ancho: 248px;
+}
+
+/* === Tema oscuro =========================================== */
+[data-tema="oscuro"]{
+  --marca-fondo: var(--marca-oscuro);
+  --marca-tinta: var(--tc-tinta-clara);
+  --tc-n0: var(--marca-oscuro);
+  --tc-n50:#10394A; --tc-n100:#16455A; --tc-n200:#1E5468;
+  --tc-n300:#2E6879; --tc-n500:#7FA7B4; --tc-n700:#B9D2DA; --tc-n900:#EAF4F7;
+  --tc-sombra-1: 0 1px 2px rgba(0,0,0,.35);
+  --tc-sombra-2: 0 8px 28px rgba(0,0,0,.45);
+}
+
+/* === Accesibilidad del movimiento ========================== */
+@media (prefers-reduced-motion: reduce) {
+  .tc-logo-animado animate,
+  .tc-logo-animado animateTransform,
+  .tc-logo-animado animateMotion { display:none; }
+  * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
