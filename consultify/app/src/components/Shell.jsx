@@ -76,7 +76,7 @@ export default function Shell({ children }) {
         <p className="mt-3 text-[11px] font-semibold italic text-brand-orange/90">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</p>
       </footer>
       <a href="/app/acceso" aria-label="Orbita.PMTools" title="Orbita.PMTools"
-         className="tc-logo-animado fixed bottom-5 right-5 z-30 hidden md:block opacity-80 transition hover:opacity-100"
+         className="tc-logo-animado fixed bottom-5 right-5 z-10 hidden md:block opacity-80 transition hover:opacity-100"
          style={{ width: 72, height: 72 }}>
         <img src="/app/marca/orbita-isotipo-anim.svg" alt="" style={{ width: '100%', height: '100%' }} />
       </a>

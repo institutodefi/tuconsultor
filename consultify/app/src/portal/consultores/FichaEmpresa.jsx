@@ -507,9 +507,9 @@ export default function FichaEmpresa({
         )}
 
         {/* Barra de guardado · el aviso también AQUÍ, junto al botón */}
-        <div className="sticky bottom-0 space-y-2 rounded-xl bg-[#0A2B3A]/95 py-2 backdrop-blur">
+        <div className="sticky bottom-0 z-40 space-y-2 rounded-xl bg-[#0A2B3A]/95 py-2 backdrop-blur">
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="mr-auto text-[11px] text-[#7FA7B4]">Obligatorios: CIF y nombre. Se guarda sin contactos, en rojo.</span>
+            <span className="mr-auto text-[11px] text-[#7FA7B4]">Obligatorios: CIF y nombre. Los contactos son opcionales: se pueden añadir después.</span>
             <button onClick={() => (form.id ? setForm(null) : onCerrar && onCerrar())} className="btn-ghost !px-3 !py-1.5 text-[11px]">Cancelar</button>
             <button onClick={guardar} disabled={guardando} className="btn-orange !px-4 !py-1.5 text-[11px] disabled:opacity-40">
               {guardando ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear empresa'}

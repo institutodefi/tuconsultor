@@ -32,21 +32,39 @@ export const GRUPOS_PORTAL = [
     ],
   },
   {
-    label: 'Comercial',
-    items: [
-      { to: 'planificador', label: 'Generador de ofertas', icon: 'file-text', roles: ['superadmin', 'admin', 'director', 'consultor'] },
-      { to: 'reglas',       label: 'Reglas comerciales',   icon: 'sliders-horizontal', roles: ['superadmin', 'admin', 'director'] },
-      { to: 'sistemas',     label: 'Sistemas de gestión',  icon: 'shield-check', roles: ['superadmin', 'admin', 'director'] },
-    ],
-  },
-  {
+    // Todo lo comercial pasa a colgar del CRM: generar una oferta y fijar sus
+    // reglas no son cosas aparte, son lo que se hace SOBRE un cliente. Tenerlo
+    // en dos bloques obligaba a saltar de un sitio a otro para lo mismo.
     label: 'CRM',
     items: [
-      // Una sola pestaña: clientes, proveedores y potenciales son filtros de 'empresas'
       { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-      { to: 'ofertas',   label: 'Ofertas',   icon: 'receipt',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
-      { to: 'proyectos', label: 'Proyectos', icon: 'folder-kanban', roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
+      {
+        to: 'clientes', label: 'Clientes', icon: 'users',
+        roles: ['superadmin', 'admin', 'director', 'gestion'],
+        hijos: [
+          { to: 'clientes',           label: 'Cartera de clientes',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'clientes/dashboard', label: 'Dashboard de clientes', roles: ['superadmin', 'admin', 'director', 'gestion'] },
+        ],
+      },
+      {
+        to: 'ofertas', label: 'Ofertas', icon: 'receipt',
+        roles: ['superadmin', 'admin', 'director', 'gestion'],
+        hijos: [
+          { to: 'ofertas',      label: 'Histórico de ofertas', roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'planificador', label: 'Generador de ofertas', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+          { to: 'reglas',       label: 'Reglas comerciales',   roles: ['superadmin', 'admin', 'director'] },
+        ],
+      },
+      {
+        to: 'proyectos', label: 'Proyectos', icon: 'folder-kanban',
+        roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'],
+        hijos: [
+          { to: 'proyectos',             label: 'Cartera de proyectos',    roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
+          { to: 'proyectos/planificador', label: 'Planificador de proyectos', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+        ],
+      },
+      { to: 'sistemas', label: 'Sistemas de gestión', icon: 'shield-check', roles: ['superadmin', 'admin', 'director'] },
     ],
   },
   {
@@ -64,7 +82,9 @@ export const GRUPOS_PORTAL = [
 ];
 
 // Lista plana (compatibilidad con código existente)
-export const TABS_PORTAL = GRUPOS_PORTAL.flatMap((g) => g.items);
+// Incluye los hijos: si no, las rutas anidadas quedarían fuera del control de acceso.
+export const TABS_PORTAL = GRUPOS_PORTAL.flatMap((g) =>
+  g.items.flatMap((i) => (i.hijos ? [i, ...i.hijos] : [i])));
 
 // Capacidades puntuales
 export const ROLES_CLIENTE = ['administrador', 'consultor', 'usuario_cliente'];
@@ -86,7 +106,16 @@ export const can = {
 export const tabsParaRol = (rol) => TABS_PORTAL.filter((t) => t.roles.includes(rol));
 
 // Grupos visibles para el rol (filtra items y descarta grupos vacíos)
+// Filtra por rol también los hijos: un consultor ve «Ofertas» pero dentro solo
+// lo que le corresponde, sin entradas que le darían un «no tienes permiso».
 export const gruposParaRol = (rol) =>
   GRUPOS_PORTAL
-    .map((g) => ({ ...g, items: g.items.filter((it) => it.roles.includes(rol)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .filter((it) => it.roles.includes(rol))
+        .map((it) => (it.hijos
+          ? { ...it, hijos: it.hijos.filter((h) => h.roles.includes(rol)) }
+          : it)),
+    }))
     .filter((g) => g.items.length > 0);

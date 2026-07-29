@@ -74,8 +74,8 @@ export default function ConsultorPortal() {
           )}
           <div className="flex flex-col gap-0.5">
             {g.items.map((t) => (
+              <div key={t.to}>
               <NavLink
-                key={t.to}
                 to={t.to}
                 end={t.to === ''}
                 onClick={onNavigate}
@@ -94,6 +94,21 @@ export default function ConsultorPortal() {
                   </>
                 )}
               </NavLink>
+                {/* Subentradas: se muestran cuando la sección está activa,
+                    para no convertir la barra en una lista de veinte enlaces. */}
+                {t.hijos && t.hijos.length > 0 && (
+                  <div className="ml-8 mt-0.5 flex flex-col gap-0.5 border-l border-[#1E5468] pl-3">
+                    {t.hijos.map((h) => (
+                      <NavLink key={h.to} to={h.to} end onClick={onNavigate}
+                        className={({ isActive }) =>
+                          `truncate rounded-lg px-2 py-1.5 text-[12.5px] font-semibold transition ${
+                            isActive ? 'text-[#F9A83A]' : 'text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
+                        {h.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -155,7 +170,11 @@ export default function ConsultorPortal() {
               <Route path="accesibilidad" element={<Guard ok={['superadmin','admin','director'].includes(role)}><Accesibilidad /></Guard>} />
               {/* Fusionadas en «Empresas» (v56): se mantienen como redirección
                   para que no se rompan enlaces ni marcadores antiguos. */}
-              <Route path="clientes" element={<Navigate to="../empresas" replace />} />
+              {/* Clientes: la cartera es la pestaña de Empresas filtrada, y el
+                  panel doble es el Dashboard con el foco puesto en clientes. */}
+              <Route path="clientes" element={<Navigate to="../empresas?filtro=cliente" replace />} />
+              <Route path="clientes/dashboard" element={<Guard ok={verClientes}><Dashboard soloClientes /></Guard>} />
+              <Route path="proyectos/planificador" element={<Guard ok={verPlanAgendaSist}><Agenda /></Guard>} />
               <Route path="leads" element={<Navigate to="../empresas?filtro=potencial" replace />} />
               <Route path="empresas" element={<Guard ok={verCrm}><Empresas /></Guard>} />
               <Route path="contactos" element={<Guard ok={verCrm}><Contactos /></Guard>} />
