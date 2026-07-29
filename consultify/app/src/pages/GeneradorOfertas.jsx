@@ -531,15 +531,12 @@ export default function GeneradorOfertas({ publico = false }) {
                 <div className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-relaxed text-white/85">
                   <p className="font-extrabold text-white/90 mb-1">Forma de pago</p>
                   {esApoyo && <p>Pago único prepagado al 100 % (bolsa de horas). Acompañamiento a auditoría aparte (600 €/jornada).</p>}
-                  {esImpl && res.fraccionado && (
-                    <>
-                      <p>{res.fraccionado.plan}, sobre el total con IVA ({res.fraccionado.meses} meses):</p>
-                      <div className="mt-1.5 space-y-0.5">
-                        <p>1) Por adelantado · <b>{fmtEUR(res.fraccionado.cuota1)}</b></p>
-                        <p>2) A mitad de proyecto · <b>{fmtEUR(res.fraccionado.cuota2)}</b></p>
-                        <p>3) Al finalizar · <b>{fmtEUR(res.fraccionado.cuota3)}</b></p>
-                      </div>
-                    </>
+                  {/* Las tres cuotas desaparecieron en la v99: la implantación
+                      solo admite pago único o dos cuotas, y eso ya lo enseña el
+                      bloque de arriba. Repetirlo aquí con otro reparto era decir
+                      dos cosas distintas en la misma pantalla. */}
+                  {esImpl && res.formasPago && (
+                    <p>{res.formasPago.nota} Puedes elegir arriba cuál de las dos aplicar.</p>
                   )}
                   {esMes && <p>Cuota mensual recurrente. Permanencia mínima 12 meses.</p>}
                 </div>

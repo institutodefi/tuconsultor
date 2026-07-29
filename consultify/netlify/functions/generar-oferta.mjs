@@ -49,102 +49,22 @@ function tareasPorBloque(normaIds, modeloId) {
   return [...grupos.entries()].map(([bloque, subs]) => ({ bloque, subs }));
 }
 
-// ======================= MOTOR (réplica de calcEngine.js) =======================
-// ⚠️ IMPORTANTE · MOTOR DE CÁLCULO DUPLICADO
-// Este archivo replica el motor de app/src/lib/calcEngine.js (NORMAS, MODELOS,
-// TARIFA, MARGEN, IVA y la función calcular). Está duplicado porque las funciones
-// de Netlify se empaquetan aparte del front y no comparten el bundle.
+// ═══════════════════ MOTOR DE CÁLCULO · UNO SOLO ═══════════════════════════
+// Antes había aquí una RÉPLICA de app/src/lib/calcEngine.js, con la advertencia
+// de replicar a mano cualquier cambio de precio. No se replicó: la copia se
+// quedó con el Plan de Igualdad en 30 h y nivel J2 cuando el motor real tenía
+// 101 h y J3, y las ofertas salieron con un importe distinto al que el cliente
+// vio en pantalla. Un documento con dos cálculos dentro.
 //
-// >>> SI CAMBIAS UN PRECIO, TARIFA, MARGEN O FÓRMULA EN calcEngine.js,
-// >>> TIENES QUE REPLICARLO AQUÍ, O EL PDF MOSTRARÁ UN PRECIO DISTINTO
-// >>> AL QUE EL CLIENTE VIO EN EL SIMULADOR.
-//
-// Verificado (v135): 3.770 combinaciones de normas × modelos comparadas entre
-// ambos motores → 0 diferencias en precio, IVA, total y fraccionamiento.
-const NORMAS = [
-  { id: '9001', nombre: 'ISO 9001', desc: 'Gestión de la calidad', nivel: 'J3', hApoyo: 34 },
-  { id: '14001', nombre: 'ISO 14001', desc: 'Gestión ambiental', nivel: 'J3', hApoyo: 46 },
-  { id: '45001', nombre: 'ISO 45001', desc: 'Seguridad y salud laboral', nivel: 'J2', hApoyo: 63 },
-  { id: '27001', nombre: 'ISO 27001', desc: 'Seguridad de la información', nivel: 'J2', hApoyo: 81 },
-  { id: '42001', nombre: 'ISO 42001', desc: 'Inteligencia artificial', nivel: 'J3', hApoyo: 42 },
-  { id: '56001', nombre: 'ISO 56001', desc: 'Gestión de la innovación', nivel: 'J3', hApoyo: 75 },
-  { id: '21001', nombre: 'ISO 21001', desc: 'Organizaciones educativas', nivel: 'J3', hApoyo: 19, solape9001: 0.5 },
-  { id: '9004', nombre: 'ISO 9004', desc: 'Calidad sostenible', nivel: 'J3', hApoyo: 11, solape9001: 0.5 },
-  { id: 'une93200', nombre: 'UNE 93200', desc: 'Cartas de Servicios', nivel: 'J3', hApoyo: 25 },
-  { id: 'une158101', nombre: 'UNE 158101', desc: 'Centros residenciales', nivel: 'J3', hApoyo: 91 },
-  { id: 'une66181', nombre: 'UNE 66181', desc: 'Calidad de la formación virtual', nivel: 'J3', hApoyo: 30 },
-  { id: 'igualdad', nombre: 'Plan de Igualdad', desc: 'Plan de igualdad de empresa', nivel: 'J2', hApoyo: 30 },
-  { id: 'madridexcelente', nombre: 'Madrid Excelente', desc: 'Marca de garantía de la Comunidad de Madrid', nivel: 'J3', hApoyo: 30 },
-];
-const NORMA_BY_ID = Object.fromEntries(NORMAS.map((n) => [n.id, n]));
-const TARIFA = { J1: 30, J2: 40, J3: 55, Senior: 75 };
-const MARGEN = 0.60, IVA = 0.21, MESES_IMPL = 12;
+// Ahora se importa el motor de verdad. esbuild sigue los imports relativos y lo
+// empaqueta con la función, así que la razón por la que estaba duplicado —«no
+// comparten el bundle»— no era cierta.
+import {
+  NORMAS, NORMA_BY_ID, MODELOS, TARIFA, MARGEN, IVA as IVA_MOTOR, calcular,
+} from '../../app/src/lib/calcEngine.js';
+import { DISCLAIMER_OFERTA } from '../../app/src/lib/legal.js';
 
-// Aviso obligatorio en TODAS las ofertas (espejo de app/src/lib/legal.js).
-// Redacción con perspectiva de género: "personas trabajadoras", "equipo consultor".
-const DISCLAIMER_OFERTA =
-  'Oferta orientativa sujeta a validación. El importe calculado en la web es una estimación de partida y no tiene ' +
-  'carácter contractual. Queda sujeto a la validación del equipo consultor y al alcance definitivo del sistema de ' +
-  'gestión, al número de personas trabajadoras y al número de sedes o centros de trabajo incluidos. No incluye las ' +
-  'tasas de la entidad de certificación.';
-const MODELOS = {
-  Apoyo: { tipo: 'bolsa', hSist: null, hPres: 0, paso: 100, suelo: 0, leyenda: 'Pago único prepagado al 100 %. No contratable a menos de 60 días de una auditoría externa. Acompañamiento a auditoría aparte (600 €/jornada).' },
-  Relación: { tipo: 'mes', hSist: 2, hPres: 0, paso: 25, suelo: 350, leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.' },
-  Implicación: { tipo: 'mes', hSist: 4, hPres: 2, paso: 25, suelo: 350, leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.' },
-  Compromiso: { tipo: 'mes', hSist: 6, hPres: 2, paso: 25, suelo: 350, leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.' },
-  Implantación: { tipo: 'mes', hSist: 2.4, hPres: 1.2, paso: 25, suelo: 350, leyenda: 'Cuota durante la fase de implantación. 50% por adelantado + 50% antes de la auditoría externa.' },
-};
-const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v) + ' €';
-
-function calcular(normaIds, modeloId, opts = {}) {
-  const m = MODELOS[modeloId];
-  if (!m || !normaIds?.length) return null;
-  const normas = normaIds.map((id) => NORMA_BY_ID[id]).filter(Boolean);
-  if (!normas.length) return null;
-  const f9001 = opts.tiene9001 ? 0.5 : 1;
-  const raw = { J2: 0, J3: 0, Senior: 0 };
-  if (m.tipo === 'bolsa') { for (const n of normas) raw[n.nivel] += n.hApoyo * (n.id === '9001' ? f9001 : 1); }
-  else {
-    for (const n of normas) raw[n.nivel] += m.hSist * (n.solape9001 ?? 1) * (n.id === '9001' ? f9001 : 1);
-    if (m.hPres > 0) { const lider = normas.some((n) => n.nivel === 'J3') ? 'J3' : 'J2'; raw[lider] += m.hPres; }
-  }
-  const coord = (raw.J2 + raw.J3) * 0.10;
-  if (normas.length <= 4) raw.J3 += coord; else raw.Senior += coord;
-  const h = { J2: Math.ceil(raw.J2), J3: Math.ceil(raw.J3), Senior: Math.ceil(raw.Senior) };
-  const hTotal = h.J2 + h.J3 + h.Senior;
-  const coste = h.J2 * TARIFA.J2 + h.J3 * TARIFA.J3 + h.Senior * TARIFA.Senior;
-  const precioExacto = Math.round(coste * (1 + MARGEN));
-  let precioCatalogo = Math.ceil(precioExacto / m.paso) * m.paso;
-  if (m.suelo > 0) precioCatalogo = Math.max(m.suelo, precioCatalogo);
-  const iva = Math.round(precioCatalogo * IVA * 100) / 100;
-  const totalConIva = Math.round((precioCatalogo + iva) * 100) / 100;
-  let fraccionado = null;
-  let formasPago = null;
-  if (modeloId === 'Implantación') {
-    const meses = Math.max(parseInt(opts.meses, 10) || MESES_IMPL, 1);
-    const totalSinIva = precioCatalogo * meses;
-    const totalConIvaFrac = Math.round(totalSinIva * (1 + IVA) * 100) / 100;
-    const r2 = (x) => Math.round(x * 100) / 100;
-    // Dos únicas formas de pago de la implantación.
-    const DTO = 0.05;
-    const unicoSinIva = r2(totalSinIva * (1 - DTO));
-    const c = r2(totalConIvaFrac / 2);
-    fraccionado = {
-      meses, totalSinIva, totalConIva: totalConIvaFrac,
-      cuota1: c, cuota2: r2(totalConIvaFrac - c), cuota3: 0,
-      plan: '50 % a la firma y 50 % antes del inicio de las auditorías',
-    };
-    formasPago = {
-      descuentoUnico: DTO,
-      unico: { titulo: 'Pago único', sinIva: unicoSinIva, total: r2(unicoSinIva * (1 + IVA)), ahorro: r2(totalSinIva - unicoSinIva),
-               condicion: 'Un solo pago al inicio del proyecto, con un 5 % de descuento.' },
-      dos:   { titulo: 'Dos cuotas', sinIva: totalSinIva, total: totalConIvaFrac, cuota1: c, cuota2: r2(totalConIvaFrac - c),
-               condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.' },
-      nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
-    };
-  }
-  return { modelo: modeloId, tipo: m.tipo, normas: normas.map((n) => n.id), nSistemas: normas.length, tiene9001: !!opts.tiene9001, horas: h, hTotal, coste, precioExacto, precioCatalogo, iva, totalConIva, fraccionado, formasPago, leyenda: m.leyenda };
-}
+const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0) + ' €';
 
 // ======================= GENERADORES =======================
 const NAVY = rgb(0.024, 0.106, 0.271);  // #061B45
@@ -489,15 +409,34 @@ export default async (req) => {
     if (ov.horas) r.horas = ov.horas;
     if (Number.isFinite(Number(ov.hTotal))) r.hTotal = Number(ov.hTotal);
     r.reglasAplicadas = Array.isArray(ov.reglas) ? ov.reglas : [];
-    r.iva = Math.round(r.precioCatalogo * IVA * 100) / 100;
-    r.totalConIva = Math.round((r.precioCatalogo + r.iva) * 100) / 100;
+    const r2 = (x) => Math.round(x * 100) / 100;
+    r.iva = r2(r.precioCatalogo * IVA_MOTOR);
+    r.totalConIva = r2(r.precioCatalogo + r.iva);
+
+    // Las formas de pago TAMBIÉN se rehacen. Antes no se tocaban y se quedaban
+    // con el precio anterior: el documento acababa con el importe de un cálculo
+    // y las cuotas de otro. Es lo que hizo que una oferta llevara 11.650 € de
+    // total y 4.200 € de importe en la misma página.
+    if (r.formasPago) {
+      const base = r.precioCatalogo;
+      const dto = r.formasPago.descuentoUnico ?? 0.05;
+      const unicoSinIva = r2(base * (1 - dto));
+      const cuota = r2(base / 2);
+      r.formasPago = {
+        ...r.formasPago,
+        unico: { ...r.formasPago.unico, sinIva: unicoSinIva, iva: r2(unicoSinIva * IVA_MOTOR),
+                 total: r2(unicoSinIva * (1 + IVA_MOTOR)), ahorro: r2(base - unicoSinIva) },
+        dos: { ...r.formasPago.dos, sinIva: base, iva: r2(base * IVA_MOTOR),
+               total: r2(base * (1 + IVA_MOTOR)),
+               cuota1: r2(cuota * (1 + IVA_MOTOR)),
+               cuota2: r2(base * (1 + IVA_MOTOR) - r2(cuota * (1 + IVA_MOTOR))) },
+      };
+    }
     if (r.fraccionado) {
-      const meses2 = r.fraccionado.meses;
-      const totalSinIva = r.precioCatalogo * meses2;
-      const totalConIvaFrac = Math.round(totalSinIva * (1 + IVA) * 100) / 100;
-      const r2 = (x) => Math.round(x * 100) / 100;
-      const c1 = r2(totalConIvaFrac * 0.50), c2 = r2(totalConIvaFrac * 0.25);
-      r.fraccionado = { ...r.fraccionado, totalSinIva, totalConIva: totalConIvaFrac, cuota1: c1, cuota2: c2, cuota3: r2(totalConIvaFrac - c1 - c2) };
+      const totalConIvaFrac = r2(r.precioCatalogo * (1 + IVA_MOTOR));
+      const c1 = r2(totalConIvaFrac / 2);
+      r.fraccionado = { ...r.fraccionado, totalSinIva: r.precioCatalogo, totalConIva: totalConIvaFrac,
+                        cuota1: c1, cuota2: r2(totalConIvaFrac - c1), cuota3: 0 };
     }
   }
   r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;

@@ -51,6 +51,42 @@
   to = "/.netlify/functions/newsletter"
   status = 200
 
+# ── 1a · institutoexcelencia.com → su ficha en tuconsultor.com ──────────────
+# El dominio del Instituto de Excelencia Europea deja de tener web propia y
+# apunta a su ficha dentro del grupo.
+#
+# ⚠ CUIDADO CON EL CORREO. Este bloque solo afecta al tráfico HTTP que ya haya
+# llegado a Netlify. El correo del dominio depende de sus registros MX, que NO
+# se tocan: si al apuntar el dominio se cambian los servidores de nombres a
+# Netlify sin recrear los MX, el correo deja de entrar el mismo día.
+# Ver DOMINIO-INSTITUTO.md antes de tocar el DNS.
+#
+# 301 y no 302: es un traslado permanente y así se transfiere la autoridad de
+# enlaces a la ficha del grupo.
+[[redirects]]
+  from = "https://institutoexcelencia.com/*"
+  to = "https://www.tuconsultor.com/grupo/instituto-excelencia.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.institutoexcelencia.com/*"
+  to = "https://www.tuconsultor.com/grupo/instituto-excelencia.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://institutoexcelencia.com/*"
+  to = "https://www.tuconsultor.com/grupo/instituto-excelencia.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.institutoexcelencia.com/*"
+  to = "https://www.tuconsultor.com/grupo/instituto-excelencia.html"
+  status = 301
+  force = true
+
 # ── 1b · El blog vivió en Consultify: redirigir al blog de TuConsultor ──
 [[redirects]]
   from = "https://consultify.tuconsultor.com/blog/*"
