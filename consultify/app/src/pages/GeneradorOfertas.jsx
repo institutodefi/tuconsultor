@@ -4,6 +4,7 @@ import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
+import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
@@ -543,6 +544,7 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 {/* Datos del cliente, dentro del panel para no perder al usuario */}
                 <div className="mt-4 border-t border-white/15 pt-4">
+                  <ClienteDeOferta cli={cli} setCli={setCli} publico={publico} />
                   <p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-brand-orange">Tus datos {publico ? 'para recibir la propuesta' : 'para la oferta'}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <input required autoComplete="organization" className="col-span-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-brand-orange focus:outline-none" placeholder="Empresa / Cliente *" value={cli.empresa} onChange={e => setCli({ ...cli, empresa: e.target.value })} />

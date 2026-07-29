@@ -14,13 +14,32 @@ export default function Ofertas() {
   const [genId, setGenId] = useState(null);
   const [editNormas, setEditNormas] = useState(null); // { oferta, normas:[] } cuando se editan normas
   const [edicion, setEdicion] = useState(null);       // edición completa de la oferta
+  const [avisoPrecio, setAvisoPrecio] = useState(null);  // el motor da hoy otro precio
 
   const cargar = () => listAll('presupuestos', 'creado').then(setRows).catch(() => setRows([]));
   useEffect(() => { cargar(); }, []);
 
   const [msg, setMsg] = useState(null);
 
-  async function generar(r) {
+  async function generar(r, { forzarPrecioNuevo = false } = {}) {
+    // ── Una oferta ya emitida se regenera CON SU PRECIO, no con el de hoy ──
+    // El motor cambia: tarifas, horas por norma, solapes. Si al regenerar se
+    // recalculara, saldría un documento con el mismo número de oferta y otro
+    // importe que el que recibió el cliente. Por eso se manda el precio guardado
+    // como override, y solo se recalcula si se pide expresamente.
+    const emitida = !!r.numero_oferta && Number.isFinite(Number(r.precio));
+    if (emitida && !forzarPrecioNuevo) {
+      try {
+        const hoy = calcular(r.normas || [], r.modelo, {
+          meses: r.meses, complejidad: r.complejidad, sedes: r.sedes,
+        });
+        if (hoy && Math.abs(hoy.precioCatalogo - Number(r.precio)) > 0.5) {
+          setAvisoPrecio({ oferta: r, guardado: Number(r.precio), hoy: hoy.precioCatalogo });
+          return;   // no se regenera hasta que se decida cuál de los dos
+        }
+      } catch { /* si no se puede comparar, se sigue con el guardado */ }
+    }
+
     setGenId(r.id); setMsg(null);
     try {
       const resp = await fetch('/.netlify/functions/generar-oferta', {
@@ -31,6 +50,9 @@ export default function Ofertas() {
           empresa: r.empresa || '', contacto: r.nombre || '', cif: r.cif || '', cargo: r.cargo || '',
           ref: r.numero_oferta || '', comercial: r.comercial || 'Alejandro',
           email: r.email || '', presupuesto_id: r.id,
+          complejidad: r.complejidad, sedes: r.sedes,
+          // El precio que se emitió manda sobre el que calcularía hoy el motor.
+          ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),
       });
       let j = null; try { j = await resp.json(); } catch { j = null; }
@@ -166,6 +188,36 @@ export default function Ofertas() {
         </div>
         <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
       </div>
+
+
+      {/* ── El motor da hoy un precio distinto al que se emitió ── */}
+      {avisoPrecio && (
+        <section className="card mb-4 space-y-3 ring-1 ring-brand-orange/50">
+          <h2 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
+            Esta oferta se emitió con otro precio
+          </h2>
+          <p className="text-[13px] leading-relaxed text-[#EAF4F7]">
+            La oferta <b>{avisoPrecio.oferta.numero_oferta}</b> se emitió por{' '}
+            <b>{fmtEUR(avisoPrecio.guardado)}</b>. Con las tarifas y horas de hoy saldría por{' '}
+            <b>{fmtEUR(avisoPrecio.hoy)}</b>.
+          </p>
+          <p className="text-[12px] leading-relaxed text-[#9FC0CB]">
+            Regenerar con el precio de hoy deja el mismo número de oferta con un importe distinto
+            al que recibió el cliente. Si el precio ha de cambiar, lo limpio es emitir una oferta nueva.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: false }); }}
+              className="btn-orange !px-4 !py-1.5 text-xs">
+              Regenerar con {fmtEUR(avisoPrecio.guardado)} · el precio emitido
+            </button>
+            <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: true }); }}
+              className="btn-ghost !px-3 !py-1.5 text-xs">
+              Recalcular a {fmtEUR(avisoPrecio.hoy)}
+            </button>
+            <button onClick={() => setAvisoPrecio(null)} className="btn-ghost !px-3 !py-1.5 text-xs">Cancelar</button>
+          </div>
+        </section>
+      )}
 
       {/* ── Edición completa de la oferta ── */}
       {edicion && (
