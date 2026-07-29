@@ -18,7 +18,7 @@ import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
 import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
-import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga } from './contenido-oferta.mjs';
+import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes } from './contenido-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
 const BLOQUES = {
@@ -85,7 +85,7 @@ async function generarPPTX(r, cli, anexo) {
   const C = HEX;
   const esImpl = r.modelo === 'Implantación';
   const esMes = r.tipo === 'mes' && !esImpl;
-  const normNames = (r.normaNombres || r.normasNombres || r.normas || []);
+  const normNames = nombresDeNormas(r);
 
   const p = new PptxGenJS();
   p.defineLayout({ name: 'W', width: 10, height: 5.63 }); p.layout = 'W';
@@ -188,6 +188,26 @@ async function generarPPTX(r, cli, anexo) {
     });
   }
   pie(s);
+
+  // ══════════ 3b · Fases de los planes ══════════
+  for (const plan of fasesDeLosPlanes(r)) {
+    const bloques = plan.fases.slice();
+    while (bloques.length) {
+      const tanda = bloques.splice(0, 4);
+      s = p.addSlide(); s.background = { color: C.blanco };
+      seccion(s, 'Fases del plan', plan.plan);
+      s.addText(`${plan.fases.length} fases · ${plan.horas} horas en total`,
+        { x: 0.6, y: 1.55, w: 8.8, h: 0.24, fontFace: F, fontSize: 11, color: C.apagado });
+      tanda.forEach(function (f, i) {
+        const y = 1.95 + i * 0.78;
+        s.addShape(p.ShapeType.rect, { x: 0.6, y: y, w: 0.06, h: 0.26, fill: { color: C.teal } });
+        s.addText(f.nombre, { x: 0.82, y: y - 0.04, w: 7.2, h: 0.3, fontFace: F, fontSize: 12, bold: true, color: C.tinta });
+        s.addText(f.horas + ' h', { x: 8.1, y: y - 0.04, w: 1.3, h: 0.3, fontFace: F, fontSize: 12, bold: true, color: C.teal, align: 'right' });
+        s.addText(f.tareas.join(' · '), { x: 0.82, y: y + 0.26, w: 8.5, h: 0.44, fontFace: F, fontSize: 9, color: C.apagado });
+      });
+      pie(s);
+    }
+  }
 
   // ══════════ 4 · Condiciones ══════════
   s = p.addSlide(); s.background = { color: C.blanco };
@@ -443,7 +463,10 @@ export default async (req) => {
   r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
   r.modeloMantenimiento = body.modelo_mantenimiento || null;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
+  // Se escriben las dos variantes del nombre: hubo documentos que leían una y
+  // otros la otra, y la portada acabó enseñando el identificador interno.
   r.normaNombres = normas.map((id) => (NORMA_BY_ID[id]?.nombre || id));
+  r.normasNombres = r.normaNombres;
   r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || 3, 1);
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);

@@ -63,6 +63,16 @@ export const PCT_PRODUCTIVO = 0.70;
 // Horas que le cuesta a un nivel una tarea cuya base son `horasBase`
 export const horasPorNivel = (horasBase, nivel) => horasBase * (EFICIENCIA[nivel] ?? 1);
 
+// ⚠ CONTRATO CON LA BASE DE DATOS
+// El campo `tipo` que devuelve `calcular()` se guarda en `presupuestos.tipo`,
+// que tiene una restricción CHECK. Los valores admitidos son:
+//
+//     'mes' · 'bolsa' · 'proyecto'
+//
+// Si aquí aparece un tipo nuevo, hay que ampliar esa restricción ANTES de
+// desplegar, o el guardado falla con «violates check constraint
+// presupuestos_tipo_check». Pasó en la v99 al convertir Implantación en
+// proyecto: se cambió el motor y no la tabla.
 export const MODELOS = {
   Apoyo: {
     // El fondo de horas cubre el 60 % de lo planificado: en este modelo la

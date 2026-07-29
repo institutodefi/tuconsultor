@@ -27,6 +27,7 @@ import {
 import {
   RGB01, EMISOR, condiciones as condicionesComunes,
   REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
+  nombresDeNormas, fasesDeLosPlanes,
 } from './contenido-oferta.mjs';
 
 const b64 = (s) => Buffer.from(s, 'base64');
@@ -120,7 +121,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   for (const l of titulo.slice(0, 3)) { cover.drawText(l, { x: MG, y, size: 30, font: bold, color: BLANCO }); y -= U * 4.5; }
 
   y -= U * 1;
-  const normNames = (r.normasNombres || r.normas || []).join(' · ');
+  const normNames = nombresDeNormas(r).join(' · ');
   for (const l of partir(normNames, reg, 12, ANCHO).slice(0, 3)) {
     cover.drawText(l, { x: MG, y, size: 12, font: reg, color: rgb(0.55, 0.72, 0.78) }); y -= U * 2.2;
   }
@@ -211,19 +212,20 @@ export async function generarPDFOferta(r, cli, anexo) {
   // ── 2 · Qué se ofrece ──
   cabeceraPagina();
   seccion('La propuesta');
-  titulo2(esImpl
-    ? 'Implantación completa del sistema de gestión'
-    : `Acompañamiento en modelo ${r.modelo}`);
-  parrafo(esImpl
-    ? `Ejecutamos el programa completo: el equipo consultor lleva el peso del trabajo documental y técnico hasta dejar a ${cli?.empresa || 'la organización'} lista para la auditoría externa de certificación.`
-    : `El equipo consultor acompaña a ${cli?.empresa || 'la organización'} en el desarrollo y el mantenimiento del sistema, con una dedicación recurrente pactada y sin sorpresas de facturación.`);
+  // El texto sale del módulo común: adapta el cierre según se implante un
+  // sistema de gestión (auditoría de certificación) o un plan (registro ante la
+  // autoridad laboral). Estaba escrito a mano aquí y decía «certificación»
+  // también en las ofertas de plan de igualdad, que no se certifica.
+  const prop = propuestaComun(r, cli);
+  titulo2(prop.titulo);
+  parrafo(prop.texto);
 
   rejillaDatos([
     ['Cliente', cli?.empresa || '—'],
     ['CIF', cli?.cif || '—'],
     ['Persona de contacto', cli?.contacto || cli?.email || '—'],
     ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ` · ${r.meses} meses` : '')],
-    ['Sistemas incluidos', String((r.normasNombres || r.normas || []).length)],
+    ['Sistemas incluidos', String(nombresDeNormas(r).length)],
     ['Dedicación estimada', `${r.hTotal} h`],
     ...(r.complejidad ? [['Complejidad', r.complejidad]] : []),
     ...(r.sedes && r.sedes > 1 ? [['Sedes o alcances', String(r.sedes)]] : []),
@@ -231,7 +233,7 @@ export async function generarPDFOferta(r, cli, anexo) {
 
   // ── 3 · Alcance ──
   seccion('Alcance');
-  const listaNormas = r.normasNombres || r.normas || [];
+  const listaNormas = nombresDeNormas(r);
   for (const n of listaNormas) {
     asegurar(3);
     p.drawRectangle({ x: MG, y: cursor + 3, width: U * 0.6, height: U * 0.6, color: TEAL });
@@ -239,6 +241,29 @@ export async function generarPDFOferta(r, cli, anexo) {
     cursor -= U * 2.6;
   }
   cursor -= U;
+
+  // ── 3b · Fases de los planes ──
+  // Un plan de igualdad no es un bloque indivisible: son fases con horas
+  // propias. Quien lo contrata tiene derecho a ver cuáles entran.
+  const planes = fasesDeLosPlanes(r);
+  for (const plan of planes) {
+    seccion(`Fases · ${plan.plan}`, 12);
+    parrafo(`El plan se desarrolla en ${plan.fases.length} fases, ${plan.horas} horas en total. Cada una tiene sus tareas y su dedicación.`);
+    for (const f of plan.fases) {
+      const lineas = partir(f.tareas.join(' · '), reg, 9, ANCHO - U * 3);
+      asegurar(lineas.length * 1.6 + 4);
+      p.drawRectangle({ x: MG, y: cursor - U * 0.3, width: U * 0.35, height: U * 1.7, color: TEAL });
+      p.drawText(f.nombre, { x: MG + U * 1.4, y: cursor, size: 10.5, font: bold, color: TINTA });
+      const hs = `${f.horas} h`;
+      p.drawText(hs, { x: MG + ANCHO - bold.widthOfTextAtSize(hs, 10.5), y: cursor, size: 10.5, font: bold, color: TEAL });
+      cursor -= U * 2;
+      for (const l of lineas) {
+        p.drawText(l, { x: MG + U * 1.4, y: cursor, size: 9, font: reg, color: APAGADO });
+        cursor -= U * 1.5;
+      }
+      cursor -= U * 0.8;
+    }
+  }
 
   // ── 4 · Inversión ──
   seccion('Inversión', esImpl ? 22 : 17);   // rótulo + caja de importe
