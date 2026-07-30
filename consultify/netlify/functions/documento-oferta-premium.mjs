@@ -27,7 +27,7 @@ import {
 import {
   RGB01, EMISOR, condiciones as condicionesComunes,
   REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
-  nombresDeNormas, fasesDeLosPlanes,
+  nombresDeNormas, fasesDeLosPlanes, describirAjuste,
 } from './contenido-oferta.mjs';
 
 const b64 = (s) => Buffer.from(s, 'base64');
@@ -283,6 +283,34 @@ export async function generarPDFOferta(r, cli, anexo) {
     { x: MG + U * 3, y: yc, size: 9.5, font: reg, color: APAGADO });
   cursor = cursor - alturaCaja - U;
 
+  // ── Ajustes de esta oferta ──
+  // Se enseñan: un descuento que no se ve no sirve de argumento comercial, y
+  // uno que aparece sin explicar levanta la sospecha de que el precio de
+  // partida estaba inflado.
+  const ajustes = (r.ajustes || []).filter((a) => a.efecto);
+  if (ajustes.length) {
+    asegurar(ajustes.length * 2 + 6);
+    p.drawText('CONDICIONES PARTICULARES DE ESTA PROPUESTA',
+      { x: MG, y: cursor, size: 8, font: med, color: TEAL, characterSpacing: 1.2 });
+    cursor -= U * 2;
+    p.drawText(`Precio de catálogo: ${eur(r.precioAntesDeAjustes)}${esMes ? '/mes' : ''}`,
+      { x: MG, y: cursor, size: 9.5, font: reg, color: APAGADO });
+    cursor -= U * 2;
+    for (const a of ajustes) {
+      const d = describirAjuste(a);
+      p.drawCircle({ x: MG + U * 0.5, y: cursor + 3, size: 1.4, color: TEAL });
+      p.drawText(d.concepto, { x: MG + U * 1.6, y: cursor, size: 10, font: med, color: TINTA });
+      p.drawText(d.efecto, { x: MG + ANCHO - med.widthOfTextAtSize(d.efecto, 10), y: cursor, size: 10, font: med,
+                             color: a.efecto < 0 ? TEAL : NARANJA });
+      cursor -= U * 2;
+    }
+    p.drawLine({ start: { x: MG, y: cursor + U * 0.6 }, end: { x: MG + ANCHO, y: cursor + U * 0.6 }, thickness: 0.6, color: LINEA });
+    cursor -= U * 0.6;
+    const final = `Precio de esta propuesta: ${eur(r.precioCatalogo)}${esMes ? '/mes' : ''}`;
+    p.drawText(final, { x: MG, y: cursor, size: 11, font: bold, color: TINTA });
+    cursor -= U * 3;
+  }
+
   // ── 5 · Formas de pago (solo implantación) ──
   if (r.formasPago) {
     seccion('Formas de pago', 24);   // rótulo + entradilla + las dos tarjetas
@@ -330,6 +358,22 @@ export async function generarPDFOferta(r, cli, anexo) {
     cursor -= U * 0.8;
   }
 
+
+  // ── Notas aclaratorias de esta oferta ──
+  if (r.notas && String(r.notas).trim()) {
+    seccion('Notas de esta propuesta', 10);
+    for (const linea of String(r.notas).split('\n').map((x) => x.trim()).filter(Boolean)) {
+      const lineas = partir(linea, reg, 10, ANCHO - U * 2.5);
+      asegurar(lineas.length * 1.7 + 1);
+      p.drawRectangle({ x: MG, y: cursor - U * 0.3, width: U * 0.35, height: U * 1.5, color: TEAL });
+      for (const l of lineas) {
+        p.drawText(l, { x: MG + U * 1.6, y: cursor, size: 10, font: reg, color: TINTA });
+        cursor -= U * 1.7;
+      }
+      cursor -= U * 0.8;
+    }
+    cursor -= U;
+  }
 
   // ══════════════════ ACEPTACIÓN ══════════════════
   asegurar(20);

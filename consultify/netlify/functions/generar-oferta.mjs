@@ -18,7 +18,7 @@ import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
 import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
-import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes } from './contenido-oferta.mjs';
+import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste } from './contenido-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
 const BLOQUES = {
@@ -173,6 +173,21 @@ async function generarPPTX(r, cli, anexo) {
   s.addText('IVA 21 % · ' + fmtEur(r.iva) + '\nTotal ' + fmtEur(r.totalConIva) + (esMes ? '/mes' : ''),
     { x: 6.55, y: 2.0, w: 2.8, h: 0.5, fontFace: F, fontSize: 10, color: C.apagado });
 
+  const ajustes = (r.ajustes || []).filter(function (a) { return a.efecto; });
+  if (ajustes.length) {
+    s.addText('CONDICIONES PARTICULARES', { x: 6.3, y: 2.7, w: 3.1, h: 0.2, fontFace: F, fontSize: 7.5, bold: true, color: C.teal, charSpacing: 1 });
+    let yy = 2.92;
+    s.addText('Catálogo: ' + fmtEur(r.precioAntesDeAjustes), { x: 6.3, y: yy, w: 3.1, h: 0.2, fontFace: F, fontSize: 8.5, color: C.apagado });
+    yy += 0.22;
+    ajustes.slice(0, 3).forEach(function (a) {
+      const d = describirAjuste(a);
+      s.addText(d.concepto, { x: 6.3, y: yy, w: 2.1, h: 0.2, fontFace: F, fontSize: 8.5, color: C.tinta });
+      s.addText(d.efecto, { x: 8.4, y: yy, w: 1.0, h: 0.2, fontFace: F, fontSize: 8.5, bold: true,
+                            color: a.efecto < 0 ? C.teal : C.naranja, align: 'right' });
+      yy += 0.22;
+    });
+  }
+
   if (r.formasPago) {
     s.addText('FORMAS DE PAGO', { x: 0.6, y: 2.95, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.naranja, charSpacing: 2 });
     [r.formasPago.unico, r.formasPago.dos].forEach(function (f, i) {
@@ -217,6 +232,19 @@ async function generarPPTX(r, cli, anexo) {
     s.addText(c, { x: 0.85, y: 1.12 + i * 0.72, w: 8.5, h: 0.62, fontFace: F, fontSize: 10.5, color: C.apagado, lineSpacingMultiple: 1.25 });
   });
   pie(s);
+
+  // ══════════ 4b · Notas de esta propuesta ══════════
+  if (r.notas && String(r.notas).trim()) {
+    const lineas = String(r.notas).split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+    s = p.addSlide(); s.background = { color: C.blanco };
+    seccion(s, 'Notas de esta propuesta', 'Lo acordado para este caso');
+    lineas.slice(0, 8).forEach(function (l, i) {
+      const y = 1.7 + i * 0.42;
+      s.addShape(p.ShapeType.rect, { x: 0.6, y: y, w: 0.06, h: 0.26, fill: { color: C.teal } });
+      s.addText(l, { x: 0.85, y: y - 0.04, w: 8.5, h: 0.36, fontFace: F, fontSize: 11, color: C.tinta });
+    });
+    pie(s);
+  }
 
   // ══════════ 5 · Aceptación ══════════
   s = p.addSlide(); s.background = { color: C.blanco };
@@ -461,6 +489,7 @@ export default async (req) => {
   }
   r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;
   r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
+  r.notas = body.notas_oferta || body.notas || null;     // solo las que ve el cliente
   r.modeloMantenimiento = body.modelo_mantenimiento || null;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
   // Se escriben las dos variantes del nombre: hubo documentos que leían una y

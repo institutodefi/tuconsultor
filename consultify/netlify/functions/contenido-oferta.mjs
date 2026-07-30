@@ -204,6 +204,29 @@ export function nombresDeNormas(r) {
   });
 }
 
+/**
+ * Cómo se lee un ajuste de precio en el documento.
+ *
+ * Se enseña el CONCEPTO y el efecto, no el porcentaje a secas: «2x1 en sedes ·
+ * −1.675 €» dice mucho más que «−50 %». El motivo interno del ajuste no se
+ * imprime; para el cliente vale el concepto.
+ */
+export function describirAjuste(a) {
+  const eur = (v) => fmtEur(Math.abs(v));
+  if (a.tipo === 'nxm') {
+    return { concepto: a.concepto || `${a.lleva}x${a.paga}`, efecto: `−${eur(a.efecto)}` };
+  }
+  if (a.tipo === 'precio_fijo') {
+    return { concepto: a.concepto || 'Precio cerrado', efecto: `${a.efecto < 0 ? '−' : '+'}${eur(a.efecto)}` };
+  }
+  const signo = a.tipo === 'recargo' ? '+' : '−';
+  const cuanto = a.unidad === 'euros' ? eur(a.valor) : `${a.valor} %`;
+  return {
+    concepto: a.concepto || (a.tipo === 'recargo' ? `Recargo ${cuanto}` : `Descuento ${cuanto}`),
+    efecto: `${signo}${eur(a.efecto)}`,
+  };
+}
+
 export const fmtEur = (v) =>
   new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0) + ' €';
 export const fmtEur0 = (v) =>

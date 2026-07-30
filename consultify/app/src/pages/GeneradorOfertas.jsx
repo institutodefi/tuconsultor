@@ -5,6 +5,7 @@ import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormular
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
+import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
@@ -46,6 +47,9 @@ export default function GeneradorOfertas({ publico = false }) {
   const [equipo, setEquipo] = useState(EQUIPO_VACIO());
   const [formaPago, setFormaPago] = useState('unico');      // 'unico' | 'dos'
   const [fasesPlan, setFasesPlan] = useState({});           // fases elegidas de cada plan
+  const [ajustes, setAjustes] = useState([]);               // trato particular de ESTA oferta
+  const [notas, setNotas] = useState('');                   // salen en el PDF y el PPT
+  const [notasInternas, setNotasInternas] = useState('');   // no salen en ningún sitio
   const [modeloDespues, setModeloDespues] = useState('Implicación');  // mantenimiento al terminar
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
@@ -67,8 +71,8 @@ export default function GeneradorOfertas({ publico = false }) {
   };
 
   const res = useMemo(
-    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan }),
-    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan],
+    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes }),
+    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan, ajustes],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -160,6 +164,8 @@ export default function GeneradorOfertas({ publico = false }) {
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
+          ajustes, notas_oferta: notas || null, notas_internas: notasInternas || null,
+          precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
           forma_pago: modelo === 'Implantación' ? formaPago : null,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
@@ -415,6 +421,11 @@ export default function GeneradorOfertas({ publico = false }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {!publico && (
+            <AjustesOferta ajustes={ajustes} setAjustes={setAjustes} notas={notas} setNotas={setNotas}
+              notasInternas={notasInternas} setNotasInternas={setNotasInternas} res={res} />
           )}
 
           {/* 2 · Modelo */}

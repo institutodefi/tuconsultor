@@ -325,6 +325,52 @@ export function calcular(normaIds, modeloId, opts = {}) {
   }
   const ajusteReglas = Math.round((precioCatalogo - precioBase) * 100) / 100;
 
+  // ── AJUSTES DE ESTA OFERTA ────────────────────────────────────────────────
+  // Distintos de las reglas comerciales: aquéllas valen para todo el que cumpla
+  // la condición; esto es un trato concreto para una oferta concreta —un 2x1 en
+  // sedes, un descuento puntual para cerrar—. Van DESPUÉS de las reglas, sobre
+  // el precio que ya salió de ellas, porque son la última palabra.
+  //
+  // Cada uno arrastra su motivo. Un descuento sin motivo escrito es un número
+  // que nadie sabe justificar seis meses después, y en una auditoría comercial
+  // es exactamente lo que se pregunta.
+  const sedesN = normalizarSedes(opts.sedes);
+  const precioAntesDeAjustes = precioCatalogo;
+  const ajustesAplicados = [];
+  for (const a of (opts.ajustes || [])) {
+    const v = Number(a.valor);
+    // El nxm (2x1 y parecidos) no usa `valor`, sino `lleva` y `paga`.
+    if (a.tipo !== 'nxm' && (!Number.isFinite(v) || v === 0)) continue;
+    const antes = precioCatalogo;
+
+    if (a.tipo === 'precio_fijo') {
+      precioCatalogo = Math.max(0, v);
+    } else if (a.tipo === 'nxm') {
+      // 2x1 en sedes y parecidos: se pagan `paga` de cada `lleva`.
+      const lleva = Math.max(1, Number(a.lleva) || 2);
+      const paga  = Math.max(1, Number(a.paga)  || 1);
+      const unidades = Math.max(1, Number(sedesN) || 1);
+      const gratis = Math.floor(unidades / lleva) * (lleva - paga);
+      if (gratis > 0 && unidades > 0) {
+        precioCatalogo = precioCatalogo * ((unidades - gratis) / unidades);
+      }
+    } else {
+      const signo = a.tipo === 'recargo' ? 1 : -1;
+      precioCatalogo = a.unidad === 'euros'
+        ? precioCatalogo + signo * v
+        : precioCatalogo * (1 + signo * v / 100);
+    }
+
+    precioCatalogo = Math.max(0, Math.round(precioCatalogo * 100) / 100);
+    ajustesAplicados.push({
+      ...a,
+      antes: Math.round(antes * 100) / 100,
+      despues: precioCatalogo,
+      efecto: Math.round((precioCatalogo - antes) * 100) / 100,
+    });
+  }
+  const ajusteOferta = Math.round((precioCatalogo - precioAntesDeAjustes) * 100) / 100;
+
   const iva = Math.round(precioCatalogo * IVA * 100) / 100;
   const totalConIva = Math.round((precioCatalogo + iva) * 100) / 100;
 
@@ -378,6 +424,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
   }
 
   return {
+    ajustes: ajustesAplicados,
+    ajusteOferta,
+    precioAntesDeAjustes: Math.round(precioAntesDeAjustes * 100) / 100,
     // Horas de planes e importe, para que la pantalla pueda cuadrarlos.
     planes: detallePlanes,
     horasPlanes: Math.round(horasPlanes * 10) / 10,
