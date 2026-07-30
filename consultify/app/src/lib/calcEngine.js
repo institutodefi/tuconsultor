@@ -7,6 +7,7 @@
 
 import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.js';
 import { tarifaEquipo, perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
+import { FASES as FASES_PLAN, TARIFA_PROYECTO } from './fases.js';
 
 export const NORMAS = [
   { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
@@ -196,14 +197,19 @@ export function calcular(normaIds, modeloId, opts = {}) {
 
   const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
 
+  // Los planes (igualdad, diversidad) NO pasan por aquí: se cobran por sus
+  // fases a tarifa plana, más abajo. Si contaran también aquí, se sumarían dos
+  // veces y la oferta saldría al doble.
+  const genericas = normas.filter((n) => !FASES_PLAN[n.id]);
+
   if (m.usaHorasProyecto) {
     // Horas planificadas completas: la implantación hace el trabajo entero.
-    for (const n of normas) raw[n.nivel] += n.hApoyo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+    for (const n of genericas) raw[n.nivel] += n.hApoyo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else if (m.tipo === 'bolsa') {
     const fFondo = m.factorFondo ?? 1;
-    for (const n of normas) raw[n.nivel] += n.hApoyo * fFondo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+    for (const n of genericas) raw[n.nivel] += n.hApoyo * fFondo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else {
-    for (const n of normas) raw[n.nivel] += m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+    for (const n of genericas) raw[n.nivel] += m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
     if (m.hPres > 0) {
       const lider = normas.some(n => n.nivel === 'J3') ? 'J3' : 'J2';
       raw[lider] += m.hPres; // por cliente, no por sistema
@@ -230,7 +236,44 @@ export function calcular(normaIds, modeloId, opts = {}) {
     J3: Math.ceil(raw.J3),
     Senior: Math.ceil(raw.Senior),
   };
-  const hTotal = h.J1 + h.J2 + h.J3 + h.Senior;
+  // ── Los planes se cobran por fases, a tarifa plana ────────────────────────
+  // Un plan de igualdad no se dimensiona como un sistema de gestión: sale de un
+  // desglose de tareas con sus horas y una tarifa de proyecto de 99 €/h. Meterlo
+  // por el modelo genérico (horas × tarifa por nivel × margen) daba un número
+  // distinto al del panel de fases, y la pantalla enseñaba dos precios.
+  //
+  // Aquí las horas y el importe de los planes salen de las fases ELEGIDAS, y el
+  // resto de sistemas siguen por el camino de siempre.
+  const planes = normas.filter((n) => FASES_PLAN[n.id]);
+  const fasesSel = opts.fasesPlan || {};
+  let horasPlanes = 0, importePlanes = 0;
+  const detallePlanes = [];
+  for (const n of planes) {
+    const todas = FASES_PLAN[n.id];
+    const elegidas = fasesSel[n.id] || todas.map((f) => f.id);
+    const hs = todas.filter((f) => elegidas.includes(f.id)).reduce((a, f) => a + f.horas, 0);
+    horasPlanes += hs;
+    importePlanes += hs * TARIFA_PROYECTO;
+    detallePlanes.push({ id: n.id, nombre: n.nombre, horas: hs, importe: hs * TARIFA_PROYECTO,
+                         fases: elegidas, totalFases: todas.length });
+  }
+  // Descuento por integrar igualdad y diversidad: se aplica sobre los planes.
+  if (planes.length > 1) {
+    const factor = planes.find((n) => n.solapeCon && normaIds.includes(n.solapeCon));
+    if (factor) {
+      const suyo = detallePlanes.find((d) => d.id === factor.id);
+      if (suyo) {
+        const antes = suyo.importe;
+        suyo.horas = Math.round(suyo.horas * factor.solapeFactor * 10) / 10;
+        suyo.importe = Math.round(suyo.horas * TARIFA_PROYECTO);
+        horasPlanes -= (antes - suyo.importe) / TARIFA_PROYECTO;
+        importePlanes -= antes - suyo.importe;
+      }
+    }
+  }
+
+  // Las horas de los planes se suman al total: son trabajo igual que el resto.
+  const hTotal = (h.J1 + h.J2 + h.J3 + h.Senior) + horasPlanes;
 
   // ── Regla 2 · PRECIO/HORA: sustituye la tarifa de catálogo ──
   const tarifa = { ...TARIFA };
@@ -256,10 +299,14 @@ export function calcular(normaIds, modeloId, opts = {}) {
   }
 
   const coste = h.J1 * tarifa.J1 + h.J2 * tarifa.J2 + h.J3 * tarifa.J3 + h.Senior * tarifa.Senior;
-  const precioExacto = Math.round(coste * (1 + margen));
+  const precioGenerico = Math.round(coste * (1 + margen));
+  const precioExacto = precioGenerico + Math.round(importePlanes);
 
-  let precioCatalogo = Math.ceil(precioExacto / m.paso) * m.paso;
-  if (m.suelo > 0) precioCatalogo = Math.max(m.suelo, precioCatalogo);
+  // El redondeo al escalón se aplica SOLO a la parte genérica. El importe de
+  // las fases es exacto —horas × 99 €— y redondearlo lo separaría del número
+  // que enseña el panel de fases, que es de donde sale.
+  let precioCatalogo = Math.ceil(precioGenerico / m.paso) * m.paso + Math.round(importePlanes);
+  if (m.suelo > 0 && !importePlanes) precioCatalogo = Math.max(m.suelo, precioCatalogo);
 
   // ── Regla 4 · DESCUENTOS y RECARGOS sobre el precio de catálogo ──
   // Se aplican DESPUÉS del suelo: si no, un descuento sobre una cuota que ya
@@ -331,6 +378,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
   }
 
   return {
+    // Horas de planes e importe, para que la pantalla pueda cuadrarlos.
+    planes: detallePlanes,
+    horasPlanes: Math.round(horasPlanes * 10) / 10,
+    importePlanes: Math.round(importePlanes),
     modelo: modeloId,
     tipo: m.tipo,                 // 'bolsa' → pago único · 'mes' → cuota mensual
     cobro: modeloId === 'Implantación' ? 'fraccionado' : m.tipo,

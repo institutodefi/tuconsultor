@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FASES, calcularFases, TARIFA_PROYECTO } from '../lib/fases.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -21,7 +21,7 @@ const PLAN_LABEL = {
 
 const eur = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
 
-export default function FasesPlanes({ planes, onTotal }) {
+export default function FasesPlanes({ planes, onTotal, onSeleccion }) {
   const activos = planes.filter((p) => FASES[p]);
   const [sel, setSel] = useState({});
   const [abierta, setAbierta] = useState(null);
@@ -39,6 +39,10 @@ export default function FasesPlanes({ planes, onTotal }) {
     onTotal && onTotal(r);
     return r;
   }, [activos, seleccion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // El precio en vivo tiene que usar ESTA selección. Antes cada uno calculaba
+  // por su cuenta y la pantalla enseñaba dos importes distintos.
+  useEffect(() => { onSeleccion && onSeleccion(seleccion); }, [seleccion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!activos.length) return null;
 

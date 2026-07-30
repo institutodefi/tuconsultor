@@ -45,6 +45,7 @@ export default function GeneradorOfertas({ publico = false }) {
   const [sedes, setSedes] = useState(1);
   const [equipo, setEquipo] = useState(EQUIPO_VACIO());
   const [formaPago, setFormaPago] = useState('unico');      // 'unico' | 'dos'
+  const [fasesPlan, setFasesPlan] = useState({});           // fases elegidas de cada plan
   const [modeloDespues, setModeloDespues] = useState('Implicación');  // mantenimiento al terminar
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
@@ -66,8 +67,8 @@ export default function GeneradorOfertas({ publico = false }) {
   };
 
   const res = useMemo(
-    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo }),
-    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo],
+    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan }),
+    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -331,7 +332,7 @@ export default function GeneradorOfertas({ publico = false }) {
 
           {/* Planes de Igualdad y Diversidad: proyecto por fases, no cuota mensual */}
           {sel.some((x) => x.startsWith('igualdad') || x.startsWith('diversidad')) && (
-            <div className="mt-4"><FasesPlanes planes={sel} /></div>
+            <div className="mt-4"><FasesPlanes planes={sel} onSeleccion={setFasesPlan} /></div>
           )}
 
           {/* Características del proyecto · solo en el generador interno */}
