@@ -175,15 +175,27 @@ export function fasesDeLosPlanes(r) {
   const ids = (r?.normas || []).map(String).filter(ES_PLAN);
   return ids
     .filter((id) => FASES[id])
-    .map((id) => ({
-      plan: NORMA_BY_ID?.[id]?.nombre || id,
-      horas: FASES[id].reduce((a, f) => a + f.horas, 0),
-      fases: FASES[id].map((f) => ({
-        nombre: f.nombre,
-        horas: f.horas,
-        tareas: f.tareas.map((t) => t.t),
-      })),
-    }));
+    .map((id) => {
+      // SOLO las fases contratadas. Antes se listaban todas, y el documento
+      // enumeraba fases que el cliente no estaba pagando: el alcance escrito no
+      // se correspondía con el precio. Sin selección, van todas.
+      const delMotor = (r?.planes || []).find((p) => p.id === id)?.fases;
+      const delOpts  = r?.fasesPlan?.[id];
+      const elegidas = delMotor || delOpts || null;
+      const fases = FASES[id].filter((f) => !elegidas || elegidas.includes(f.id));
+      return {
+        plan: NORMA_BY_ID?.[id]?.nombre || id,
+        horas: fases.reduce((a, f) => a + f.horas, 0),
+        parcial: fases.length < FASES[id].length,
+        totalFases: FASES[id].length,
+        fases: fases.map((f) => ({
+          nombre: f.nombre,
+          horas: f.horas,
+          tareas: f.tareas.map((t) => t.t),
+        })),
+      };
+    })
+    .filter((p) => p.fases.length > 0);
 }
 
 /**

@@ -123,11 +123,36 @@ export default function GeneradorOfertas({ publico = false }) {
         empresa: cli.empresa, nombre: contactoCompleto, email: cli.email, telefono: cli.telefono,
         cif: cli.cif, cargo: cli.cargo, normas: sel, modelo, precio: precioLead, tipo: tipoLead,
         numero_oferta: numero, comercial, requerimiento,
+        // Todo lo que define el encargo, para poder regenerar la oferta igual
+        // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
+        complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
+        fases_plan: Object.keys(fasesPlan || {}).length ? fasesPlan : null,
+        precio_catalogo: res?.precioAntesDeAjustes ?? precioLead,
+        ajuste_oferta: res?.ajusteOferta ?? 0,
+        notas_oferta: notas || null, notas_internas: notasInternas || null,
+        forma_pago: modelo === 'Implantación' ? formaPago : null,
+        modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
       });
     } catch (e) {
       errorInsert = e?.message || e?.error_description || String(e);
       console.error('insertRow presupuestos', e);
+    }
+
+    // 2b) Los ajustes van en su propia tabla, colgando del presupuesto.
+    if (fila?.id && ajustes.length) {
+      for (const [i, a] of ajustes.entries()) {
+        try {
+          await insertRow('presupuesto_ajustes', {
+            presupuesto_id: fila.id, tipo: a.tipo,
+            unidad: a.tipo === 'nxm' || a.tipo === 'precio_fijo' ? null : a.unidad,
+            valor: a.tipo === 'nxm' ? null : Number(a.valor),
+            lleva: a.tipo === 'nxm' ? Number(a.lleva) : null,
+            paga: a.tipo === 'nxm' ? Number(a.paga) : null,
+            motivo: a.motivo, orden: (i + 1) * 10,
+          });
+        } catch (e) { console.error('ajuste no guardado', a, e); }
+      }
     }
 
     // 3) Enviar el lead a Brevo (no bloquea).
@@ -164,7 +189,7 @@ export default function GeneradorOfertas({ publico = false }) {
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
-          ajustes, notas_oferta: notas || null, notas_internas: notasInternas || null,
+          ajustes, fasesPlan, notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
           forma_pago: modelo === 'Implantación' ? formaPago : null,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
@@ -186,7 +211,7 @@ export default function GeneradorOfertas({ publico = false }) {
         // Hubo éxito (documento y/o alta en BD). Avisamos si algo quedó a medias.
         setEstado({ ok: true, numero, parcial: !okDoc, ...(okDoc ? j : {}) });
         if (errorInsert) {
-          setError(`Aviso: la oferta ${numero} no se guardó en la base de datos (${errorInsert}). Revisa permisos/RLS de la tabla "presupuestos".`);
+          setError(`LA OFERTA ${numero} NO SE HA GUARDADO. El documento se ha generado, pero no aparecerá en el histórico. Motivo: ${errorInsert}`);
         } else if (!okDoc && j?.error) {
           setError(`Oferta ${numero} registrada, pero el documento falló: ${j.error}`);
         }

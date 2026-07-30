@@ -490,6 +490,7 @@ export default async (req) => {
   r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;
   r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
   r.notas = body.notas_oferta || body.notas || null;     // solo las que ve el cliente
+  r.fasesPlan = body.fasesPlan || body.fases_plan || null;  // fases contratadas de cada plan
   r.modeloMantenimiento = body.modelo_mantenimiento || null;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
   // Se escriben las dos variantes del nombre: hubo documentos que leían una y

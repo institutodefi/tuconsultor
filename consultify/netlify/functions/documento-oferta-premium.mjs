@@ -248,7 +248,11 @@ export async function generarPDFOferta(r, cli, anexo) {
   const planes = fasesDeLosPlanes(r);
   for (const plan of planes) {
     seccion(`Fases · ${plan.plan}`, 12);
-    parrafo(`El plan se desarrolla en ${plan.fases.length} fases, ${plan.horas} horas en total. Cada una tiene sus tareas y su dedicación.`);
+    // Si el alcance es parcial hay que decirlo: enumerar cinco fases sin
+    // aclarar que el plan tiene siete deja al cliente creyendo que compró todo.
+    parrafo(plan.parcial
+      ? `Se contratan ${plan.fases.length} de las ${plan.totalFases} fases del plan, ${plan.horas} horas en total. Las fases no incluidas quedan fuera del alcance y pueden contratarse por separado.`
+      : `El plan se desarrolla en ${plan.fases.length} fases, ${plan.horas} horas en total. Cada una tiene sus tareas y su dedicación.`);
     for (const f of plan.fases) {
       const lineas = partir(f.tareas.join(' · '), reg, 9, ANCHO - U * 3);
       asegurar(lineas.length * 1.6 + 4);
