@@ -1,0 +1,141 @@
+import { useState } from 'react';
+import { supabase, DEMO } from '../../lib/supabase.js';
+import { codigoProyecto } from '../../lib/codigos.js';
+
+// ════════════════════════════════════════════════════════════════════════════
+// DEL CONTRATO AL PROYECTO
+//
+// El proyecto SIEMPRE nace de un contrato, nunca suelto. Así se puede rastrear
+// cualquier acceso hasta lo que se firmó: proyecto → contrato → oferta.
+//
+// Aquí se hacen las dos cosas seguidas: generar el contrato de una oferta
+// aceptada, y dar de alta el proyecto con los productos que le correspondan.
+// ════════════════════════════════════════════════════════════════════════════
+
+const PRODUCTOS = [
+  { id: 'mstool', etq: 'Orbita.MSTool', desc: 'Sistema de gestión: procesos, documentación, auditorías' },
+  { id: 'tptool', etq: 'Orbita.TPTool', desc: 'Proyectos de transformación: fases, hitos, entregables' },
+];
+
+export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
+  const [abierto, setAbierto] = useState(false);
+  const [productos, setProductos] = useState(['mstool']);
+  const [nombre, setNombre] = useState('');
+  const [msg, setMsg] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  const sugerido = codigoProyecto({
+    cliente: oferta.empresa, anio: new Date(oferta.creado || Date.now()).getFullYear(),
+    modelo: oferta.modelo, normas: oferta.normas || [],
+  });
+
+  async function generarContrato() {
+    setOcupado(true); setMsg(null);
+    try {
+      if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se genera de verdad.' }); return; }
+      const r = await fetch('/api/generar-contrato', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ presupuesto_id: oferta.id }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'No se pudo generar.');
+      setMsg({ err: false, t: `Contrato ${j.numero} ${j.ya_existia ? 'ya existía' : 'generado'}.` });
+      onCambio && onCambio();
+    } catch (e) {
+      setMsg({ err: true, t: `${e?.message || e}` });
+    } finally { setOcupado(false); }
+  }
+
+  async function crearProyecto() {
+    if (!productos.length) { setMsg({ err: true, t: 'Elige al menos una herramienta.' }); return; }
+    setOcupado(true); setMsg(null);
+    try {
+      if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se da de alta.' }); return; }
+      const { data, error } = await supabase.rpc('activar_productos_contrato', {
+        p_contrato_id: contrato.id,
+        p_productos: productos,
+        p_nombre_proyecto: nombre.trim() || null,
+      });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error);
+      setMsg({ err: false, t: `Proyecto dado de alta con ${productos.length === 2 ? 'las dos herramientas' : PRODUCTOS.find((x) => x.id === productos[0])?.etq}.` });
+      setAbierto(false);
+      onCambio && onCambio();
+    } catch (e) {
+      setMsg({ err: true, t: `No se pudo dar de alta: ${e?.message || e}` });
+    } finally { setOcupado(false); }
+  }
+
+  // Oferta aceptada sin contrato todavía
+  if (!contrato) {
+    if ((oferta.estado || 'emitida') !== 'aceptada') return null;
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button onClick={generarContrato} disabled={ocupado}
+          className="btn-orange !px-3 !py-1 text-[11.5px] disabled:opacity-50">
+          {ocupado ? 'Generando…' : 'Generar contrato'}
+        </button>
+        {msg && <span className={`text-[11.5px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</span>}
+      </div>
+    );
+  }
+
+  // Ya hay contrato: se puede colgar el proyecto
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="chip !px-2 !py-0.5 bg-emerald-500/15 text-[10.5px] font-extrabold text-emerald-300">
+          {contrato.numero}
+        </span>
+        {contrato.url_pdf && (
+          <a href={contrato.url_pdf} target="_blank" rel="noopener"
+            className="text-[11.5px] font-bold text-brand-orange hover:underline">Ver contrato</a>
+        )}
+        <button onClick={() => { setAbierto((v) => !v); setNombre(nombre || sugerido); }}
+          className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">
+          {abierto ? 'Cancelar' : '+ Dar de alta el proyecto'}
+        </button>
+      </div>
+
+      {abierto && (
+        <div className="rounded-xl bg-[#0D3242] p-3">
+          <label className="label" htmlFor={`np-${oferta.id}`}>Nombre del proyecto</label>
+          <input id={`np-${oferta.id}`} className="input !py-1.5 !text-[13px]" value={nombre}
+            onChange={(e) => setNombre(e.target.value)} />
+          <p className="mt-1 text-[11px] text-[#7FA7B4]">
+            Código sugerido: <code className="text-[#9FC0CB]">{sugerido}</code>
+          </p>
+
+          <p className="label !mb-1.5 mt-3">Herramientas que se le abren</p>
+          <div className="space-y-1.5">
+            {PRODUCTOS.map((pr) => {
+              const on = productos.includes(pr.id);
+              return (
+                <button key={pr.id} type="button"
+                  onClick={() => setProductos(on ? productos.filter((x) => x !== pr.id) : [...productos, pr.id])}
+                  className={`flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left transition ${
+                    on ? 'border-brand-verde bg-brand-verde/12' : 'border-[#1E5468] hover:border-brand-verde/50'}`}>
+                  <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border-[1.5px] text-[10px] font-bold ${
+                    on ? 'border-brand-verde bg-brand-verde text-[#061F2B]' : 'border-[#3F7D93]'}`}>{on ? '✓' : ''}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-bold text-[#EAF4F7]">{pr.etq}</span>
+                    <span className="block text-[11px] leading-snug text-[#7FA7B4]">{pr.desc}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button onClick={crearProyecto} disabled={ocupado}
+            className="btn-orange mt-3 !px-4 !py-1.5 text-xs disabled:opacity-50">
+            {ocupado ? 'Dando de alta…' : 'Dar de alta el proyecto'}
+          </button>
+        </div>
+      )}
+
+      {msg && (
+        <p className={`text-[11.5px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</p>
+      )}
+    </div>
+  );
+}

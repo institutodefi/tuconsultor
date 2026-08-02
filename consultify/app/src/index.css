@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────
+   Tokens compartidos con la landing (public-site/index.html)
+   navy-900 #061B45 · navy-800 #0A2A6C · orange #F5A623
+   orange-deep #E89313 · ink #0A1530 · muted #5B6680
+   off-white #F8F9FB · línea rgba(10,21,48,.10)
+   ────────────────────────────────────────────────────────── */
+:root { color-scheme: dark; }
+
+body {
+  @apply font-sans antialiased;
+  background: #0A2B3A;          /* Orbita · navy profundo */
+  color: #EAF4F7;               /* tinta clara */
+  line-height: 1.55;
+}
+
+/* Manrope en toda la interfaz, incluidos inputs y botones (que por defecto
+   heredan la fuente del sistema). */
+*, input, select, textarea, button {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+/* Rubik para los titulares del portal (marca Órbita) y la clase .font-orbita. */
+h1, .font-orbita {
+  font-family: 'Manrope', system-ui, sans-serif;  /* Orbita.PMTools: Manrope (manual A7) */
+  font-weight: 600;
+}
+
+@layer components {
+  /* Botones píldora idénticos a la landing (.btn) */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-[#0A2B3A] transition disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply bg-brand-orangeDark -translate-y-px shadow-[0_8px_24px_rgba(0,0,0,0.35)];
+  }
+  .btn-orange {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-[#0A2B3A] transition disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-orange:hover:not(:disabled) {
+    @apply bg-brand-orangeDark -translate-y-px;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-[#1E5468] bg-transparent px-5 py-2.5 text-sm font-semibold text-[#EAF4F7] transition hover:border-brand-verde;
+  }
+
+  /* Eyebrow de sección, calcado de .section-eyebrow */
+  .eyebrow {
+    @apply inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.22em] text-brand-verdeTexto;
+  }
+  .eyebrow::before { content: ''; @apply h-2 w-2 rounded-full bg-brand-verde; }
+
+  /* Tarjetas con el radio de la landing (22px) y su línea */
+  .card  { @apply rounded-2xl sm:rounded-[22px] border bg-[#10394A] p-4 sm:p-6 shadow-sm; border-color: #1E5468; }
+  .input { @apply w-full rounded-xl border border-[#1E5468] bg-[#0D3242] px-4 py-2.5 text-sm text-[#EAF4F7] outline-none transition focus:border-brand-verde focus:ring-2 focus:ring-brand-verde/30; }
+  .label { @apply mb-1.5 block text-xs font-bold uppercase tracking-[0.16em] text-[#B9D2DA]; }
+  .chip  { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold; }
+  .tab-active { @apply border-b-2 border-brand-verde font-bold text-[#EAF4F7]; }
+  .tab-idle   { @apply border-b-2 border-transparent font-semibold text-[#9FC0CB] hover:text-[#EAF4F7]; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+}
+
+::selection { background: #F5A62355; }
