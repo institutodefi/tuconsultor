@@ -5,6 +5,7 @@ import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormular
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
+import { EMISORAS_BASE } from '../lib/emisoras.js';
 import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
@@ -50,6 +51,22 @@ export default function GeneradorOfertas({ publico = false }) {
   const [ajustes, setAjustes] = useState([]);               // trato particular de ESTA oferta
   const [notas, setNotas] = useState('');                   // salen en el PDF y el PPT
   const [notasInternas, setNotasInternas] = useState('');   // no salen en ningún sitio
+  // Sociedad que emite. Se cargan las que esta persona tiene asignadas; si no
+  // tiene ninguna, la de por defecto. Nadie se queda sin poder ofertar.
+  const [emisoras, setEmisoras] = useState([]);
+  const [emisora, setEmisora] = useState('trescore');
+  useEffect(() => {
+    if (publico) return;
+    listTable('empresas_emisoras')
+      .then((es) => (es && es.length ? es : EMISORAS_BASE))
+      .catch(() => EMISORAS_BASE)
+      .then((es) => {
+        const act = es.filter((e) => e.activa !== false).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+        setEmisoras(act);
+        const def = act.find((e) => e.por_defecto) || act[0];
+        if (def) setEmisora(def.id);
+      });
+  }, [publico]);
   const [modeloDespues, setModeloDespues] = useState('Implicación');  // mantenimiento al terminar
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
@@ -193,7 +210,8 @@ export default function GeneradorOfertas({ publico = false }) {
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
-          ajustes, fasesPlan, notas_oferta: notas || null, notas_internas: notasInternas || null,
+          ajustes, fasesPlan, emisora_id: emisora,
+          notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
           forma_pago: modelo === 'Implantación' ? formaPago : null,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
@@ -378,6 +396,26 @@ export default function GeneradorOfertas({ publico = false }) {
                 No cambian el precio por sí solas: las usan las reglas comerciales. El equipo sí afecta,
                 porque de él sale la tarifa real.
               </p>
+
+              {emisoras.length > 1 && (
+                <div className="mt-3">
+                  <p className="label !mb-1.5">Sociedad que emite la oferta</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {emisoras.map((e) => (
+                      <button key={e.id} type="button" onClick={() => setEmisora(e.id)}
+                        title={`${e.razon_social} · CIF ${e.cif}`}
+                        className={`rounded-lg border px-3 py-1.5 text-left text-[12px] font-bold transition ${
+                          emisora === e.id ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange/60'}`}>
+                        {e.razon_social}
+                        <span className="ml-1.5 font-normal text-[10.5px] opacity-80">{e.cif}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                    Es la sociedad que firma y factura. Sale en el pie del PDF y en la aceptación.
+                  </p>
+                </div>
+              )}
 
               <div className="mt-3 grid gap-4 lg:grid-cols-3">
                 <div>

@@ -18,7 +18,7 @@ import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
 import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
-import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste } from './contenido-oferta.mjs';
+import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe } from './contenido-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
 const BLOQUES = {
@@ -89,10 +89,11 @@ async function generarPPTX(r, cli, anexo) {
 
   const p = new PptxGenJS();
   p.defineLayout({ name: 'W', width: 10, height: 5.63 }); p.layout = 'W';
-  p.author = EMISOR.marca; p.company = EMISOR.marca;
+  p.author = EM.razonSocial; p.company = EM.marca;
   p.title = ('Oferta ' + (r.numero || '') + ' · ' + (cli?.empresa || '')).trim();
 
   const F = 'Arial';   // Rubik no está instalada en el equipo de quien lo abra
+  const EM = emisorDe(r);   // qué sociedad emite esta oferta
 
   // Pie con las tres marcas, igual que en el PDF.
   const pie = (s, legal) => {
@@ -105,7 +106,7 @@ async function generarPPTX(r, cli, anexo) {
       s.addImage({ data: 'image/png;base64,' + par[0], x: x, y: 5.22, w: w, h: alto });
       x += w + 0.22;
     }
-    s.addText(legal || EMISOR.legalPie,
+    s.addText(legal || EM.legalPie,
       { x: 5.3, y: 5.22, w: 4.1, h: 0.26, fontFace: F, fontSize: 8, color: C.claro, align: 'right', valign: 'middle' });
   };
 
@@ -137,7 +138,7 @@ async function generarPPTX(r, cli, anexo) {
       { x: 0.6, y: 4.35, w: 8.8, h: 0.26, fontFace: F, fontSize: 10, color: C.naranja });
   }
   s.addText('Oferta ' + (r.numero || '') + '  ·  ' + fechaLarga(), { x: 0.6, y: 4.65, w: 5, h: 0.26, fontFace: F, fontSize: 9, color: C.claro });
-  pie(s, EMISOR.marca + ' · CIF ' + EMISOR.cif);
+  pie(s, EM.pieCorto);
 
   // ══════════ 2 · La propuesta ══════════
   const prop = propuesta(r, cli);
@@ -252,7 +253,7 @@ async function generarPPTX(r, cli, anexo) {
   s.addText('La firma de este documento supone la aceptación de la propuesta y de las condiciones recogidas en los anexos.',
     { x: 0.6, y: 1.6, w: 8.8, h: 0.4, fontFace: F, fontSize: 11, color: C.tinta });
   const firmas = [
-    ['POR TUCONSULTOR', EMISOR.firmante, EMISOR.cargo, C.suave, null],
+    ['POR ' + EM.marca.toUpperCase(), EM.firmante, EM.cargo + ' · ' + EM.razonSocial, C.suave, null],
     ['POR LA ORGANIZACIÓN', cli?.empresa || '', cli?.contacto || 'Persona con capacidad de firma', C.blanco, C.linea],
   ];
   firmas.forEach(function (f, i) {
@@ -491,6 +492,7 @@ export default async (req) => {
   r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
   r.notas = body.notas_oferta || body.notas || null;     // solo las que ve el cliente
   r.fasesPlan = body.fasesPlan || body.fases_plan || null;  // fases contratadas de cada plan
+  r.emisora_id = body.emisora_id || 'trescore';            // sociedad que emite
   r.modeloMantenimiento = body.modelo_mantenimiento || null;
   // Enriquecer el resultado con nombres de norma y meses para el documento.
   // Se escriben las dos variantes del nombre: hubo documentos que leían una y
@@ -597,6 +599,7 @@ export default async (req) => {
               fases_plan: body.fasesPlan || body.fases_plan || null,
               notas_oferta: r.notas || null,
               forma_pago: body.forma_pago || null,
+              emisora_id: r.emisora_id,
               modelo_mantenimiento: body.modelo_mantenimiento || null,
               ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
               ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),

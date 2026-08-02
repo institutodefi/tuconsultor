@@ -27,7 +27,7 @@ import {
 import {
   RGB01, EMISOR, condiciones as condicionesComunes,
   REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
-  nombresDeNormas, fasesDeLosPlanes, describirAjuste,
+  nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe,
 } from './contenido-oferta.mjs';
 
 const b64 = (s) => Buffer.from(s, 'base64');
@@ -69,7 +69,9 @@ export async function generarPDFOferta(r, cli, anexo) {
   try { logoColor = await pdf.embedPng(Buffer.from(LOGO_TUCONSULTOR, 'base64')); } catch { /* sin logo */ }
 
   pdf.setTitle(`Oferta ${r.numero || ''} · ${cli?.empresa || ''}`.trim());
-  pdf.setAuthor('TuConsultor');
+  // Quién emite ESTA oferta. Se resuelve una vez y se usa en todo el documento.
+  const EM = emisorDe(r);
+  pdf.setAuthor(EM.razonSocial);
   pdf.setSubject('Propuesta de servicios de consultoría de sistemas de gestión');
   pdf.setProducer('Orbita.PMTools');
 
@@ -141,7 +143,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   // Pie de portada
   cover.drawText(`Oferta ${r.numero || ''}`.trim(), { x: MG, y: U * 5.5, size: 8.5, font: med, color: rgb(0.45, 0.6, 0.68) });
   cover.drawText(HOY(), { x: MG, y: U * 3.5, size: 8.5, font: reg, color: rgb(0.35, 0.5, 0.58) });
-  const pieCover = 'TuConsultor · CIF B84867670';
+  const pieCover = EM.pieCorto;
   cover.drawText(pieCover, { x: A4[0] - MG - reg.widthOfTextAtSize(pieCover, 8), y: U * 3.5, size: 8, font: reg, color: rgb(0.35, 0.5, 0.58) });
 
   // ══════════════════ Páginas de contenido ══════════════════
@@ -390,9 +392,13 @@ export async function generarPDFOferta(r, cli, anexo) {
     const alto = U * 11;
     // Por TuConsultor
     p.drawRectangle({ x: MG, y: yFirmas - alto, width: colAncho, height: alto, color: SUAVE });
-    p.drawText('POR TUCONSULTOR', { x: MG + U * 1.5, y: yFirmas - U * 2, size: 7, font: med, color: APAGADO, characterSpacing: 1.2 });
-    p.drawText(EMISOR.firmante, { x: MG + U * 1.5, y: yFirmas - U * 4.4, size: 11.5, font: bold, color: TINTA });
-    p.drawText(EMISOR.cargo, { x: MG + U * 1.5, y: yFirmas - U * 6.2, size: 9, font: reg, color: APAGADO });
+    p.drawText('POR ' + EM.marca.toUpperCase(), { x: MG + U * 1.5, y: yFirmas - U * 2, size: 7, font: med, color: APAGADO, characterSpacing: 1.2 });
+    p.drawText(EM.firmante, { x: MG + U * 1.5, y: yFirmas - U * 4.4, size: 11.5, font: bold, color: TINTA });
+    p.drawText(EM.cargo, { x: MG + U * 1.5, y: yFirmas - U * 6.2, size: 9, font: reg, color: APAGADO });
+    // La razón social, en la firma: es la sociedad que se obliga.
+    for (const l of partir(`${EM.razonSocial} · CIF ${EM.cif}`, reg, 8, colAncho - U * 3)) {
+      p.drawText(l, { x: MG + U * 1.5, y: yFirmas - U * 7.4, size: 8, font: reg, color: APAGADO });
+    }
     p.drawLine({ start: { x: MG + U * 1.5, y: yFirmas - U * 9 }, end: { x: MG + colAncho - U * 1.5, y: yFirmas - U * 9 }, thickness: 0.8, color: LINEA });
     p.drawText('Firma y fecha', { x: MG + U * 1.5, y: yFirmas - U * 10.3, size: 7, font: reg, color: APAGADO });
 
@@ -521,7 +527,7 @@ export async function generarPDFOferta(r, cli, anexo) {
     }
 
     // Datos legales, a la derecha de los logotipos
-    const legal = EMISOR.legalPie;
+    const legal = EM.legalPie;
     const anchoLegal = reg.widthOfTextAtSize(legal, 7);
     const num = `${i + 1} / ${total}`;
     const anchoNum = med.widthOfTextAtSize(num, 7.5);

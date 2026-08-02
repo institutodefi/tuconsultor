@@ -36,16 +36,39 @@ export const RGB01 = Object.fromEntries(
   ]]),
 );
 
-export const EMISOR = {
-  marca: 'TuConsultor',
-  razonSocial: 'TRESCORE PROYECTOS ITE, S.L.',
-  cif: 'B84867670',
+// Las tres sociedades que pueden emitir. La marca es común; la razón social y
+// el CIF, no. Una oferta que dice una sociedad y se factura desde otra deja el
+// contrato sin sostener, así que el documento tiene que decir cuál emite.
+export const EMISORAS = {
+  trescore: { id: 'trescore', marca: 'TuConsultor', razonSocial: 'TRESCORE PROYECTOS ITE, S.L.',
+              cif: 'B84867670', domicilio: 'Alcorcón, Madrid' },
+  iee:      { id: 'iee', marca: 'TuConsultor', razonSocial: 'INSTITUTO EXCELENCIA EUROPEA, S.L.',
+              cif: 'B87093076', domicilio: 'Alcorcón, Madrid' },
+  defi:     { id: 'defi', marca: 'TuConsultor', razonSocial: 'INSTITUTO EUROPEO DE BLOCKCHAIN Y DEFI, S.L.',
+              cif: 'B06996631', domicilio: 'Alcorcón, Madrid' },
+};
+
+const COMUN = {
   email: 'hola@tuconsultor.com',
   rgpd: 'rgpd@tuconsultor.com',
   firmante: 'Alejandro San Nicolás',
   cargo: 'CEO de TuConsultor',
-  legalPie: 'TuConsultor · CIF B84867670 · hola@tuconsultor.com',
 };
+
+/** Datos del emisor de ESTA oferta. Sin emisora indicada, la de por defecto. */
+export function emisorDe(r) {
+  const e = EMISORAS[r?.emisora_id || r?.emisoraId] || EMISORAS.trescore;
+  return {
+    ...COMUN, ...e,
+    // En el pie va la marca con la razón social entre paréntesis: el cliente
+    // reconoce «TuConsultor» y a la vez consta quién emite legalmente.
+    legalPie: `${e.marca} (${e.razonSocial}) · CIF ${e.cif} · ${COMUN.email}`,
+    pieCorto: `${e.marca} · CIF ${e.cif}`,
+  };
+}
+
+/** Compatibilidad: quien no pase la oferta recibe la sociedad por defecto. */
+export const EMISOR = emisorDe(null);
 
 /** Condiciones generales. `r` es el resultado del cálculo. */
 export function condiciones(r) {
