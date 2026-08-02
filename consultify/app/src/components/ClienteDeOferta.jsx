@@ -19,6 +19,18 @@ import { ROLES_CONTACTO } from '../lib/crm.js';
 
 const nombreDe = (c) => [c?.nombre, c?.apellidos].filter(Boolean).join(' ').trim();
 
+// Los formularios trabajan con Nombre y Apellidos POR SEPARADO. Antes esto
+// rellenaba un campo `contacto` con los dos unidos que ningún formulario leía,
+// así que elegir un cliente existente dejaba el nombre en blanco.
+// Si un contacto antiguo tiene todo en `nombre`, se parte por el primer espacio.
+function partirNombre(c) {
+  if (c?.apellidos) return { nombre: c.nombre || '', apellidos: c.apellidos };
+  const t = String(c?.nombre || '').trim();
+  if (!t.includes(' ')) return { nombre: t, apellidos: '' };
+  const i = t.indexOf(' ');
+  return { nombre: t.slice(0, i), apellidos: t.slice(i + 1) };
+}
+
 export default function ClienteDeOferta({ cli, setCli, publico = false }) {
   const [modo, setModo] = useState('nuevo');        // 'existente' | 'nuevo'
   const [empresas, setEmpresas] = useState([]);
@@ -64,13 +76,16 @@ export default function ClienteDeOferta({ cli, setCli, publico = false }) {
     const principal = personas.find((x) => x.vinc.principal)
       || personas.find((x) => x.vinc.rol === 'directivo')
       || personas.find((x) => x.c.email) || personas[0];
+    const n = principal ? partirNombre(principal.c) : { nombre: '', apellidos: '' };
     setCli((c) => ({
       ...c,
       empresa: e.nombre_comercial || e.nombre || '',
       cif: e.cif || '',
       direccion: e.direccion || c.direccion,
       empresa_id: e.id,
-      contacto: principal ? nombreDe(principal.c) : '',
+      nombre: n.nombre,
+      apellidos: n.apellidos,
+      cargo: principal?.vinc?.cargo || principal?.c?.cargo || c.cargo || '',
       email: principal?.c?.email || '',
       telefono: principal?.c?.movil || principal?.c?.telefono || e.telefono || '',
       contacto_id: principal?.c?.id || null,
@@ -78,9 +93,12 @@ export default function ClienteDeOferta({ cli, setCli, publico = false }) {
   }
 
   function elegirPersona(x) {
+    const n = partirNombre(x.c);
     setCli((c) => ({
       ...c,
-      contacto: nombreDe(x.c),
+      nombre: n.nombre,
+      apellidos: n.apellidos,
+      cargo: x.vinc?.cargo || x.c.cargo || c.cargo || '',
       email: x.c.email || '',
       telefono: x.c.movil || x.c.telefono || c.telefono,
       contacto_id: x.c.id,

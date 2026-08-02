@@ -571,6 +571,41 @@ export default async (req) => {
       envio_cliente = await enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email }).catch((e) => ({ ok: false, motivo: String(e) }));
     }
 
+    // ── RED DE SEGURIDAD ──────────────────────────────────────────────────
+    // Si el navegador no consiguió crear la fila (una columna que falta, una
+    // política, un fallo de red), el documento ya está generado y el cliente lo
+    // va a recibir. Que no quede registrado es peor que cualquiera de esos
+    // fallos: queda un PDF con un número de oferta que el sistema no conoce.
+    // Aquí se crea con la clave de servicio, que no depende de esas políticas.
+    if (!presupuesto_id && numeroOferta && base && key) {
+      try {
+        const ya = await fetch(
+          `${base}/rest/v1/presupuestos?numero_oferta=eq.${encodeURIComponent(numeroOferta)}&select=id`,
+          { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+        const filas = ya.ok ? await ya.json() : [];
+        if (!filas.length) {
+          await fetch(`${base}/rest/v1/presupuestos`, {
+            method: 'POST',
+            headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json',
+                       Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              numero_oferta: numeroOferta, empresa, nombre: contacto || null, email: email || null,
+              telefono: body.telefono || null, cif: cif || null, cargo: cargo || null,
+              normas, modelo, precio: Math.round(r.precioCatalogo), tipo: r.tipo,
+              comercial: comercial || null, url_pdf, url_pptx,
+              complejidad: body.complejidad || null, sedes: body.sedes || 1,
+              fases_plan: body.fasesPlan || body.fases_plan || null,
+              notas_oferta: r.notas || null,
+              forma_pago: body.forma_pago || null,
+              modelo_mantenimiento: body.modelo_mantenimiento || null,
+              ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
+              ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),
+            }),
+          });
+        }
+      } catch (e) { console.error('red de seguridad del histórico', e); }
+    }
+
     return Response.json({ ok: true, alta, url_pdf, url_pptx, numero_oferta: numeroOferta, precio: r.precioCatalogo, tipo: r.tipo, envio_cliente });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 502 });

@@ -122,6 +122,10 @@ export default function GeneradorOfertas({ publico = false }) {
       fila = await insertRow('presupuestos', {
         empresa: cli.empresa, nombre: contactoCompleto, email: cli.email, telefono: cli.telefono,
         cif: cli.cif, cargo: cli.cargo, normas: sel, modelo, precio: precioLead, tipo: tipoLead,
+        // Nombre y apellidos también por separado: `nombre` guarda el completo
+        // por compatibilidad, pero partir un nombre después falla con los
+        // compuestos («María del Carmen») y con los dos apellidos.
+        contacto_nombre: cli.nombre || null, contacto_apellidos: cli.apellidos || null,
         numero_oferta: numero, comercial, requerimiento,
         // Todo lo que define el encargo, para poder regenerar la oferta igual
         // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
@@ -211,7 +215,7 @@ export default function GeneradorOfertas({ publico = false }) {
         // Hubo éxito (documento y/o alta en BD). Avisamos si algo quedó a medias.
         setEstado({ ok: true, numero, parcial: !okDoc, ...(okDoc ? j : {}) });
         if (errorInsert) {
-          setError(`LA OFERTA ${numero} NO SE HA GUARDADO. El documento se ha generado, pero no aparecerá en el histórico. Motivo: ${errorInsert}`);
+          setError(`LA OFERTA ${numero} NO SE PUDO GUARDAR DESDE AQUÍ. Motivo: ${errorInsert}. Se ha intentado registrar desde el servidor: comprueba el histórico antes de enviarla al cliente.`);
         } else if (!okDoc && j?.error) {
           setError(`Oferta ${numero} registrada, pero el documento falló: ${j.error}`);
         }
