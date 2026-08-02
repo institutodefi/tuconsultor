@@ -14,8 +14,18 @@ import './index.css';
 function Protected({ allow, children }) {
   const { user, role, loading } = useAuth();
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-[#9FC0CB] font-semibold">Cargando…</div>;
+
+  // Sin sesión, a identificarse.
   if (!user) return <Navigate to="/acceso" replace />;
-  if (allow && !allow.includes(role)) return <Navigate to="/acceso" replace />;
+
+  // Con sesión pero sin permiso para ESTA zona, al panel que sí le corresponde.
+  // Mandarlo a /acceso era el fallo: ya está identificado, así que le salía la
+  // pantalla de credenciales con su propio correo visible en la barra lateral,
+  // y no había forma de salir de ahí.
+  if (allow && !allow.includes(role)) {
+    const suyo = role === 'cliente' ? '/clientes' : '/consultores/mi-agenda';
+    return <Navigate to={suyo} replace />;
+  }
   return children;
 }
 
