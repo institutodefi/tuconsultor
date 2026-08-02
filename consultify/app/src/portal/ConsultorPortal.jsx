@@ -10,6 +10,7 @@ import Agenda from './consultores/Agenda.jsx';
 import MiAgenda from './consultores/MiAgenda.jsx';
 import Sistemas from './consultores/Sistemas.jsx';
 import ReglasComerciales from './consultores/ReglasComerciales.jsx';
+import DashboardProyectos from './consultores/DashboardProyectos.jsx';
 import Versiones from './consultores/Versiones.jsx';
 import RegistroAccesos from './consultores/RegistroAccesos.jsx';
 import Accesibilidad from './consultores/Accesibilidad.jsx';
@@ -174,6 +175,7 @@ export default function ConsultorPortal() {
                   panel doble es el Dashboard con el foco puesto en clientes. */}
               <Route path="clientes" element={<Navigate to="../empresas?filtro=cliente" replace />} />
               <Route path="clientes/dashboard" element={<Guard ok={verClientes}><Dashboard soloClientes /></Guard>} />
+              <Route path="proyectos/dashboard" element={<Guard ok={verPlanAgendaSist}><DashboardProyectos /></Guard>} />
               <Route path="proyectos/planificador" element={<Guard ok={verPlanAgendaSist}><Agenda /></Guard>} />
               <Route path="leads" element={<Navigate to="../empresas?filtro=potencial" replace />} />
               <Route path="empresas" element={<Guard ok={verCrm}><Empresas /></Guard>} />

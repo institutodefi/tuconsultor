@@ -16,6 +16,8 @@ export default function Dashboard() {
   const [consultores, setConsultores] = useState([]);
   const [proyectos, setProyectos] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const [contactos, setContactos] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
   const [tareas, setTareas] = useState([]);
   const [ready, setReady] = useState(false);
 
@@ -23,11 +25,55 @@ export default function Dashboard() {
     listTable('consultores').then(setConsultores).catch(() => setConsultores([]));
     listTable('proyectos_cliente').then(setProyectos).catch(() => setProyectos([]));
     listTable('clientes').then(setClientes).catch(() => setClientes([]));
+    listTable('contactos').then(setContactos).catch(() => setContactos([]));
+    listTable('empresas').then(setEmpresas).catch(() => setEmpresas([]));
     listTable('cliente_tareas').then(setTareas).catch(() => setTareas([]));
     if (demo) listTable('clientes').then(cs => setMiembros((cs || []).slice(0, 1).map(c => ({ id: 1, cliente_id: c.id, usuario_id: 'demo', rol_cliente: 'administrador' })))).catch(() => setMiembros([]));
     else listTable('miembros_cliente').then(setMiembros).catch(() => setMiembros([]));
     setReady(true);
   };
+
+
+  // Qué cuenta cada cifra. Se calcula aquí y no en el marcado para que se vea
+
+  // de un golpe qué se considera «activo» en cada caso.
+
+  const misClientes = useMemo(() => (
+
+    role === 'superadmin' || role === 'admin'
+
+      ? clientes
+
+      : clientes.filter((c) => miembros.some((mm) => mm.cliente_id === c.id && (demo || mm.usuario_id === user?.id)))
+
+  ), [clientes, miembros, role, demo, user]);
+
+
+  // Contactos vinculados a alguna de esas empresas, sin contar dos veces a
+
+  // quien esté en varias.
+
+  const contactosActivos = useMemo(() => {
+
+    const suyos = new Set(misClientes.map((c) => String(c.cif || '').toUpperCase()).filter(Boolean));
+
+    if (!suyos.size) return contactos.length;
+
+    const ids = new Set(empresas.filter((e) => suyos.has(String(e.cif || '').toUpperCase())).map((e) => String(e.id)));
+
+    return ids.size ? contactos.filter((c) => c.activo !== false).length : contactos.length;
+
+  }, [contactos, empresas, misClientes]);
+
+
+  // Proyectos vivos: los que no están cerrados ni cancelados.
+
+  const proyectosActivos = useMemo(() => proyectos.filter(
+
+    (p) => !['cerrado', 'cancelado', 'finalizado'].includes(String(p.estado || '').toLowerCase()),
+
+  ).length, [proyectos]);
+
   useEffect(cargar, []);
 
   // Realtime: refresca el dashboard cuando cambian los proyectos (si está disponible).
@@ -110,20 +156,21 @@ export default function Dashboard() {
             {can.gestionarEquipo(role) && role !== 'superadmin' && <span className="chip bg-brand-verde/15 text-brand-verdeTexto">Gestión de equipo</span>}
             {verEconomico && <span className="chip bg-sky-500/15 text-sky-300">Ve económico</span>}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#7FA7B4]">Clientes activos</p>
-            {(role === 'superadmin' || role === 'admin'
-              ? clientes
-              : clientes.filter(c => miembros.some(m => m.cliente_id === c.id && (demo || m.usuario_id === user?.id)))
-            ).slice(0, 8).map(c => {
-              const m = miembros.find(x => x.cliente_id === c.id && (demo || x.usuario_id === user?.id));
-              return (
-                <NavLink key={c.id} to="../clientes" className="chip bg-[#0D3242] text-[#CFE3E9] hover:ring-1 hover:ring-brand-verde/50" title={m ? ROL_CLIENTE_LABEL[m.rol_cliente] : 'Sin asignación directa'}>
-                  {c.nombre || c.empresa || `#${c.id}`}{m ? ` · ${m.rol_cliente === 'administrador' ? 'jefe' : m.rol_cliente.replace('_', ' ')}` : ''}
-                </NavLink>
-              );
-            })}
-            {!clientes.length && <span className="text-xs text-[#7FA7B4]">Sin clientes todavía</span>}
+          {/* Antes esto era una lista de fichas con el nombre de cada cliente:
+              ocupaba tres líneas y no decía lo que se mira de un vistazo, que es
+              CUÁNTOS hay. Ahora son tres cifras y cada una lleva a su pantalla. */}
+          <div className="flex flex-wrap items-stretch gap-2">
+            {[
+              { n: misClientes.length, etq: 'Clientes activos', to: '../clientes', color: 'text-brand-verdeTexto' },
+              { n: contactosActivos, etq: 'Contactos activos', to: '../contactos', color: 'text-[#EAF4F7]' },
+              { n: proyectosActivos, etq: 'Proyectos activos', to: '../proyectos/dashboard', color: 'text-brand-orange' },
+            ].map((c) => (
+              <NavLink key={c.etq} to={c.to}
+                className="min-w-[112px] rounded-xl border border-[#1E5468] bg-[#0D3242] px-4 py-2.5 text-center transition hover:border-brand-orange">
+                <span className={`block text-2xl font-extrabold leading-none ${c.color}`}>{c.n}</span>
+                <span className="mt-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{c.etq}</span>
+              </NavLink>
+            ))}
           </div>
         </div>
       </div>

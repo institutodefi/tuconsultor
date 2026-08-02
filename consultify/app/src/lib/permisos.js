@@ -61,6 +61,7 @@ export const GRUPOS_PORTAL = [
         roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'],
         hijos: [
           { to: 'proyectos',             label: 'Cartera de proyectos',    roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
+          { to: 'proyectos/dashboard',   label: 'Panel de proyectos',      roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
           { to: 'proyectos/planificador', label: 'Planificador de proyectos', roles: ['superadmin', 'admin', 'director', 'consultor'] },
         ],
       },
