@@ -21,6 +21,7 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
   const [abierto, setAbierto] = useState(false);
   const [productos, setProductos] = useState(['mstool']);
   const [nombre, setNombre] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [msg, setMsg] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -48,6 +49,9 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
 
   async function crearProyecto() {
     if (!productos.length) { setMsg({ err: true, t: 'Elige al menos una herramienta.' }); return; }
+    // El código es obligatorio: la base lo exige y es lo que identifica el
+    // proyecto en todo lo demás. Se propone, pero tiene que haber uno.
+    if (!codigo.trim()) { setMsg({ err: true, t: 'El código del proyecto es obligatorio.' }); return; }
     setOcupado(true); setMsg(null);
     try {
       if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se da de alta.' }); return; }
@@ -55,6 +59,7 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
         p_contrato_id: contrato.id,
         p_productos: productos,
         p_nombre_proyecto: nombre.trim() || null,
+        p_codigo: codigo.trim(),
       });
       if (error) throw error;
       if (data?.ok === false) throw new Error(data.error);
@@ -91,7 +96,7 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
           <a href={contrato.url_pdf} target="_blank" rel="noopener"
             className="text-[11.5px] font-bold text-brand-orange hover:underline">Ver contrato</a>
         )}
-        <button onClick={() => { setAbierto((v) => !v); setNombre(nombre || sugerido); }}
+        <button onClick={() => { setAbierto((v) => !v); setNombre(nombre || contrato.objeto || sugerido); setCodigo(codigo || sugerido); }}
           className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">
           {abierto ? 'Cancelar' : '+ Dar de alta el proyecto'}
         </button>
@@ -102,8 +107,14 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
           <label className="label" htmlFor={`np-${oferta.id}`}>Nombre del proyecto</label>
           <input id={`np-${oferta.id}`} className="input !py-1.5 !text-[13px]" value={nombre}
             onChange={(e) => setNombre(e.target.value)} />
-          <p className="mt-1 text-[11px] text-[#7FA7B4]">
-            Código sugerido: <code className="text-[#9FC0CB]">{sugerido}</code>
+          <label className="label mt-3" htmlFor={`cp-${oferta.id}`}>
+            Código del proyecto <span className="text-brand-orange">*</span>
+          </label>
+          <input id={`cp-${oferta.id}`} className="input !py-1.5 !text-[13px] font-mono" value={codigo}
+            onChange={(e) => setCodigo(e.target.value.toUpperCase())} />
+          <p className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+            Cliente · año · servicio · normas. Se propone {sugerido === codigo ? 'éste' : <><code className="text-[#9FC0CB]">{sugerido}</code></>};
+            puedes cambiarlo, pero no puede repetirse.
           </p>
 
           <p className="label !mb-1.5 mt-3">Herramientas que se le abren</p>

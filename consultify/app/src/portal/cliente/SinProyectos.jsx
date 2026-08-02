@@ -53,6 +53,15 @@ export default function ClienteSinProyectos() {
         <h1 className="text-2xl font-extrabold tracking-tight text-[#EAF4F7]">
           Hola{nombre ? `, ${nombre.split(' ')[0]}` : ''}
         </h1>
+        {/* La empresa, una sola vez y aquí: quien entra necesita saber en
+            nombre de qué organización está mirando. Repetirla en cada tarjeta
+            era ruido. */}
+        {(empresa?.empresa || empresa?.nombre) && (
+          <p className="mt-0.5 text-[13px] font-bold text-brand-verdeTexto">
+            {empresa.empresa || empresa.nombre}
+            {empresa.cif && <span className="ml-2 font-normal text-[#7FA7B4]">{empresa.cif}</span>}
+          </p>
+        )}
         <p className="mt-1 text-sm text-[#9FC0CB]">
           Todavía no hay ningún proyecto en marcha. Cuando lo haya, lo verás aquí con su estado y sus fechas.
         </p>
@@ -80,8 +89,8 @@ export default function ClienteSinProyectos() {
           <h2 className="text-sm font-extrabold text-[#EAF4F7]">Tu empresa</h2>
           {empresa ? (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Dato etiqueta="Empresa" valor={empresa.empresa || empresa.nombre} />
               <Dato etiqueta="CIF" valor={empresa.cif} />
+              <Dato etiqueta="Dirección" valor={empresa.direccion} />
               <Dato etiqueta="Teléfono" valor={empresa.telefono} />
               <Dato etiqueta="Correo" valor={empresa.email} />
             </div>

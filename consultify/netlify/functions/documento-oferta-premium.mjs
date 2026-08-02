@@ -29,6 +29,7 @@ import {
   REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
   nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe,
 } from './contenido-oferta.mjs';
+import { cuadroFacturacion, mesLargo } from '../../app/src/lib/facturacion.js';
 
 const b64 = (s) => Buffer.from(s, 'base64');
 
@@ -348,6 +349,61 @@ export async function generarPDFOferta(r, cli, anexo) {
       masBajo = Math.min(masBajo, yy);
     });
     cursor = Math.min(masBajo, yTop - U * 12) - U * 2;
+  }
+
+  // ── Cuadro de facturación ──
+  // «12.000 € de implantación» no dice si entran este mes o repartidos en un
+  // año, que es lo que el cliente necesita saber para su tesorería.
+  {
+    const cuadro = cuadroFacturacion({
+      tipo: r.tipo, importe: r.precioCatalogo,
+      firma: r.fecha_inicio || null, meses: r.meses,
+      formaPago: r.formaPagoElegida || r.forma_pago,
+      certificacion: r.fecha_certificacion || null,
+    });
+    if (cuadro.filas.length > 1 || r.tipo === 'mes') {
+      seccion('Cuándo se factura', Math.min(cuadro.filas.length, 6) * 2 + 10);
+      parrafo(r.tipo === 'mes'
+        ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} cargos en el primer periodo.`
+        : 'Calendario de facturación previsto desde la firma.');
+
+      // Cabecera
+      asegurar(4);
+      p.drawText('FECHA', { x: MG, y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
+      p.drawText('CONCEPTO', { x: MG + U * 13, y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
+      const hBase = 'BASE', hTot = 'TOTAL';
+      p.drawText(hBase, { x: MG + ANCHO - U * 13 - med.widthOfTextAtSize(hBase, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
+      p.drawText(hTot, { x: MG + ANCHO - med.widthOfTextAtSize(hTot, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
+      cursor -= U * 1.2;
+      p.drawLine({ start: { x: MG, y: cursor }, end: { x: MG + ANCHO, y: cursor }, thickness: 0.6, color: LINEA });
+      cursor -= U * 2;
+
+      // Con cuota mensual no se listan doce filas iguales: se resume.
+      const filas = r.tipo === 'mes' ? cuadro.filas.slice(0, 3) : cuadro.filas;
+      for (const f of filas) {
+        asegurar(3);
+        p.drawText(mesLargo(f.mes), { x: MG, y: cursor, size: 9.5, font: reg, color: TINTA });
+        for (const l of partir(f.concepto, reg, 9.5, ANCHO - U * 27).slice(0, 1)) {
+          p.drawText(l, { x: MG + U * 13, y: cursor, size: 9.5, font: reg, color: APAGADO });
+        }
+        const b = eur(f.base), t = eur(f.total);
+        p.drawText(b, { x: MG + ANCHO - U * 13 - reg.widthOfTextAtSize(b, 9.5), y: cursor, size: 9.5, font: reg, color: APAGADO });
+        p.drawText(t, { x: MG + ANCHO - med.widthOfTextAtSize(t, 9.5), y: cursor, size: 9.5, font: med, color: TINTA });
+        cursor -= U * 2;
+      }
+      if (r.tipo === 'mes' && cuadro.filas.length > 3) {
+        asegurar(3);
+        p.drawText(`… y ${cuadro.filas.length - 3} cuotas más, hasta ${mesLargo(cuadro.filas.at(-1).mes)}.`,
+          { x: MG, y: cursor, size: 9, font: reg, color: APAGADO });
+        cursor -= U * 2;
+      }
+
+      p.drawLine({ start: { x: MG, y: cursor + U * 0.8 }, end: { x: MG + ANCHO, y: cursor + U * 0.8 }, thickness: 0.6, color: LINEA });
+      cursor -= U * 0.4;
+      const tot = `${eur(cuadro.totalBase)} + IVA · ${eur(cuadro.total)} en total`;
+      p.drawText(tot, { x: MG + ANCHO - bold.widthOfTextAtSize(tot, 10), y: cursor, size: 10, font: bold, color: TINTA });
+      cursor -= U * 3;
+    }
   }
 
   // ── 6 · Condiciones ──

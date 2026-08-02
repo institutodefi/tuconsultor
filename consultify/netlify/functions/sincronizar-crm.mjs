@@ -1,0 +1,231 @@
+// ════════════════════════════════════════════════════════════════════════════
+// SINCRONIZACIÓN DE IDA Y VUELTA · Holded ↔ CRM ↔ Brevo
+//
+// Tres sistemas y una regla de prioridad, que es lo que decide todo:
+//
+//   · HOLDED manda en lo FISCAL. Razón social, CIF, dirección de facturación:
+//     ahí es donde se factura de verdad, así que ahí está el dato bueno.
+//   · EL CRM manda en lo COMERCIAL. Estado, notas, quién lleva la cuenta,
+//     asignaciones: eso solo vive aquí.
+//   · BREVO no manda en nada. Es destino, no origen. Lo único que sube desde
+//     Brevo es la BAJA: si alguien se dio de baja allí, aquí se respeta.
+//
+// Esa última regla es la importante. Traer datos de Brevo al CRM permitiría
+// que un formulario público sobrescribiera la ficha fiscal de un cliente.
+//
+// Listas de Brevo:
+//   #7  pendientes de confirmar (antes del doble consentimiento)
+//   #9  confirmados
+//   #10 empresas
+// ════════════════════════════════════════════════════════════════════════════
+
+const LISTA_PENDIENTES = 7;
+const LISTA_CONFIRMADOS = 9;
+const LISTA_EMPRESAS = 10;
+
+const limpioCif = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const norm = (v) => (v === undefined || v === null || v === '' ? null : String(v).trim());
+
+/** Campos fiscales: los que manda Holded. */
+const FISCALES = ['nombre', 'cif', 'direccion', 'poblacion', 'cp', 'provincia', 'pais', 'vat_id'];
+/** Campos comerciales: los que manda el CRM y Holded no debe pisar. */
+const COMERCIALES = ['estado_comercial', 'notas', 'es_cliente', 'es_proveedor', 'empresa_matriz_id'];
+
+export default async (req) => {
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+
+  const base = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const holdedKey = process.env.HOLDED_API_KEY;
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (!base || !key) return Response.json({ ok: false, error: 'Falta la configuración de Supabase.' }, { status: 500 });
+
+  const sb = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+  const informe = { holded: { leidas: 0, creadas: 0, actualizadas: 0, sin_cambios: 0 },
+                    brevo: { subidas: 0, bajas: 0 }, conflictos: [], errores: [] };
+
+  try {
+    const { modo = 'completo' } = await req.json().catch(() => ({}));
+
+    // ══════════ 1 · HOLDED → CRM ══════════
+    // Solo lo fiscal. Lo comercial del CRM no se toca.
+    if (holdedKey && modo !== 'solo-brevo') {
+      const r = await fetch('https://api.holded.com/api/invoicing/v1/contacts', {
+        headers: { key: holdedKey, Accept: 'application/json' },   // v1 usa `key`, no Bearer
+      });
+      if (!r.ok) {
+        informe.errores.push(`Holded devolvió ${r.status}`);
+      } else {
+        const contactos = await r.json();
+        informe.holded.leidas = Array.isArray(contactos) ? contactos.length : 0;
+
+        // Las empresas del CRM, indexadas por CIF.
+        const q = await fetch(`${base}/rest/v1/empresas?select=*`, { headers: sb });
+        const empresas = q.ok ? await q.json() : [];
+        const porCif = new Map(empresas.filter((e) => e.cif).map((e) => [limpioCif(e.cif), e]));
+
+        for (const h of (Array.isArray(contactos) ? contactos : [])) {
+          const cif = limpioCif(h.code || h.vatnumber);
+          if (!cif) continue;                       // sin CIF no hay forma de casar
+          const actual = porCif.get(cif);
+
+          const fiscal = {
+            nombre: norm(h.name),
+            cif: norm(h.code || h.vatnumber),
+            direccion: norm(h.billAddress?.address),
+            poblacion: norm(h.billAddress?.city),
+            cp: norm(h.billAddress?.postalCode),
+            provincia: norm(h.billAddress?.province),
+            pais: norm(h.billAddress?.country) || 'España',
+            vat_id: norm(h.vatnumber),
+            holded_id: norm(h.id),
+            holded_sincronizado_en: new Date().toISOString(),
+          };
+
+          if (!actual) {
+            const ins = await fetch(`${base}/rest/v1/empresas`, {
+              method: 'POST', headers: { ...sb, Prefer: 'return=minimal' },
+              body: JSON.stringify({ ...fiscal, es_cliente: true, estado_comercial: 'potencial', origen: 'holded' }),
+            });
+            if (ins.ok) informe.holded.creadas += 1;
+            else informe.errores.push(`No se pudo crear ${fiscal.nombre}`);
+            continue;
+          }
+
+          // Qué cambia de verdad. Si no cambia nada, no se toca la fila: así el
+          // `updated_at` sigue diciendo cuándo cambió algo de verdad.
+          const cambios = {};
+          for (const c of FISCALES) {
+            if (fiscal[c] && norm(actual[c]) !== fiscal[c]) cambios[c] = fiscal[c];
+          }
+          if (!Object.keys(cambios).length) { informe.holded.sin_cambios += 1; continue; }
+
+          // Si el CRM tocó lo fiscal DESPUÉS de la última sincronización, hay
+          // conflicto: gana Holded, pero queda anotado para poder revisarlo.
+          const tocadoAqui = actual.updated_at && actual.holded_sincronizado_en
+            && new Date(actual.updated_at) > new Date(actual.holded_sincronizado_en);
+          if (tocadoAqui) {
+            informe.conflictos.push({
+              empresa: actual.nombre, cif: actual.cif,
+              campos: Object.keys(cambios),
+              nota: 'Cambiado aquí después de la última sincronización. Ha ganado Holded.',
+            });
+          }
+
+          const upd = await fetch(`${base}/rest/v1/empresas?id=eq.${actual.id}`, {
+            method: 'PATCH', headers: { ...sb, Prefer: 'return=minimal' },
+            body: JSON.stringify({ ...cambios, holded_id: fiscal.holded_id,
+                                   holded_sincronizado_en: fiscal.holded_sincronizado_en }),
+          });
+          if (upd.ok) informe.holded.actualizadas += 1;
+        }
+      }
+    }
+
+    // ══════════ 2 · CRM → HOLDED ══════════
+    // Empresas del CRM que Holded no conoce. Lo comercial NO se sube: a Holded
+    // no le sirve y ensuciaría su ficha.
+    if (holdedKey && modo === 'completo') {
+      const q = await fetch(`${base}/rest/v1/empresas?holded_id=is.null&cif=not.is.null&select=*`, { headers: sb });
+      const nuevas = q.ok ? await q.json() : [];
+      for (const e of nuevas.slice(0, 50)) {           // por tandas, para no agotar la cuota
+        const cuerpo = {
+          name: e.nombre, code: e.cif, type: e.es_proveedor ? 'supplier' : 'client',
+          email: e.email || undefined, phone: e.telefono || undefined,
+          billAddress: {
+            address: e.direccion || undefined, city: e.poblacion || undefined,
+            postalCode: e.cp || undefined, province: e.provincia || undefined,
+            country: e.pais || 'España',
+          },
+        };
+        const r = await fetch('https://api.holded.com/api/invoicing/v1/contacts', {
+          method: 'POST', headers: { key: holdedKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify(cuerpo),
+        });
+        if (r.ok) {
+          const d = await r.json().catch(() => ({}));
+          if (d?.id) {
+            await fetch(`${base}/rest/v1/empresas?id=eq.${e.id}`, {
+              method: 'PATCH', headers: { ...sb, Prefer: 'return=minimal' },
+              body: JSON.stringify({ holded_id: d.id, holded_sincronizado_en: new Date().toISOString() }),
+            });
+          }
+        }
+      }
+    }
+
+    // ══════════ 3 · CRM → BREVO ══════════
+    // Los contactos van a la lista que les corresponde según su consentimiento.
+    // Quien no lo ha dado va a la #7 y NO recibe comercial hasta confirmarlo.
+    if (brevoKey && modo !== 'solo-holded') {
+      const q = await fetch(`${base}/rest/v1/contactos?select=*,empresa_contactos(empresa_id)`, { headers: sb });
+      const contactos = q.ok ? await q.json() : [];
+      const qe = await fetch(`${base}/rest/v1/empresas?select=id,nombre,cif`, { headers: sb });
+      const empresas = qe.ok ? await qe.json() : [];
+      const nombreEmpresa = new Map(empresas.map((e) => [String(e.id), e.nombre]));
+
+      for (const c of contactos) {
+        if (!c.email) continue;
+        const confirmado = !!c.consentimiento_marketing;
+        const lista = confirmado ? LISTA_CONFIRMADOS : LISTA_PENDIENTES;
+        const empId = c.empresa_contactos?.[0]?.empresa_id;
+
+        const r = await fetch('https://api.brevo.com/v3/contacts', {
+          method: 'POST',
+          headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: c.email, updateEnabled: true,
+            listIds: [lista],
+            // Sacarlo de la otra lista: si confirma, deja de estar pendiente.
+            unlinkListIds: [confirmado ? LISTA_PENDIENTES : LISTA_CONFIRMADOS],
+            attributes: {
+              NOMBRE: c.nombre || '', APELLIDOS: c.apellidos || '',
+              CARGO: c.cargo || '', SMS: c.movil || c.telefono || '',
+              EMPRESA: empId ? (nombreEmpresa.get(String(empId)) || '') : '',
+              DOI_PENDIENTE: !confirmado,
+            },
+          }),
+        });
+        if (r.ok || r.status === 204) informe.brevo.subidas += 1;
+      }
+
+      // ── Brevo → CRM: SOLO las bajas ──
+      // Es lo único que Brevo puede decirnos que aquí no sabemos, y respetarlo
+      // no es opcional: alguien pidió no recibir más.
+      const rb = await fetch(`https://api.brevo.com/v3/contacts?limit=500&modifiedSince=${
+        new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)}`, {
+        headers: { 'api-key': brevoKey, Accept: 'application/json' },
+      });
+      if (rb.ok) {
+        const { contacts = [] } = await rb.json();
+        for (const b of contacts) {
+          if (!b.emailBlacklisted) continue;
+          const upd = await fetch(`${base}/rest/v1/contactos?email=eq.${encodeURIComponent(b.email)}`, {
+            method: 'PATCH', headers: { ...sb, Prefer: 'return=minimal' },
+            body: JSON.stringify({ consentimiento_marketing: false }),
+          });
+          if (upd.ok) informe.brevo.bajas += 1;
+        }
+      }
+    }
+
+    // ══════════ 4 · Empresas a la lista #10 ══════════
+    if (brevoKey && modo === 'completo') {
+      const q = await fetch(`${base}/rest/v1/empresas?email=not.is.null&select=nombre,cif,email,telefono,web`, { headers: sb });
+      for (const e of (q.ok ? await q.json() : [])) {
+        await fetch('https://api.brevo.com/v3/contacts', {
+          method: 'POST', headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: e.email, updateEnabled: true, listIds: [LISTA_EMPRESAS],
+            attributes: { NOMBRE: e.nombre || '', CIF: e.cif || '', TELEFONO: e.telefono || '', WEB: e.web || '' },
+          }),
+        }).catch(() => {});
+      }
+    }
+
+    return Response.json({ ok: true, informe });
+  } catch (e) {
+    informe.errores.push(e?.message || String(e));
+    return Response.json({ ok: false, informe, error: e?.message || String(e) }, { status: 500 });
+  }
+};
