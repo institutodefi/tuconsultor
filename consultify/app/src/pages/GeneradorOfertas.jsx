@@ -6,6 +6,7 @@ import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { EMISORAS_BASE } from '../lib/emisoras.js';
+import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses } from '../lib/planificacion.js';
 import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
@@ -17,7 +18,11 @@ export default function GeneradorOfertas({ publico = false }) {
   const { user } = useAuth();
   const [sel, setSel] = useState(['9001']);          // 9001 premarcada, pero se puede quitar
   const [modelo, setModelo] = useState('Implicación');
-  const [meses, setMeses] = useState('');            // vacío = usa el mínimo del modelo
+  // Fechas en vez de meses: nadie sabe de memoria si su proyecto son ocho meses
+  // o diez, pero todo el mundo sabe cuándo tiene la auditoría.
+  const [fechaInicio, setFechaInicio] = useState(hoyISO());
+  const [fechaCert, setFechaCert] = useState(sumarMeses(hoyISO(), 12));
+  const meses = mesesEntre(fechaInicio, fechaCert) || '';
   const [tiene9001, setTiene9001] = useState(false); // "ya tengo la 9001" → −50% horas 9001
   const [cli, setCli] = useState({ nombre: '', apellidos: '', empresa: '', cif: '', cargo: '', email: '', telefono: '', direccion: '' });
   const location = useLocation();
@@ -506,28 +511,59 @@ export default function GeneradorOfertas({ publico = false }) {
             <div className="flex flex-wrap gap-2">
               {MODELO_IDS.map(mid => {
                 const on = modelo === mid;
+                // Un modelo que no cabe se deshabilita y DICE por qué al pasar
+                // por encima. Dejarlo elegible para luego dar un error al
+                // generar es hacer perder el tiempo.
+                const veto = motivoNoDisponible({ inicio: fechaInicio, certificacion: fechaCert, normas: sel }, mid);
                 return (
-                  <button key={mid} onClick={() => setModelo(mid)}
+                  <button key={mid} onClick={() => !veto && setModelo(mid)} disabled={!!veto} title={veto || ''}
                     className={`min-w-[96px] flex-1 rounded-xl border-[1.5px] p-3 text-center transition ${
-                      on ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]' : 'border-[#1E5468] bg-[#0D3242] text-[#EAF4F7] hover:border-brand-verde'}`}>
+                      veto ? 'cursor-not-allowed border-[#1E5468]/50 bg-[#0D3242]/40 text-[#4E7686]'
+                           : on ? 'border-brand-orange bg-brand-orange text-[#0A2B3A]'
+                                : 'border-[#1E5468] bg-[#0D3242] text-[#EAF4F7] hover:border-brand-verde'}`}>
                     <span className="block text-sm font-extrabold">{mid}</span>
+                    {veto && <span className="mt-0.5 block text-[9.5px] font-bold leading-tight">no aplica</span>}
                   </button>
                 );
               })}
             </div>
-            <div className="mt-4 max-w-[220px]">
-              <label className="label">Duración del proyecto (meses)</label>
-              <input type="number" min="1" className={`input ${plazoMal ? '!border-red-400' : ''}`}
-                placeholder={res ? `mín. ${res.minMeses}` : ''} value={meses}
-                onChange={e => setMeses(e.target.value)} />
-              {res && (
-                <p className={`mt-1 text-xs font-medium ${plazoMal ? 'text-red-300' : 'text-[#9FC0CB]'}`}>
-                  {plazoMal
-                    ? `El modelo ${modelo} exige un mínimo de ${res.minMeses} meses.`
-                    : `Mínimo para ${modelo}: ${res.minMeses} meses. En uso: ${res.meses}.`}
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="label" htmlFor="g-inicio">Inicio estimado del proyecto</label>
+                <input id="g-inicio" type="date" className="input !py-1.5 !text-[13px]"
+                  value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              </div>
+              <div>
+                <label className="label" htmlFor="g-cert">Fecha de certificación</label>
+                <input id="g-cert" type="date" className="input !py-1.5 !text-[13px]"
+                  value={fechaCert} onChange={(e) => setFechaCert(e.target.value)} />
+              </div>
+              <div>
+                <p className="label">Plazo disponible</p>
+                <p className="mt-1 text-lg font-extrabold text-[#EAF4F7]">
+                  {meses || '—'} <span className="text-[12px] font-bold text-[#7FA7B4]">{meses === 1 ? 'mes' : 'meses'}</span>
                 </p>
-              )}
+                <p className="text-[11px] leading-snug text-[#7FA7B4]">
+                  Con él se planifican las tareas.
+                </p>
+              </div>
             </div>
+
+            {/* Lo que las fechas impiden o aconsejan */}
+            {(() => {
+              const v = validarPlanificacion({ inicio: fechaInicio, certificacion: fechaCert, modelo, normas: sel });
+              if (!v.errores.length && !v.avisos.length) return null;
+              return (
+                <div className="mt-3 space-y-1.5">
+                  {v.errores.map((e, i) => (
+                    <p key={`e${i}`} role="alert" className="rounded-lg bg-red-500/12 px-3 py-2 text-[12px] font-bold leading-relaxed text-red-200">{e}</p>
+                  ))}
+                  {v.avisos.map((a, i) => (
+                    <p key={`a${i}`} className="rounded-lg bg-brand-orange/10 px-3 py-2 text-[12px] leading-relaxed text-brand-orange">{a}</p>
+                  ))}
+                </div>
+              );
+            })()}
           </section>
 
         </div>

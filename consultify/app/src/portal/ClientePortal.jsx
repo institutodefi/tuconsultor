@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
+import ClienteSinProyectos from './cliente/SinProyectos.jsx';
 import { misProyectos, misPresupuestos } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 
@@ -11,13 +12,10 @@ function Servicios() {
   const [rows, setRows] = useState(null);
   useEffect(() => { misProyectos(user).then(setRows).catch(() => setRows([])); }, [user]);
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
-  if (!rows.length) return (
-    <div className="card text-center">
-      <p className="text-lg font-extrabold">Aún no tienes servicios activos</p>
-      <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Calcula tu propuesta y te llamamos en 24 h.</p>
-      <a href="/app/calculadora" className="btn-orange mt-4">Ir a la calculadora</a>
-    </div>
-  );
+  // Sin proyectos todavía no significa «pantalla vacía»: quien acaba de darse de
+  // alta tiene sus datos y los de su empresa, y lo que necesita es poder pedir
+  // una oferta. Enseñarle solo un cartel es dejarle sin nada que hacer.
+  if (!rows.length) return <ClienteSinProyectos />;
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {rows.map(p => (

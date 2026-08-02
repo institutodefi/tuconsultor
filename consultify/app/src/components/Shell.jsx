@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { ROL_LABEL, can } from '../lib/permisos.js';
 
 export default function Shell({ children }) {
-  const { user, role, realRole, logout, demo, verEconomico } = useAuth();
+  const { user, role, realRole, logout, demo, verEconomico , verComo, resetVista } = useAuth();
+  const [verRoles, setVerRoles] = useState(false);
   const navItem = ({ isActive }) =>
     (isActive
       ? 'rounded-xl px-4 py-2.5 bg-brand-verde/15 text-brand-verdeTexto font-bold'
@@ -33,10 +35,38 @@ export default function Shell({ children }) {
                 {(user.email || '?').charAt(0).toUpperCase()}
               </span>
               <p className="truncate text-xs font-bold text-[#EAF4F7]">{user.email}</p>
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#061F2B] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA]">
-                {ROL_LABEL[role] || role}
-                {realRole === 'superadmin' && role !== 'superadmin' && <span className="text-brand-verdeTexto">· viendo como</span>}
-              </span>
+              {/* Al pulsar el rol se despliegan los demás: superadministración
+                  necesita moverse entre niveles para ver lo que ve cada quien,
+                  y también desde la zona de clientes. Quien no es superadmin ve
+                  su rol como una etiqueta y no pasa nada más. */}
+              {realRole === 'superadmin' ? (
+                <>
+                  <button onClick={() => setVerRoles((v) => !v)}
+                    className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#061F2B] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA] transition hover:text-[#EAF4F7]"
+                    aria-expanded={verRoles} aria-label="Cambiar el nivel desde el que se ve la aplicación">
+                    {ROL_LABEL[role] || role}
+                    {role !== 'superadmin' && <span className="text-brand-verdeTexto">· viendo como</span>}
+                    <span className="opacity-70">{verRoles ? '▲' : '▼'}</span>
+                  </button>
+                  {verRoles && (
+                    <div className="mt-2 space-y-1 rounded-xl bg-[#061F2B] p-2">
+                      <p className="px-1 pb-1 text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Ver como</p>
+                      {['superadmin', 'admin', 'director', 'consultor', 'gestion', 'cliente'].map((r) => (
+                        <button key={r}
+                          onClick={() => { r === 'superadmin' ? resetVista() : verComo(r); setVerRoles(false); }}
+                          className={`block w-full truncate rounded-lg px-2 py-1.5 text-left text-[11.5px] font-bold transition ${
+                            role === r ? 'bg-brand-orange/20 text-brand-orange' : 'text-[#9FC0CB] hover:bg-white/5 hover:text-[#EAF4F7]'}`}>
+                          {role === r ? '✓ ' : ''}{ROL_LABEL[r] || r}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#061F2B] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA]">
+                  {ROL_LABEL[role] || role}
+                </span>
+              )}
               <button onClick={logout} className="btn-ghost mt-3 w-full !py-2">Salir</button>
             </div>
           ) : (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { validarPassword, mensajePassword } from '../lib/password.js';
@@ -58,8 +58,17 @@ const esGratuito = (email) => DOMINIOS_GRATUITOS.includes(dominioDe(email));
 const esInterno = (email) => ['tuconsultor.com', 'consultify.pro'].includes(dominioDe(email));
 
 export default function Acceso() {
-  const { login, register, demo } = useAuth();
+  const { login, register, demo, user, role } = useAuth();
   const nav = useNavigate();
+
+  // Con sesión ya iniciada, esta pantalla no pinta nada: al panel que
+  // corresponda. Antes se quedaba aquí pidiendo credenciales a quien ya estaba
+  // dentro, con su propio correo visible en la barra lateral.
+  useEffect(() => {
+    if (!user) return;
+    const esCliente = role === 'cliente';
+    nav(esCliente ? '/clientes' : '/consultores/mi-agenda', { replace: true });
+  }, [user, role, nav]);
 
   // Estado consultores (solo login)
   const [c, setC] = useState({ email: '', password: '' });
