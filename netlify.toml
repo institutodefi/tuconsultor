@@ -37,6 +37,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/generar-contrato"
+  to = "/.netlify/functions/generar-contrato"
+  status = 200
+
+[[redirects]]
   from = "/api/generar-oferta"
   to = "/.netlify/functions/generar-oferta"
   status = 200

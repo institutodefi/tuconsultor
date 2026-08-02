@@ -3,6 +3,7 @@ import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import ClienteSinProyectos from './cliente/SinProyectos.jsx';
 import MisDatosPagina from './cliente/MisDatosPagina.jsx';
+import MisOfertas from './cliente/MisOfertas.jsx';
 import { misProyectos, misPresupuestos } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 
@@ -41,65 +42,16 @@ function Servicios() {
 }
 
 function Presupuestos() {
+  // Antes esto solo listaba y dejaba regenerar el PDF. Ahora el cliente puede
+  // ACEPTAR o rechazar desde aquí, que es lo que dispara el contrato. Es su
+  // sitio natural: donde ya venía a mirar sus propuestas.
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
-  const [genId, setGenId] = useState(null); // id en generación
-  useEffect(() => { misPresupuestos(user).then(setRows).catch(() => setRows([])); }, [user]);
+  const [recarga, setRecarga] = useState(0);
+  useEffect(() => { misPresupuestos(user).then(setRows).catch(() => setRows([])); }, [user, recarga]);
 
-  async function generar(r) {
-    setGenId(r.id);
-    try {
-      const resp = await fetch('/.netlify/functions/generar-oferta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          normas: r.normas, modelo: r.modelo,
-          empresa: r.empresa || '', contacto: r.nombre || '',
-          ref: `OFE-${String(r.id).slice(0, 8)}`,
-          presupuesto_id: r.id,
-        }),
-      });
-      const j = await resp.json();
-      if (j.ok) {
-        setRows(rs => rs.map(x => x.id === r.id ? { ...x, url_pdf: j.url_pdf, url_pptx: j.url_pptx } : x));
-      }
-    } catch { /* sin bloquear */ }
-    setGenId(null);
-  }
-
-  if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
-  if (!rows.length) return <div className="card text-center"><p className="font-extrabold">No tienes presupuestos guardados</p><a href="/app/calculadora" className="btn-orange mt-4">Calcular uno ahora</a></div>;
-  return (
-    <div className="card overflow-x-auto">
-      <table className="w-full min-w-[680px] text-sm">
-        <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-          <th className="py-2">Fecha</th><th className="py-2">Normas</th><th className="py-2">Modelo</th><th className="py-2 text-right">Precio</th><th className="py-2 text-right">Oferta</th>
-        </tr></thead>
-        <tbody className="divide-y divide-navy-50">
-          {rows.map(r => (
-            <tr key={r.id}>
-              <td className="py-2.5 font-medium text-[#9FC0CB]">{(r.creado || '').slice(0, 10)}</td>
-              <td className="py-2.5 font-bold">{(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}</td>
-              <td className="py-2.5 font-semibold">{r.modelo}</td>
-              <td className="py-2.5 text-right font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</td>
-              <td className="py-2.5 text-right whitespace-nowrap">
-                {(r.url_pdf || r.url_pptx) ? (
-                  <span className="inline-flex gap-2">
-                    {r.url_pdf && <a href={r.url_pdf} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PDF</a>}
-                    {r.url_pptx && <a href={r.url_pptx} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PPT</a>}
-                  </span>
-                ) : (
-                  <button onClick={() => generar(r)} disabled={genId === r.id} className="text-xs font-bold text-[#CFE3E9] hover:underline disabled:opacity-50">
-                    {genId === r.id ? 'Generando…' : 'Generar'}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando tus propuestas…</p>;
+  return <MisOfertas ofertas={rows} onCambio={() => setRecarga((n) => n + 1)} />;
 }
 
 function Soporte() {
