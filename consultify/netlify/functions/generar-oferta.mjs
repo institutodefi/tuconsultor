@@ -83,6 +83,9 @@ async function generarPPTX(r, cli, anexo) {
   // Todo lo que se escribe aquí sale de contenido-oferta.mjs, que es la misma
   // fuente que usa el PDF. Si cambia una cláusula, cambia en los dos.
   const C = HEX;
+  // Quién emite: se resuelve LO PRIMERO, porque los metadatos del archivo ya lo
+  // usan. Estaba declarado más abajo y el PPT reventaba antes de empezar.
+  const EM = emisorDe(r);
   const esImpl = r.modelo === 'Implantación';
   const esMes = r.tipo === 'mes' && !esImpl;
   const normNames = nombresDeNormas(r);
@@ -93,7 +96,6 @@ async function generarPPTX(r, cli, anexo) {
   p.title = ('Oferta ' + (r.numero || '') + ' · ' + (cli?.empresa || '')).trim();
 
   const F = 'Arial';   // Rubik no está instalada en el equipo de quien lo abra
-  const EM = emisorDe(r);   // qué sociedad emite esta oferta
 
   // Pie con las tres marcas, igual que en el PDF.
   const pie = (s, legal) => {
@@ -124,7 +126,10 @@ async function generarPPTX(r, cli, anexo) {
   s.addShape(p.ShapeType.rect, { x: 4.2, y: 0, w: 5.8, h: 0.07, fill: { color: C.naranja } });
   s.addImage({ data: 'image/png;base64,' + LOGO_TUCONSULTOR_BLANCO, x: 0.6, y: 0.5, w: 2.0, h: 2.0 * 49 / 300 });
   s.addText('PROPUESTA DE SERVICIOS', { x: 0.6, y: 1.35, w: 9, h: 0.28, fontFace: F, fontSize: 10, bold: true, color: C.naranja, charSpacing: 2.4 });
-  s.addText(cli?.empresa || 'Propuesta', { x: 0.6, y: 1.75, w: 8.8, h: 0.9, fontFace: F, fontSize: 30, bold: true, color: C.blanco });
+  const nombreCli = String(cli?.empresa || 'Propuesta');
+  s.addText(nombreCli, { x: 0.6, y: 1.7, w: 8.8, h: 1.0, fontFace: F,
+    fontSize: nombreCli.length > 52 ? 22 : (nombreCli.length > 34 ? 26 : 30),
+    bold: true, color: C.blanco, valign: 'top' });
   s.addText(normNames.join('  ·  '), { x: 0.6, y: 2.65, w: 8.8, h: 0.5, fontFace: F, fontSize: 12, color: C.claro });
 
   const impPortada = esImpl ? ((r.formasPago && r.formasPago.unico.sinIva) || r.precioCatalogo) : r.precioCatalogo;
@@ -262,10 +267,16 @@ async function generarPPTX(r, cli, anexo) {
     if (f[4]) forma.line = { color: f[4], width: 1 };
     s.addShape(p.ShapeType.rect, forma);
     s.addText(f[0], { x: x + 0.25, y: 2.38, w: 3.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
-    s.addText(f[1], { x: x + 0.25, y: 2.66, w: 3.8, h: 0.34, fontFace: F, fontSize: 14, bold: true, color: C.tinta });
-    s.addText(f[2], { x: x + 0.25, y: 3.0, w: 3.8, h: 0.28, fontFace: F, fontSize: 10, color: C.apagado });
-    s.addShape(p.ShapeType.line, { x: x + 0.25, y: 4.0, w: 3.8, h: 0, line: { color: C.linea, width: 1 } });
-    s.addText('Firma y fecha', { x: x + 0.25, y: 4.06, w: 3.8, h: 0.22, fontFace: F, fontSize: 8, color: C.apagado });
+    // La razón social del cliente puede ser larga —«FUNDACION GENERAL DE LA
+    // UNIVERSIDAD POLITECNICA DE MADRID» son 57 caracteres—: caja de dos líneas
+    // y cuerpo que se reduce cuando no cabe, en vez de recortar el nombre.
+    const largo = String(f[1] || '').length;
+    s.addText(f[1], { x: x + 0.25, y: 2.62, w: 3.8, h: 0.62,
+                      fontFace: F, fontSize: largo > 46 ? 11 : (largo > 30 ? 12.5 : 14),
+                      bold: true, color: C.tinta, valign: 'top', shrinkText: true });
+    s.addText(f[2], { x: x + 0.25, y: 3.26, w: 3.8, h: 0.4, fontFace: F, fontSize: 9.5, color: C.apagado });
+    s.addShape(p.ShapeType.line, { x: x + 0.25, y: 4.08, w: 3.8, h: 0, line: { color: C.linea, width: 1 } });
+    s.addText('Firma y fecha', { x: x + 0.25, y: 4.14, w: 3.8, h: 0.22, fontFace: F, fontSize: 8, color: C.apagado });
   });
   pie(s);
 

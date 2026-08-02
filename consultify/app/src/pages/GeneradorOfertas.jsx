@@ -119,9 +119,14 @@ export default function GeneradorOfertas({ publico = false }) {
     const comercial = 'Alejandro';
     const contactoCompleto = `${cli.nombre} ${cli.apellidos}`.trim();
     const precioLead = res.fraccionado ? res.fraccionado.totalSinIva : res.precioCatalogo;
-    const tipoLead = res.fraccionado ? 'fraccionado' : res.tipo;
+    // `tipo` va a la base y allí solo caben 'mes', 'bolsa' y 'proyecto'.
+    // Aquí se mandaba 'fraccionado', resto de cuando la implantación se cobraba
+    // en tres cuotas: TODA oferta de implantación fallaba al guardarse, y por eso
+    // faltaban en el histórico. El tipo lo dice el motor; el fraccionamiento es
+    // otra cosa y ya se guarda en `forma_pago`.
+    const tipoLead = res.tipo;
     const nombresNormas = sel.map((id) => NORMAS.find((n) => n.id === id)?.nombre || id).join(' + ');
-    const sufijo = tipoLead === 'mes' ? ' €/mes' : (tipoLead === 'fraccionado' ? ' € (proyecto)' : ' € (único)');
+    const sufijo = tipoLead === 'mes' ? ' €/mes' : (tipoLead === 'proyecto' ? ' € (proyecto)' : ' € (bolsa)');
     const requerimiento = `${nombresNormas} · Modelo ${modelo} · ${precioLead}${sufijo}`;
 
     // 1) Número de oferta. Si la RPC falla, generamos uno de respaldo en cliente (no bloquea).

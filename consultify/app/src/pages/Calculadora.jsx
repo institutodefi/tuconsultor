@@ -34,14 +34,16 @@ export default function Calculadora() {
     try {
       // Para Implantación el "precio" relevante es el total fraccionado (sin IVA).
       const precioLead = res.fraccionado ? res.fraccionado.totalSinIva : res.precioCatalogo;
-      const tipoLead = res.fraccionado ? 'fraccionado' : res.tipo;
+      // Mismo caso que en el generador: 'fraccionado' no existe como tipo en la
+      // base y tumbaba el alta de toda oferta de implantación.
+      const tipoLead = res.tipo;
       // Número de oferta correlativo limpio (OFE-AAAA-NNN), asignado atómicamente en Postgres
       const numeroOferta = await siguienteNumeroOferta();
       const comercial = 'Alejandro'; // Comercial 1 por defecto
       const contactoCompleto = `${lead.nombre} ${lead.apellidos}`.trim();
       // Resumen legible del requerimiento para el comercial (CRM)
       const nombresNormas = sel.map((id) => NORMAS.find((n) => n.id === id)?.nombre || id).join(' + ');
-      const sufijo = tipoLead === 'mes' ? ' €/mes' : (tipoLead === 'fraccionado' ? ' € (proyecto)' : ' € (único)');
+      const sufijo = tipoLead === 'mes' ? ' €/mes' : (tipoLead === 'proyecto' ? ' € (proyecto)' : ' € (bolsa)');
       const requerimiento = `${nombresNormas} · Modelo ${modelo} · ${precioLead}${sufijo}`;
       // 1) Guardar presupuesto en Supabase (o demo)
       const filaPresupuesto = await insertRow('presupuestos', {

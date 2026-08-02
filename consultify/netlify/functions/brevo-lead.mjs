@@ -48,7 +48,9 @@ export default async (req) => {
     COMERCIAL: comercial || 'Alejandro',
     MODELO: modelo,
     PRECIO_CALCULADO: precio,
-    TIPO_PRECIO: tipo === 'mes' ? 'MENSUAL' : (tipo === 'fraccionado' ? 'FRACCIONADO' : 'UNICO'),
+    // 'proyecto' sustituyó a 'fraccionado' cuando la implantación dejó de
+    // cobrarse en tres cuotas. Se aceptan los dos por si llega algo antiguo.
+    TIPO_PRECIO: tipo === 'mes' ? 'MENSUAL' : (tipo === 'proyecto' || tipo === 'fraccionado' ? 'PROYECTO' : 'BOLSA'),
     MESES: meses != null && meses !== '' ? Number(meses) : undefined,
     YA_TIENE_9001: !!tiene9001,
     CONSENT_RGPD: !!consent,

@@ -121,7 +121,26 @@ export async function listTable(table) {
   return todas;
 }
 
+// Valores que la base admite en columnas con restricción. Una oferta no se
+// pierde porque un campo secundario traiga algo que la tabla no conoce: se
+// normaliza a algo válido y el alta sale adelante.
+const NORMALIZAR = {
+  presupuestos: (r) => {
+    const out = { ...r };
+    const TIPOS = ['mes', 'bolsa', 'proyecto'];
+    if (out.tipo && !TIPOS.includes(out.tipo)) {
+      // 'fraccionado' era el tipo de la implantación antes de la v99.
+      out.tipo = out.tipo === 'fraccionado' ? 'proyecto' : 'mes';
+    }
+    if (out.complejidad && !['baja', 'media', 'alta'].includes(out.complejidad)) out.complejidad = null;
+    if (out.forma_pago && !['unico', 'dos'].includes(out.forma_pago)) out.forma_pago = null;
+    if (out.estado && !['borrador', 'emitida', 'aceptada', 'rechazada', 'caducada'].includes(out.estado)) out.estado = 'emitida';
+    return out;
+  },
+};
+
 export async function insertRow(table, row) {
+  if (NORMALIZAR[table]) row = NORMALIZAR[table](row);
   if (DEMO) { const r = { id: uid(), creado: new Date().toISOString(), ...row }; demo()[table].unshift(r); return r; }
   // 1) Intento normal: insertar y devolver la fila creada.
   const { data, error } = await supabase.from(table).insert(row).select().single();
