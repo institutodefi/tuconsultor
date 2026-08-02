@@ -115,9 +115,21 @@ export default function Ofertas() {
     if (!e.normas.length)   { setMsg('Elige al menos un sistema.'); return; }
     setMsg(null);
     try {
-      const calc = calcular(e.normas, e.modelo, { meses: e.meses, complejidad: e.complejidad, sedes: e.sedes });
+      // Fases y ajustes TIENEN que ir: sin ellos el motor recalcula con el plan
+      // entero y sin el trato pactado, y una oferta de 10.296 € se convertía en
+      // 14.553 € al guardarla sin que nadie tocara el alcance.
+      const calc = calcular(e.normas, e.modelo, {
+        meses: e.meses, complejidad: e.complejidad, sedes: e.sedes,
+        fasesPlan: e.fases_plan || undefined, ajustes: e.ajustes || [],
+      });
+      const completo = [e.contacto_nombre, e.contacto_apellidos].filter(Boolean).join(' ').trim();
       const patch = {
-        empresa: e.empresa.trim(), nombre: e.nombre?.trim() || null,
+        empresa: e.empresa.trim(),
+        nombre: completo || e.nombre?.trim() || null,
+        contacto_nombre: e.contacto_nombre?.trim() || null,
+        contacto_apellidos: e.contacto_apellidos?.trim() || null,
+        cargo: e.cargo?.trim() || null, cif: e.cif?.trim() || null,
+        notas_oferta: e.notas_oferta || null, notas_internas: e.notas_internas || null,
         email: e.email?.trim() || null, telefono: e.telefono?.trim() || null,
         normas: e.normas, modelo: e.modelo, tipo: calc.tipo, precio: calc.precioCatalogo,
         complejidad: e.complejidad || null, sedes: e.sedes || 1,
@@ -231,8 +243,16 @@ export default function Ofertas() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div><label className="label" htmlFor="of-empresa">Empresa <span className="text-brand-orange">*</span></label>
               <input id="of-empresa" className="input !py-1.5 !text-[13px]" value={edicion.empresa || ''} onChange={(e) => setEdicion({ ...edicion, empresa: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-contacto">Persona de contacto</label>
-              <input id="of-contacto" className="input !py-1.5 !text-[13px]" value={edicion.nombre || ''} onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })} /></div>
+            {/* Nombre y apellidos POR SEPARADO, como el resto de formularios: unidos
+                en un campo no cuadraban con el CRM y no se podían reimportar. */}
+            <div><label className="label" htmlFor="of-nombre">Nombre</label>
+              <input id="of-nombre" className="input !py-1.5 !text-[13px]" value={edicion.contacto_nombre || ''} onChange={(e) => setEdicion({ ...edicion, contacto_nombre: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-apellidos">Apellidos</label>
+              <input id="of-apellidos" className="input !py-1.5 !text-[13px]" value={edicion.contacto_apellidos || ''} onChange={(e) => setEdicion({ ...edicion, contacto_apellidos: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-cargo">Cargo</label>
+              <input id="of-cargo" className="input !py-1.5 !text-[13px]" value={edicion.cargo || ''} onChange={(e) => setEdicion({ ...edicion, cargo: e.target.value })} /></div>
+            <div><label className="label" htmlFor="of-cif">CIF</label>
+              <input id="of-cif" className="input !py-1.5 !text-[13px]" value={edicion.cif || ''} onChange={(e) => setEdicion({ ...edicion, cif: e.target.value })} /></div>
             <div><label className="label" htmlFor="of-email">Correo</label>
               <input id="of-email" type="email" className="input !py-1.5 !text-[13px]" value={edicion.email || ''} onChange={(e) => setEdicion({ ...edicion, email: e.target.value })} /></div>
             <div><label className="label" htmlFor="of-tel">Teléfono</label>
@@ -272,13 +292,38 @@ export default function Ofertas() {
             <div><p className="label">Precio recalculado</p>
               <p className="mt-1 text-lg font-extrabold text-[#EAF4F7]">
                 {edicion.normas.length
-                  ? (() => { const c = calcular(edicion.normas, edicion.modelo, { meses: edicion.meses, complejidad: edicion.complejidad, sedes: edicion.sedes });
+                  ? (() => { const c = calcular(edicion.normas, edicion.modelo, {
+                               meses: edicion.meses, complejidad: edicion.complejidad, sedes: edicion.sedes,
+                               fasesPlan: edicion.fases_plan || undefined, ajustes: edicion.ajustes || [] });
                              return `${fmtEUR(c.precioCatalogo)}${c.tipo === 'mes' ? '/mes' : ''}`; })()
                   : '—'}
               </p>
               {edicion.precio != null && <p className="text-[11px] text-[#7FA7B4]">antes: {fmtEUR(edicion.precio)}</p>}
             </div>
           </div>
+          {/* Notas: las que salen en el documento y las que no. Separadas a
+              propósito, porque mandar al cliente el margen de negociación por
+              escribir en la caja equivocada es demasiado fácil. */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="of-notas">
+                Notas aclaratorias
+                <span className="ml-1 font-normal text-brand-verdeTexto">— salen en el PDF y el PPT</span>
+              </label>
+              <textarea id="of-notas" rows={3} className="input !py-1.5 !text-[13px]"
+                value={edicion.notas_oferta || ''} onChange={(e) => setEdicion({ ...edicion, notas_oferta: e.target.value })}
+                placeholder="Una por línea." />
+            </div>
+            <div>
+              <label className="label" htmlFor="of-internas">
+                Notas internas
+                <span className="ml-1 font-normal text-red-300">— NO salen en ningún documento</span>
+              </label>
+              <textarea id="of-internas" rows={3} className="input !py-1.5 !text-[13px]"
+                value={edicion.notas_internas || ''} onChange={(e) => setEdicion({ ...edicion, notas_internas: e.target.value })} />
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button onClick={() => guardarEdicion(true)} className="btn-orange !px-4 !py-1.5 text-xs">Guardar y regenerar documentos</button>
             <button onClick={() => guardarEdicion(false)} className="btn-ghost !px-3 !py-1.5 text-xs">Guardar solo en el CRM</button>
