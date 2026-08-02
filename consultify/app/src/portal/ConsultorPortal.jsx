@@ -56,17 +56,11 @@ function Guard({ ok, children }) {
   return ok ? children : <Navigate to="." replace />;
 }
 
-export default function ConsultorPortal() {
-  const { role, politicasOk } = useAuth();
-  const grupos = gruposParaRol(role);
-  const verEquipo = can.gestionarEquipo(role);
-  const verPlanAgendaSist = ['superadmin', 'admin', 'director', 'consultor'].includes(role);
-  const verClientes = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
-  // CRM (Empresas · Contactos): el consultor también entra, así ve con quién habla.
-  const verCrm = ['superadmin', 'admin', 'director', 'gestion', 'consultor'].includes(role);
-  const [movilAbierto, setMovilAbierto] = useState(false);
-
-  const NavItems = ({ onNavigate }) => (
+// ⚠ FUERA del componente: definirlo dentro hace que React lo trate como un
+// tipo nuevo en cada renderizado y remonte todo el menú, perdiendo el foco y
+// el estado de lo que haya dentro.
+function NavItems({ onNavigate, grupos }) {
+  return (
     <nav className="flex flex-col gap-5">
       {grupos.map((g, gi) => (
         <div key={gi}>
@@ -116,6 +110,18 @@ export default function ConsultorPortal() {
       ))}
     </nav>
   );
+}
+
+export default function ConsultorPortal() {
+  const { role, politicasOk } = useAuth();
+  const grupos = gruposParaRol(role);
+  const verEquipo = can.gestionarEquipo(role);
+  const verPlanAgendaSist = ['superadmin', 'admin', 'director', 'consultor'].includes(role);
+  const verClientes = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
+  // CRM (Empresas · Contactos): el consultor también entra, así ve con quién habla.
+  const verCrm = ['superadmin', 'admin', 'director', 'gestion', 'consultor'].includes(role);
+  const [movilAbierto, setMovilAbierto] = useState(false);
+
 
   return (
     <>
@@ -134,7 +140,7 @@ export default function ConsultorPortal() {
         </div>
         {movilAbierto && (
           <div className="mb-4 rounded-2xl border border-[#1E5468] bg-[#10394A] p-3 lg:hidden">
-            <NavItems onNavigate={() => setMovilAbierto(false)} />
+            <NavItems grupos={grupos} onNavigate={() => setMovilAbierto(false)} />
           </div>
         )}
 
@@ -144,7 +150,7 @@ export default function ConsultorPortal() {
             <div className="sticky top-24">
               <p className="eyebrow px-3">Operaciones</p>
               <h1 className="mt-1 mb-6 px-3 text-2xl font-extrabold tracking-tight">Orbita.PMTools</h1>
-              <NavItems />
+              <NavItems grupos={grupos} />
             </div>
           </aside>
 

@@ -14,6 +14,22 @@ import { emailValido } from '../../lib/crm.js';
 // que no aceptó.
 // ════════════════════════════════════════════════════════════════════════════
 
+// ⚠ FUERA del componente, a propósito.
+//
+// Definirlo dentro hace que React lo trate como un tipo NUEVO en cada
+// renderizado: desmonta el <input> y monta otro, así que el campo pierde el
+// foco tras cada letra y escribir se vuelve imposible. Es un fallo que parece
+// magia negra y siempre es esto.
+function Campo({ id, etq, tipo = 'text', v, set }) {
+  return (
+    <div>
+      <label className="label" htmlFor={id}>{etq}</label>
+      <input id={id} type={tipo} className="input !py-1.5 !text-[13px]"
+        value={v} onChange={(e) => set(e.target.value)} />
+    </div>
+  );
+}
+
 export default function MisDatosCliente({ contacto, empresa, email, onGuardado }) {
   const [f, setF] = useState({
     nombre: contacto?.nombre || '',
@@ -79,13 +95,6 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
       setPwMsg({ err: true, t: `No se pudo cambiar: ${e?.message || e}` });
     } finally { setPwBusy(false); }
   }
-
-  const Campo = ({ id, etq, tipo = 'text', v, set }) => (
-    <div>
-      <label className="label" htmlFor={id}>{etq}</label>
-      <input id={id} type={tipo} className="input !py-1.5 !text-[13px]" value={v} onChange={(e) => set(e.target.value)} />
-    </div>
-  );
 
   return (
     <div className="space-y-4">

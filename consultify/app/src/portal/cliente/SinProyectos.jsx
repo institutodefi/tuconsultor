@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth.jsx';
 import { listTable } from '../../lib/data.js';
-import MisDatosCliente from './MisDatosCliente.jsx';
 import MisOfertas from './MisOfertas.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -27,7 +26,6 @@ export default function ClienteSinProyectos() {
   const [contacto, setContacto] = useState(null);
   const [ofertas, setOfertas] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [pestana, setPestana] = useState('inicio');
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
@@ -60,26 +58,6 @@ export default function ClienteSinProyectos() {
         </p>
       </div>
 
-      {/* Tres apartados: lo que hay, lo que se le propone y sus datos. */}
-      <div className="flex flex-wrap gap-2 border-b border-[#153F52] pb-2">
-        {[['inicio', 'Inicio'], ['ofertas', `Mis propuestas${ofertas.length ? ` (${ofertas.length})` : ''}`], ['datos', 'Mis datos']].map(([k, l]) => (
-          <button key={k} onClick={() => setPestana(k)}
-            className={`rounded-lg px-3 py-1.5 text-[13px] font-bold transition ${
-              pestana === k ? 'bg-brand-orange/20 text-brand-orange' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {pestana === 'ofertas' && <MisOfertas ofertas={ofertas} onCambio={() => setRecarga((n) => n + 1)} />}
-
-      {pestana === 'datos' && (
-        <MisDatosCliente contacto={contacto} empresa={empresa} email={user?.email}
-          onGuardado={() => setRecarga((n) => n + 1)} />
-      )}
-
-      {pestana === 'inicio' && (
-      <>
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Tus datos */}
         <section className="card">
@@ -145,8 +123,6 @@ export default function ClienteSinProyectos() {
         </p>
         <a href="/app/calculadora" className="btn-orange mt-3 inline-flex">Calcular mi propuesta →</a>
       </section>
-      </>
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import ClienteSinProyectos from './cliente/SinProyectos.jsx';
+import MisDatosPagina from './cliente/MisDatosPagina.jsx';
 import { misProyectos, misPresupuestos } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 
@@ -122,6 +123,7 @@ export default function ClientePortal() {
     { to: '', end: true, label: 'Mis servicios' },
     { to: 'presupuestos', label: 'Mis presupuestos' },
     { to: 'soporte', label: 'Soporte' },
+    { to: 'mis-datos', label: 'Mis datos' },
   ];
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -137,6 +139,7 @@ export default function ClientePortal() {
           <Route index element={<Servicios />} />
           <Route path="presupuestos" element={<Presupuestos />} />
           <Route path="soporte" element={<Soporte />} />
+          <Route path="mis-datos" element={<MisDatosPagina />} />
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>
       </div>
