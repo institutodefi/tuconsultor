@@ -47,6 +47,7 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
   const [cargando, setCargando] = useState(true);
   const [abierta, setAbierta] = useState(null);
   const [nueva, setNueva] = useState('');
+  const [nuevaObl, setNuevaObl] = useState(true);
   const [msg, setMsg] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
 
@@ -101,7 +102,7 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
     if (t.length < 3) { setMsg({ err: true, t: 'La condición tiene que decir algo.' }); return; }
     try {
       await insertRow('homologacion_condiciones', {
-        homologacion_id: hid, texto: t, obligatoria: true,
+        homologacion_id: hid, texto: t, obligatoria: nuevaObl,
         orden: (condsDe(hid).length + 1) * 10,
       });
       setNueva(''); setMsg(null); await cargar();
@@ -115,6 +116,12 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
       });
       await cargar();
     } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
+  };
+
+  /** Obligatoria ⇄ opcional. Cambia el estado de la homologación al vuelo. */
+  const alternarObligatoria = async (c) => {
+    try { await updateRow('homologacion_condiciones', c.id, { obligatoria: !c.obligatoria }); await cargar(); }
+    catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
   };
 
   const quitar = async (c) => { try { await deleteRow('homologacion_condiciones', c.id); await cargar(); } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); } };
@@ -203,10 +210,25 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
                             {c.cumplida ? '✓' : ''}
                           </button>
                           <span className="min-w-0 flex-1">
-                            <span className={`block text-[12.5px] ${c.cumplida ? 'text-[#9FC0CB] line-through' : 'text-[#EAF4F7]'}`}>
-                              {c.texto}
+                            {/* Sin tachar: una condición cumplida sigue siendo
+                                parte del expediente y hay que poder leerla. */}
+                            <span className="block text-[12.5px] text-[#EAF4F7]">{c.texto}</span>
+                            <span className="flex flex-wrap items-center gap-2">
+                              {/* Obligatoria u opcional se cambia aquí: es una
+                                  decisión de cada organización, no del catálogo. */}
+                              <button type="button" disabled={!puedeEditar}
+                                onClick={() => alternarObligatoria(c)}
+                                title="Cambiar entre obligatoria y opcional"
+                                className={`text-[10px] font-bold transition ${
+                                  c.obligatoria ? 'text-brand-orange hover:text-brand-orange/70' : 'text-[#7FA7B4] hover:text-[#9FC0CB]'}`}>
+                                {c.obligatoria ? 'obligatoria' : 'opcional'}
+                              </button>
+                              {c.cumplida && (
+                                <span className="text-[10px] font-bold text-brand-verdeTexto">
+                                  ✓ cumplida{c.cumplida_en ? ` · ${fmt(c.cumplida_en)}` : ''}
+                                </span>
+                              )}
                             </span>
-                            {c.obligatoria && <span className="text-[10px] font-bold text-brand-orange">obligatoria</span>}
                             {suyos.map((a) => (
                               <a key={a.id} href={urlDe(a.ruta)} target="_blank" rel="noopener"
                                 className={`ml-2 text-[10.5px] font-bold hover:underline ${
@@ -237,6 +259,12 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
                     <input className="input !py-1.5 !text-[13px] flex-1" placeholder="Escribe una condición…"
                       value={abierta === h.id ? nueva : ''} onChange={(e) => setNueva(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && anadirCondicion(h.id)} />
+                    <button type="button" onClick={() => setNuevaObl((v) => !v)}
+                      title="Obligatoria: sin ella no se homologa. Opcional: suma, pero no bloquea."
+                      className={`rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold transition ${
+                        nuevaObl ? 'border-brand-orange text-brand-orange' : 'border-[#1E5468] text-[#7FA7B4]'}`}>
+                      {nuevaObl ? 'obligatoria' : 'opcional'}
+                    </button>
                     <button onClick={() => anadirCondicion(h.id)} className="btn-ghost !px-3 !py-1.5 text-xs">Añadir</button>
                     <label className="btn-ghost cursor-pointer !px-3 !py-1.5 text-xs">
                       {subiendo ? 'Subiendo…' : '+ Archivo general'}

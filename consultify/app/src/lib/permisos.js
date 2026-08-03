@@ -39,6 +39,7 @@ export const GRUPOS_PORTAL = [
     items: [
       { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'proveedores', label: 'Proveedores', icon: 'truck', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       {
         to: 'clientes', label: 'Clientes', icon: 'users',
         roles: ['superadmin', 'admin', 'director', 'gestion'],
