@@ -7,6 +7,7 @@ import {
 import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
 import HomologacionProveedor from './HomologacionProveedor.jsx';
+import HomologacionNormas from './HomologacionNormas.jsx';
 import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 
@@ -86,6 +87,15 @@ export default function FichaEmpresa({
   const [diagAuto, setDiagAuto] = useState(null);  // diagnóstico lanzado al fallar
   const [contactosNuevos, setContactosNuevos] = useState([]);   // contactos apuntados durante el alta
 
+  // Empresa NUEVA: llega `{}` sin id, así que hay que abrir el formulario sola.
+  // Sin esto la pantalla se quedaba en modo lectura de una empresa vacía: no
+  // había nada que rellenar y por eso no se podían crear a mano.
+  useEffect(() => {
+    if (empresa && !empresa.id && form === null) {
+      setForm({ es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', pais: 'España' });
+    }
+  }, [empresa, form]);
+
   // Un fallo al guardar no puede quedarse en un mensajito que se pierde: se
   // lleva la vista al aviso y se anuncia a los lectores de pantalla.
   function fallar(texto, extra = {}) {
@@ -164,9 +174,18 @@ export default function FichaEmpresa({
     const v = normalizarCif(cifBuscado ?? vista.cif);
     if (!v) { setMsg({ err: true, t: 'Escribe primero el CIF.' }); return; }
     setHolded({ estado: 'buscando' });
-    const r = await holdedFn({ action: 'buscar_empresa', cif: v });
+    const r = await holdedFn({ action: 'buscar_empresa', cif: v, nombre: vista.nombre });
     if (!r?.ok) { setHolded({ estado: 'error', error: r?.error || 'error' }); return; }
-    if (!r.encontrado) { setHolded({ estado: 'no' }); return; }
+    if (!r.encontrado) {
+      // Sin coincidencia de CIF pero sí de nombre: se ofrece, no se aplica.
+      // Dar por buena una empresa con otro CIF sería mezclar dos fichas.
+      if (r.porNombre) {
+        setHolded({ estado: 'candidato', candidato: r, holded_id: r.holded_id });
+        return;
+      }
+      setHolded({ estado: 'no' });
+      return;
+    }
 
     const d = r.empresa || {};
     const CAMPOS = ['nombre', 'nombre_comercial', 'email', 'telefono', 'movil', 'web',
@@ -200,6 +219,26 @@ export default function FichaEmpresa({
     });
     setHolded({ estado: 'encontrado', personas: d.contactos || [], holded_id: r.holded_id,
                 huecos: huecos.length, diferencias, deHolded: d });
+  }
+
+  /** Aceptar el candidato encontrado por nombre, cuando el CIF no coincidía. */
+  function usarCandidato() {
+    const r = holded.candidato;
+    if (!r) return;
+    const d = r.empresa || {};
+    setForm((f) => {
+      const base = { ...(f || vista) };
+      for (const k of ['nombre', 'nombre_comercial', 'email', 'telefono', 'movil', 'web',
+                       'direccion', 'poblacion', 'cp', 'provincia', 'pais', 'vat_id']) {
+        if (d[k] && !String(base[k] || '').trim()) base[k] = d[k];
+      }
+      base.holded_id = r.holded_id || base.holded_id;
+      base._holded_crudo = r.crudo || null;
+      base._holded_contactos = d.contactos || [];
+      return base;
+    });
+    setHolded({ estado: 'encontrado', personas: d.contactos || [], holded_id: r.holded_id,
+                diferencias: [], deHolded: d });
   }
 
   /** Traer de Holded un campo concreto, cuando difiere de lo que hay aquí. */
@@ -498,6 +537,26 @@ export default function FichaEmpresa({
             {!duplicada && cif.mensaje && (
               <p className={cif.valido ? 'text-emerald-300' : 'text-red-300'}>{cif.valido ? '✓' : '⚠'} {cif.mensaje}</p>
             )}
+            {holded.estado === 'candidato' && (
+              <div className="mt-2 rounded-xl border border-brand-orange/40 bg-brand-orange/8 p-3">
+                <p className="text-[12.5px] font-extrabold text-brand-orange">
+                  En Holded no hay nadie con ese CIF, pero sí con un nombre parecido
+                </p>
+                <p className="mt-1 text-[12.5px] text-[#EAF4F7]">{holded.candidato?.nombre_holded}</p>
+                <p className="text-[11.5px] text-[#9FC0CB]">
+                  CIF en Holded: <b className="text-brand-orange">{holded.candidato?.cif_holded || 'sin CIF'}</b>
+                  {' · '}aquí: <b>{normalizarCif(vista.cif)}</b>
+                </p>
+                <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
+                  Si son la misma empresa, es que el CIF está distinto en un sitio. Compruébalo antes:
+                  vincular dos empresas distintas mezcla sus facturas.
+                </p>
+                <button type="button" onClick={usarCandidato} className="btn-ghost mt-2 !px-3 !py-1 text-[11.5px]">
+                  Sí, es la misma: traer sus datos
+                </button>
+              </div>
+            )}
+
             {/* Lo que Holded dice distinto: se enseña y se decide, campo a campo. */}
             {holded.estado === 'encontrado' && holded.diferencias?.length > 0 && (
               <div className="mt-2 rounded-xl border border-brand-orange/40 bg-brand-orange/8 p-3">
@@ -575,7 +634,10 @@ export default function FichaEmpresa({
             <span className="text-[11px] text-[#7FA7B4]">se pueden marcar los dos</span>
           </div>
 
-          <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+          {/* El estado comercial describe la relación de VENTA: en un proveedor
+                    puro no significa nada y ensucia los informes de clientes. */}
+              {form.es_cliente && (
+              <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
             <label className="block">
               <span className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Estado comercial</span>
               <select className="input !py-1.5 !px-2.5 !text-[13px]" value={form.estado_comercial || 'potencial'}
@@ -594,6 +656,7 @@ export default function FichaEmpresa({
               </label>
             )}
           </div>
+              )}
         </div>
 
         {/* Datos fiscales · se abre solo si falta el nombre */}
@@ -777,9 +840,12 @@ export default function FichaEmpresa({
       )}
 
       {/* Homologación · solo proveedores */}
+      {/* Se abre SOLA en un proveedor: si está marcada como tal, la homologación
+          es lo que hay que hacer con ella, no algo escondido tras un desplegable. */}
       {empresa.es_proveedor ? (
-        <Caja titulo="Condiciones de homologación">
-          <HomologacionProveedor empresa={empresa} puedeEditar={puedeEditar} onCambio={onCambio} desnudo />
+        <Caja titulo="Homologación por normas" abiertaPorDefecto
+          insignia={<span className="chip !px-1.5 !py-0 bg-brand-orange/15 text-[10px] text-brand-orange">proveedor</span>}>
+          <HomologacionNormas empresa={empresa} puedeEditar={puedeEditar} />
         </Caja>
       ) : (
         <p className="text-[11px] text-[#7FA7B4]">

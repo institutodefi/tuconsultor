@@ -146,7 +146,27 @@ const cifsDe = (x) => {
 const cifDe = (x) => cifsDe(x)[0] || '';
 
 // ¿Este contacto de Holded corresponde al CIF que buscamos?
-const coincideCif = (x, objetivo) => !!objetivo && cifsDe(x).includes(objetivo);
+// El prefijo de país es opcional: la misma empresa puede estar aquí como
+// «G28826055» y en Holded como «ESG28826055». Comparar con igualdad exacta hacía
+// que no se encontrara y pareciera que Holded no la tenía.
+const sinPrefijo = (v) => String(v || '').replace(/^[A-Z]{2}(?=[A-Z0-9]{8,})/, '');
+
+const coincideCif = (x, objetivo) => {
+  if (!objetivo) return false;
+  const o = norm(objetivo);
+  const oSin = sinPrefijo(o);
+  return cifsDe(x).some((c) => c === o || sinPrefijo(c) === oSin);
+};
+
+/** Compara nombres ignorando forma societaria, acentos y palabras vacías. */
+const claveNombre = (v) => String(v || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase()
+  .replace(/\b(S\.?L\.?U?|S\.?A\.?|SLU|SCP|SCCL|AIE|UTE|FUNDACION|ASOCIACION)\b/g, ' ')
+  .replace(/\b(DE|DEL|LA|LAS|EL|LOS|Y|PARA|POR|CON|EN)\b/g, ' ')
+  .replace(/[^A-Z0-9 ]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 // Mapea un contacto de Holded a los campos de cliente de Consultify (para autocompletar).
 function deContactoHolded(x) {
@@ -211,8 +231,12 @@ function aContactoHolded(c) {
 }
 
 // Recorre todas las páginas de contactos buscando uno cuyo CIF coincida.
-async function buscarContactoPorCif(cif) {
+async function buscarContactoPorCif(cif, nombre) {
   const objetivo = norm(cif);
+  const claveObj = claveNombre(nombre);
+  // Si no se encuentra por CIF, se guarda el mejor candidato por nombre para
+  // ofrecerlo: es mucho más útil que un «no encontrado» seco.
+  let porNombre = null;
   // La v2 pagina por cursor: respuesta {items, cursor, has_more}.
   let cursor = null;
   for (let i = 0; i < 100; i++) { // hasta 100 lotes (cubre miles de contactos)
@@ -223,12 +247,22 @@ async function buscarContactoPorCif(cif) {
     if (lista.length === 0) break;
     const match = lista.find((x) => coincideCif(x, objetivo));
     if (match) return { match, base: HOLDED_BASE };
+
+    // Candidato por nombre, por si el CIF está distinto en Holded.
+    if (claveObj && !porNombre) {
+      porNombre = lista.find((x) => {
+        const k = claveNombre(x?.name);
+        return k && (k === claveObj || k.includes(claveObj) || claveObj.includes(k));
+      }) || null;
+    }
     // ¿hay más páginas?
     const hayMas = r.data?.has_more === true && r.data?.cursor;
     if (!hayMas) break;
     cursor = r.data.cursor;
   }
-  return { match: null, base: HOLDED_BASE };
+  // Sin coincidencia de CIF: se devuelve el candidato por nombre, marcado como
+  // tal para que la interfaz pregunte en vez de dar por bueno.
+  return { match: null, porNombre, base: HOLDED_BASE };
 }
 
 // Calcula el semáforo de cobros de un contacto de Holded a partir de sus facturas.
@@ -442,9 +476,22 @@ export default async (req) => {
     if (action === 'buscar_empresa') {
       const cif = norm(body.cif);
       if (!cif) return json({ ok: false, error: 'CIF vacío' }, 400);
-      const res = await buscarContactoPorCif(cif);
+      const res = await buscarContactoPorCif(cif, body.nombre);
       if (res.error) return json({ ok: false, error: motivo(res.error.status, res.error.data), detalle: res.error.data }, 502);
-      if (!res.match) return json({ ok: true, encontrado: false });
+      if (!res.match) {
+        // Nada por CIF, pero quizá sí por nombre: se ofrece, sin darlo por bueno.
+        if (res.porNombre) {
+          return json({
+            ok: true, encontrado: false, porNombre: true,
+            holded_id: res.porNombre.id,
+            nombre_holded: res.porNombre.name,
+            cif_holded: cifDe(res.porNombre),
+            empresa: deEmpresaHolded(res.porNombre),
+            crudo: res.porNombre,
+          });
+        }
+        return json({ ok: true, encontrado: false });
+      }
       return json({
         ok: true,
         encontrado: true,
