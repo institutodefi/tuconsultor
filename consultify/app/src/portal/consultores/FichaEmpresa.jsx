@@ -217,19 +217,33 @@ export default function FichaEmpresa({
     setHolded((h) => ({ ...h, diferencias: [] }));
   }
 
+  const [rastro, setRastro] = useState(null);
+
   async function guardar() {
+    const pasos = [];
+    const anota = (t, ok = true, extra) => {
+      pasos.push({ t, ok, extra });
+      setRastro([...pasos]);
+    };
+    anota(`Pulsado. Empresa ${form?.id ? `existente ${String(form.id).slice(0, 8)}` : 'NUEVA'}`);
     // El CIF va primero: es la llave de la ficha y de la sincronización con Holded.
     const cifNorm = normalizarCif(form.cif);
+    anota(`CIF normalizado: «${cifNorm || '(vacío)'}»`, !!cifNorm);
     if (!cifNorm) { fallar('El CIF es obligatorio: es el dato con el que se identifica la empresa y se cruza con Holded.'); return; }
     // El motivo, literal. «No es válido» sin decir por qué obliga a adivinar, y
     // con un CIF traído de Holded el problema suele ser el formato, no el dato.
     const chequeo = validarCif(cifNorm);
+    anota(`Validación del CIF: ${chequeo.valido ? 'correcto' : chequeo.mensaje || 'no válido'}`, !!chequeo.valido);
     if (!chequeo.valido) {
       fallar(`El CIF «${cifNorm}» no es válido${chequeo.mensaje ? `: ${chequeo.mensaje}` : '. Revisa la letra de control.'}`);
       return;
     }
+    anota(duplicada ? `CIF duplicado con «${duplicada.nombre}»` : 'CIF no duplicado', !duplicada);
     if (duplicada) { fallar(`Ese CIF ya está en «${duplicada.nombre}».`, { irA: duplicada.id }); return; }
+    anota(`Nombre: «${(form.nombre || '').slice(0, 40) || '(vacío)'}»`, !!form.nombre?.trim());
     if (!form.nombre?.trim()) { fallar('Falta el nombre o razón social.'); return; }
+    anota(`Correo: ${form.email ? (emailValido(form.email) ? 'válido' : 'NO válido') : 'sin correo'}`,
+          !form.email || emailValido(form.email));
     if (form.email && !emailValido(form.email)) { fallar('El email de la empresa no es válido.'); return; }
 
     const payload = {
@@ -260,8 +274,10 @@ export default function FichaEmpresa({
     setGuardando(true);
     try {
       let id = form.id;
+      anota(`Enviando ${id ? 'UPDATE' : 'INSERT'} con ${Object.keys(payload).length} campos…`);
       if (id) await updateRow('empresas', id, payload);
       else id = (await insertRow('empresas', payload))?.id;
+      anota(`Guardado en la base ✓ (id ${String(id).slice(0, 8)})`);
 
       // Contactos apuntados durante el alta: se crean ahora, con la empresa ya
       // existente. Si uno falla, se anota y se sigue: no se pierde la empresa
@@ -332,6 +348,7 @@ export default function FichaEmpresa({
       // el motivo y la causa aparecen juntos sin tener que ir a buscarlos.
       const m = e?.message || e?.details || e?.hint || String(e);
       const cod = e?.code ? ` [${e.code}]` : '';
+      setRastro((r) => [...(r || []), { t: `ERROR${cod}: ${m}`, ok: false }]);
       fallar(`No se pudo guardar${cod}: ${m}`);
       setDiagAuto({ cargando: true });
       diagnosticarCrm()
@@ -620,6 +637,24 @@ export default function FichaEmpresa({
         <div className="sticky bottom-0 z-40 space-y-2 rounded-xl bg-[#0A2B3A]/95 py-2 backdrop-blur">
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="mr-auto text-[11px] text-[#7FA7B4]">Obligatorios: CIF y nombre. Los contactos son opcionales: se pueden añadir después.</span>
+            {/* Qué ha pasado al pulsar guardar, paso a paso. */}
+            {rastro && (
+              <div className="mr-auto max-w-lg rounded-lg bg-[#0D3242] px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Qué ha pasado</p>
+                  <button type="button" onClick={() => setRastro(null)}
+                    className="text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Ocultar</button>
+                </div>
+                <ol className="mt-1 space-y-0.5">
+                  {rastro.map((x, i) => (
+                    <li key={i} className={`text-[11.5px] leading-snug ${x.ok ? 'text-[#9FC0CB]' : 'font-bold text-red-300'}`}>
+                      {x.ok ? '✓' : '✗'} {x.t}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
             {/* Qué impide guardar, en vivo. Cinco comprobaciones que hasta ahora
                 solo se veían al pulsar y una a una. */}
             {(() => {
