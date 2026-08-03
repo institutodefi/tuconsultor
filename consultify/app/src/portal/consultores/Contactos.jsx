@@ -60,10 +60,27 @@ export default function Contactos() {
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
 
-  const empresasDe = useCallback((cid) => vinculos
-    .filter((v) => String(v.contacto_id) === String(cid))
-    .map((v) => ({ vinc: v, e: empresas.find((e) => String(e.id) === String(v.empresa_id)) }))
-    .filter((x) => x.e), [vinculos, empresas]);
+  // Una entrada por EMPRESA, con todos sus roles dentro.
+  //
+  // Desde la v69 una persona puede tener varios roles en la misma empresa
+  // —directiva, de facturación y de proyecto a la vez, que en una pyme es lo
+  // normal—. Esto devolvía un elemento por vínculo, así que la ficha decía
+  // «Empresas (3)» repitiendo tres veces la misma. Ahora se agrupa.
+  const empresasDe = useCallback((cid) => {
+    const porEmpresa = new Map();
+    for (const v of vinculos) {
+      if (String(v.contacto_id) !== String(cid)) continue;
+      const e = empresas.find((x) => String(x.id) === String(v.empresa_id));
+      if (!e) continue;
+      const k = String(e.id);
+      if (!porEmpresa.has(k)) porEmpresa.set(k, { e, vincs: [], vinc: v });
+      const g = porEmpresa.get(k);
+      g.vincs.push(v);
+      // El vínculo «principal» representa a la empresa: es el rol que manda.
+      if (v.principal || (!g.vinc.principal && v.rol === 'directivo')) g.vinc = v;
+    }
+    return [...porEmpresa.values()];
+  }, [vinculos, empresas]);
 
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -264,7 +281,9 @@ export default function Contactos() {
                           <div className="ml-4 text-xs text-[#7FA7B4]">
                             {emailValido(c.email) ? c.email : <span className="font-bold text-red-300">sin email válido</span>}
                             {' · '}
-                            {emps.length ? emps.map((x) => x.e.nombre).join(', ') : <span className="font-bold text-red-300">sin empresa</span>}
+                            {emps.length
+                              ? emps.map((x) => x.e.nombre).join(' · ')
+                              : <span className="font-bold text-red-300">sin empresa</span>}
                           </div>
                         </td>
                       </tr>
@@ -401,15 +420,23 @@ export default function Contactos() {
                         </p>
                       )}
                       <div className="space-y-2">
-                        {emps.map(({ vinc, e }) => (
-                          <button key={vinc.id} onClick={() => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
-                            className="flex w-full items-center gap-2 rounded-xl border border-[#1E5468] bg-[#0D3242] p-2.5 text-left hover:border-brand-verde">
+                        {emps.map(({ e, vincs }) => (
+                          <button key={e.id} onClick={() => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
+                            className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-[#0D3242] p-2.5 text-left hover:border-brand-verde">
                             <div className="min-w-0 flex-1">
                               <span className="font-bold text-[#EAF4F7]">{e.nombre}</span>
                               <span className="ml-2 text-xs text-[#7FA7B4]">{e.cif || 'sin CIF'}</span>
                             </div>
-                            <span className="chip bg-brand-verde/15 text-[10px] text-brand-verdeTexto">
-                              {ROL_LABEL[vinc.rol] || 'Secundario'}
+                            {/* Todos los roles que ocupa en ESTA empresa. Antes se
+                                repetía la empresa entera por cada uno. */}
+                            <span className="flex flex-wrap gap-1">
+                              {vincs.map((v) => (
+                                <span key={v.id}
+                                  className={`chip !px-2 !py-0 text-[10px] ${
+                                    v.principal ? 'bg-brand-orange/15 text-brand-orange' : 'bg-brand-verde/15 text-brand-verdeTexto'}`}>
+                                  {v.principal ? '★ ' : ''}{ROL_LABEL[v.rol] || 'Secundario'}
+                                </span>
+                              ))}
                             </span>
                           </button>
                         ))}

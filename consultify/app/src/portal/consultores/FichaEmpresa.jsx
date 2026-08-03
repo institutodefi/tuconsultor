@@ -115,6 +115,12 @@ export default function FichaEmpresa({
     .map((v) => ({ vinc: v, c: contactos.find((c) => String(c.id) === String(v.contacto_id)) }))
     .filter((x) => x.c), [vinculos, contactos, empresa?.id]);
 
+  // Personas DISTINTAS, no vínculos. Desde la v69 una persona puede ocupar
+  // varios roles en la misma empresa, así que contar vínculos decía «3
+  // contactos» cuando hay uno con tres cargos.
+  const cuantasPersonas = useMemo(
+    () => new Set(mios.map((x) => String(x.c.id))).size, [mios]);
+
   const semaforo = useMemo(
     () => semaforoEmpresa(empresa, mios.map((x) => x.vinc), mios.map((x) => x.c)),
     [empresa, mios],
@@ -492,7 +498,7 @@ export default function FichaEmpresa({
         {/* Contactos · visibles también editando */}
         {form.id ? (
           <Caja titulo="Contactos de la empresa" abiertaPorDefecto
-            insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{mios.length || 'ninguno'}</span>}>
+            insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{cuantasPersonas || 'ninguno'}</span>}>
             <ContactosEmpresa
               empresa={empresa} contactos={contactos} vinculos={vinculos}
               puedeEditar={puedeEditar} onCambio={onCambio} onAbrirContacto={onAbrirContacto} desnudo
@@ -575,7 +581,7 @@ export default function FichaEmpresa({
 
       {/* Contactos primero y abierto */}
       <Caja titulo="Contactos de la empresa" abiertaPorDefecto
-        insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{mios.length || 'ninguno'}</span>}>
+        insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{cuantasPersonas || 'ninguno'}</span>}>
         <ContactosEmpresa
           empresa={empresa} contactos={contactos} vinculos={vinculos}
           puedeEditar={puedeEditar} onCambio={onCambio} onAbrirContacto={onAbrirContacto} desnudo
