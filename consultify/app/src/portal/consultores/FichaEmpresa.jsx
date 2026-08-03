@@ -282,38 +282,50 @@ export default function FichaEmpresa({
     }
     anota(duplicada ? `CIF duplicado con «${duplicada.nombre}»` : 'CIF no duplicado', !duplicada);
     if (duplicada) { fallar(`Ese CIF ya está en «${duplicada.nombre}».`, { irA: duplicada.id }); return; }
-    anota(`Nombre: «${(form.nombre || '').slice(0, 40) || '(vacío)'}»`, !!form.nombre?.trim());
-    if (!form.nombre?.trim()) { fallar('Falta el nombre o razón social.'); return; }
+    anota(`Nombre: «${(form.nombre || '').slice(0, 40) || '(vacío)'}»`, !!String(form.nombre ?? '').trim());
+    if (!String(form.nombre ?? '').trim()) { fallar('Falta el nombre o razón social.'); return; }
     anota(`Correo: ${form.email ? (emailValido(form.email) ? 'válido' : 'NO válido') : 'sin correo'}`,
           !form.email || emailValido(form.email));
     if (form.email && !emailValido(form.email)) { fallar('El email de la empresa no es válido.'); return; }
 
-    const payload = {
-      nombre: form.nombre.trim(),
-      nombre_comercial: form.nombre_comercial?.trim() || null,
+    // Dentro del try, a propósito. Antes se construía fuera y un fallo aquí
+    // —un campo que no es texto, algo inesperado— quedaba sin capturar: el
+    // rastro se cortaba en seco y no aparecía ningún error en pantalla.
+    setGuardando(true);
+    let payload;
+    try {
+      payload = {
+      nombre: String(form.nombre || '').trim(),
+      nombre_comercial: String(form.nombre_comercial ?? '').trim() || null,
       cif: cifNorm,
-      vat_id: form.vat_id?.trim() || null,
+      vat_id: String(form.vat_id ?? '').trim() || null,
       es_cliente: !!form.es_cliente,
       es_proveedor: !!form.es_proveedor,
       estado_comercial: form.estado_comercial || 'potencial',
-      direccion: form.direccion?.trim() || null,
-      poblacion: form.poblacion?.trim() || null,
-      cp: form.cp?.trim() || null,
-      provincia: form.provincia?.trim() || null,
-      pais: form.pais?.trim() || 'España',
-      email: form.email?.trim() || null,
-      telefono: form.telefono?.trim() || null,
-      movil: form.movil?.trim() || null,
-      web: form.web?.trim() || null,
-      notas: form.notas?.trim() || null,
+      direccion: String(form.direccion ?? '').trim() || null,
+      poblacion: String(form.poblacion ?? '').trim() || null,
+      cp: String(form.cp ?? '').trim() || null,
+      provincia: String(form.provincia ?? '').trim() || null,
+      pais: String(form.pais ?? '').trim() || 'España',
+      email: String(form.email ?? '').trim() || null,
+      telefono: String(form.telefono ?? '').trim() || null,
+      movil: String(form.movil ?? '').trim() || null,
+      web: String(form.web ?? '').trim() || null,
+      notas: String(form.notas ?? '').trim() || null,
       empresa_matriz_id: form.es_cliente ? (form.empresa_matriz_id || null) : null,
       holded_id: form.holded_id || null,
       holded_datos: form._holded_crudo || form.holded_datos || null,
       holded_sincronizado_en: form._holded_crudo ? new Date().toISOString() : (form.holded_sincronizado_en || null),
       updated_at: new Date().toISOString(),
-    };
+      };
+      anota(`Datos preparados: ${Object.keys(payload).length} campos`);
+    } catch (e) {
+      anota(`Fallo al preparar los datos: ${e?.message || e}`, false);
+      fallar(`No se pudieron preparar los datos: ${e?.message || e}`);
+      setGuardando(false);
+      return;
+    }
 
-    setGuardando(true);
     try {
       let id = form.id;
       anota(`Enviando ${id ? 'UPDATE' : 'INSERT'} con ${Object.keys(payload).length} campos…`);
@@ -667,9 +679,9 @@ export default function FichaEmpresa({
         </div>
 
         {/* Datos fiscales · se abre solo si falta el nombre */}
-        <Caja titulo="Datos fiscales y de contacto" abiertaPorDefecto={!form.nombre?.trim()}
+        <Caja titulo="Datos fiscales y de contacto" abiertaPorDefecto={!String(form.nombre ?? '').trim()}
           resumen={[form.nombre, resumenDireccion].filter(Boolean).join(' · ') || 'sin rellenar'}
-          insignia={!form.nombre?.trim()
+          insignia={!String(form.nombre ?? '').trim()
             ? <span className="chip !px-1.5 !py-0 bg-red-500/15 text-[10px] text-red-300">falta el nombre</span>
             : null}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -734,7 +746,7 @@ export default function FichaEmpresa({
                 !cn && 'Falta el CIF',
                 cn && ch.valido === false && `Identificador no válido: ${ch.mensaje || 'revisa la letra de control'}`,
                 duplicada && `Ese CIF ya está en «${duplicada.nombre}»`,
-                !form.nombre?.trim() && 'Falta el nombre o razón social',
+                !String(form.nombre ?? '').trim() && 'Falta el nombre o razón social',
                 form.email && !emailValido(form.email) && 'El correo de la empresa no es válido',
               ].filter(Boolean);
               if (!problemas.length) return null;
