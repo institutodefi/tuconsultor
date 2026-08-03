@@ -37,6 +37,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/validar-vies"
+  to = "/.netlify/functions/validar-vies"
+  status = 200
+
+[[redirects]]
   from = "/api/sincronizar-crm"
   to = "/.netlify/functions/sincronizar-crm"
   status = 200

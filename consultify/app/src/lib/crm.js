@@ -37,6 +37,42 @@ export const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(e 
 // ── NIF · CIF · NIE ─────────────────────────────────────────────────────────
 export const normalizarCif = (s) => String(s || '').toUpperCase().replace(/[\s\-.]/g, '');
 
+// ── Identificadores fiscales de la UE ──────────────────────────────────────
+// El prefijo de país NO se quita: en una empresa portuguesa o francesa forma
+// parte del identificador y tirarlo lo deja inservible. En una española es
+// opcional —«B84867670» y «ESB84867670» son la misma empresa—, así que se
+// acepta con prefijo y sin él, pero se valida el dígito de control español.
+//
+// Del resto de países se comprueba el FORMATO, no el dígito de control: cada
+// uno tiene su algoritmo y fingir que se validan sería peor que no hacerlo,
+// porque daría por bueno lo que no se ha comprobado.
+const FORMATO_VAT = {
+  AT: /^U\d{8}$/,           BE: /^0\d{9}$/,        BG: /^\d{9,10}$/,
+  CY: /^\d{8}[A-Z]$/,       CZ: /^\d{8,10}$/,      DE: /^\d{9}$/,
+  DK: /^\d{8}$/,            EE: /^\d{9}$/,         EL: /^\d{9}$/,
+  FI: /^\d{8}$/,            FR: /^[A-Z0-9]{2}\d{9}$/, HR: /^\d{11}$/,
+  HU: /^\d{8}$/,            IE: /^[\dA-Z+*]{8,9}$/, IT: /^\d{11}$/,
+  LT: /^(\d{9}|\d{12})$/,   LU: /^\d{8}$/,         LV: /^\d{11}$/,
+  MT: /^\d{8}$/,            NL: /^\d{9}B\d{2}$/,   PL: /^\d{10}$/,
+  PT: /^\d{9}$/,            RO: /^\d{2,10}$/,      SE: /^\d{12}$/,
+  SI: /^\d{8}$/,            SK: /^\d{10}$/,
+  // Fuera de la UE, los más habituales aquí.
+  GB: /^(\d{9}|\d{12}|(GD|HA)\d{3})$/, CH: /^E\d{9}$/, NO: /^\d{9}(MVA)?$/,
+};
+
+export const PAISES_VAT = Object.keys(FORMATO_VAT).concat('ES').sort();
+
+/** Nombre del país a partir del prefijo, para poder decirlo en pantalla. */
+export const PAIS_DE = {
+  AT: 'Austria', BE: 'Bélgica', BG: 'Bulgaria', CY: 'Chipre', CZ: 'Chequia',
+  DE: 'Alemania', DK: 'Dinamarca', EE: 'Estonia', EL: 'Grecia', ES: 'España',
+  FI: 'Finlandia', FR: 'Francia', HR: 'Croacia', HU: 'Hungría', IE: 'Irlanda',
+  IT: 'Italia', LT: 'Lituania', LU: 'Luxemburgo', LV: 'Letonia', MT: 'Malta',
+  NL: 'Países Bajos', PL: 'Polonia', PT: 'Portugal', RO: 'Rumanía',
+  SE: 'Suecia', SI: 'Eslovenia', SK: 'Eslovaquia',
+  GB: 'Reino Unido', CH: 'Suiza', NO: 'Noruega',
+};
+
 /**
  * Valida un identificador fiscal español y devuelve
  * { valido, tipo, mensaje }. Replica el aviso «CIF correcto» de Holded.
@@ -44,6 +80,30 @@ export const normalizarCif = (s) => String(s || '').toUpperCase().replace(/[\s\-
 export function validarCif(entrada) {
   const v = normalizarCif(entrada);
   if (!v) return { valido: null, tipo: null, mensaje: '' };
+
+  // ── Con prefijo de país ──
+  const m = /^([A-Z]{2})([A-Z0-9]+)$/.exec(v);
+  if (m && (m[1] === 'ES' || FORMATO_VAT[m[1]])) {
+    const [, pais, resto] = m;
+
+    if (pais === 'ES') {
+      // Española con prefijo: se valida el CIF de verdad, dígito incluido.
+      const r = validarCif(resto);
+      return { ...r, tipo: r.tipo ? `${r.tipo} · VAT ES` : 'VAT ES', pais: 'ES',
+               mensaje: r.valido ? `${r.mensaje} (con prefijo ES)` : r.mensaje };
+    }
+
+    const ok = FORMATO_VAT[pais].test(resto);
+    return {
+      valido: ok, tipo: `VAT ${pais}`, pais,
+      // Se dice claramente que NO se ha comprobado el dígito: dar por bueno lo
+      // que no se ha validado es peor que avisar.
+      mensaje: ok
+        ? `Formato correcto de ${PAIS_DE[pais] || pais}. El dígito de control no se comprueba aquí: verifícalo en VIES.`
+        : `No encaja con el formato de ${PAIS_DE[pais] || pais}.`,
+    };
+  }
+
   if (!/^[A-Z0-9]{9}$/.test(v)) return { valido: false, tipo: null, mensaje: 'Debe tener 9 caracteres' };
 
   const LETRAS_NIF = 'TRWAGMYFPDXBNJZSQVHLCKE';

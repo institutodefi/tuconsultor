@@ -266,8 +266,27 @@ export async function upsertClienteDesdeFormulario({ empresa, contacto, email, t
 // usa el código del criterio (1.4.3) como clave, no un uuid.
 export async function updateRow(table, id, patch, clave = 'id') {
   if (DEMO) { const t = demo()[table]; const i = t.findIndex(r => r[clave] === id); if (i >= 0) t[i] = { ...t[i], ...patch }; return t[i]; }
+  if (NORMALIZAR[table]) patch = NORMALIZAR[table](patch);
   const { data, error } = await supabase.from(table).update(patch).eq(clave, id).select().single();
-  if (error) throw error;
+
+  // Un guardado bloqueado por permisos no siempre llega como error legible:
+  // puede volver como «0 filas» y parecer que fue bien. Aquí se traduce a algo
+  // que se pueda leer en pantalla, porque el silencio es lo que hace que un
+  // formulario parezca roto sin decir por qué.
+  if (error) {
+    const m = String(error.message || '');
+    if (error.code === 'PGRST116' || /no rows|0 rows/i.test(m)) {
+      throw new Error(
+        `No se pudo guardar en «${table}». La fila existe pero la base no deja escribirla: ` +
+        'faltan permisos o la política de seguridad no incluye tu rol. ' +
+        'Pásale a quien administre el diagnóstico DIAGNOSTICO-GUARDAR.sql.',
+      );
+    }
+    if (/permission denied/i.test(m)) {
+      throw new Error(`Sin permiso para escribir en «${table}». Falta el GRANT de la tabla.`);
+    }
+    throw error;
+  }
   return data;
 }
 

@@ -96,6 +96,26 @@ export default function FichaEmpresa({
     }, 50);
   }
 
+  // ── Comprobar en VIES ──
+  // La validación local dice si el número está bien FORMADO. VIES dice si está
+  // OPERATIVO, que es lo que hace falta antes de facturar sin IVA.
+  const [vies, setVies] = useState(null);
+  async function comprobarVies() {
+    const id = normalizarCif(vista.vat_id || vista.cif);
+    if (!id) { setVies({ estado: 'error', motivo: 'Escribe primero el identificador.' }); return; }
+    setVies({ estado: 'consultando' });
+    try {
+      const r = await fetch('/api/validar-vies', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identificador: id }),
+      });
+      const j = await r.json();
+      setVies({ estado: 'hecho', ...j });
+    } catch (e) {
+      setVies({ estado: 'hecho', comprobado: false, motivo: `No se pudo consultar: ${e?.message || e}` });
+    }
+  }
+
   async function probarHolded() {
     setDiag({ cargando: true });
     try { setDiag(await holdedFn({ action: 'diagnostico' })); }
@@ -149,11 +169,27 @@ export default function FichaEmpresa({
     if (!r.encontrado) { setHolded({ estado: 'no' }); return; }
 
     const d = r.empresa || {};
+    const CAMPOS = ['nombre', 'nombre_comercial', 'email', 'telefono', 'movil', 'web',
+                    'direccion', 'poblacion', 'cp', 'provincia', 'pais', 'vat_id', 'notas'];
+
+    // Antes esto solo rellenaba huecos: en una empresa que YA tenía datos no
+    // cambiaba nada, el formulario quedaba igual y guardar no hacía nada
+    // visible. Ahora se separan los huecos de las DIFERENCIAS, se rellenan los
+    // primeros y se preguntan las segundas: sobrescribir sin avisar sería peor.
+    const actual = form || vista;
+    const huecos = [];
+    const diferencias = [];
+    for (const k of CAMPOS) {
+      const nuevo = d[k];
+      if (!nuevo) continue;
+      const tenia = String(actual[k] || '').trim();
+      if (!tenia) huecos.push(k);
+      else if (tenia !== String(nuevo).trim()) diferencias.push({ campo: k, aqui: tenia, alli: String(nuevo).trim() });
+    }
+
     setForm((f) => {
       const base = { ...(f || vista) };
-      const poner = (k, val) => { if (val && !String(base[k] || '').trim()) base[k] = val; };
-      for (const k of ['nombre', 'nombre_comercial', 'email', 'telefono', 'movil', 'web',
-                       'direccion', 'poblacion', 'cp', 'provincia', 'pais', 'vat_id', 'notas']) poner(k, d[k]);
+      for (const k of huecos) base[k] = d[k];
       base.cif = d.cif || v;
       if (d.es_cliente) base.es_cliente = true;
       if (d.es_proveedor) base.es_proveedor = true;
@@ -162,14 +198,36 @@ export default function FichaEmpresa({
       base._holded_contactos = d.contactos || [];
       return base;
     });
-    setHolded({ estado: 'encontrado', personas: d.contactos || [], holded_id: r.holded_id });
+    setHolded({ estado: 'encontrado', personas: d.contactos || [], holded_id: r.holded_id,
+                huecos: huecos.length, diferencias, deHolded: d });
+  }
+
+  /** Traer de Holded un campo concreto, cuando difiere de lo que hay aquí. */
+  function aceptarDeHolded(campo) {
+    setForm((f) => ({ ...(f || vista), [campo]: holded.deHolded?.[campo] }));
+    setHolded((h) => ({ ...h, diferencias: (h.diferencias || []).filter((x) => x.campo !== campo) }));
+  }
+
+  function aceptarTodoDeHolded() {
+    setForm((f) => {
+      const base = { ...(f || vista) };
+      for (const x of (holded.diferencias || [])) base[x.campo] = x.alli;
+      return base;
+    });
+    setHolded((h) => ({ ...h, diferencias: [] }));
   }
 
   async function guardar() {
     // El CIF va primero: es la llave de la ficha y de la sincronización con Holded.
     const cifNorm = normalizarCif(form.cif);
     if (!cifNorm) { fallar('El CIF es obligatorio: es el dato con el que se identifica la empresa y se cruza con Holded.'); return; }
-    if (!validarCif(cifNorm).valido) { fallar(`El CIF «${cifNorm}» no es válido. Revisa la letra de control.`); return; }
+    // El motivo, literal. «No es válido» sin decir por qué obliga a adivinar, y
+    // con un CIF traído de Holded el problema suele ser el formato, no el dato.
+    const chequeo = validarCif(cifNorm);
+    if (!chequeo.valido) {
+      fallar(`El CIF «${cifNorm}» no es válido${chequeo.mensaje ? `: ${chequeo.mensaje}` : '. Revisa la letra de control.'}`);
+      return;
+    }
     if (duplicada) { fallar(`Ese CIF ya está en «${duplicada.nombre}».`, { irA: duplicada.id }); return; }
     if (!form.nombre?.trim()) { fallar('Falta el nombre o razón social.'); return; }
     if (form.email && !emailValido(form.email)) { fallar('El email de la empresa no es válido.'); return; }
@@ -398,9 +456,55 @@ export default function FichaEmpresa({
                 <button onClick={() => onSeleccionar && onSeleccionar(duplicada.id)} className="ml-1 underline">abrir</button>
               </p>
             )}
+            {/* VIES: comprobar que el número existe, no solo que esté bien escrito */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <button type="button" onClick={comprobarVies} disabled={vies?.estado === 'consultando'}
+                className="btn-ghost !px-2.5 !py-1 text-[11px] disabled:opacity-50">
+                {vies?.estado === 'consultando' ? 'Consultando VIES…' : 'Comprobar en VIES'}
+              </button>
+              {vies?.estado === 'hecho' && (
+                <span className={`text-[11.5px] font-bold ${
+                  vies.valido === true ? 'text-emerald-300'
+                    : vies.valido === false ? 'text-red-300' : 'text-[#9FC0CB]'}`}>
+                  {vies.valido === true ? '✓' : vies.valido === false ? '⚠' : 'ℹ'} {vies.motivo}
+                  {vies.nombre && <span className="ml-1 font-normal text-[#9FC0CB]">· {vies.nombre}</span>}
+                </span>
+              )}
+            </div>
+            {vies?.estado === 'hecho' && vies.nombre && vies.nombre !== vista.nombre && (
+              <button type="button" onClick={() => setForm((f) => ({ ...(f || vista), nombre: vies.nombre }))}
+                className="mt-1 text-[11px] font-bold text-brand-orange hover:underline">
+                Usar «{vies.nombre}» como razón social
+              </button>
+            )}
+
             {!duplicada && cif.mensaje && (
               <p className={cif.valido ? 'text-emerald-300' : 'text-red-300'}>{cif.valido ? '✓' : '⚠'} {cif.mensaje}</p>
             )}
+            {/* Lo que Holded dice distinto: se enseña y se decide, campo a campo. */}
+            {holded.estado === 'encontrado' && holded.diferencias?.length > 0 && (
+              <div className="mt-2 rounded-xl border border-brand-orange/40 bg-brand-orange/8 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[12.5px] font-extrabold text-brand-orange">
+                    Holded tiene {holded.diferencias.length} dato{holded.diferencias.length === 1 ? '' : 's'} distinto{holded.diferencias.length === 1 ? '' : 's'}
+                  </p>
+                  <button type="button" onClick={aceptarTodoDeHolded}
+                    className="btn-ghost !px-2.5 !py-1 text-[11px]">Traerlos todos</button>
+                </div>
+                <ul className="mt-2 space-y-1.5">
+                  {holded.diferencias.map((x) => (
+                    <li key={x.campo} className="rounded-lg bg-[#0D3242] px-2.5 py-2">
+                      <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{x.campo.replace('_', ' ')}</p>
+                      <p className="mt-0.5 text-[12px] text-[#9FC0CB]">Aquí: <span className="text-[#EAF4F7]">{x.aqui}</span></p>
+                      <p className="text-[12px] text-[#9FC0CB]">Holded: <span className="text-brand-orange">{x.alli}</span></p>
+                      <button type="button" onClick={() => aceptarDeHolded(x.campo)}
+                        className="mt-1 text-[11px] font-bold text-brand-orange hover:underline">Usar el de Holded</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {holded.estado === 'encontrado' && (
               <p className="text-emerald-300">
                 ✓ En Holded, campos vacíos rellenados
@@ -516,6 +620,25 @@ export default function FichaEmpresa({
         <div className="sticky bottom-0 z-40 space-y-2 rounded-xl bg-[#0A2B3A]/95 py-2 backdrop-blur">
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="mr-auto text-[11px] text-[#7FA7B4]">Obligatorios: CIF y nombre. Los contactos son opcionales: se pueden añadir después.</span>
+            {/* Qué impide guardar, en vivo. Cinco comprobaciones que hasta ahora
+                solo se veían al pulsar y una a una. */}
+            {(() => {
+              const cn = normalizarCif(form.cif);
+              const ch = validarCif(cn);
+              const problemas = [
+                !cn && 'Falta el CIF',
+                cn && ch.valido === false && `Identificador no válido: ${ch.mensaje || 'revisa la letra de control'}`,
+                duplicada && `Ese CIF ya está en «${duplicada.nombre}»`,
+                !form.nombre?.trim() && 'Falta el nombre o razón social',
+                form.email && !emailValido(form.email) && 'El correo de la empresa no es válido',
+              ].filter(Boolean);
+              if (!problemas.length) return null;
+              return (
+                <p className="mr-auto max-w-md text-[11.5px] font-bold leading-snug text-red-300">
+                  No se puede guardar: {problemas.join(' · ')}
+                </p>
+              );
+            })()}
             <button onClick={() => (form.id ? setForm(null) : onCerrar && onCerrar())} className="btn-ghost !px-3 !py-1.5 text-[11px]">Cancelar</button>
             <button onClick={guardar} disabled={guardando} className="btn-orange !px-4 !py-1.5 text-[11px] disabled:opacity-40">
               {guardando ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Crear empresa'}
