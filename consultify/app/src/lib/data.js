@@ -111,7 +111,12 @@ export async function listTable(table) {
   let desde = 0;
   let todas = [];
   for (;;) {
-    const { data, error } = await supabase.from(table).select('*').range(desde, desde + PAGE - 1);
+    // Ordenado por `id`: sin un orden estable, PostgREST puede devolver la
+    // misma fila en dos páginas y omitir otra. Con pocas filas no se nota; al
+    // pasar de mil, empiezan a faltar registros sin motivo aparente.
+    const { data, error } = await supabase.from(table).select('*')
+      .order('id', { ascending: true })
+      .range(desde, desde + PAGE - 1);
     if (error) throw error;
     if (!data || data.length === 0) break;
     todas = todas.concat(data);
