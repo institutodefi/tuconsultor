@@ -86,12 +86,16 @@ export default function FichaEmpresa({
   const cajaAviso = useRef(null);          // para llevar el foco al error
   const [diagAuto, setDiagAuto] = useState(null);  // diagnóstico lanzado al fallar
   const [contactosNuevos, setContactosNuevos] = useState([]);   // contactos apuntados durante el alta
+  const recienGuardada = useRef(false);   // se declara aquí: el efecto de más abajo la lee
 
   // Empresa NUEVA: llega `{}` sin id, así que hay que abrir el formulario sola.
   // Sin esto la pantalla se quedaba en modo lectura de una empresa vacía: no
   // había nada que rellenar y por eso no se podían crear a mano.
   useEffect(() => {
-    if (empresa && !empresa.id && form === null) {
+    // `recienGuardada` evita el bucle: al guardar se hace setForm(null), y sin
+    // esta guarda el efecto volvía a abrir un formulario VACÍO encima. Parecía
+    // que el alta no había hecho nada.
+    if (empresa && !empresa.id && form === null && !recienGuardada.current) {
       setForm({ es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', pais: 'España' });
     }
   }, [empresa, form]);
@@ -132,7 +136,6 @@ export default function FichaEmpresa({
     catch (e) { setDiag({ ok: false, conclusion: `No se pudo contactar con la función: ${e?.message || e}` }); }
   }
 
-  const recienGuardada = useRef(false);
   useEffect(() => {
     setForm(esNueva ? { pais: 'España', es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', ...empresa } : null);
     if (recienGuardada.current) recienGuardada.current = false;
@@ -379,8 +382,12 @@ export default function FichaEmpresa({
       const extra = importados ? ` · ${importados} contacto(s) importados de Holded` : '';
       const aviso = saltados ? ` · ${saltados} sin email válido, no importados` : '';
       setMsg({ t: `Empresa guardada.${altas ? ` ${altas} contacto${altas === 1 ? '' : 's'} creado${altas === 1 ? '' : 's'}.` : ' Asígnale ahora sus contactos.'}${fallidos.length ? ` No se pudo con: ${fallidos.join(' · ')}` : ''}` });
+      const eraNueva = !form.id;
       if (onCambio) await onCambio(id);
-      if (!form.id && id) onSeleccionar && onSeleccionar(id);
+      // Tras un ALTA se vuelve al listado: es donde se comprueba que la empresa
+      // está, y desde donde se sigue trabajando. Dejar abierta la ficha recién
+      // creada obliga a cerrarla a mano para ver si consta.
+      if (eraNueva && onCerrar) onCerrar();
     } catch (e) {
       // El motivo real de la base de datos, sin adornos. Y como un mensaje suelto
       // no ha bastado las veces anteriores, se lanza además el diagnóstico: así

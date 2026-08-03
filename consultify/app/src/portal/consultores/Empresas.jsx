@@ -109,7 +109,7 @@ export default function Empresas() {
         puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
         onCambio={cargar}
         onSeleccionar={seleccionar}
-        onCerrar={() => { setNueva(false); setParams({}); }}
+        onCerrar={() => { setNueva(false); setParams({}); cargar(); }}
         onAbrirContacto={abrirContacto}
       />
     );

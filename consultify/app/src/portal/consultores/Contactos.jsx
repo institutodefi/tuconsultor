@@ -148,7 +148,10 @@ export default function Contactos() {
               empresa_id: form._empresa_id, contacto_id: nuevo.id, rol: 'secundario', principal: false,
             }).catch(() => {});
           }
-          seleccionar(nuevo.id);
+          // Tras un ALTA se vuelve al listado, igual que en empresas: es donde
+          // se comprueba que el contacto está. Dejar abierta su ficha obliga a
+          // cerrarla a mano para ver si consta.
+          seleccionar(null);
         }
       }
       setForm(null); cargar();
