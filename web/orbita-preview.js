@@ -27,8 +27,13 @@
 (function () {
   var CLAVE_SESION = 'tc-orbita-preview';
   var CLAVE_IDIOMA = 'tc-idioma';
-  var MIN = 700;      // ms visible como mínimo
-  var TOPE = 3000;    // ms como máximo, pase lo que pase
+  var MIN = 4000;      // ms visible como mínimo
+  var TOPE = 6000;    // ms como máximo, pase lo que pase
+
+  // La presentación se ve AL MENOS 4 segundos. Antes duraba lo que tardara en
+  // cargar la página, que en una conexión buena es medio segundo: se veía un
+  // parpadeo en vez de una entrada. El tope sube en consecuencia: si no,
+  // cortaría el mínimo por arriba.
 
   try {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -82,7 +87,7 @@
   }
 
   var css = ''
-    + '#tc-preview{position:fixed;inset:0;z-index:99998;display:grid;place-items:center;'
+    + '#tc-preview{position:fixed;inset:0;z-index:var(--capa-presentacion,9800);display:grid;place-items:center;'
     + 'background:radial-gradient(circle at 50% 42%,#123244 0%,#0E1730 60%,#0A1024 100%);'
     + 'transition:opacity .45s ease,visibility .45s ease}'
     + '#tc-preview.tc-fuera{opacity:0;visibility:hidden;pointer-events:none}'

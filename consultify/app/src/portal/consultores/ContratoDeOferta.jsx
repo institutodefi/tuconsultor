@@ -19,6 +19,7 @@ const PRODUCTOS = [
 
 export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
   const [abierto, setAbierto] = useState(false);
+  const [previa, setPrevia] = useState(false);
   const [productos, setProductos] = useState(['mstool']);
   const [nombre, setNombre] = useState('');
   const [codigo, setCodigo] = useState('');
@@ -40,11 +41,33 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
       });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || 'No se pudo generar.');
-      setMsg({ err: false, t: `Contrato ${j.numero} ${j.ya_existia ? 'ya existía' : 'generado'}.` });
+      // Si el PDF no se guardó, hay que decirlo: un contrato sin documento no
+      // se puede firmar, y creer que está hecho es peor que saber que falta.
+      setMsg(j.aviso
+        ? { err: true, t: j.aviso }
+        : { err: false, t: `Contrato ${j.numero} ${j.ya_existia ? 'ya existía' : 'generado'}.` });
       onCambio && onCambio();
     } catch (e) {
       setMsg({ err: true, t: `${e?.message || e}` });
     } finally { setOcupado(false); }
+  }
+
+  /** Rehace el PDF. Sale idéntico: los datos están congelados en el contrato. */
+  async function regenerarPdf() {
+    setOcupado(true); setMsg(null);
+    try {
+      if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se regenera.' }); return; }
+      const r = await fetch('/api/generar-contrato', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contrato_id: contrato.id, regenerar: true }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'No se pudo regenerar.');
+      setMsg({ err: false, t: 'PDF rehecho.' });
+      setPrevia(true);
+      onCambio && onCambio();
+    } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
+    finally { setOcupado(false); }
   }
 
   async function crearProyecto() {
@@ -92,15 +115,37 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
         <span className="chip !px-2 !py-0.5 bg-emerald-500/15 text-[10.5px] font-extrabold text-emerald-300">
           {contrato.numero}
         </span>
-        {contrato.url_pdf && (
-          <a href={contrato.url_pdf} target="_blank" rel="noopener"
-            className="text-[11.5px] font-bold text-brand-orange hover:underline">Ver contrato</a>
+        {contrato.url_pdf ? (
+          <>
+            <button type="button" onClick={() => setPrevia((v) => !v)}
+              className="text-[11.5px] font-bold text-brand-orange hover:underline">
+              {previa ? 'Cerrar vista previa' : 'Ver contrato'}
+            </button>
+            <a href={contrato.url_pdf} target="_blank" rel="noopener"
+              className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">Abrir aparte</a>
+          </>
+        ) : (
+          <span className="text-[11.5px] font-bold text-red-300">Sin PDF</span>
         )}
+        <button type="button" onClick={regenerarPdf} disabled={ocupado}
+          className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7] disabled:opacity-50"
+          title="Rehace el PDF con lo que se congeló al firmar: sale idéntico">
+          {ocupado ? 'Rehaciendo…' : '↻ Regenerar PDF'}
+        </button>
         <button onClick={() => { setAbierto((v) => !v); setNombre(nombre || contrato.objeto || sugerido); setCodigo(codigo || sugerido); }}
           className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">
           {abierto ? 'Cancelar' : '+ Dar de alta el proyecto'}
         </button>
       </div>
+
+      {/* Vista previa aquí mismo: abrir el PDF en otra pestaña para comprobar
+          una cifra obliga a saltar de contexto cada vez. */}
+      {previa && contrato.url_pdf && (
+        <div className="overflow-hidden rounded-xl border border-[#1E5468]">
+          <iframe src={`${contrato.url_pdf}#view=FitH`} title={`Contrato ${contrato.numero}`}
+            className="h-[520px] w-full bg-white" />
+        </div>
+      )}
 
       {abierto && (
         <div className="rounded-xl bg-[#0D3242] p-3">

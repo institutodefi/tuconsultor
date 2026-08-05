@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth.jsx';
 import ClienteSinProyectos from './cliente/SinProyectos.jsx';
 import MisDatosPagina from './cliente/MisDatosPagina.jsx';
 import MisOfertas from './cliente/MisOfertas.jsx';
-import { misProyectos, misPresupuestos } from '../lib/data.js';
+import { misProyectos, misPresupuestos, listTable } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 
 const ESTADOS = { activo: 'bg-green-100 text-green-800', 'implantación': 'bg-brand-orange/20 text-[#F9A83A]', pausado: 'bg-[#123F52] text-[#9FC0CB]', cerrado: 'bg-[#0D3242] text-[#7FA7B4]' };
@@ -47,11 +47,16 @@ function Presupuestos() {
   // sitio natural: donde ya venía a mirar sus propuestas.
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
+  const [contratos, setContratos] = useState([]);
   const [recarga, setRecarga] = useState(0);
-  useEffect(() => { misPresupuestos(user).then(setRows).catch(() => setRows([])); }, [user, recarga]);
+  useEffect(() => {
+    misPresupuestos(user).then(setRows).catch(() => setRows([]));
+    // La política deja al cliente ver SOLO los contratos de sus ofertas.
+    listTable('contratos').then(setContratos).catch(() => setContratos([]));
+  }, [user, recarga]);
 
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando tus propuestas…</p>;
-  return <MisOfertas ofertas={rows} onCambio={() => setRecarga((n) => n + 1)} />;
+  return <MisOfertas ofertas={rows} contratos={contratos} onCambio={() => setRecarga((n) => n + 1)} />;
 }
 
 function Soporte() {

@@ -9,8 +9,8 @@
   a.href = DESTINO;
   a.setAttribute('aria-label', 'Acceso a Orbita.PMTools');
   a.title = 'Orbita.PMTools';
-  a.className = 'tc-logo-animado';
-  a.style.cssText = 'position:fixed;bottom:96px;right:20px;z-index:9998;width:64px;height:64px;' +
+  a.className = 'flotante-apilado tc-logo-animado';
+  a.style.cssText = 'position:fixed;bottom:var(--flotante-2-abajo,96px);right:var(--flotante-borde,20px);z-index:var(--capa-flotante-2,9000);width:64px;height:64px;' +
     'border-radius:50%;background:#061F2B;border:2px solid #1FA1A6;display:flex;align-items:center;' +
     'justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.35);transition:transform .18s;overflow:hidden;padding:7px';
   a.onmouseenter = function(){ a.style.transform = 'translateY(-2px) scale(1.05)'; };

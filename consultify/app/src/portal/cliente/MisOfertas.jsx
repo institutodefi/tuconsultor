@@ -22,7 +22,7 @@ const ESTADO = {
   borrador:  { etq: 'En preparación', tono: 'bg-white/8 text-[#9FC0CB]' },
 };
 
-export default function MisOfertas({ ofertas, onCambio }) {
+export default function MisOfertas({ ofertas, contratos = [], onCambio }) {
   const [rechazando, setRechazando] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [msg, setMsg] = useState(null);
@@ -89,6 +89,32 @@ export default function MisOfertas({ ofertas, onCambio }) {
                 {o.notas_oferta}
               </p>
             )}
+
+            {/* El contrato, cuando lo hay. Es el documento que se firma, así
+                que se enseña aparte y con más peso que la propuesta. */}
+            {(() => {
+              const c = contratos.find((x) => String(x.presupuesto_id) === String(o.id) && x.estado !== 'anulado');
+              if (!c) return null;
+              return (
+                <div className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-500/8 px-3 py-2">
+                  <p className="text-[12.5px] font-extrabold text-emerald-300">
+                    Contrato {c.numero}
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] text-[#9FC0CB]">
+                    {c.estado === 'firmado' ? 'Firmado' : 'Pendiente de firma'}
+                    {c.fecha_contrato ? ` · ${new Date(c.fecha_contrato).toLocaleDateString('es-ES')}` : ''}
+                  </p>
+                  {c.url_pdf ? (
+                    <a href={c.url_pdf} target="_blank" rel="noopener"
+                      className="btn-ghost mt-2 inline-flex !px-3 !py-1 text-[11.5px]">Ver el contrato</a>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-[#7FA7B4]">
+                      Estamos preparando el documento. Te avisamos en cuanto esté.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="mt-3 flex flex-wrap gap-2">
               {o.url_pdf && (

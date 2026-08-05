@@ -210,16 +210,49 @@ export default async (req) => {
     }
 
     // ══════════ 4 · Empresas a la lista #10 ══════════
+    //
+    // Brevo identifica cada contacto por su CORREO: una empresa sin correo no
+    // puede subirse, y por eso la lista #10 seguía a cero. No es un fallo del
+    // código, es cómo funciona Brevo.
+    //
+    // Cuando la empresa no tiene correo propio pero sí un contacto principal
+    // con correo, se usa ÉSE y se marca que representa a la empresa. Es lo
+    // razonable: a una empresa no se le escribe, se le escribe a alguien.
     if (brevoKey && modo === 'completo') {
-      const q = await fetch(`${base}/rest/v1/empresas?email=not.is.null&select=nombre,cif,email,telefono,web`, { headers: sb });
-      for (const e of (q.ok ? await q.json() : [])) {
-        await fetch('https://api.brevo.com/v3/contacts', {
+      const q = await fetch(`${base}/rest/v1/empresas?select=id,nombre,cif,email,telefono,web`, { headers: sb });
+      const empresas = q.ok ? await q.json() : [];
+      const qv = await fetch(`${base}/rest/v1/empresa_contactos?select=empresa_id,contacto_id,principal,rol`, { headers: sb });
+      const vinculos = qv.ok ? await qv.json() : [];
+      const qc = await fetch(`${base}/rest/v1/contactos?select=id,email,nombre,apellidos`, { headers: sb });
+      const contactos = qc.ok ? await qc.json() : [];
+
+      informe.brevo.empresas_sin_correo = [];
+
+      for (const e of empresas) {
+        let correo = (e.email || '').trim();
+        let via = 'propio';
+
+        if (!correo) {
+          const suyos = vinculos.filter((v) => String(v.empresa_id) === String(e.id));
+          const pref = suyos.find((v) => v.principal) || suyos.find((v) => v.rol === 'directivo') || suyos[0];
+          const c = pref && contactos.find((x) => String(x.id) === String(pref.contacto_id));
+          if (c?.email) { correo = c.email.trim(); via = 'contacto principal'; }
+        }
+
+        if (!correo) { informe.brevo.empresas_sin_correo.push(e.nombre); continue; }
+
+        const r = await fetch('https://api.brevo.com/v3/contacts', {
           method: 'POST', headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: e.email, updateEnabled: true, listIds: [LISTA_EMPRESAS],
-            attributes: { NOMBRE: e.nombre || '', CIF: e.cif || '', TELEFONO: e.telefono || '', WEB: e.web || '' },
+            email: correo, updateEnabled: true, listIds: [LISTA_EMPRESAS],
+            attributes: {
+              EMPRESA: e.nombre || '', CIF: e.cif || '',
+              TELEFONO: e.telefono || '', WEB: e.web || '',
+              ES_EMPRESA: true, CORREO_VIA: via,
+            },
           }),
-        }).catch(() => {});
+        }).catch(() => null);
+        if (r && (r.ok || r.status === 204)) informe.brevo.empresas = (informe.brevo.empresas || 0) + 1;
       }
     }
 

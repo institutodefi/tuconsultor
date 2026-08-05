@@ -204,7 +204,11 @@
 
   // ── Pintado ───────────────────────────────────────────────────────────────
   var caja, previo;
-  function cerrar() { if (caja) { caja.remove(); caja = null; } document.removeEventListener('keydown', esc); }
+  function cerrar() {
+    if (caja) { caja.remove(); caja = null; }
+    document.body.classList.remove('cookies-abiertas');
+    document.removeEventListener('keydown', esc);
+  }
   function esc(e) { if (e.key === 'Escape' && caja && caja.dataset.capa === '2') pintar(1); }
   function esconder(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
@@ -237,7 +241,7 @@
     caja.setAttribute('aria-modal', 'true');
     caja.setAttribute('aria-label', capa === 1 ? t.titulo : t.capa2);
     if (rtl) caja.setAttribute('dir', 'rtl');
-    caja.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:10000;max-width:' +
+    caja.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:var(--capa-cookies,10000);max-width:' +
       (capa === 1 ? '760px' : '860px') + ';margin:0 auto;max-height:86vh;overflow:auto;' +
       'background:#0A2B3A;border:1.5px solid #1E5468;border-radius:18px;padding:22px;color:#EAF4F7;' +
       'box-shadow:0 18px 50px rgba(0,0,0,.55);font-family:Manrope,system-ui,sans-serif;font-size:14px;line-height:1.6;' +
@@ -284,6 +288,10 @@
 
     caja.innerHTML = html;
     document.body.appendChild(caja);
+    // Marca el cuerpo: los botones flotantes se apartan para no taparlo.
+    // Un botón de WhatsApp encima del aviso de cookies es justo lo que no
+    // puede pasar, porque impide responder a algo obligatorio.
+    document.body.classList.add('cookies-abiertas');
 
     var $ = function (id) { return caja.querySelector('#' + id); };
     if (capa === 1) {

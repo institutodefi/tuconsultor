@@ -101,6 +101,28 @@
   .nav-mid a:hover { opacity: 1; color: var(--acento-texto); }
   .nav-right { display: flex; gap: 14px; align-items: center; }
 
+  /* Acceso a Orbita, presente en TODAS las páginas y en su idioma.
+     Antes solo estaba en 232 de 299, y quien volvía a entrar tenía que buscarlo.
+     Va en la barra y no en el pie porque es lo primero que se busca al volver. */
+  .nav-orbita {
+    display: inline-flex; align-items: center;
+    padding: 7px 15px; border-radius: 999px;
+    border: 1.5px solid var(--acento-texto);
+    color: var(--acento-texto);
+    font-weight: 700; font-size: 14px; line-height: 1;
+    text-decoration: none; white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+  }
+  .nav-orbita:hover, .nav-orbita:focus-visible {
+    background: var(--acento-texto);
+    color: var(--fondo);      /* invertido: mantiene el contraste al pasar por encima */
+  }
+  /* En pantallas estrechas la barra ya va justa: el enlace se queda, el resto
+     de la navegación se pliega, porque entrar importa más que el menú. */
+  @media (max-width: 720px) {
+    .nav-orbita { padding: 6px 12px; font-size: 13px; }
+  }
+
   /* Language switcher */
   .lang-switch {
     display: flex; gap: 2px;
