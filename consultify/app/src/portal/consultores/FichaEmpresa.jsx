@@ -8,6 +8,7 @@ import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
 import HomologacionProveedor from './HomologacionProveedor.jsx';
 import HomologacionNormas from './HomologacionNormas.jsx';
+import ServiciosProveedor from '../../components/ServiciosProveedor.jsx';
 import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 
@@ -864,6 +865,10 @@ export default function FichaEmpresa({
       {empresa.es_proveedor ? (
         <Caja titulo="Homologación por normas" abiertaPorDefecto
           insignia={<span className="chip !px-1.5 !py-0 bg-brand-orange/15 text-[10px] text-brand-orange">proveedor</span>}>
+          <div className="mb-3">
+            <p className="label !mb-1.5">Servicios que nos presta</p>
+            <ServiciosProveedor empresa={empresa} puedeEditar={puedeEditar} />
+          </div>
           <HomologacionNormas empresa={empresa} puedeEditar={puedeEditar} />
         </Caja>
       ) : (

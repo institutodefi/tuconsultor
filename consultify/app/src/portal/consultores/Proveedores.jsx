@@ -45,14 +45,21 @@ export default function Proveedores() {
   const [q, setQ] = useState('');
   const [filtro, setFiltro] = useState(null);
 
+  const [servicios, setServicios] = useState([]);
+  const [tipos, setTipos] = useState([]);
+  const [orden, setOrden] = useState('estado');   // estado · nota · nombre
+
   const cargar = useCallback(() => Promise.all([
     listTable('empresas').catch(() => []),
     listTable('homologaciones_norma').catch(() => []),
     listTable('homologacion_condiciones').catch(() => []),
     listTable('homologacion_archivos').catch(() => []),
-  ]).then(([e, h, c, a]) => {
+    listTable('empresa_servicios').catch(() => []),
+    listTable('tipos_servicio').catch(() => []),
+  ]).then(([e, h, c, a, es, ts]) => {
     setEmpresas((e || []).filter((x) => x.es_proveedor));
     setHoms(h || []); setConds(c || []); setArchivos(a || []);
+    setServicios(es || []); setTipos(ts || []);
   }).finally(() => setCargando(false)), []);
 
   useEffect(() => { cargar(); }, [cargar]);
@@ -82,8 +89,16 @@ export default function Proveedores() {
       const o = ESTADO[x.estado]?.orden ?? 9;
       return o < (ESTADO[p]?.orden ?? 9) ? x.estado : p;
     }, 'homologado');
-    return { e, porNorma, venceEn, peor: porNorma.length ? peor : 'sin_abrir' };
-  }), [empresas, homs, archivos, estadoDe]);
+    // Nota global: media de las notas de sus normas evaluadas.
+    const notas = suyas.map((h) => h.nota).filter((n) => n != null).map(Number);
+    const nota = notas.length ? Math.round((notas.reduce((a, n) => a + n, 0) / notas.length) * 10) / 10 : null;
+    const susServicios = servicios
+      .filter((x) => String(x.empresa_id) === String(e.id))
+      .map((x) => tipos.find((t) => t.id === x.servicio_id))
+      .filter(Boolean);
+    return { e, porNorma, venceEn, nota, servicios: susServicios,
+             peor: porNorma.length ? peor : 'sin_abrir' };
+  }), [empresas, homs, archivos, estadoDe, servicios, tipos]);
 
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -92,8 +107,18 @@ export default function Proveedores() {
         ? f.venceEn && f.venceEn.d <= 60
         : f.peor === filtro))
       .filter((f) => !t || [f.e.nombre, f.e.cif, f.e.poblacion].filter(Boolean).join(' ').toLowerCase().includes(t))
-      .sort((a, b) => (ESTADO[a.peor]?.orden ?? 9) - (ESTADO[b.peor]?.orden ?? 9));
-  }, [filas, q, filtro]);
+      .sort((a, b) => {
+        if (orden === 'nota') {
+          // Sin nota al final: no evaluado no es lo mismo que mal evaluado.
+          if (a.nota == null && b.nota == null) return 0;
+          if (a.nota == null) return 1;
+          if (b.nota == null) return -1;
+          return b.nota - a.nota;
+        }
+        if (orden === 'nombre') return String(a.e.nombre).localeCompare(String(b.e.nombre));
+        return (ESTADO[a.peor]?.orden ?? 9) - (ESTADO[b.peor]?.orden ?? 9);
+      });
+  }, [filas, q, filtro, orden]);
 
   const cuenta = (k) => k === 'vence'
     ? filas.filter((f) => f.venceEn && f.venceEn.d <= 60).length
@@ -129,8 +154,19 @@ export default function Proveedores() {
         ))}
       </div>
 
-      <input className="input !py-2 !text-[13px]" placeholder="Buscar por nombre, CIF, población…"
-        value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-2">
+        <input className="input !py-2 !text-[13px] min-w-[240px] flex-1" placeholder="Buscar por nombre, CIF, población, servicio…"
+          value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex gap-1">
+          {[['estado', 'Por estado'], ['nota', 'Mejor nota'], ['nombre', 'A-Z']].map(([k, l]) => (
+            <button key={k} onClick={() => setOrden(k)}
+              className={`rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition ${
+                orden === k ? 'bg-brand-orange/20 text-brand-orange' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {lista.length === 0 ? (
         <p className="card py-8 text-center text-[13px] text-[#7FA7B4]">
@@ -140,7 +176,7 @@ export default function Proveedores() {
         </p>
       ) : (
         <ul className="space-y-2">
-          {lista.map(({ e, porNorma, venceEn, peor }) => (
+          {lista.map(({ e, porNorma, venceEn, peor, nota, servicios: svs }) => (
             <li key={e.id}>
               <button onClick={() => navegar({ pathname: '../empresas', search: `?e=${e.id}` })}
                 className="w-full rounded-xl border border-[#1E5468] bg-[#0D3242] p-3 text-left transition hover:border-brand-orange">
@@ -151,6 +187,13 @@ export default function Proveedores() {
                       {e.cif || 'sin CIF'}{e.poblacion ? ` · ${e.poblacion}` : ''}
                     </span>
                   </span>
+                  {nota != null && (
+                    <span className={`text-[17px] font-extrabold ${
+                      nota >= 8 ? 'text-emerald-300' : nota >= 5 ? 'text-brand-orange' : 'text-red-300'}`}
+                      title="Media de sus normas evaluadas">
+                      {nota.toFixed(1)}<span className="text-[10px] font-bold text-[#7FA7B4]">/10</span>
+                    </span>
+                  )}
                   {peor === 'sin_abrir' ? (
                     <span className="chip !px-2 !py-0.5 bg-white/8 text-[10.5px] text-[#7FA7B4]">sin homologar</span>
                   ) : (
@@ -159,6 +202,16 @@ export default function Proveedores() {
                     </span>
                   )}
                 </div>
+
+                {svs.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {svs.map((t) => (
+                      <span key={t.id} className={`text-[10.5px] font-bold ${t.critico ? 'text-brand-orange' : 'text-[#7FA7B4]'}`}>
+                        {t.critico && '● '}{t.nombre}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {porNorma.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">

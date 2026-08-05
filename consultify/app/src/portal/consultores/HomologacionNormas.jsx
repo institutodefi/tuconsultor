@@ -118,6 +118,14 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
     } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
   };
 
+  /** Nota de una condición. Vaciarla la deja SIN EVALUAR, que no es un cero. */
+  const puntuar = async (c, valor) => {
+    const v = valor === '' ? null : Math.max(0, Math.min(10, Number(valor)));
+    if (valor !== '' && !Number.isFinite(v)) return;
+    try { await updateRow('homologacion_condiciones', c.id, { puntuacion: v }); await cargar(); }
+    catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
+  };
+
   /** Obligatoria ⇄ opcional. Cambia el estado de la homologación al vuelo. */
   const alternarObligatoria = async (c) => {
     try { await updateRow('homologacion_condiciones', c.id, { obligatoria: !c.obligatoria }); await cargar(); }
@@ -188,7 +196,23 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
               <span className="text-[13.5px] font-extrabold text-[#EAF4F7]">{norma?.etq || h.norma}</span>
               <span className="text-[11px] text-[#7FA7B4]">{norma?.desc}</span>
               <span className={`chip !px-2 !py-0.5 text-[10.5px] font-extrabold ${info.tono}`}>{info.etq}</span>
-              <span className="ml-auto text-[11.5px] text-[#9FC0CB]">
+              {/* Media ponderada: las obligatorias pesan el doble. Sin ponderar,
+                  bordar lo accesorio taparía flojear en lo esencial. */}
+              {(() => {
+                const ev = cs.filter((c) => c.puntuacion != null);
+                if (!ev.length) return null;
+                const peso = (c) => (c.obligatoria ? 2 : 1);
+                const n = ev.reduce((a, c) => a + Number(c.puntuacion) * peso(c), 0)
+                        / ev.reduce((a, c) => a + peso(c), 0);
+                return (
+                  <span className={`ml-auto text-[15px] font-extrabold ${
+                    n >= 8 ? 'text-emerald-300' : n >= 5 ? 'text-brand-orange' : 'text-red-300'}`}
+                    title={`Media ponderada de ${ev.length} criterio(s) evaluado(s)`}>
+                    {n.toFixed(1)}<span className="text-[10px] font-bold text-[#7FA7B4]">/10</span>
+                  </span>
+                );
+              })()}
+              <span className="text-[11.5px] text-[#9FC0CB]">
                 {cs.filter((c) => c.cumplida).length}/{cs.length} condiciones
                 {as.length ? ` · ${as.length} archivo${as.length === 1 ? '' : 's'}` : ''}
               </span>
@@ -228,6 +252,14 @@ export default function HomologacionNormas({ empresa, puedeEditar }) {
                                   ✓ cumplida{c.cumplida_en ? ` · ${fmt(c.cumplida_en)}` : ''}
                                 </span>
                               )}
+                              {/* Nota de 0 a 10. Vacío ≠ cero: sin evaluar no
+                                  penaliza, y ese matiz importa. */}
+                              <label className="flex items-center gap-1 text-[10px] text-[#7FA7B4]">
+                                nota
+                                <input type="number" min="0" max="10" step="0.5" disabled={!puedeEditar}
+                                  value={c.puntuacion ?? ''} onChange={(e) => puntuar(c, e.target.value)}
+                                  className="input !w-14 !px-1.5 !py-0.5 !text-[11px] text-center" />
+                              </label>
                             </span>
                             {suyos.map((a) => (
                               <a key={a.id} href={urlDe(a.ruta)} target="_blank" rel="noopener"
