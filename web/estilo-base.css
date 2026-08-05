@@ -961,3 +961,33 @@
   /* Palabras largas (DE y otros): nunca desbordan */
   h1, h2, h3, .btn, .norm-name, .sub, p { overflow-wrap: break-word; }
   [lang="de"] h1, [lang="de"] h2, [lang="de"] .btn, [lang="de"] .norm-name { hyphens: auto; -webkit-hyphens: auto; }
+
+/* ── Sellos de certificación ─────────────────────────────────────────────────
+   Sobre placa clara porque los sellos de ENAC vienen sobre fondo blanco: sobre
+   el navy del pie se verían con un recuadro blanco recortado, y recortarlos
+   está prohibido por las condiciones de uso de la entidad. */
+.tc-sellos {
+  display: flex; flex-wrap: wrap;
+  align-items: flex-start; justify-content: center; gap: 18px;
+  margin: 26px auto 0; padding: 16px 20px;
+  max-width: 760px;
+  background: #fff; border-radius: 14px;
+}
+.tc-sello { margin: 0; text-align: center; }
+/* Los sellos vienen en dos formatos muy distintos: Bureau Veritas es apaisado
+   (proporción 2,06) y los otros casi cuadrados (0,93 y 0,82). A la misma
+   ALTURA, los apaisados ocupan el doble de ancho y dominan la fila.
+   Se igualan por superficie: los apaisados algo más bajos, los cuadrados algo
+   más altos, y así los cuatro pesan lo mismo en la vista. */
+.tc-sello img { height: 62px; width: auto; display: block; }
+.tc-sello[data-forma="ancho"] img { height: 48px; }
+.tc-sello[data-forma="alto"]  img { height: 70px; }
+.tc-sello figcaption {
+  margin-top: 5px; font-size: 9.5px; line-height: 1.35;
+  color: #3d4c77;          /* 8,1:1 sobre blanco */
+  max-width: 108px;
+}
+@media (max-width: 560px) {
+  .tc-sellos { gap: 12px; padding: 12px 14px; }
+  .tc-sello img { height: 48px; }
+}

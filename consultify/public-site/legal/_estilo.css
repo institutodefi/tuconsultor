@@ -32,3 +32,64 @@ th{background:var(--soft);color:var(--navy);font-weight:700}
    Es el mismo tono, oscurecido lo justo para que se pueda leer. */
 a { color: var(--orange-txt); }
 a:hover, a:focus-visible { color: var(--navy2); text-decoration: underline; }
+
+/* ── PIE COMÚN ───────────────────────────────────────────────────────────────
+   Las cuatro páginas legales no tenían pie: se entraba desde un enlace y no
+   había forma de volver ni de ver de quién era la web. En páginas legales eso
+   importa más que en ninguna otra, porque son las que alguien abre buscando
+   quién responde.
+
+   Las tres marcas juntas: TuConsultor es la casa, Consultify el servicio y
+   Orbita la herramienta. Verlas juntas explica la relación sin texto. */
+.pie-tc {
+  margin-top: 48px;
+  padding: 36px 20px 30px;
+  border-top: 1px solid var(--line);
+  background: var(--navy);
+  color: #cfd9ea;
+  text-align: center;
+}
+.pie-marcas {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 14px;
+  margin-bottom: 18px;
+}
+.pie-marcas img { height: 26px; width: auto; display: block; opacity: .92; }
+.pie-marcas a { display: inline-flex; border-radius: 6px; }
+/* Foco visible: sin esto, quien navega con teclado no sabe dónde está. */
+.pie-marcas a:focus-visible,
+.pie-enlaces a:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.pie-marcas a:hover img { opacity: 1; }
+/* Era #5b6b86: 3,11:1 sobre el navy, por debajo del mínimo. Es decorativo y
+   lleva aria-hidden, así que técnicamente no lo exige la norma — pero un punto
+   que apenas se ve tampoco separa nada, que es para lo que está. */
+.pie-sep { color: #8fa3c4; font-size: 15px; }
+
+.pie-legal { font-size: 13px; color: #cfd9ea; margin: 0 0 10px; }
+
+.pie-enlaces {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 18px;
+  margin-bottom: 14px;
+}
+/* #cfd9ea sobre #061B45 da 11,4:1 — AAA. En pie de página, donde el texto es
+   pequeño, no vale con quedarse en el mínimo. */
+.pie-enlaces a {
+  color: #cfd9ea; font-size: 13px; font-weight: 600;
+  text-decoration: none; border-bottom: 1px solid transparent;
+}
+.pie-enlaces a:hover, .pie-enlaces a:focus-visible {
+  color: #fff; border-bottom-color: var(--orange);
+}
+
+.pie-corazon {
+  font-size: 12.5px; font-style: italic;
+  color: var(--orange); margin: 0;
+}
+
+@media (max-width: 560px) {
+  .pie-marcas { gap: 10px; }
+  .pie-marcas img { height: 22px; }
+  .pie-sep { display: none; }
+  .pie-enlaces { gap: 12px; }
+}
