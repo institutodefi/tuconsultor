@@ -41,6 +41,7 @@ window.TC_SELLOS = [
     archivo: '/marca/sellos/9001-oca.jpg',
     entidad: 'OCA Global',
     numero: '34/5200/23/3163',
+    pdf: '/certificados/iso-9001.pdf',
     norma: 'UNE-EN ISO 9001:2015',
     vence: '2029-03-30',
   },
@@ -50,6 +51,7 @@ window.TC_SELLOS = [
     archivo: '/marca/sellos/14001-oca.jpg',
     entidad: 'OCA Global',
     numero: '34/5400/23/3164',
+    pdf: '/certificados/iso-14001.pdf',
     norma: 'UNE-EN ISO 14001:2015',
     vence: '2029-03-30',
   },
@@ -59,6 +61,7 @@ window.TC_SELLOS = [
     archivo: '/marca/sellos/27001-oca.jpg',
     entidad: 'OCA Global',
     numero: '34/5700/24/10271',
+    pdf: '/certificados/iso-27001.pdf',
     // Hay dos versiones: el de 2022 fue sustituido por el de 2023 el 29/10/2024.
     // El vigente es éste.
     norma: 'UNE-EN ISO/IEC 27001:2023',
@@ -70,6 +73,7 @@ window.TC_SELLOS = [
     archivo: '/marca/sellos/ens-basica.jpg',
     entidad: 'OCA Global',
     numero: '34/5704/24/10277',
+    pdf: '/certificados/ens-basica.pdf',
     norma: 'RD 311/2022 · categoría Básica',
     // ⚠ RENUEVA EL 22/10/2026. El aviso salta con 60 días de antelación.
     vence: '2026-10-22',
@@ -98,14 +102,31 @@ window.TC_SELLOS = [
   if (!vigentes.length) { destino.style.display = 'none'; return; }
 
   destino.innerHTML = vigentes.map(function (s) {
-    return '<figure class="tc-sello">'
-      + '<span class="tc-sello-img">'
+    // El sello enlaza al CERTIFICADO en PDF, no a la web de la entidad.
+    // Dos motivos: es el documento que de verdad prueba lo que el sello afirma,
+    // y no depende de que un tercero mantenga viva una URL.
+    var vence = s.vence
+      ? ' · válido hasta ' + s.vence.split('-').reverse().join('/')
+      : '';
+    var titulo = (s.norma || s.id) + ' · certificado ' + (s.numero || '') + vence
+      + '. Se abre el certificado en PDF.';
+
+    var interior =
+        '<span class="tc-sello-img">'
       + '<img src="' + s.archivo + '" alt="' + s.alt.replace(/"/g, '&quot;') + '" loading="lazy" />'
       + '</span>'
       + (s.numero
           ? '<figcaption>' + (s.entidad || '')
             + '<span class="num">' + s.numero + '</span></figcaption>'
-          : '')
-      + '</figure>';
+          : '');
+
+    if (!s.pdf) return '<figure class="tc-sello">' + interior + '</figure>';
+
+    return '<figure class="tc-sello">'
+      + '<a class="tc-sello-enlace" href="' + s.pdf + '" target="_blank" rel="noopener"'
+      + ' title="' + titulo.replace(/"/g, '&quot;') + '">'
+      + interior
+      + '<span class="tc-sello-ver">Ver certificado</span>'
+      + '</a></figure>';
   }).join('');
 })();

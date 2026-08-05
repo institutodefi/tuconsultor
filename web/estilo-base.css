@@ -1014,6 +1014,40 @@
 }
 .tc-sello img { max-height: 58px; max-width: 92px; width: auto; height: auto; display: block; }
 
+/* El sello entero es el enlace: un objetivo grande es más fácil de acertar que
+   un texto pequeño, y en móvil eso es la diferencia entre poder pulsarlo y no. */
+.tc-sello-enlace {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  gap: 6px; height: 100%;
+  text-decoration: none; color: inherit;
+  border-radius: 10px; padding: 4px 2px;
+  transition: background .18s ease, transform .18s ease;
+}
+.tc-sello-enlace:hover, .tc-sello-enlace:focus-visible { background: #eef2f8; transform: translateY(-2px); }
+/* Foco visible sobre la placa clara: el naranja de marca no contrasta ahí. */
+.tc-sello-enlace:focus-visible { outline: 2px solid #1d2b4d; outline-offset: 2px; }
+
+/* «Ver certificado» aparece al pasar por encima, pero SIEMPRE está en el
+   marcado: quien navega con lector de pantalla o con teclado necesita saber
+   que el sello lleva a algún sitio, no solo quien pasa el ratón. */
+.tc-sello-ver {
+  font-size: 8.5px; font-weight: 700;
+  letter-spacing: .3px; text-transform: uppercase;
+  color: #A16707;            /* 4,7:1 sobre blanco */
+  opacity: 0; height: 0; overflow: hidden;
+  transition: opacity .18s ease;
+}
+.tc-sello-enlace:hover .tc-sello-ver,
+.tc-sello-enlace:focus-visible .tc-sello-ver { opacity: 1; height: auto; }
+/* Si alguien tiene reducido el movimiento, se muestra siempre: no debe hacer
+   falta un gesto para descubrir que hay un enlace. */
+@media (prefers-reduced-motion: reduce) {
+  .tc-sello-ver { opacity: 1; height: auto; }
+  .tc-sello-enlace { transition: none; }
+  .tc-sello-enlace:hover { transform: none; }
+}
+
 .tc-sello figcaption {
   font-size: 9px; line-height: 1.35;
   color: #4a5875;            /* 7,4:1 sobre blanco */
