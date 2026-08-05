@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import TablaLista from '../../components/TablaLista.jsx';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../lib/crm.js';
@@ -259,43 +261,40 @@ export default function Contactos() {
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
         <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
           {/* Listado */}
-          <div className="card overflow-hidden p-0">
-            <div className="max-h-[600px] overflow-y-auto">
-              <table className="w-full text-sm">
-                <tbody>
-                  {lista.length === 0 && (
-                    <tr><td className="px-5 py-8 text-center text-[#7FA7B4]">
-                      {contactos.length === 0 ? 'Sin contactos. ¿Has ejecutado las migraciones v48 y v56?' : 'Ninguno con ese filtro.'}
-                    </td></tr>
-                  )}
-                  {lista.map((c) => {
+          <TablaLista
+              destacada={sel}
+              filas={lista}
+              onFila={(c) => seleccionar(c.id)}
+              vacio={contactos.length === 0 ? 'Sin contactos todavía.' : 'Ninguno con ese filtro.'}
+              columnas={[
+                { k: 'nombre', etq: 'Nombre', ancho: '30%', pinta: (c) => {
                     const emps = empresasDe(c.id);
-                    const s = semaforoContacto(c, emps.length);
+                    const st = semaforoContacto(c, emps.length);
                     return (
-                      <tr key={c.id} onClick={() => seleccionar(c.id)}
-                        className={`cursor-pointer border-b border-[#1E5468]/60 last:border-0 ${String(sel) === String(c.id) ? 'bg-[#12454A]' : 'hover:bg-[#10394A]'}`}>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${s.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
-                              title={s.motivos.join(' · ') || 'Ficha completa'} />
-                            <span className="font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
-                            {c.consentimiento_marketing && <span className="chip bg-emerald-500/15 !px-1.5 !py-0 text-[9px] text-emerald-300">RGPD</span>}
-                          </div>
-                          <div className="ml-4 text-xs text-[#7FA7B4]">
-                            {emailValido(c.email) ? c.email : <span className="font-bold text-red-300">sin email válido</span>}
-                            {' · '}
-                            {emps.length
-                              ? emps.map((x) => x.e.nombre).join(' · ')
-                              : <span className="font-bold text-red-300">sin empresa</span>}
-                          </div>
-                        </td>
-                      </tr>
+                      <span className="flex items-center gap-2">
+                        <span className={`h-2 w-2 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
+                          title={st.motivos.join(' · ') || 'Ficha completa'} />
+                        <span className="truncate font-bold">{c.nombre} {c.apellidos || ''}</span>
+                        {c.consentimiento_marketing && (
+                          <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300">RGPD</span>
+                        )}
+                      </span>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  } },
+                { k: 'empresa', etq: 'Empresa', ancho: '32%', clase: 'text-[#B9D2DA]', pinta: (c) => {
+                    const emps = empresasDe(c.id);
+                    if (!emps.length) return <span className="font-bold text-red-300">sin empresa</span>;
+                    return <span className="block truncate" title={emps.map((x) => x.e.nombre).join(' · ')}>
+                      {emps.map((x) => x.e.nombre).join(' · ')}</span>;
+                  } },
+                { k: 'email', etq: 'Correo', ancho: '24%', clase: 'text-[#9FC0CB]', pinta: (c) =>
+                    emailValido(c.email)
+                      ? <span className="block truncate">{c.email}</span>
+                      : <span className="font-bold text-red-300">sin correo válido</span> },
+                { k: 'telefono', etq: 'Teléfono', ancho: '14%', clase: 'text-[#9FC0CB]', pinta: (c) =>
+                    c.movil || c.telefono || <span className="text-[#5E8494]">—</span> },
+              ]}
+            />
 
           {/* Detalle / formulario */}
           <div>

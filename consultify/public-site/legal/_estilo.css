@@ -1,4 +1,4 @@
-:root{--navy:#061B45;--navy2:#0A2A6C;--orange:#F5A623;--orange-d:#d8910e;--ink:#0c1424;--muted:#5b6b86;--line:#e3e9f2;--soft:#f3f6fb}
+:root{--navy:#061B45;--navy2:#0A2A6C;--orange:#F5A623;--orange-d:#d8910e;--orange-txt:#A16707;--ink:#0c1424;--muted:#5b6b86;--line:#e3e9f2;--soft:#f3f6fb}
 *{box-sizing:border-box}
 body{margin:0;background:#eef2f8;font-family:'Manrope',system-ui,-apple-system,sans-serif;color:var(--ink);line-height:1.6}
 .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
@@ -7,19 +7,28 @@ body{margin:0;background:#eef2f8;font-family:'Manrope',system-ui,-apple-system,s
 .logo b{color:var(--orange)}
 .topbar .name{font-weight:800;color:var(--navy);font-size:18px;letter-spacing:-.3px}
 .topbar a{margin-left:auto;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}
-.topbar a:hover{color:var(--orange-d)}
+.topbar a:hover{color:var(--orange-txt)}
 .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:34px 36px;box-shadow:0 1px 3px rgba(8,20,60,.05)}
 h1{font-size:28px;color:var(--navy);margin:0 0 6px;letter-spacing:-.5px}
 .upd{color:var(--muted);font-size:13px;margin:0 0 26px}
 h2{font-size:18px;color:var(--navy);margin:30px 0 10px;letter-spacing:-.2px}
 h3{font-size:15px;color:var(--navy2);margin:20px 0 6px}
 p,li{font-size:14.5px;color:#27324a}
-a{color:var(--orange-d)}
+a{color:var(--orange-txt)}
 table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
 th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
 th{background:var(--soft);color:var(--navy);font-weight:700}
 .box{background:var(--soft);border-left:3px solid var(--orange);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13.5px}
 .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;line-height:1.5}
-.foot .madrid{color:var(--orange-d);font-style:italic;font-weight:600}
+.foot .madrid{color:var(--orange-txt);font-style:italic;font-weight:600}
 .nav-legal{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;font-size:13px}
 .nav-legal a{font-weight:600;text-decoration:none}
+
+
+/* ── Contraste ──────────────────────────────────────────────────────────────
+   El naranja de marca (#F5A623) da 2,03:1 sobre blanco: muy por debajo del
+   4,5:1 que exige WCAG AA para texto. Se conserva para fondos y adornos, donde
+   no hay que leer nada, y para TEXTO se usa --orange-txt (#A16707, 4,71:1).
+   Es el mismo tono, oscurecido lo justo para que se pueda leer. */
+a { color: var(--orange-txt); }
+a:hover, a:focus-visible { color: var(--navy2); text-decoration: underline; }
