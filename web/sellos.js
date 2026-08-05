@@ -98,15 +98,14 @@ window.TC_SELLOS = [
   if (!vigentes.length) { destino.style.display = 'none'; return; }
 
   destino.innerHTML = vigentes.map(function (s) {
-    var pie = [s.entidad, s.numero].filter(Boolean).join('<br>');
-    // La forma se mide al cargar la imagen, no se codifica a mano: si mañana
-    // la entidad cambia su sello por otro con distinta proporción, se ajusta
-    // solo en vez de quedarse descuadrado.
-    return '<figure class="tc-sello" data-forma="' + (s.forma || '') + '">'
-      + '<img src="' + s.archivo + '" alt="' + s.alt.replace(/"/g, '&quot;') + '" loading="lazy"'
-      + ' onload="var f=this.naturalWidth/this.naturalHeight;'
-      + 'this.parentNode.dataset.forma = f>1.5 ? \'ancho\' : (f<0.95 ? \'alto\' : \'\');" />'
-      + (pie ? '<figcaption>' + pie + '</figcaption>' : '')
+    return '<figure class="tc-sello">'
+      + '<span class="tc-sello-img">'
+      + '<img src="' + s.archivo + '" alt="' + s.alt.replace(/"/g, '&quot;') + '" loading="lazy" />'
+      + '</span>'
+      + (s.numero
+          ? '<figcaption>' + (s.entidad || '')
+            + '<span class="num">' + s.numero + '</span></figcaption>'
+          : '')
       + '</figure>';
   }).join('');
 })();

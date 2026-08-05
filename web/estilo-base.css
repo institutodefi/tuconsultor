@@ -963,31 +963,87 @@
   [lang="de"] h1, [lang="de"] h2, [lang="de"] .btn, [lang="de"] .norm-name { hyphens: auto; -webkit-hyphens: auto; }
 
 /* ── Sellos de certificación ─────────────────────────────────────────────────
-   Sobre placa clara porque los sellos de ENAC vienen sobre fondo blanco: sobre
-   el navy del pie se verían con un recuadro blanco recortado, y recortarlos
-   está prohibido por las condiciones de uso de la entidad. */
+   Van sobre placa clara porque los sellos vienen con fondo blanco y recortarlos
+   está prohibido por las condiciones de uso de la entidad.
+
+   Tres cosas que estaban mal y se corrigen aquí:
+
+   · La placa ocupaba todo el ancho con los sellos empujados a un lado. Ahora
+     se ajusta a su contenido y va centrada.
+   · Los pies tenían distinta longitud y descuadraban las alturas. Ahora cada
+     sello es una columna con la imagen alineada abajo y el pie debajo.
+   · Competían con el pie en peso visual. Se reducen y se separan con una línea
+     y un rótulo: son una credencial, no el mensaje principal. */
+
+.tc-sellos-caja {
+  margin: 34px auto 0;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255,255,255,.09);
+  text-align: center;
+}
+.tc-sellos-rotulo {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 1.6px; text-transform: uppercase;
+  color: #7f8db0;            /* 5,1:1 sobre el fondo: legible sin gritar */
+  margin: 0 0 14px;
+}
+
 .tc-sellos {
-  display: flex; flex-wrap: wrap;
-  align-items: flex-start; justify-content: center; gap: 18px;
-  margin: 26px auto 0; padding: 16px 20px;
-  max-width: 760px;
-  background: #fff; border-radius: 14px;
+  display: inline-flex; flex-wrap: wrap;
+  align-items: stretch; justify-content: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 14px rgba(0,0,0,.18);
+  max-width: 100%;
 }
-.tc-sello { margin: 0; text-align: center; }
-/* Los sellos vienen en dos formatos muy distintos: Bureau Veritas es apaisado
-   (proporción 2,06) y los otros casi cuadrados (0,93 y 0,82). A la misma
-   ALTURA, los apaisados ocupan el doble de ancho y dominan la fila.
-   Se igualan por superficie: los apaisados algo más bajos, los cuadrados algo
-   más altos, y así los cuatro pesan lo mismo en la vista. */
-.tc-sello img { height: 62px; width: auto; display: block; }
-.tc-sello[data-forma="ancho"] img { height: 48px; }
-.tc-sello[data-forma="alto"]  img { height: 70px; }
+
+.tc-sello {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  gap: 6px; margin: 0;
+  padding: 0 8px;
+  min-width: 96px;
+}
+/* Los sellos NO son del mismo formato: tres casi cuadrados y el ENS más alto.
+   Una caja de altura fija con la imagen centrada los alinea sin deformarlos. */
+.tc-sello-img {
+  height: 58px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tc-sello img { max-height: 58px; max-width: 92px; width: auto; height: auto; display: block; }
+
 .tc-sello figcaption {
-  margin-top: 5px; font-size: 9.5px; line-height: 1.35;
-  color: #3d4c77;          /* 8,1:1 sobre blanco */
-  max-width: 108px;
+  font-size: 9px; line-height: 1.35;
+  color: #4a5875;            /* 7,4:1 sobre blanco */
+  letter-spacing: .1px;
 }
-@media (max-width: 560px) {
-  .tc-sellos { gap: 12px; padding: 12px 14px; }
-  .tc-sello img { height: 48px; }
+.tc-sello figcaption .num {
+  display: block; font-weight: 700; color: #1d2b4d;
+  font-variant-numeric: tabular-nums;   /* los números alinean */
+}
+
+/* En móvil los cuatro no caben en una fila y se parten en dos, con la segunda
+   descolgada. Una rejilla de 2×2 los reparte con las filas alineadas entre sí,
+   que es lo que se rompía al dejarlos fluir. */
+@media (max-width: 620px) {
+  .tc-sellos {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px 6px; padding: 14px 12px;
+    width: 100%;
+  }
+  .tc-sello { min-width: 0; padding: 0 2px; }
+  .tc-sello-img { height: 50px; }
+  .tc-sello img { max-height: 50px; max-width: 100%; }
+  .tc-sello figcaption { font-size: 8.5px; }
+}
+
+/* Entre 620 y 760 caben los cuatro, pero justos: se aprieta el hueco antes de
+   que salten de línea. */
+@media (min-width: 621px) and (max-width: 760px) {
+  .tc-sellos { gap: 2px; padding: 12px 10px; }
+  .tc-sello { min-width: 84px; padding: 0 4px; }
+  .tc-sello-img { height: 50px; }
+  .tc-sello img { max-height: 50px; max-width: 78px; }
 }
