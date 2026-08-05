@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import SincronizarCrm from '../../components/SincronizarCrm.jsx';
 import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES } from '../../lib/crm.js';
@@ -132,6 +133,7 @@ export default function Empresas() {
               {diagBd?.cargando ? 'Comprobando…' : '⚙ Comprobar base de datos'}
             </button>
           )}
+          {puedeEditar && <SincronizarCrm />}
           {puedeEditar && <button onClick={() => setNueva(true)} className="btn-orange">+ Nueva empresa</button>}
         </div>
       </div>
