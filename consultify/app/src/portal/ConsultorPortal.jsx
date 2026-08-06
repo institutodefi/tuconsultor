@@ -12,6 +12,7 @@ import Sistemas from './consultores/Sistemas.jsx';
 import ReglasComerciales from './consultores/ReglasComerciales.jsx';
 import DashboardProyectos from './consultores/DashboardProyectos.jsx';
 import Proveedores from './consultores/Proveedores.jsx';
+import PlanificadorContextos from './consultores/PlanificadorContextos.jsx';
 import Versiones from './consultores/Versiones.jsx';
 import RegistroAccesos from './consultores/RegistroAccesos.jsx';
 import Accesibilidad from './consultores/Accesibilidad.jsx';
@@ -184,7 +185,7 @@ export default function ConsultorPortal() {
               <Route path="clientes/dashboard" element={<Guard ok={verClientes}><Dashboard soloClientes /></Guard>} />
               <Route path="proveedores" element={<Guard ok={verCrm}><Proveedores /></Guard>} />
               <Route path="proyectos/dashboard" element={<Guard ok={verPlanAgendaSist}><DashboardProyectos /></Guard>} />
-              <Route path="proyectos/planificador" element={<Guard ok={verPlanAgendaSist}><Agenda /></Guard>} />
+              <Route path="proyectos/planificador" element={<Guard ok={verPlanAgendaSist}><PlanificadorContextos /></Guard>} />
               <Route path="leads" element={<Navigate to="../empresas?filtro=potencial" replace />} />
               <Route path="empresas" element={<Guard ok={verCrm}><Empresas /></Guard>} />
               <Route path="contactos" element={<Guard ok={verCrm}><Contactos /></Guard>} />

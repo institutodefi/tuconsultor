@@ -1218,3 +1218,33 @@ html[data-sitio="consultify"] footer,
 html[data-sitio="consultify"] .pie-tc { background: #061B45; color: #cfd9ea; }
 
 /* Los sellos y las marcas del pie no cambian: van sobre el mismo oscuro. */
+
+
+/* ── PIE CLARO ───────────────────────────────────────────────────────────────
+   Los sellos de OCA son azul marino y sobre el pie oscuro desaparecían: se
+   hicieron transparentes justo para no llevar placa, y el fondo se los comía.
+   El pie pasa a claro: los sellos se ven tal cual son y las tres marcas van
+   en sus versiones para fondo claro.
+   Contrastes medidos sobre #EAF0F9:
+     texto   #22314F → 10,9:1  AAA
+     apagado #44557A →  6,3:1  AA
+     naranja #A16707 →  4,6:1  AA (solo en negrita)  */
+footer, .pie-tc {
+  background: #EAF0F9 !important;
+  color: #22314F !important;
+  border-top: 1px solid #d3ddef;
+}
+footer a, .pie-tc a, .pie-enlaces a { color: #22314F !important; }
+footer a:hover, .pie-tc a:hover { color: #A16707 !important; }
+.pie-legal, .pie-corazon { color: #44557A !important; }
+.pie-corazon { color: #A16707 !important; }
+.tc-sellos-caja { border-top-color: #d3ddef !important; }
+.tc-sellos-rotulo { color: #44557A !important; }
+.tc-sello figcaption { color: #44557A !important; }
+.tc-sello figcaption .num { color: #22314F !important; }
+.tc-marcas { border-bottom-color: #d3ddef !important; }
+.tc-sello-enlace:hover, .tc-sello-enlace:focus-visible { background: rgba(13,50,84,.06) !important; }
+.tc-sello-enlace:focus-visible { outline-color: #22314F !important; }
+.tc-sello-ver { color: #A16707 !important; }
+html[data-sitio="consultify"] footer,
+html[data-sitio="consultify"] .pie-tc { background: #EAF0F9 !important; color: #22314F !important; }
