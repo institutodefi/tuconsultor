@@ -23,6 +23,14 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
   const [productos, setProductos] = useState(['mstool']);
   const [nombre, setNombre] = useState('');
   const [codigo, setCodigo] = useState('');
+  // ── El flujo del alta, en el orden que se decide ──
+  // 1º el MODELO y la FECHA LÍMITE: gobiernan todo lo demás.
+  // 2º las NORMAS, todas desmarcables — la 9001 incluida. Venía obligada y un
+  //    proyecto de solo 27001, por ejemplo, es perfectamente legítimo.
+  const [modelo, setModelo] = useState(oferta.modelo === 'apoyo' ? 'apoyo'
+    : ['relacion','implicacion','compromiso'].includes(oferta.modelo) ? 'relacion' : 'implantacion');
+  const [fechaLimite, setFechaLimite] = useState(oferta.fecha_certificacion || '');
+  const [normas, setNormas] = useState((oferta.normas || []).map(String));
   const [msg, setMsg] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -78,6 +86,8 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
     setOcupado(true); setMsg(null);
     try {
       if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se da de alta.' }); return; }
+      if (!fechaLimite) throw new Error('Falta la fecha límite: es la que gobierna los avisos de 30/60/90 días.');
+      if (!normas.length) throw new Error('Elige al menos una norma: cada una será un contexto de trabajo.');
       const { data, error } = await supabase.rpc('activar_productos_contrato', {
         p_contrato_id: contrato.id,
         p_productos: productos,
@@ -86,6 +96,20 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
       });
       if (error) throw error;
       if (data?.ok === false) throw new Error(data.error);
+
+      // El modelo y la fecha límite, del flujo nuevo (v90)
+      const pid = data?.proyecto_id;
+      if (pid) {
+        await supabase.from('proyectos_cliente')
+          .update({ modelo, fecha_limite: fechaLimite }).eq('id', pid);
+        // Un CONTEXTO por norma: tres sistemas son tres contextos, y las
+        // tareas de cada uno se programan por separado. Nunca se integra.
+        for (const n of normas) {
+          await supabase.from('proyecto_contextos')
+            .insert({ proyecto_id: pid, norma: String(n) })
+            .then(() => {}, () => {});   // si ya existía, se sigue
+        }
+      }
       setMsg({ err: false, t: `Proyecto dado de alta con ${productos.length === 2 ? 'las dos herramientas' : PRODUCTOS.find((x) => x.id === productos[0])?.etq}.` });
       setAbierto(false);
       onCambio && onCambio();

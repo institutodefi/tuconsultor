@@ -20,12 +20,18 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  /* Rubik para titulares y marca; Manrope para el resto (cuerpo). */
-  h1, h2, h3, .rubik { font-family: 'Manrope', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+  /* Rubik en TODO; Manrope queda solo para los hipervínculos. El comentario
+     antiguo decía «Rubik para titulares» pero la regla ponía Manrope: la
+     estética que se veía era Manrope entera sin que nadie lo decidiera. */
+  h1, h2, h3, .rubik { font-family: 'Rubik', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
   .btn-orbita { display:inline-flex; align-items:center; gap:7px; font-family:'Manrope',sans-serif; font-weight:600; }
   .btn-orbita .orbita-ic { height:20px; width:auto; display:block; }
+  /* Manrope distingue lo pulsable: los enlaces y botones se leen distintos
+     del texto que los rodea, sin depender solo del color. */
+  a, .btn, button { font-family: 'Manrope', system-ui, sans-serif; }
+
   body {
-    font-family: 'Manrope', system-ui, sans-serif;
+    font-family: 'Rubik', system-ui, sans-serif;
     background: var(--fondo);
     color: var(--ink);
     font-size:16px;
