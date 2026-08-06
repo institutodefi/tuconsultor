@@ -97,6 +97,20 @@
     + "font-family:'Rubik','Noto Sans Arabic',system-ui,sans-serif;letter-spacing:-.015em;"
     + 'font-weight:600;line-height:1.15;font-size:clamp(1.35rem,3.4vw,2.1rem);color:#fff}'
     + '#tc-preview .tc-p-saludo b{display:block;font-weight:700;color:var(--tc-naranja,#F99001)}'
+    + '#tc-preview .tc-p-progreso{width:190px;height:2px;margin:14px auto 0;border-radius:2px;'
+    +   'background:rgba(255,255,255,.14);overflow:hidden}'
+    + '#tc-preview .tc-p-progreso i{display:block;height:100%;width:0;border-radius:2px;'
+    +   'background:linear-gradient(90deg,#1FA1A6,#F99001);animation:tc-p-avanza 4s linear forwards}'
+    + '@keyframes tc-p-avanza{from{width:0}to{width:100%}}'
+    + '#tc-preview .tc-p-marcas{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;'
+    +   'gap:12px;margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);opacity:.75}'
+    + '#tc-preview .tc-p-marcas img{height:17px;width:auto;display:block}'
+    + '#tc-preview .tc-p-marcas span{color:#5E8494;font-size:13px}'
+    + '@media (max-width:520px){#tc-preview .tc-p-marcas{gap:8px}'
+    +   '#tc-preview .tc-p-marcas img{height:14px}#tc-preview .tc-p-marcas span{display:none}}'
+    // Quien tenga reducido el movimiento no ve la barra avanzar: se le muestra
+    // llena, porque su función es informar, no animar.
+    + '@media (prefers-reduced-motion:reduce){#tc-preview .tc-p-progreso i{animation:none;width:100%}}'
     + '#tc-preview .tc-p-otros{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;'
     + "margin:0;font:500 12.5px/1.4 'Rubik','Noto Sans Arabic',system-ui,sans-serif;"
     + "color:rgba(255,255,255,.62)}"
@@ -150,9 +164,22 @@
     + '<p class="tc-p-otros">' + IDIOMAS.filter(function (i) { return i.k !== lang; })
         .map(function (i) { return '<span lang="' + i.k + '">' + BIENVENIDA[i.k] + '</span>'; }).join('') + '</p>'
     + '<div class="tc-p-linea"><i></i></div>'
+    // Cuenta atrás visible. Cuatro segundos sin saber cuánto queda se hacen
+    // largos; con una barra que avanza, se esperan sin impaciencia.
+    + '<div class="tc-p-progreso" role="presentation"><i></i></div>'
     + '<p class="tc-p-rot">' + t.elige + '</p>'
     + '<nav class="tc-p-idiomas" aria-label="' + t.elige + '">' + botones + '</nav>'
     + '<button type="button" class="tc-p-saltar">' + t.saltar + '</button>'
+    // Las tres marcas al pie: quien llega por primera vez ve de un golpe que
+    // TuConsultor, Consultify y Orbita son la misma casa. Es la pregunta que
+    // se hace todo el mundo al ver tres nombres distintos.
+    + '<div class="tc-p-marcas" aria-hidden="true">'
+    +   '<img src="/marca/horizontal-dark.svg" alt="" />'
+    +   '<span>·</span>'
+    +   '<img src="/marca/consultify-horizontal-blanco.svg" alt="" />'
+    +   '<span>·</span>'
+    +   '<img src="/marca/orbita-pmtool-h-blanco.svg" alt="" />'
+    + '</div>'
     + '</div>';
 
   function montar() {

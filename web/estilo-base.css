@@ -991,11 +991,11 @@
 .tc-sellos {
   display: inline-flex; flex-wrap: wrap;
   align-items: stretch; justify-content: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 14px rgba(0,0,0,.18);
+  gap: 18px;
+  padding: 0;
+  /* Sin placa blanca: los tres ISO ya son transparentes y se apoyan sobre el
+     fondo del pie. El ENS conserva su marco azul, que es parte de su diseño
+     oficial y no se puede recortar. */
   max-width: 100%;
 }
 
@@ -1024,9 +1024,9 @@
   border-radius: 10px; padding: 4px 2px;
   transition: background .18s ease, transform .18s ease;
 }
-.tc-sello-enlace:hover, .tc-sello-enlace:focus-visible { background: #eef2f8; transform: translateY(-2px); }
+.tc-sello-enlace:hover, .tc-sello-enlace:focus-visible { background: rgba(255,255,255,.07); transform: translateY(-2px); }
 /* Foco visible sobre la placa clara: el naranja de marca no contrasta ahí. */
-.tc-sello-enlace:focus-visible { outline: 2px solid #1d2b4d; outline-offset: 2px; }
+.tc-sello-enlace:focus-visible { outline: 2px solid var(--acento-texto); outline-offset: 2px; }
 
 /* «Ver certificado» aparece al pasar por encima, pero SIEMPRE está en el
    marcado: quien navega con lector de pantalla o con teclado necesita saber
@@ -1034,7 +1034,7 @@
 .tc-sello-ver {
   font-size: 8.5px; font-weight: 700;
   letter-spacing: .3px; text-transform: uppercase;
-  color: #A16707;            /* 4,7:1 sobre blanco */
+  color: var(--acento-texto);   /* 9,5:1 sobre el fondo del pie */
   opacity: 0; height: 0; overflow: hidden;
   transition: opacity .18s ease;
 }
@@ -1050,11 +1050,11 @@
 
 .tc-sello figcaption {
   font-size: 9px; line-height: 1.35;
-  color: #4a5875;            /* 7,4:1 sobre blanco */
+  color: #97a4c2;            /* 6,4:1 sobre el fondo del pie */
   letter-spacing: .1px;
 }
 .tc-sello figcaption .num {
-  display: block; font-weight: 700; color: #1d2b4d;
+  display: block; font-weight: 700; color: #d6dff0;
   font-variant-numeric: tabular-nums;   /* los números alinean */
 }
 
@@ -1081,3 +1081,134 @@
   .tc-sello-img { height: 50px; }
   .tc-sello img { max-height: 50px; max-width: 78px; }
 }
+
+
+/* ── Las tres marcas del grupo ───────────────────────────────────────────────
+   TuConsultor es la casa, Consultify el servicio y Orbita la herramienta.
+   Juntas explican la relación sin necesidad de texto.
+   Van SOBRE los sellos y separadas por una línea: quiénes somos y qué
+   acreditamos son cosas distintas, y mezclarlas confunde las dos. */
+.tc-marcas {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 22px;
+  margin-bottom: 20px; padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.tc-marcas a { display: inline-flex; border-radius: 8px; padding: 4px; transition: opacity .18s ease; }
+.tc-marcas img { height: 26px; width: auto; display: block; opacity: .88; }
+.tc-marcas a:hover img, .tc-marcas a:focus-visible img { opacity: 1; }
+.tc-marcas a:focus-visible { outline: 2px solid var(--acento-texto); outline-offset: 2px; }
+@media (max-width: 620px) {
+  .tc-marcas { gap: 14px; margin-bottom: 16px; padding-bottom: 16px; }
+  .tc-marcas img { height: 21px; }
+}
+
+/* ── Menú en móvil ───────────────────────────────────────────────────────────
+   `.nav-mid` se ocultaba en pantallas estrechas SIN botón para abrirlo: los
+   seis enlaces de navegación quedaban inalcanzables desde el móvil. */
+.nav-menu-btn {
+  display: none;
+  width: 42px; height: 42px;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px;
+  background: transparent; border: 0; cursor: pointer;
+  border-radius: 10px; padding: 0;
+}
+.nav-menu-linea {
+  display: block; width: 22px; height: 2px;
+  background: var(--tinta, #EAF4F7); border-radius: 2px;
+  transition: transform .22s ease, opacity .18s ease;
+}
+.nav-menu-btn:focus-visible { outline: 2px solid var(--acento-texto); outline-offset: 2px; }
+
+/* Aspa al abrirse: dice qué va a pasar al pulsar de nuevo. */
+.menu-abierto .nav-menu-btn .nav-menu-linea:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-abierto .nav-menu-btn .nav-menu-linea:nth-child(2) { opacity: 0; }
+.menu-abierto .nav-menu-btn .nav-menu-linea:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+@media (max-width: 860px) {
+  .nav-menu-btn { display: flex; }
+
+  nav .nav-mid {
+    display: none;
+    position: fixed; left: 0; right: 0;
+    top: var(--nav-alto, 64px); bottom: 0;
+    z-index: var(--capa-navegacion, 50);
+    flex-direction: column; align-items: stretch; gap: 0;
+    padding: 12px 20px 40px;
+    background: var(--fondo, #0E1730);
+    overflow-y: auto;
+  }
+  nav.menu-abierto .nav-mid { display: flex; }
+
+  /* Objetivos de 52 px: por debajo de 44 se falla al pulsar con el pulgar. */
+  nav.menu-abierto .nav-mid a {
+    display: block; padding: 15px 4px;
+    font-size: 16px; opacity: 1;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  nav.menu-abierto .nav-mid a:last-child { border-bottom: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu-linea { transition: none; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TEMA CONSULTIFY · data-sitio="consultify" en <html>
+   
+   La MISMA hoja, la MISMA estructura, la MISMA tipografía (Rubik para
+   titulares, Manrope para el cuerpo). Solo cambian los colores: así la
+   navegación entre las dos webs no da ningún salto de estética.
+   
+   Consultify es tema CLARO con el azul de su marca (#014695). Cada color de
+   texto está medido contra su fondo:
+     tinta   #0c1424 sobre #f4f7fc → 17,1:1  AAA
+     azul    #014695 sobre #f4f7fc → 10,1:1  AAA
+     suave   #4a5875 sobre #f4f7fc →  7,0:1  AAA
+     naranja de TEXTO #A16707      →  4,4:1 sobre #f4f7fc — solo en negrita
+       y cuerpos grandes; para texto normal se usa el azul.
+   ════════════════════════════════════════════════════════════════════════ */
+html[data-sitio="consultify"] {
+  --fondo: #f4f7fc;
+  --fondo-tarjeta: #ffffff;
+  --tinta: #0c1424;
+  --muted: #4a5875;
+  --line: #d7e0ee;
+  --acento-texto: #014695;     /* el azul de Consultify hace de acento */
+  --verde-texto: #0e7a7e;      /* el verde, oscurecido para fondo claro: 5,4:1 */
+  --tc-naranja: #A16707;       /* naranja legible sobre claro */
+}
+
+html[data-sitio="consultify"] body { background: var(--fondo); color: var(--tinta); }
+
+/* La barra: misma estructura, colores del tema */
+html[data-sitio="consultify"] nav[aria-label] {
+  background: rgba(244, 247, 252, .92);
+  border-bottom: 1px solid var(--line);
+}
+html[data-sitio="consultify"] .nav-mid a { color: var(--tinta); }
+html[data-sitio="consultify"] .nav-mid a:hover { color: var(--acento-texto); }
+html[data-sitio="consultify"] .nav-menu-linea { background: var(--tinta); }
+html[data-sitio="consultify"] nav .nav-mid { background: var(--fondo); }
+html[data-sitio="consultify"] nav.menu-abierto .nav-mid a { border-bottom-color: rgba(0,0,0,.06); }
+
+/* El acceso a Orbita: mismo componente, azul en vez de naranja */
+html[data-sitio="consultify"] .nav-orbita {
+  border-color: var(--acento-texto);
+  color: var(--acento-texto);
+}
+html[data-sitio="consultify"] .nav-orbita:hover,
+html[data-sitio="consultify"] .nav-orbita:focus-visible {
+  background: var(--acento-texto);
+  color: #fff;
+}
+
+/* El pie: se mantiene OSCURO también en Consultify, con el navy de su marca.
+   Es la zona común de las dos webs —las tres marcas y los sellos— y que sea
+   idéntica refuerza que son la misma casa. */
+html[data-sitio="consultify"] footer,
+html[data-sitio="consultify"] .pie-tc { background: #061B45; color: #cfd9ea; }
+
+/* Los sellos y las marcas del pie no cambian: van sobre el mismo oscuro. */

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" dir="ltr">
+<html lang="es" dir="ltr" data-sitio="consultify">
 <head>
 <!-- Google Consent Mode v2 (por defecto denegado; el banner lo actualiza) -->
 <script>
@@ -1205,6 +1205,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .model-card.featured .per, .price-table thead th .per { color: #B9CDF0; }
 </style>
   <link rel="stylesheet" href="/capas.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/estilo-base.css" />
+  <link rel="stylesheet" href="/capas.css" />
 </head>
 <body>
 <div style="background:#04173F;color:#EAF4F7;font-size:13px;padding:8px 0;text-align:center;font-family:Manrope,system-ui,sans-serif">Consultify es la línea digital de <a href="https://www.tuconsultor.com" style="color:#9DBEF3;font-weight:700;text-decoration:underline">TuConsultor</a> · <a href="https://www.tuconsultor.com" style="color:#EAF4F7;text-decoration:underline">← Volver a tuconsultor.com</a></div>
@@ -1230,6 +1234,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <a href="/app/calculadora" data-i18n="nav.calc" data-evt="click_calculadora" data-evt-loc="nav_menu">Calculadora</a>
     </div>
     <div class="nav-right">
+      <a class="nav-orbita" href="https://consultify.tuconsultor.com/app/acceso" title="Entrar en Orbita.PMTools">Entrar</a>
       <div class="lang-switch" role="group" aria-label="Selector de idioma">
         <button data-lang="es" class="active" aria-pressed="true" aria-label="Español">ES</button>
         <button data-lang="en" aria-pressed="false" aria-label="English">EN</button>
@@ -1884,39 +1889,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- FOOTER -->
 <footer>
   <div class="container">
-    <div class="footer-top">
-      <div class="footer-brand">
-        <img src="/marca/consultify-horizontal-blanco.svg" alt="Consultify · consultoría ISO impulsada por IA" />
-        <p data-i18n="footer.tagline">El Spotify de la consultoría. Suscríbete a un equipo de consultores impulsado por IA. Una línea de TuConsultor.</p>
+    <div class="tc-sellos-caja">
+      <div class="tc-marcas">
+        <a href="https://www.tuconsultor.com/" aria-label="TuConsultor"><img src="/marca/horizontal-dark.svg" alt="TuConsultor" /></a>
+        <a href="/consultify/" aria-label="Consultify"><img src="/marca/consultify-horizontal-blanco.svg" alt="Consultify" /></a>
+        <a href="https://consultify.tuconsultor.com/app/acceso" aria-label="Orbita.PMTools"><img src="/marca/orbita-pmtool-h-blanco.svg" alt="Orbita.PMTools" /></a>
       </div>
-      <div class="footer-col">
-        <h4 data-i18n="footer.product">Producto</h4>
-        <a href="#models" data-i18n="nav.models">Modelos</a>
-        <a href="#norms" data-i18n="nav.norms">Normas ISO</a>
-        <a href="#pricing" data-i18n="nav.pricing">Tarifas</a>
-        <a href="#faq" data-i18n="nav.faq">FAQ</a>
-        <a href="/app/calculadora" data-i18n="nav.calc">Calculadora</a>
-      </div>
-      <div class="footer-col">
-        <h4 data-i18n="footer.contact">Contacto</h4>
-        <a href="mailto:hola@tuconsultor.com" data-keep-ltr data-evt="click_email" data-evt-loc="footer">hola@tuconsultor.com</a>
-        <a href="https://consultify.tuconsultor.com" data-keep-ltr>consultify.tuconsultor.com</a>
-        <a href="tel:+34672462321" data-keep-ltr data-evt="click_telefono" data-evt-loc="footer">+34 672 462 321</a>
-        <a data-i18n="footer.address">Madrid, España</a>
-      </div>
+      <p class="tc-sellos-rotulo">Sistemas de gestión certificados</p>
+      <div class="tc-sellos" id="tc-sellos" role="group" aria-label="Certificaciones de TuConsultor"></div>
     </div>
-    <div class="footer-bot">
-      <span data-i18n="footer.copyright">© 2026 Consultify · Una línea de TuConsultor</span>
-      <span style="display:flex;gap:14px;flex-wrap:wrap">
-        <a href="/legal/aviso-legal.html" style="color:inherit;text-decoration:none">Aviso legal</a>
-        <a href="/legal/privacidad.html" style="color:inherit;text-decoration:none">Privacidad</a>
-        <a href="/legal/cookies.html" style="color:inherit;text-decoration:none">Cookies</a>
-        <a href="#" class="abrir-cookies" style="color:inherit;text-decoration:none">Configurar cookies</a>
-      </span>
-      <span class="madrid" data-i18n="footer.madrid">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</span>
-    </div>
+    <p style="text-align:center;font-size:12.5px;margin-top:22px;color:#97a4c2">
+      Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid ·
+      <a href="/consultify/legal/aviso-legal.html" style="color:#cfd9ea">Aviso legal</a> ·
+      <a href="/consultify/legal/privacidad.html" style="color:#cfd9ea">Privacidad</a> ·
+      <a href="/consultify/legal/cookies.html" style="color:#cfd9ea">Cookies</a>
+    </p>
   </div>
-<div style="text-align:center;padding:14px 0 0"><a href="https://www.tuconsultor.com" style="color:#9DBEF3;font-size:13px;text-decoration:underline">tuconsultor.com — la consultora detrás de Consultify</a></div></footer>
+</footer>
+
 
 <script>
 const i18n = {
@@ -2660,5 +2650,7 @@ document.querySelectorAll('.lang-switch button').forEach(btn => {
 
 <script src="/cookies-banner.js" defer></script>
   <script src="orbita-flotante.js" defer></script>
+  <script src="/sellos.js" defer></script>
+  <script src="/menu-movil.js" defer></script>
 </body>
 </html>

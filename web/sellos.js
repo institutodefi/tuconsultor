@@ -38,7 +38,7 @@ window.TC_SELLOS = [
   {
     id: '9001',
     alt: 'ISO 9001 · Sistema de gestión de la calidad, certificado por OCA Global, entidad acreditada por ENAC',
-    archivo: '/marca/sellos/9001-oca.jpg',
+    archivo: '/marca/sellos/9001-oca.png',
     entidad: 'OCA Global',
     numero: '34/5200/23/3163',
     pdf: '/certificados/iso-9001.pdf',
@@ -48,7 +48,7 @@ window.TC_SELLOS = [
   {
     id: '14001',
     alt: 'ISO 14001 · Sistema de gestión ambiental, certificado por OCA Global, entidad acreditada por ENAC',
-    archivo: '/marca/sellos/14001-oca.jpg',
+    archivo: '/marca/sellos/14001-oca.png',
     entidad: 'OCA Global',
     numero: '34/5400/23/3164',
     pdf: '/certificados/iso-14001.pdf',
@@ -58,7 +58,7 @@ window.TC_SELLOS = [
   {
     id: '27001',
     alt: 'ISO/IEC 27001 · Sistema de gestión de la seguridad de la información, certificado por OCA Global, entidad acreditada por ENAC',
-    archivo: '/marca/sellos/27001-oca.jpg',
+    archivo: '/marca/sellos/27001-oca.png',
     entidad: 'OCA Global',
     numero: '34/5700/24/10271',
     pdf: '/certificados/iso-27001.pdf',
@@ -70,7 +70,7 @@ window.TC_SELLOS = [
   {
     id: 'ens',
     alt: 'Esquema Nacional de Seguridad · categoría Básica, conforme al Real Decreto 311/2022',
-    archivo: '/marca/sellos/ens-basica.jpg',
+    archivo: '/marca/sellos/ens-basica.png',
     entidad: 'OCA Global',
     numero: '34/5704/24/10277',
     pdf: '/certificados/ens-basica.pdf',

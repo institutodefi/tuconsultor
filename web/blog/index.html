@@ -7,7 +7,6 @@
 <title>Blog · TuConsultor</title>
 <meta name="description" content="El blog de TuConsultor: normas de gestión, Modelo EFQM y excelencia, con un artículo nuevo cada día." />
 <link rel="canonical" href="https://www.tuconsultor.com/blog/" />
-<link rel="icon" href="/favicon.ico" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -19,6 +18,11 @@
   .blog-serie.efqm { color:#B97711; }
   .blog-fecha { font-size:13px; color:var(--muted); }
 </style>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/svg+xml" href="/marca/orbita-favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 </head>
 <body>
 <a href="#main" class="skip-link">Saltar al contenido</a>
@@ -76,6 +80,11 @@
   </div>
 
     <div class="tc-sellos-caja">
+      <div class="tc-marcas">
+        <a href="/" aria-label="TuConsultor"><img src="/marca/horizontal-dark.svg" alt="TuConsultor" /></a>
+        <a href="/consultify/" aria-label="Consultify"><img src="/marca/consultify-horizontal-blanco.svg" alt="Consultify" /></a>
+        <a href="https://consultify.tuconsultor.com/app/acceso" aria-label="Orbita.PMTools"><img src="/marca/orbita-pmtool-h-blanco.svg" alt="Orbita.PMTools" /></a>
+      </div>
       <p class="tc-sellos-rotulo">Sistemas de gestión certificados</p>
       <div class="tc-sellos" id="tc-sellos" role="group" aria-label="Certificaciones de TuConsultor"></div>
     </div>
@@ -125,5 +134,6 @@ cargar(true);
 <script src="/whatsapp-widget.js" defer></script>
 <script src="/cookies-banner.js" defer></script>
   <script src="/sellos.js" defer></script>
+  <script src="/menu-movil.js" defer></script>
 </body>
 </html>

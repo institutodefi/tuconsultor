@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-sitio="consultify">
 <head>
 <!-- Google Consent Mode v2 (por defecto denegado; el banner lo actualiza) -->
 <script>
@@ -50,19 +50,32 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/legal/_estilo.css">
   <link rel="stylesheet" href="/capas.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/estilo-base.css" />
+  <link rel="stylesheet" href="/capas.css" />
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KV974VT5"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
-<div class="wrap">
-  <div class="topbar">
-    <div class="logo"><b>C</b>
-    <a class="nav-orbita" href="https://consultify.tuconsultor.com/app/acceso" style="margin-left:auto;padding:6px 14px;border:1.5px solid var(--orange-txt);border-radius:999px;color:var(--orange-txt);font-weight:700;font-size:13px;text-decoration:none">Entrar</a></div>
-    <div class="name">TuConsultor · Consultify</div>
-    <a href="/">← Volver a la web</a>
+<nav aria-label="Navegación principal">
+  <div class="container nav-inner">
+    <a href="/consultify/" class="nav-logo"><img src="/marca/consultify-horizontal-light.svg" alt="Consultify" style="height:30px;width:auto" /></a>
+    <div class="nav-mid">
+      <a href="/consultify/#servicios">Servicios</a>
+      <a href="/consultify/#planes">Planes</a>
+      <a href="/consultify/orbita.html">Orbita.PMTools</a>
+      <a href="https://www.tuconsultor.com/">TuConsultor</a>
+      <a href="https://www.tuconsultor.com/contacto.html">Contacto</a>
+    </div>
+    <div class="nav-right">
+        <a class="nav-orbita" href="https://consultify.tuconsultor.com/app/acceso" title="Entrar en Orbita.PMTools">Entrar</a>
+    </div>
   </div>
+</nav>
+<div class="wrap">
   <div class="card">
     <h1>Política de privacidad</h1>
     <p class="upd">Última actualización: junio de 2026</p>
@@ -181,34 +194,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <script src="../whatsapp-flotante.js" defer></script>
   <script src="../orbita-flotante.js" defer></script>
 
-<footer class="pie-tc" role="contentinfo">
-  <div class="pie-marcas">
-    <a href="https://www.tuconsultor.com/" aria-label="TuConsultor">
-      <img src="/marca/horizontal-dark.svg" alt="TuConsultor" />
-    </a>
-    <span class="pie-sep" aria-hidden="true">·</span>
-    <a href="/consultify/" aria-label="Consultify">
-      <img src="/marca/consultify-horizontal-light.svg" alt="Consultify" />
-    </a>
-    <span class="pie-sep" aria-hidden="true">·</span>
-    <a href="https://consultify.tuconsultor.com/app/acceso" aria-label="Orbita.PMTools">
-      <img src="/marca/orbita-horizontal-light.svg" alt="Orbita.PMTools" />
-    </a>
+<footer>
+  <div class="container">
+    <div class="tc-sellos-caja">
+      <div class="tc-marcas">
+        <a href="https://www.tuconsultor.com/" aria-label="TuConsultor"><img src="/marca/horizontal-dark.svg" alt="TuConsultor" /></a>
+        <a href="/consultify/" aria-label="Consultify"><img src="/marca/consultify-horizontal-blanco.svg" alt="Consultify" /></a>
+        <a href="https://consultify.tuconsultor.com/app/acceso" aria-label="Orbita.PMTools"><img src="/marca/orbita-pmtool-h-blanco.svg" alt="Orbita.PMTools" /></a>
+      </div>
+      <p class="tc-sellos-rotulo">Sistemas de gestión certificados</p>
+      <div class="tc-sellos" id="tc-sellos" role="group" aria-label="Certificaciones de TuConsultor"></div>
+    </div>
+    <p style="text-align:center;font-size:12.5px;margin-top:22px;color:#97a4c2">
+      Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid ·
+      <a href="/consultify/legal/aviso-legal.html" style="color:#cfd9ea">Aviso legal</a> ·
+      <a href="/consultify/legal/privacidad.html" style="color:#cfd9ea">Privacidad</a> ·
+      <a href="/consultify/legal/cookies.html" style="color:#cfd9ea">Cookies</a>
+    </p>
   </div>
-
-  <p class="pie-legal">
-    Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid
-  </p>
-
-  <nav class="pie-enlaces" aria-label="Enlaces legales">
-    <a href="/consultify/legal/aviso-legal.html">Aviso legal</a>
-    <a href="/consultify/legal/privacidad.html">Privacidad</a>
-    <a href="/consultify/legal/cookies.html">Cookies</a>
-    <a href="#" data-tc-cookies>Configurar cookies</a>
-  </nav>
-
-  <p class="pie-corazon">Hecho con amor en Madrid por TuConsultor · Desde 2006 gestionando con el corazón</p>
 </footer>
 
+
+  <script src="/sellos.js" defer></script>
+  <script src="/menu-movil.js" defer></script>
 </body>
 </html>
