@@ -84,3 +84,15 @@ apuntaba a un ancla inexistente. Corregido.
 1. Search Console → reenviar `sitemap.xml` y pedir indexación de las 6 páginas nuevas.
 2. Rich Results Test sobre `/areas/sostenibilidad/iso-20121.html` (FAQ + Breadcrumb + Service).
 3. Recordatorio: **ENS Básica caduca de forma inminente** — sigue pendiente la renovación.
+
+---
+
+# v184 · Verificación de Bing
+
+- `web/BingSiteAuth.xml` en la raíz (se sirve en `https://www.tuconsultor.com/BingSiteAuth.xml`;
+  `build-dist.mjs` copia `web/` a la raíz del dist y no hay ninguna regla catch-all
+  en `netlify.toml` que lo intercepte).
+- `<meta name="msvalidate.01" content="5E68C86191818A62B99BF6C108403776" />` insertado
+  tras el `charset` en las **305 páginas HTML** (ES/EN/FR/DE/AR).
+
+Doble método a propósito: si Bing falla al leer el XML, el meta lo cubre, y viceversa.
