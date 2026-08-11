@@ -8,6 +8,7 @@ import Ofertas from './consultores/Ofertas.jsx';
 import ProyectosConfig from './consultores/ProyectosConfig.jsx';
 import Agenda from './consultores/Agenda.jsx';
 import MiAgenda from './consultores/MiAgenda.jsx';
+import AgendaTareas from './consultores/AgendaTareas.jsx';
 import Sistemas from './consultores/Sistemas.jsx';
 import ReglasComerciales from './consultores/ReglasComerciales.jsx';
 import DashboardProyectos from './consultores/DashboardProyectos.jsx';
@@ -165,7 +166,7 @@ export default function ConsultorPortal() {
               <Route index element={verPlanAgendaSist ? <Navigate to="mi-agenda" replace /> : <Dashboard />} />
               <Route path="panel" element={<Dashboard />} />
               <Route path="proyectos" element={<Guard ok={verClientes}><ProyectosConfig /></Guard>} />
-              <Route path="agenda" element={<Guard ok={verPlanAgendaSist}><Agenda /></Guard>} />
+              <Route path="agenda" element={<Guard ok={verPlanAgendaSist}><AgendaTareas /></Guard>} />
               <Route path="mi-agenda" element={<Guard ok={verPlanAgendaSist}><MiAgenda /></Guard>} />
               <Route path="planificador" element={<Guard ok={verPlanAgendaSist}><GeneradorOfertas /></Guard>} />
               <Route path="equipo" element={<Guard ok={verEquipo}><Equipo /></Guard>} />

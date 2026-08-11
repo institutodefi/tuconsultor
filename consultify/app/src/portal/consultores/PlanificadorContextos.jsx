@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { supabase, DEMO } from '../../lib/supabase.js';
+import { useAuth } from '../../lib/auth.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR CONTEXTOS
@@ -26,6 +27,10 @@ const fmt = (iso) => iso ? new Date(`${String(iso).slice(0,10)}T00:00:00`).toLoc
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 export default function PlanificadorContextos() {
+  const { role } = useAuth();
+  // La ayuda de cada tarea la editan consultores y administración; las
+  // empresas la LEEN como guía. El icono es el mismo: cambia lo que abre.
+  const puedeEditarAyuda = ['superadmin', 'admin', 'director', 'consultor'].includes(role);
   const [proyectos, setProyectos] = useState([]);
   const [contextos, setContextos] = useState([]);
   const [tareas, setTareas] = useState([]);
@@ -33,6 +38,9 @@ export default function PlanificadorContextos() {
   const [pid, setPid] = useState('');
   const [msg, setMsg] = useState(null);
   const [nuevas, setNuevas] = useState({});          // texto de alta por contexto
+  const [subprocesos, setSubprocesos] = useState({}); // subproceso de alta por contexto
+  const [ayudaDe, setAyudaDe] = useState(null);       // tarea con la ficha de ayuda abierta
+  const [ayudaTxt, setAyudaTxt] = useState('');
   const [simulacion, setSimulacion] = useState(null); // propuesta SIN guardar
 
   const cargar = useCallback(() => Promise.all([
@@ -57,13 +65,14 @@ export default function PlanificadorContextos() {
     const titulo = (nuevas[ctx.id] || '').trim();
     if (titulo.length < 3) { setMsg({ err: true, t: 'La tarea tiene que decir algo.' }); return; }
     try {
+      const sub = (subprocesos[ctx.id] || '').trim() || null;
       let codigo = `${ctx.norma}-01`;
       if (!DEMO) {
-        const { data } = await supabase.rpc('codigo_tarea', { p_contexto: ctx.id });
+        const { data } = await supabase.rpc('codigo_tarea', { p_contexto: ctx.id, p_subproceso: sub });
         if (data) codigo = data;
       }
       await insertRow('tareas_programadas', {
-        contexto_id: ctx.id, codigo, titulo,
+        contexto_id: ctx.id, codigo, titulo, subproceso: sub,
         estado: 'pendiente',
       });
       setNuevas((n) => ({ ...n, [ctx.id]: '' }));
@@ -214,7 +223,7 @@ export default function PlanificadorContextos() {
 
                   <ul className="space-y-1.5">
                     {ts.map((t) => (
-                      <li key={t.id} title={t.descripcion || t.titulo}
+                      <li key={t.id} title={`${t.titulo}${t.descripcion ? ' — ' + t.descripcion : ''}`}
                         className="flex flex-wrap items-center gap-2 rounded-lg bg-[#10394A] px-2 py-1.5">
                         <button onClick={() => hecha(t)}
                           className={`grid h-4 w-4 shrink-0 place-items-center rounded border-[1.5px] text-[10px] font-bold ${
@@ -222,10 +231,18 @@ export default function PlanificadorContextos() {
                           aria-label={t.estado === 'hecha' ? 'Hecha' : 'Marcar hecha'}>
                           {t.estado === 'hecha' ? '✓' : ''}
                         </button>
-                        <code className="text-[10.5px] font-bold text-brand-orange">{t.codigo}</code>
-                        <span className={`min-w-0 flex-1 truncate text-[12.5px] ${t.estado === 'hecha' ? 'text-[#7FA7B4]' : 'text-[#EAF4F7]'}`}>
+                        {/* El código es lo que se ve: corto, máx. 10 caracteres.
+                            El título completo, al pasar el cursor por la fila. */}
+                        <code className="text-[11.5px] font-extrabold tracking-wide text-brand-orange">{t.codigo}</code>
+                        <span className={`min-w-0 flex-1 truncate text-[11.5px] ${t.estado === 'hecha' ? 'text-[#7FA7B4]' : 'text-[#B9D2DA]'}`}>
                           {t.titulo}
                         </span>
+                        <button onClick={() => { setAyudaDe(t); setAyudaTxt(t.ayuda || ''); }}
+                          title={puedeEditarAyuda ? 'Editar la ayuda de esta tarea' : 'Ver la ayuda de esta tarea'}
+                          aria-label="Ayuda de la tarea"
+                          className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[#3F7D93] text-[10px] font-bold text-[#9FC0CB] hover:border-brand-orange hover:text-brand-orange">
+                          i
+                        </button>
                         <input type="date" value={t.fecha || ''} disabled={t.estado === 'hecha'}
                           onChange={(e) => programar(t, e.target.value)}
                           className="input !w-[130px] !px-1.5 !py-0.5 !text-[11px]" />
@@ -236,6 +253,10 @@ export default function PlanificadorContextos() {
                   </ul>
 
                   <div className="mt-2 flex gap-1.5">
+                    <input className="input !w-[110px] !py-1.5 !text-[11px]" placeholder="Subproceso"
+                      title="Base del código: DOCUMEN-01, AUDITOR-02… Máximo 7 letras; sin él se usa la norma."
+                      value={subprocesos[ctx.id] || ''} maxLength={24}
+                      onChange={(e) => setSubprocesos((n) => ({ ...n, [ctx.id]: e.target.value }))} />
                     <input className="input !py-1.5 !text-[12.5px] flex-1" placeholder={`Nueva tarea de ${NORMA_ETQ[ctx.norma] || ctx.norma}…`}
                       value={nuevas[ctx.id] || ''}
                       onChange={(e) => setNuevas((n) => ({ ...n, [ctx.id]: e.target.value }))}
@@ -252,6 +273,49 @@ export default function PlanificadorContextos() {
             )}
           </div>
         </>
+      )}
+      {ayudaDe && (
+        <div className="fixed inset-0 z-[9500] flex items-start justify-center overflow-auto bg-black/55 p-4 sm:p-10"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setAyudaDe(null); }}>
+          <div role="dialog" aria-modal="true" aria-label={`Ayuda de ${ayudaDe.codigo}`}
+            className="w-full max-w-xl rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0A2B3A] p-5 shadow-2xl">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div>
+                <code className="text-[12px] font-extrabold text-brand-orange">{ayudaDe.codigo}</code>
+                <h2 className="text-[15.5px] font-extrabold text-[#EAF4F7]">{ayudaDe.titulo}</h2>
+              </div>
+              <button onClick={() => setAyudaDe(null)} aria-label="Cerrar"
+                className="rounded-lg px-2 py-0.5 text-lg font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">×</button>
+            </div>
+
+            {puedeEditarAyuda ? (
+              <>
+                <p className="mb-1.5 text-[11px] text-[#7FA7B4]">
+                  Esta ayuda la ven las empresas como guía de la tarea. Escríbela para ellas.
+                </p>
+                <textarea rows={7} className="input w-full !text-[13px]" value={ayudaTxt}
+                  onChange={(e) => setAyudaTxt(e.target.value)}
+                  placeholder="Qué hay que hacer, qué evidencias se esperan, dónde está la plantilla…" />
+                <div className="mt-2.5 flex justify-end gap-2">
+                  <button onClick={() => setAyudaDe(null)} className="btn-ghost !px-3 !py-1.5 text-xs">Cancelar</button>
+                  <button className="btn-orange !px-3 !py-1.5 text-xs"
+                    onClick={async () => {
+                      try {
+                        await updateRow('tareas_programadas', ayudaDe.id, { ayuda: ayudaTxt.trim() || null });
+                        setAyudaDe(null); await cargar();
+                      } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
+                    }}>
+                    Guardar ayuda
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="whitespace-pre-wrap rounded-xl bg-[#10394A] p-3.5 text-[13px] leading-relaxed text-[#DFF1F5]">
+                {ayudaDe.ayuda || 'Esta tarea todavía no tiene ayuda escrita.'}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
