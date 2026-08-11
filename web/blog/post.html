@@ -5,7 +5,14 @@
 <meta charset="UTF-8" />
 <meta name="msvalidate.01" content="5E68C86191818A62B99BF6C108403776" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Blog · TuConsultor</title>
+<title>Artículo · Blog TuConsultor</title>
+<meta name="description" content="Artículos sobre normas ISO, Modelo EFQM y sistemas de gestión, escritos por consultores en activo." />
+
+<meta property="og:image" content="https://www.tuconsultor.com/social-img/og-default.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://www.tuconsultor.com/social-img/og-default.png" />
 <meta name="robots" content="index,follow" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -103,7 +110,54 @@ const H = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
     return;
   }
   const p = rows[0];
-  document.title = p.titulo + ' · Blog TuConsultor';
+  // ── SEO del artículo: metadatos que no existen hasta que carga el contenido ──
+  const url = 'https://www.tuconsultor.com/blog/post.html?p=' + encodeURIComponent(slug);
+  const resumen = (p.resumen || String(p.contenido || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 155);
+  const imagen = p.imagen || 'https://www.tuconsultor.com/social-img/blog-general.png';
+  const titulo = p.titulo + ' · Blog TuConsultor';
+
+  document.title = titulo;
+  const meta = (sel, attr, val) => {
+    let el = document.head.querySelector(sel);
+    if (!el) {
+      el = document.createElement('meta');
+      const [k, v] = attr;
+      el.setAttribute(k, v);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', val);
+  };
+  let can = document.head.querySelector('link[rel="canonical"]');
+  if (!can) { can = document.createElement('link'); can.rel = 'canonical'; document.head.appendChild(can); }
+  can.href = url;
+  meta('meta[name="description"]', ['name', 'description'], resumen);
+  meta('meta[property="og:title"]', ['property', 'og:title'], titulo);
+  meta('meta[property="og:description"]', ['property', 'og:description'], resumen);
+  meta('meta[property="og:url"]', ['property', 'og:url'], url);
+  meta('meta[property="og:type"]', ['property', 'og:type'], 'article');
+  meta('meta[property="og:image"]', ['property', 'og:image'], imagen);
+  meta('meta[name="twitter:title"]', ['name', 'twitter:title'], titulo);
+  meta('meta[name="twitter:description"]', ['name', 'twitter:description'], resumen);
+  meta('meta[name="twitter:image"]', ['name', 'twitter:image'], imagen);
+
+  const ld = document.createElement('script');
+  ld.type = 'application/ld+json';
+  ld.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'BlogPosting', '@id': url + '#post', headline: p.titulo, description: resumen,
+        image: imagen, datePublished: p.fecha_publicacion, dateModified: p.fecha_publicacion,
+        inLanguage: 'es-ES', mainEntityOfPage: url,
+        author: { '@id': 'https://www.tuconsultor.com/#organization' },
+        publisher: { '@id': 'https://www.tuconsultor.com/#organization' },
+        isPartOf: { '@id': 'https://www.tuconsultor.com/#website' } },
+      { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://www.tuconsultor.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.tuconsultor.com/blog/' },
+        { '@type': 'ListItem', position: 3, name: p.titulo, item: url } ] }
+    ]
+  });
+  document.head.appendChild(ld);
   document.getElementById('titulo').textContent = p.titulo;
   document.getElementById('meta').textContent =
     (p.serie === 'EFQM' ? 'Serie Modelo EFQM · ' : 'Normas de gestión · ') +

@@ -71,6 +71,31 @@
   to = "/.netlify/functions/indexnow"
   status = 200
 
+# ── 1c · Páginas fusionadas en "Quiénes somos" (301 permanente) ────────────
+[[redirects]]
+  from = "/equipo.html"
+  to = "/quienes-somos.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/proposito.html"
+  to = "/quienes-somos.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/equipo.html"
+  to = "/en/quienes-somos.html"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/proposito.html"
+  to = "/en/quienes-somos.html"
+  status = 301
+  force = true
+
 # ── 1a · institutoexcelencia.com → su ficha en tuconsultor.com ──────────────
 # El dominio del Instituto de Excelencia Europea deja de tener web propia y
 # apunta a su ficha dentro del grupo.

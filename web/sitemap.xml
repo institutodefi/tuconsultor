@@ -37,12 +37,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/contacto.html"/>
   </url>
   <url>
-    <loc>https://www.tuconsultor.com/quienes-somos.html</loc>
-    <lastmod>2026-08-11</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://www.tuconsultor.com/formacion.html</loc>
     <lastmod>2026-08-11</lastmod>
     <changefreq>weekly</changefreq>
@@ -59,6 +53,15 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://www.tuconsultor.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://www.tuconsultor.com/en/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/"/>
+  </url>
+  <url>
+    <loc>https://www.tuconsultor.com/quienes-somos.html</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.tuconsultor.com/quienes-somos.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.tuconsultor.com/en/quienes-somos.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/quienes-somos.html"/>
   </url>
   <url>
     <loc>https://www.tuconsultor.com/servicios-tecnologicos.html</loc>
@@ -118,12 +121,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/contacto.html"/>
   </url>
   <url>
-    <loc>https://www.tuconsultor.com/en/quienes-somos.html</loc>
-    <lastmod>2026-08-11</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://www.tuconsultor.com/en/formacion.html</loc>
     <lastmod>2026-08-11</lastmod>
     <changefreq>monthly</changefreq>
@@ -140,6 +137,15 @@
     <xhtml:link rel="alternate" hreflang="es" href="https://www.tuconsultor.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://www.tuconsultor.com/en/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/"/>
+  </url>
+  <url>
+    <loc>https://www.tuconsultor.com/en/quienes-somos.html</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.tuconsultor.com/quienes-somos.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.tuconsultor.com/en/quienes-somos.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/quienes-somos.html"/>
   </url>
   <url>
     <loc>https://www.tuconsultor.com/en/servicios-tecnologicos.html</loc>

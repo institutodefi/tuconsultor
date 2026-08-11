@@ -220,3 +220,64 @@ las cuatro líneas de servicio.
 
 Las versiones EN y FR de estas cuatro páginas siguen con el contenido corto.
 El mercado objetivo del ENS es español, así que la prioridad era esta.
+
+---
+
+# v187 · Batería de pruebas y corrección de los fallos encontrados
+
+Nueva `scripts/test-web.py`: 13 comprobaciones sobre las 305 páginas (estructura,
+metadatos, hreflang recíproco, JSON-LD, enlaces y recursos, anclas, alt de
+imágenes, duplicados, clases CSS, sitemap, robots, clave IndexNow y volumen de
+contenido en las páginas reforzadas). Ejecutar antes de cada empaquetado.
+
+Resultado inicial: **44 fallos y 83 avisos**. Resultado final: **0 y 10**.
+
+## Corregido
+
+**96 títulos pasaban de 60 caracteres** — se truncaban en Google. Los sufijos
+ahora se eligen por escalera hasta caber: «consultoría e implantación» →
+«implantación» → sin sufijo. Culpa mía, del pase de títulos de v183.
+
+**`/fr/areas/` tenía título y descripción en inglés.** Traducidos.
+Escaneado el resto de `/fr/`: era el único caso.
+
+**`/equipo.html` y `/proposito.html` (ES y EN)** eran stubs de meta-refresh que
+canonicalizaban a `quienes-somos.html`, y el pase de v183 les inyectó un JSON-LD
+que se hacía pasar por esa página. Retirado, marcados `noindex,follow` y añadidos
+**301 forzados en `netlify.toml`**, que es como debía haberse hecho.
+
+**Portadas FR, DE, AR y `servicios/consultify.html`** solo tenían `Organization`
+en JSON-LD porque el pase de v183 saltaba las páginas que ya traían schema.
+Añadido el nodo `WebPage`.
+
+**`/blog/post.html` no tenía canonical, description ni schema.** Es una plantilla
+que monta el artículo desde Supabase, así que cada post se servía sin metadatos.
+Ahora el script fija canonical, description, Open Graph, Twitter Card e inyecta
+`BlogPosting` + `BreadcrumbList` con los datos reales del artículo.
+
+**Páginas legales sin description** y **6 páginas sin og:image**. Añadidos.
+
+**5 páginas sin skip-link** teniendo `<main id="main">`. Añadido en su idioma.
+
+**Títulos duplicados ES/EN** en las tres fichas de `/grupo/`: las inglesas tenían
+el título en español. Traducidas.
+
+**Descripciones de las 4 páginas reforzadas** pasaban de 170 caracteres.
+Recortadas a 143–149.
+
+## Avisos que quedan (deliberados)
+
+- `de/index.html` y `accesibilidad.html` con metadatos algo largos: no los toco
+  sin repasar el copy alemán.
+- `blog/index.html` con título corto: es correcto para esa página.
+- Cuatro descripciones de 170–185 caracteres en páginas secundarias.
+
+## Hallazgo pendiente, y es el importante
+
+**Los artículos del blog no están en el sitemap.** Viven en
+`/blog/post.html?p=slug`, una URL con parámetro que Google indexa mal y que
+ninguna herramienta descubre sola. Los metadatos ya se generan bien por JS, pero
+mientras las URLs no se listen, el blog aporta poco a la autoridad del dominio.
+
+La solución es generar un sitemap de blog leyendo `blog_tuconsultor` de Supabase,
+o mejor, prerenderizar cada artículo como HTML estático en el build.
