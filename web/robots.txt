@@ -1,3 +1,40 @@
+# TuConsultor · https://www.tuconsultor.com
 User-agent: *
 Allow: /
+Disallow: /*?utm_
+Disallow: /*?fbclid
+Disallow: /*?gclid
+
+# Rastreadores de IA: acceso permitido (visibilidad en respuestas generativas)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Rastreadores agresivos de SEO comercial
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
 Sitemap: https://www.tuconsultor.com/sitemap.xml

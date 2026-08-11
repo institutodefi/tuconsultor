@@ -77,3 +77,45 @@ body.wa-abierto .orbita-flotante {
     --flotante-hueco:  8px;
   }
 }
+
+/* ── v183 · prosa larga, requisitos, bullets y migas ── */
+.tc-prose { max-width: 78ch; }
+.tc-prose p { color: var(--muted); font-size: 17px; line-height: 1.72; margin: 0 0 18px; }
+.tc-prose p:last-child { margin-bottom: 0; }
+.tc-prose strong { color: var(--ink); font-weight: 700; }
+.tc-prose a { color: var(--acento-texto); text-decoration: underline; text-underline-offset: 3px; }
+
+.tc-req-list { display: grid; gap: 14px; }
+.tc-req { border: 1.5px solid var(--line); border-radius: 18px; padding: 20px 22px; background: var(--white); }
+.tc-req h3 { font-size: 17px; letter-spacing: -0.01em; margin: 0 0 8px; color: var(--ink); }
+.tc-req p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+
+.tc-bullets { list-style: none; display: grid; gap: 12px; padding: 0; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px,100%), 1fr)); }
+.tc-bullets li { position: relative; padding-left: 26px; color: var(--muted); font-size: 15.5px; line-height: 1.65; }
+.tc-bullets li::before { content: "◆"; position: absolute; left: 0; top: 0; color: var(--verde-texto); font-weight: 800; }
+
+.tc-breadcrumb { margin-top: 26px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.tc-breadcrumb a { color: var(--muted); text-decoration: none; }
+.tc-breadcrumb a:hover, .tc-breadcrumb a:focus-visible { color: var(--acento-texto); text-decoration: underline; }
+.tc-breadcrumb [aria-current="page"] { color: var(--ink); font-weight: 700; }
+
+/* ── v183 · buscador de normas en portada ── */
+.tc-bn { position: relative; max-width: 640px; margin: 26px 0 6px; }
+.tc-bn-label { display: block; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--verde-texto); margin-bottom: 9px; }
+.tc-bn-input { width: 100%; padding: 16px 22px; border-radius: 100px; border: 1.5px solid var(--line);
+  font: 600 15px Manrope, system-ui, sans-serif; color: var(--ink); background: var(--white); outline: none; }
+.tc-bn-input::placeholder { color: var(--muted); font-weight: 500; }
+.tc-bn-input:focus { border-color: var(--acento-texto); box-shadow: 0 0 0 4px rgba(249,144,1,.14); }
+.tc-bn-res { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 70; background: var(--white);
+  border: 1.5px solid var(--line); border-radius: 18px; padding: 8px; max-height: 340px; overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(0,0,0,.45); display: none; }
+.tc-bn-res.on { display: block; }
+.tc-bn-res a { display: block; padding: 11px 14px; border-radius: 12px; text-decoration: none; color: var(--ink); }
+.tc-bn-res a:hover, .tc-bn-res a:focus-visible, .tc-bn-res a.sel { background: rgba(249,144,1,.14); }
+.tc-bn-res b { display: block; font-size: 14.5px; font-weight: 800; }
+.tc-bn-res span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.tc-bn-none { padding: 14px; color: var(--muted); font-size: 14px; }
+.tc-bn-all { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 700;
+  color: var(--acento-texto); text-decoration: underline; text-underline-offset: 3px; }
