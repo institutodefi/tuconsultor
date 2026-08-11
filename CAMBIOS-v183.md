@@ -96,3 +96,49 @@ apuntaba a un ancla inexistente. Corregido.
   tras el `charset` en las **305 páginas HTML** (ES/EN/FR/DE/AR).
 
 Doble método a propósito: si Bing falla al leer el XML, el meta lo cubre, y viceversa.
+
+---
+
+# v185 · IndexNow, Google y `lastmod` real
+
+## IndexNow (Bing, Yandex, Naver, Seznam · y por herencia DuckDuckGo y Yahoo)
+
+- Clave `1cebb014fb74fc8f9c449b2bd8698b5e`, servida en
+  `web/1cebb014fb74fc8f9c449b2bd8698b5e.txt`.
+- Función `consultify/netlify/functions/indexnow.mjs`, expuesta en `/api/indexnow`.
+  Se dispara con un *outgoing webhook* de Netlify en el evento «Deploy succeeded».
+  Lee el sitemap y envía solo las URLs con el `lastmod` más reciente.
+  Admite además una lista explícita de URLs protegida por token.
+- Cabeceras nuevas en `netlify.toml`: `text/plain` para `.txt`,
+  `application/xml` para `sitemap.xml` y `BingSiteAuth.xml`.
+- Variables de entorno a crear en Netlify: `INDEXNOW_KEY` e `INDEXNOW_TOKEN`.
+
+Google **no** participa en IndexNow. Sigue testeándolo desde 2021 sin adoptarlo.
+
+## `lastmod` real por contenido
+
+`scripts/seo-sitemap.py` sustituye al generador anterior. Guarda el hash del
+contenido significativo de cada página en `web/.seo-manifest.json` y solo mueve
+el `lastmod` cuando ese hash cambia. Sin esto, IndexNow enviaría las 300 URLs en
+cada despliegue y los buscadores dejarían de atender las notificaciones.
+
+En esta versión las 300 salen con fecha de hoy porque es la primera ejecución
+del manifiesto y porque v183/v184 sí tocaron las 300 páginas (títulos, JSON-LD,
+migas, Orbita.PMTools, meta de Bing). A partir de v186 el número será realista.
+
+**El manifiesto tiene que viajar en el ZIP.** Si se pierde, todo vuelve a
+marcarse como nuevo.
+
+## Google
+
+`scripts/gsc-estado.mjs`: reenvío del sitemap vía Search Console API y auditoría
+de indexación con URL Inspection API (solo lectura, 2.000 consultas/día).
+Requiere cuenta de servicio con la API activada y añadida como propietario en
+Search Console.
+
+No se usa la Indexing API: está oficialmente limitada a `JobPosting` y
+`BroadcastEvent` y aplicarla a landings de normas incumple sus condiciones.
+
+## Documentación
+
+`scripts/README-SEO.md` con la rutina completa por versión.

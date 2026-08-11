@@ -66,6 +66,11 @@
   to = "/.netlify/functions/newsletter"
   status = 200
 
+[[redirects]]
+  from = "/api/indexnow"
+  to = "/.netlify/functions/indexnow"
+  status = 200
+
 # ── 1a · institutoexcelencia.com → su ficha en tuconsultor.com ──────────────
 # El dominio del Instituto de Excelencia Europea deja de tener web propia y
 # apunta a su ficha dentro del grupo.
@@ -151,3 +156,19 @@
   for = "/index.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Content-Type = "application/xml; charset=utf-8"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/BingSiteAuth.xml"
+  [headers.values]
+    Content-Type = "application/xml; charset=utf-8"
