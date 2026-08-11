@@ -142,3 +142,81 @@ No se usa la Indexing API: está oficialmente limitada a `JobPosting` y
 ## Documentación
 
 `scripts/README-SEO.md` con la rutina completa por versión.
+
+---
+
+# v186 · Refuerzo SEO de ISO 9001, 14001, 27001, ENS y ciberseguridad
+
+## Contenido profundo en las 4 páginas prioritarias (ES)
+
+Pasan de ~150 palabras de plantilla a 1.500–2.000 palabras propias con datos
+normativos verificados. Esto es lo que de verdad mueve el ranking: hasta ahora
+esas cuatro páginas eran indistinguibles de las otras 75.
+
+**ENS** (`/areas/ciberseguridad/ens.html`) — RD 311/2022; ámbito extendido a
+proveedores privados del sector público; las cinco dimensiones; las tres
+categorías y cómo se calculan; certificación obligatoria en media y alta frente
+a autoevaluación con Declaración de Conformidad en básica; las 73 medidas del
+Anexo II en sus tres marcos; Declaración de Aplicabilidad; perfiles de
+cumplimiento; auditoría bienal y extraordinaria; entidad acreditada ENAC;
+comparativa ENS / ISO 27001 / NIS2; 6 pasos; 8 FAQ.
+
+**ISO 27001** — versión 2022; **transición desde 2013 cerrada el 31/10/2025**
+(los certificados de la edición 2013 ya no son válidos); Anexo A de 93 controles
+en 4 temas con el desglose 37/8/14/34; los 11 controles nuevos; SoA; capítulos
+4→10; 6 pasos; 6 FAQ.
+
+**ISO 9001** — **la 2026 aún NO está publicada**: DIS en agosto de 2025, FDIS
+votado en primavera de 2026, publicación prevista para septiembre de 2026 y
+transición de ~3 años. Lenguaje condicional en todo el bloque de novedades, con
+un aviso explícito contra quien ofrezca certificar hoy en la 2026. Siete
+principios, capítulos 4→10, 6 pasos, 6 FAQ.
+
+**ISO 14001** — **la 2026 SÍ está publicada** (15 de abril de 2026), sustituye a
+la 2015 incluida la enmienda climática de 2024, transición de tres años hasta
+abril de 2029. Lenguaje de urgencia y argumento del cuello de botella en la
+agenda del certificador. Qué cambia, capítulos 4→10, 6 pasos, 6 FAQ.
+
+FAQPage de schema.org regenerado en las cuatro con las preguntas nuevas.
+Títulos y descripciones reescritos con intención de búsqueda.
+
+## CTA reforzado
+
+Bloque `.tc-cta-fuerte` nuevo: caja a dos columnas con borde naranja, lista de
+lo que incluye el diagnóstico, botón principal, WhatsApp con mensaje
+prerrellenado, teléfono pulsable y nota de tiempo de respuesta. **Aparece dos
+veces** en cada página (tras el tercer bloque y al final) y en el índice de
+ciberseguridad. En ENS e ISO 14001 el segundo botón del hero pasa a ser
+«Diagnóstico sin coste» apuntando al CTA.
+
+La versión de ciberseguridad tiene copy específico de pliego: «¿Tienes un pliego
+encima de la mesa?».
+
+## Aviso emergente de ENS
+
+`web/ens-aviso.js`, cargado solo en las 13 páginas de `/areas/ciberseguridad/`.
+
+Disparadores, el primero que ocurra: intención de salida en escritorio,
+55 segundos de permanencia o 65 % de scroll.
+
+Decisiones deliberadas para que ayude en vez de molestar:
+- Una sola vez por visitante; descarte recordado 60 días en localStorage.
+- **No se muestra a quien ya está convirtiendo**: si ha hecho clic en contacto,
+  teléfono, WhatsApp o email, se marca como visto y no aparece.
+- Sin cuentas atrás falsas, sin escasez inventada, sin «no, prefiero seguir
+  siendo vulnerable». El botón de descarte dice lo que hace.
+- Accesible: `role="dialog"`, `aria-modal`, foco atrapado dentro, Escape cierra,
+  el foco vuelve a su origen, respeta `prefers-reduced-motion`.
+- Si no hay localStorage disponible, no se muestra. Mejor perder un lead que ser
+  pesado con alguien a quien no podemos recordar.
+- Eventos a dataLayer: `ens_aviso_visto`, `ens_aviso_clic`, `ens_aviso_cerrado`.
+
+## Enlazado interno
+
+Enlaces directos a ENS, ISO 27001, ISO 9001 e ISO 14001 desde la portada, bajo
+las cuatro líneas de servicio.
+
+## Pendiente
+
+Las versiones EN y FR de estas cuatro páginas siguen con el contenido corto.
+El mercado objetivo del ENS es español, así que la prioridad era esta.
