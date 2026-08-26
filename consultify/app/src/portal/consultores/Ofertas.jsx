@@ -27,6 +27,33 @@ export default function Ofertas() {
   ]);
   useEffect(() => { cargar(); }, []);
 
+  // Abrir la edición completa de una oferta. Lo llaman el lápiz de la tabla y
+  // los enlaces que llegan desde la ficha de empresa.
+  const abrirEdicion = (r) => {
+    setEdicion({ ...r, normas: [...(r.normas || [])], sedes: r.sedes || 1, complejidad: r.complejidad || 'media' });
+    setMsg(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Llegada desde otra pantalla: /consultores/ofertas?oferta=ID abre esa oferta
+  // en edición, y ?empresa=NOMBRE deja el buscador filtrado por ese cliente.
+  // Sin esto, desde la ficha de empresa solo se podía llegar al listado entero
+  // y volver a buscar a mano lo que ya se sabía.
+  const [urlAplicada, setUrlAplicada] = useState(false);
+  useEffect(() => {
+    if (!rows || urlAplicada) return;
+    const p = new URLSearchParams(window.location.search);
+    const id = p.get('oferta');
+    const emp = p.get('empresa');
+    if (emp) setQ(emp);
+    if (id) {
+      const r = rows.find((x) => String(x.id) === String(id));
+      if (r) abrirEdicion(r);
+      else setMsg('No se encontró esa oferta. Puede que se haya eliminado.');
+    }
+    setUrlAplicada(true);
+  }, [rows, urlAplicada]);
+
   const [msg, setMsg] = useState(null);
 
   async function generar(r, { forzarPrecioNuevo = false } = {}) {
@@ -444,7 +471,8 @@ export default function Ofertas() {
             </tr></thead>
             <tbody className="divide-y divide-navy-50">
               {lista.map(r => (
-                <tr key={r.id}>
+                <tr key={r.id} id={`oferta-${r.id}`}
+                  className={edicion && String(edicion.id) === String(r.id) ? 'bg-brand-orange/[0.07]' : undefined}>
                   <td className="py-2.5 align-top font-extrabold text-[#EAF4F7]">
                     {r.numero_oferta || '—'}
                     {/* El contrato y el proyecto cuelgan de aquí: el proyecto
@@ -459,7 +487,7 @@ export default function Ofertas() {
                   <td className="py-2.5 font-semibold">
                     <span className="inline-flex items-center gap-1.5">
                       {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
-                      <button onClick={() => { setEdicion({ ...r, normas: [...(r.normas || [])], sedes: r.sedes || 1, complejidad: r.complejidad || 'media' }); setMsg(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      <button onClick={() => abrirEdicion(r)}
                         className="text-xs font-bold text-[#7FA7B4] hover:text-[#F9A83A]" title="Editar la oferta completa">✎</button>
                     </span>
                   </td>

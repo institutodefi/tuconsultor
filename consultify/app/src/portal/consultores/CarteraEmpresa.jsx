@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
 import { carteraDe, fmtEur, fmtFecha } from '../../lib/cartera.js';
 import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js';
@@ -63,6 +64,9 @@ const Vacio = ({ children }) => (
   <p className="py-4 text-center text-[12px] text-[#7FA7B4]">{children}</p>
 );
 
+// El título de cada línea es el enlace: es lo que se pulsa por instinto.
+const ENLACE = 'block truncate text-[12.5px] font-bold text-[#EAF4F7] hover:text-brand-orange hover:underline';
+
 export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
@@ -76,7 +80,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
           listTable('presupuestos').catch(() => []),
           listTable('contratos').catch(() => []),
           listTable('clientes').catch(() => []),
-          listTable('proyectos').catch(() => []),
+          listTable('proyectos_cliente').catch(() => []),
         ]);
         if (vivo) setDatos({ presupuestos, contratos, clientes, proyectos });
       } catch (e) {
@@ -149,11 +153,13 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                   <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${t.punto}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-bold text-[#EAF4F7]">
-                        {(p.normas || []).join(' + ') || 'Sin normas'}
-                      </span>
+                      <Link to={`/consultores/proyectos?proyecto=${p.id}`} className={ENLACE}
+                        title="Abrir el proyecto">
+                        {p.nombre || (p.normas || []).join(' + ') || 'Sin nombre'}
+                      </Link>
                       <span className="text-[11px] text-[#7FA7B4]">
-                        {p.modelo} · {fmtFechaProy(p.fecha_inicio)} → {fmtFechaProy(p.fecha_fin)}
+                        {[p.modelo, (p.normas || []).join(' + ')].filter(Boolean).join(' · ')}
+                        {p.fecha_inicio || p.fecha_fin ? ` · ${fmtFechaProy(p.fecha_inicio)} → ${fmtFechaProy(p.fecha_fin)}` : ''}
                       </span>
                     </span>
                     <span className={`chip !px-2 !py-0 text-[10px] ${COLOR_ESTADO_PROYECTO[p.estado] || ''}`}>{p.estado}</span>
@@ -173,7 +179,12 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
               {contratos.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold text-[#EAF4F7]">{c.numero}</span>
+                    {/* El contrato se gestiona colgando de su oferta, así que el
+                        enlace lleva allí y no a una pantalla propia que no existe. */}
+                    <Link to={`/consultores/ofertas?oferta=${c.presupuesto_id}`} className={ENLACE}
+                      title="Abrir el contrato en su oferta">
+                      {c.numero}
+                    </Link>
                     <span className="text-[11px] text-[#7FA7B4]">
                       {c.modelo} · {(c.normas || []).join(' + ')} · {fmtFecha(c.fecha_contrato)}
                     </span>
@@ -182,6 +193,11 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                   <span className="text-[11.5px] font-bold text-[#9FC0CB]">
                     {fmtEur(c.importe)}{c.tipo === 'mes' ? '/mes' : ''}
                   </span>
+                  {c.url_pdf && (
+                    <a href={c.url_pdf} target="_blank" rel="noreferrer"
+                      className="shrink-0 text-[11px] font-bold text-brand-verdeTexto hover:underline"
+                      title="Abrir el contrato en PDF">PDF</a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -193,7 +209,8 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
               {ofertas.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold text-[#EAF4F7]">
+                    <Link to={`/consultores/ofertas?oferta=${o.id}`} className={ENLACE}
+                      title="Abrir la oferta para editarla">
                       {o.numero_oferta || 'Sin número'}
                       {/* Cuando el cruce ha sido por nombre y no por CIF, se dice:
                           es menos fiable y quien mira debe poder desconfiar. */}
@@ -202,7 +219,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                           ~ por nombre
                         </span>
                       )}
-                    </span>
+                    </Link>
                     <span className="text-[11px] text-[#7FA7B4]">
                       {o.modelo} · {(o.normas || []).join(' + ')} · {fmtFecha(o.fecha_emision || o.creado)}
                     </span>
@@ -211,10 +228,20 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                   <span className="text-[11.5px] font-bold text-[#9FC0CB]">
                     {fmtEur(o.precio)}{o.tipo === 'mes' ? '/mes' : ''}
                   </span>
-                  {o.url_pdf && (
-                    <a href={o.url_pdf} target="_blank" rel="noreferrer"
-                      className="text-[11px] font-bold text-brand-verdeTexto hover:underline">PDF</a>
-                  )}
+                  {/* Acceso directo al documento emitido, sin pasar por el
+                      listado de ofertas. */}
+                  <span className="flex shrink-0 gap-2">
+                    {o.url_pdf && (
+                      <a href={o.url_pdf} target="_blank" rel="noreferrer"
+                        className="text-[11px] font-bold text-brand-verdeTexto hover:underline"
+                        title="Abrir el PDF emitido">PDF</a>
+                    )}
+                    {o.url_pptx && (
+                      <a href={o.url_pptx} target="_blank" rel="noreferrer"
+                        className="text-[11px] font-bold text-[#9FC0CB] hover:underline"
+                        title="Abrir la presentación">PPT</a>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>

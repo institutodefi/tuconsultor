@@ -825,3 +825,59 @@ renovaciones, elección de alerta, orden por fecha descendente, normalización d
 razón social y casos vacíos (empresa sin datos y empresa nula). Todo correcto.
 
 App compilada.
+
+---
+
+# v196 · Enlaces desde la cartera de la empresa
+
+Cada línea de la caja «Ofertas, contratos y proyectos» lleva ahora a donde se
+gestiona. El título es el enlace: es lo que se pulsa por instinto.
+
+| Línea | Lleva a |
+|---|---|
+| Oferta | `/consultores/ofertas?oferta=ID`, con la edición abierta |
+| Contrato | `/consultores/ofertas?oferta=PRESUPUESTO_ID` — el contrato cuelga de su oferta |
+| Proyecto | `/consultores/proyectos?proyecto=ID`, con el proyecto seleccionado |
+
+Además, acceso directo a los documentos: PDF y PPT de cada oferta y PDF del
+contrato, sin pasar por el listado.
+
+## Ofertas acepta parámetros de URL
+
+`Ofertas.jsx` no leía la URL. Ahora entiende `?oferta=ID` (abre esa oferta en
+edición y resalta su fila) y `?empresa=NOMBRE` (deja el buscador filtrado). Si
+el id no existe —oferta borrada— lo dice en vez de quedarse en blanco.
+
+De paso, la apertura de la edición estaba duplicada en línea dentro del JSX de
+la tabla; se ha extraído a `abrirEdicion()`, que usan el lápiz y el enlace.
+
+## Hallazgo: la cartera leía la tabla equivocada
+
+Al buscar a dónde enlazar los proyectos apareció que **hay dos tablas de
+proyectos y `Proyectos.jsx` está huérfano**, como lo estaba
+`documento-oferta.mjs`:
+
+- `proyectos` — la que leía la cartera de v195. Su pantalla (`Proyectos.jsx`) no
+  está montada en ninguna ruta del portal.
+- `proyectos_cliente` — la operativa: tiene las tareas colgando, la usa
+  `ProyectosConfig` (la pantalla real de proyectos) y también
+  `DashboardProyectos`.
+
+La cartera se ha cambiado a `proyectos_cliente`. Con la anterior, la caja habría
+mostrado proyectos que el equipo no ve en su pantalla, o ninguno; y el enlace no
+habría podido apuntar a sitio alguno, porque esa pantalla no existe en el portal.
+
+Queda pendiente decidir qué hacer con `Proyectos.jsx` y la tabla `proyectos`:
+tienen el mismo problema que tenía el generador de PDF archivado. La diferencia
+es que aquí hay datos de por medio, así que conviene mirar antes si la tabla
+`proyectos` tiene filas y de cuándo.
+
+## Verificación
+
+`scripts/test-cartera.mjs` ampliado: además del cruce por CIF, comprueba que el
+contrato apunta a una oferta que existe en la misma cartera y que el cruce de
+`cliente_id` funciona comparando como texto (los uuid llegan a veces como
+string y a veces como objeto según el driver).
+
+App compilada y bundle verificado: las tres rutas salen con el prefijo correcto
+`/consultores`, no `/consultor`.

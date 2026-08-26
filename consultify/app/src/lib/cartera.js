@@ -4,11 +4,17 @@
 // El CRM tiene la información repartida en cuatro tablas que no se conocen
 // entre sí:
 //
-//   empresas        ficha del CRM (la que se está viendo)
-//   presupuestos    ofertas emitidas          → cruza por `cif`
-//   contratos       contratos                 → cruza por `cliente_cif`
-//   clientes        alta operativa del cliente→ cruza por `cif`
-//   proyectos       proyectos                 → cuelga de `clientes.cliente_id`
+//   empresas          ficha del CRM (la que se está viendo)
+//   presupuestos      ofertas emitidas          → cruza por `cif`
+//   contratos         contratos                 → cruza por `cliente_cif`
+//   clientes          alta operativa del cliente→ cruza por `cif`
+//   proyectos_cliente proyectos                 → cuelga de `clientes.id`
+//
+// Sobre la tabla de proyectos: existen dos, `proyectos` y `proyectos_cliente`.
+// La operativa —la que tiene pantalla en el portal, tareas colgando y de la que
+// lee el panel de proyectos— es `proyectos_cliente`. `proyectos` no está
+// montada en ninguna ruta. Se usa la primera, que además permite enlazar a una
+// pantalla que existe de verdad.
 //
 // La única llave común es el CIF. Por eso se normaliza antes de comparar: en la
 // práctica el mismo CIF aparece como «B-84867670», «b84867670» y «B84867670 »,
@@ -64,10 +70,10 @@ export function carteraDe(empresa, { presupuestos = [], contratos = [], clientes
   // Los proyectos cuelgan de `clientes`, no de `empresas`: primero hay que
   // localizar las fichas de cliente que corresponden a esta empresa.
   const idsCliente = new Set(
-    clientes.filter((c) => coincide(empresa, c.cif, c.empresa)).map((c) => c.id),
+    clientes.filter((c) => coincide(empresa, c.cif, c.empresa)).map((c) => String(c.id)),
   );
   const prj = proyectos
-    .filter((p) => idsCliente.has(p.cliente_id))
+    .filter((p) => idsCliente.has(String(p.cliente_id)))
     .map((p) => ({ ...p, sem: semaforoProyecto(p) }))
     .sort((a, b) => a.sem.orden - b.sem.orden
       || String(a.fecha_fin || '9999').localeCompare(String(b.fecha_fin || '9999')));
@@ -81,6 +87,8 @@ const vacio = () => ({
   facturacionAnual: 0, ultimaActividad: null,
 });
 
+// `proyectos_cliente` usa activo | pausado | cerrado; `proyectos` añade
+// 'implantación'. Se aceptan los dos vocabularios.
 const ESTADOS_ACTIVOS = ['implantación', 'activo'];
 
 function resumir(ofertas, contratos, proyectos) {
