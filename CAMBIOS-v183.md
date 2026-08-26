@@ -579,3 +579,78 @@ Añadida la dependencia (`^2.45.0`) y verificado que ya carga.
 **Conviene comprobar en el panel de Netlify si esa función tiene ejecuciones
 correctas recientes o solo errores.** Si llevaba tiempo caída, no hay copias de
 seguridad recientes.
+
+---
+
+# v192 · Cuadro de facturación: mes de inicio real y las 12 cuotas
+
+El cuadro mostraba «3 cargos en el primer periodo» empezando en agosto de 2026
+para una oferta de 350 €/mes. Tres fallos encadenados, todos corregidos.
+
+## 1 · El calendario empezaba HOY, no en el inicio del servicio
+
+`documento-oferta-premium.mjs` llamaba a `cuadroFacturacion({ firma: r.fecha_inicio })`,
+pero **`r.fecha_inicio` no se asignaba nunca** en `generar-oferta.mjs`. Al llegar
+`null`, `cuadroFacturacion` cae a `new Date()`.
+
+El generador ya pedía fecha de inicio y de certificación al usuario —la
+migración v84 sustituyó «meses» por fechas precisamente para esto— pero ninguna
+de las dos se enviaba a la función ni se guardaba en `presupuestos`.
+
+Corregido en tres puntos:
+- `GeneradorOfertas.jsx` envía `fecha_inicio` y `fecha_certificacion`, y las
+  guarda en la fila del presupuesto.
+- `Ofertas.jsx` las reenvía al regenerar, para que la oferta regenerada no se
+  recalcule desde hoy.
+- `generar-oferta.mjs` las lee del body y las pone en `r`.
+
+## 2 · Doce meses se convertían en tres
+
+```js
+r.meses = Math.max(parseInt(meses,10) || (r.fraccionado?.meses) || 3, 1);
+```
+
+Ese `3` era el mínimo de meses de una Implantación, y se aplicaba también a los
+modelos recurrentes cuando no llegaba `meses`. `cuadroFacturacion` recibía 3 y
+generaba tres cuotas de un contrato de doce.
+
+Ahora el fallback distingue: 12 en recurrentes (la permanencia del modelo),
+3 en el resto.
+
+## 3 · El PDF recortaba la tabla a tres filas
+
+```js
+const filas = r.tipo === 'mes' ? cuadro.filas.slice(0, 3) : cuadro.filas;
+```
+
+Con una línea de «… y 9 cuotas más». Se listan las doce: el cliente necesita ver
+qué mes empieza, qué mes acaba y cuánto lleva comprometido en cada uno.
+
+Ajustada la reserva de altura de la sección para que pagine sola en vez de
+forzar salto de página, y eliminada la línea de resumen.
+
+## Resultado
+
+```
+octubre de 2026     Cuota mensual 1 de 12     350,00 €      350,00 €
+noviembre de 2026   Cuota mensual 2 de 12     350,00 €      700,00 €
+…
+septiembre de 2027  Cuota mensual 12 de 12    350,00 €    4.200,00 €
+                              4.200,00 € en total · impuestos indirectos no incluidos
+```
+
+## Y de paso: el pie ya no solapa los logotipos
+
+Los tres logotipos se dibujaban de izquierda a derecha y el texto legal se
+colocaba desde el borde derecho **sin medir si quedaba sitio**. Con «TRESCORE
+PROYECTOS ITE, S.L.» ambos se pisaban.
+
+Ahora se mide antes: si el legal completo no cabe se usa una versión corta
+(razón social y CIF) y, si tampoco, se omite. Mejor un pie limpio que dos textos
+encimados.
+
+## Verificación
+
+Cuadro probado con inicio en octubre de 2026: 12 filas, primer mes = mes de
+inicio, último = septiembre de 2027, acumulado correcto y total 4.200 €.
+PDF generado y revisado a nivel visual. App compilada.

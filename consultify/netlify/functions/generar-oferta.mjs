@@ -459,6 +459,7 @@ export default async (req) => {
   }
 
   const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false } = body;
+  // `fecha_inicio` y `fecha_certificacion` se leen más abajo, al enriquecer `r`.
   const r = calcular(normas, modelo, { meses, tiene9001 });
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
 
@@ -520,7 +521,19 @@ export default async (req) => {
   // otros la otra, y la portada acabó enseñando el identificador interno.
   r.normaNombres = normas.map((id) => (NORMA_BY_ID[id]?.nombre || id));
   r.normasNombres = r.normaNombres;
-  r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || 3, 1);
+  // Duración en meses. El fallback de 3 estaba pensado para Implantación y se
+  // aplicaba también a los recurrentes: el cuadro de facturación salía con tres
+  // cuotas en un contrato de doce. En recurrentes el fallback es la permanencia
+  // del modelo, doce meses.
+  const esRecurrente = r.tipo === 'mes' && modelo !== 'Implantación';
+  r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || (esRecurrente ? 12 : 3), 1);
+
+  // ── Fechas del encargo ──
+  // Sin esto, `cuadroFacturacion` no recibía fecha de firma y arrancaba el
+  // calendario en la fecha de HOY: una oferta emitida en agosto para un
+  // servicio que empieza en octubre facturaba desde agosto.
+  r.fecha_inicio = body.fecha_inicio || null;
+  r.fecha_certificacion = body.fecha_certificacion || null;
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);
 

@@ -59,6 +59,9 @@ export default function Ofertas() {
           ref: r.numero_oferta || '', comercial: r.comercial || 'Alejandro',
           email: r.email || '', presupuesto_id: r.id,
           complejidad: r.complejidad, sedes: r.sedes,
+          // Las fechas guardadas mandan: si no se envían, el cuadro de
+          // facturación se recalcula desde hoy y no desde el inicio real.
+          fecha_inicio: r.fecha_inicio || null, fecha_certificacion: r.fecha_certificacion || null,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),

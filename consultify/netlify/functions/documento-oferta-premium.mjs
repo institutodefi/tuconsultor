@@ -362,9 +362,12 @@ export async function generarPDFOferta(r, cli, anexo) {
       certificacion: r.fecha_certificacion || null,
     });
     if (cuadro.filas.length > 1 || r.tipo === 'mes') {
-      seccion('Cuándo se factura', Math.min(cuadro.filas.length, 6) * 2 + 10);
+      // Se reserva sitio para la cabecera y unas cuantas filas; el resto pagina
+      // solo con `asegurar`. Pedir las doce de golpe forzaría un salto de página
+      // aunque cupieran ocho.
+      seccion('Cuándo se factura', Math.min(cuadro.filas.length, 8) * 2 + 12);
       parrafo(r.tipo === 'mes'
-        ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} cargos en el primer periodo.`
+        ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} ${cuadro.filas.length === 1 ? 'cargo' : 'cargos'} durante la vigencia del contrato.`
         : 'Calendario de facturación previsto desde la firma.');
 
       // Cabecera
@@ -381,8 +384,10 @@ export async function generarPDFOferta(r, cli, anexo) {
       p.drawLine({ start: { x: MG, y: cursor }, end: { x: MG + ANCHO, y: cursor }, thickness: 0.6, color: LINEA });
       cursor -= U * 2;
 
-      // Con cuota mensual no se listan doce filas iguales: se resume.
-      const filas = r.tipo === 'mes' ? cuadro.filas.slice(0, 3) : cuadro.filas;
+      // Se listan TODAS las cuotas. Antes se recortaba a tres «para no repetir
+      // filas iguales», pero el cliente necesita ver el calendario completo:
+      // qué mes empieza, qué mes acaba y cuánto lleva comprometido en cada uno.
+      const filas = cuadro.filas;
       let acumulado = 0;
       for (const f of filas) {
         asegurar(3);
@@ -394,12 +399,6 @@ export async function generarPDFOferta(r, cli, anexo) {
         const b = eur(f.base), t = eur(acumulado);
         p.drawText(b, { x: MG + ANCHO - U * 13 - reg.widthOfTextAtSize(b, 9.5), y: cursor, size: 9.5, font: reg, color: APAGADO });
         p.drawText(t, { x: MG + ANCHO - med.widthOfTextAtSize(t, 9.5), y: cursor, size: 9.5, font: med, color: TINTA });
-        cursor -= U * 2;
-      }
-      if (r.tipo === 'mes' && cuadro.filas.length > 3) {
-        asegurar(3);
-        p.drawText(`… y ${cuadro.filas.length - 3} cuotas más, hasta ${mesLargo(cuadro.filas.at(-1).mes)}.`,
-          { x: MG, y: cursor, size: 9, font: reg, color: APAGADO });
         cursor -= U * 2;
       }
 
@@ -574,25 +573,47 @@ export async function generarPDFOferta(r, cli, anexo) {
     // Orbita ya es un lockup horizontal como los otros dos, no una esfera suelta.
     const ALTOS = { tuconsultor: U * 2.1, consultify: U * 1.9, orbita: U * 2.3 };
     const CENTRO = ALTO_BANDA / 2;
-    let x = MG;
+
+    // Se mide ANTES de dibujar. Antes se dibujaban los logos y luego el texto
+    // legal se colocaba desde el borde derecho a ciegas: con tres logotipos y
+    // una razón social larga, ambos acababan pisándose en la misma banda.
+    const num = `${i + 1} / ${total}`;
+    const anchoNum = med.widthOfTextAtSize(num, 7.5);
+
+    let anchoLogos = 0;
+    const piezas = [];
     for (const nombre of ['tuconsultor', 'consultify', 'orbita']) {
       const img = pieLogos[nombre];
       if (!img) continue;
-      const h = ALTOS[nombre];
-      const w = h * (img.width / img.height);
-      pg.drawImage(img, { x, y: CENTRO - h / 2, width: w, height: h });
-      x += w + U * 2;
-      if (nombre !== 'orbita') {
+      const hh = ALTOS[nombre];
+      const ww = hh * (img.width / img.height);
+      piezas.push({ nombre, img, h: hh, w: ww });
+      anchoLogos += ww + U * 2;
+    }
+    if (piezas.length) anchoLogos -= U * 2;   // el último no lleva separación
+
+    let x = MG;
+    for (let k = 0; k < piezas.length; k++) {
+      const { img, h: hh, w: ww } = piezas[k];
+      pg.drawImage(img, { x, y: CENTRO - hh / 2, width: ww, height: hh });
+      x += ww + U * 2;
+      if (k < piezas.length - 1) {
         pg.drawCircle({ x: x - U, y: CENTRO, size: 0.9, color: rgb(0.35, 0.5, 0.58) });
       }
     }
 
-    // Datos legales, a la derecha de los logotipos
-    const legal = EM.legalPie;
-    const anchoLegal = reg.widthOfTextAtSize(legal, 7);
-    const num = `${i + 1} / ${total}`;
-    const anchoNum = med.widthOfTextAtSize(num, 7.5);
-    pg.drawText(legal, { x: MG + ANCHO - anchoNum - U * 2 - anchoLegal, y: CENTRO - 2.5, size: 7, font: reg, color: rgb(0.55, 0.68, 0.74) });
+    // El legal solo se dibuja si cabe de verdad entre los logos y el número de
+    // página. Si no cabe entero se prueba una versión corta (razón social y
+    // CIF); si tampoco, se omite: mejor un pie limpio que dos textos encimados.
+    const libre = ANCHO - anchoLogos - anchoNum - U * 4;
+    const largo = EM.legalPie;
+    const corto = `${EM.razonSocial} · CIF ${EM.cif}`;
+    const legal = reg.widthOfTextAtSize(largo, 7) <= libre ? largo
+      : (reg.widthOfTextAtSize(corto, 7) <= libre ? corto : null);
+    if (legal) {
+      const anchoLegal = reg.widthOfTextAtSize(legal, 7);
+      pg.drawText(legal, { x: MG + ANCHO - anchoNum - U * 2 - anchoLegal, y: CENTRO - 2.5, size: 7, font: reg, color: rgb(0.55, 0.68, 0.74) });
+    }
     pg.drawText(num, { x: MG + ANCHO - anchoNum, y: CENTRO - 2.5, size: 7.5, font: med, color: BLANCO });
   });
 
