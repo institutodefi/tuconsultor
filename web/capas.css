@@ -1,0 +1,191 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   ESCALA DE CAPAS · un solo sitio donde se decide qué va encima de qué
+   
+   Había cuatro elementos flotantes puestos por cuatro scripts distintos, cada
+   uno eligiendo su z-index a ojo: dos compartían el 9998 y se pisaban entre sí
+   y con el aviso de cookies.
+   
+   Cuando dos elementos comparten z-index, el que gana depende del orden en que
+   se carguen los scripts. Eso no es una decisión, es un accidente.
+   
+   El orden de abajo SÍ es una decisión, y este es el motivo:
+   
+     · Las cookies mandan sobre todo lo demás. Es una obligación legal y hasta
+       que no se responde no debería taparlo nada.
+     · La presentación de entrada va por encima del contenido pero por debajo
+       de las cookies: es decorativa.
+     · Los botones flotantes van al fondo. Son atajos, no interrupciones.
+   
+   Se apilan en vertical desde abajo a la derecha, con hueco entre ellos: por
+   eso cada uno tiene su distancia al borde reservada.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --capa-contenido:      1;
+  --capa-navegacion:    50;
+  --capa-flotante-2:  9000;   /* Orbita: el de más abajo */
+  --capa-flotante-1:  9100;   /* WhatsApp: justo encima */
+  --capa-ventana:     9500;   /* lo que abre un flotante al pulsarlo */
+  --capa-presentacion: 9800;  /* animación de entrada */
+  --capa-cookies:    10000;   /* siempre lo último: es obligación legal */
+
+  /* Sitio reservado a cada flotante, contando desde abajo. */
+  --flotante-borde:    20px;
+  --flotante-alto:     64px;
+  --flotante-hueco:    12px;
+  --flotante-1-abajo:  var(--flotante-borde);                                       /* 20px  */
+  --flotante-2-abajo:  calc(var(--flotante-borde) + var(--flotante-alto) + var(--flotante-hueco));  /* 96px */
+}
+
+/* Con el aviso de cookies abierto, los flotantes se apartan: taparlo con un
+   botón de WhatsApp es justo lo que no puede pasar. */
+body.cookies-abiertas .flotante-apilado {
+  transform: translateY(-120px);
+  transition: transform 0.25s ease;
+}
+
+.flotante-apilado { transition: transform 0.25s ease; }
+
+/* Con la ventana de WhatsApp abierta, el botón de Orbita se aparta: la ventana
+   mide 372 px de alto y lo tapaba por completo. Medido, no estimado. */
+body.wa-abierto #orbita-flotante,
+body.wa-abierto .orbita-flotante {
+  /* A un lado, no hacia arriba: subiéndolo acababa sobre el borde superior de
+     la ventana, que mide 372 px. Apartarlo en horizontal lo saca del todo y
+     además lo deja donde se espera encontrarlo, en la misma altura. */
+  transform: translateX(-336px);
+  transition: transform 0.25s ease;
+}
+
+/* En pantallas estrechas no hay sitio al lado: ahí sí se oculta, porque con la
+   ventana abierta el botón no se va a usar. */
+@media (max-width: 700px) {
+  body.wa-abierto #orbita-flotante,
+  body.wa-abierto .orbita-flotante {
+    transform: translateY(24px);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* En pantallas estrechas no caben dos apilados y una ventana abierta: se
+   reducen y se pegan más al borde. */
+@media (max-width: 480px) {
+  :root {
+    --flotante-borde: 14px;
+    --flotante-alto:  52px;
+    --flotante-hueco:  8px;
+  }
+}
+
+/* ── v183 · prosa larga, requisitos, bullets y migas ── */
+.tc-prose { max-width: 78ch; }
+.tc-prose p { color: var(--muted); font-size: 17px; line-height: 1.72; margin: 0 0 18px; }
+.tc-prose p:last-child { margin-bottom: 0; }
+.tc-prose strong { color: var(--ink); font-weight: 700; }
+.tc-prose a { color: var(--acento-texto); text-decoration: underline; text-underline-offset: 3px; }
+
+.tc-req-list { display: grid; gap: 14px; }
+.tc-req { border: 1.5px solid var(--line); border-radius: 18px; padding: 20px 22px; background: var(--white); }
+.tc-req h3 { font-size: 17px; letter-spacing: -0.01em; margin: 0 0 8px; color: var(--ink); }
+.tc-req p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+
+.tc-bullets { list-style: none; display: grid; gap: 12px; padding: 0; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px,100%), 1fr)); }
+.tc-bullets li { position: relative; padding-left: 26px; color: var(--muted); font-size: 15.5px; line-height: 1.65; }
+.tc-bullets li::before { content: "◆"; position: absolute; left: 0; top: 0; color: var(--verde-texto); font-weight: 800; }
+
+.tc-breadcrumb { margin-top: 26px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.tc-breadcrumb a { color: var(--muted); text-decoration: none; }
+.tc-breadcrumb a:hover, .tc-breadcrumb a:focus-visible { color: var(--acento-texto); text-decoration: underline; }
+.tc-breadcrumb [aria-current="page"] { color: var(--ink); font-weight: 700; }
+
+/* ── v183 · buscador de normas en portada ── */
+.tc-bn { position: relative; max-width: 640px; margin: 26px 0 6px; }
+.tc-bn-label { display: block; font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--verde-texto); margin-bottom: 9px; }
+.tc-bn-input { width: 100%; padding: 16px 22px; border-radius: 100px; border: 1.5px solid var(--line);
+  font: 600 15px Manrope, system-ui, sans-serif; color: var(--ink); background: var(--white); outline: none; }
+.tc-bn-input::placeholder { color: var(--muted); font-weight: 500; }
+.tc-bn-input:focus { border-color: var(--acento-texto); box-shadow: 0 0 0 4px rgba(249,144,1,.14); }
+.tc-bn-res { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 70; background: var(--white);
+  border: 1.5px solid var(--line); border-radius: 18px; padding: 8px; max-height: 340px; overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(0,0,0,.45); display: none; }
+.tc-bn-res.on { display: block; }
+.tc-bn-res a { display: block; padding: 11px 14px; border-radius: 12px; text-decoration: none; color: var(--ink); }
+.tc-bn-res a:hover, .tc-bn-res a:focus-visible, .tc-bn-res a.sel { background: rgba(249,144,1,.14); }
+.tc-bn-res b { display: block; font-size: 14.5px; font-weight: 800; }
+.tc-bn-res span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.tc-bn-none { padding: 14px; color: var(--muted); font-size: 14px; }
+.tc-bn-all { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 700;
+  color: var(--acento-texto); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── v186 · CTA fuerte ── */
+.tc-cta-fuerte { padding: 56px 0; }
+.tc-cta-caja {
+  display: grid; gap: 32px; align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  background: linear-gradient(135deg, #14213F 0%, #0E1730 100%);
+  border: 1.5px solid var(--line); border-left: 5px solid var(--acento-texto);
+  border-radius: 24px; padding: 38px 36px;
+}
+.tc-cta-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--verde-texto); margin-bottom: 10px; }
+.tc-cta-h { font-size: clamp(24px, 3vw, 34px); letter-spacing: -0.03em; margin: 0 0 14px; color: var(--ink); }
+.tc-cta-p { color: var(--muted); font-size: 16px; line-height: 1.65; margin: 0 0 18px; max-width: 52ch; }
+.tc-cta-p strong { color: var(--ink); }
+.tc-cta-lista { list-style: none; padding: 0; margin: 0; display: grid; gap: 9px; }
+.tc-cta-lista li { position: relative; padding-left: 24px; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+.tc-cta-lista li::before { content: "◆"; position: absolute; left: 0; color: var(--acento-texto); font-weight: 800; }
+.tc-cta-acciones { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.tc-cta-btn { text-align: center; font-size: 16px; padding: 15px 26px; }
+.tc-cta-tel { text-align: center; font-size: 19px; font-weight: 800; color: var(--ink);
+  text-decoration: none; letter-spacing: -0.01em; margin-top: 4px; }
+.tc-cta-tel:hover, .tc-cta-tel:focus-visible { color: var(--acento-texto); }
+.tc-cta-nota { text-align: center; font-size: 12.5px; color: var(--muted); }
+
+/* ── v186 · aviso ENS ── */
+.tc-ens-fondo { position: fixed; inset: 0; background: rgba(6, 11, 24, .72);
+  backdrop-filter: blur(3px); z-index: 9998; display: flex; align-items: center;
+  justify-content: center; padding: 20px; opacity: 0; transition: opacity .25s ease; }
+.tc-ens-fondo.on { opacity: 1; }
+.tc-ens {
+  position: relative; width: min(560px, 100%); max-height: 88vh; overflow-y: auto;
+  background: linear-gradient(150deg, #16244A 0%, #0E1730 100%);
+  border: 1.5px solid var(--line); border-top: 5px solid var(--acento-texto);
+  border-radius: 24px; padding: 34px 32px 28px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .6);
+  transform: translateY(14px) scale(.98); transition: transform .25s ease;
+}
+.tc-ens-fondo.on .tc-ens { transform: none; }
+.tc-ens-cerrar { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px;
+  border-radius: 50%; border: 1.5px solid var(--line); background: transparent;
+  color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.tc-ens-cerrar:hover, .tc-ens-cerrar:focus-visible { color: var(--ink); border-color: var(--acento-texto); }
+.tc-ens-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--verde-texto); margin-bottom: 10px; }
+.tc-ens h2 { font-size: clamp(22px, 3vw, 29px); letter-spacing: -0.03em; margin: 0 0 12px; color: var(--ink); }
+.tc-ens h2 .accent { color: var(--acento-texto); }
+.tc-ens p { color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0 0 16px; }
+.tc-ens ul { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 8px; }
+.tc-ens li { position: relative; padding-left: 24px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.tc-ens li::before { content: "◆"; position: absolute; left: 0; color: var(--acento-texto); font-weight: 800; }
+.tc-ens-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.tc-ens-acciones .btn { flex: 1 1 190px; text-align: center; }
+.tc-ens-no { display: block; width: 100%; margin-top: 14px; background: none; border: 0;
+  color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tc-ens-no:hover, .tc-ens-no:focus-visible { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .tc-ens-fondo, .tc-ens { transition: none; }
+  .tc-ens { transform: none; }
+}
+
+/* ── v188 · leyenda fiscal en bloques con precio ── */
+.tc-sin-impuestos {
+  margin: 18px auto 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
