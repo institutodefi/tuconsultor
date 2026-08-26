@@ -881,3 +881,69 @@ string y a veces como objeto según el driver).
 
 App compilada y bundle verificado: las tres rutas salen con el prefijo correcto
 `/consultores`, no `/consultor`.
+
+---
+
+# v197 · Certificación desvinculada del fin de contrato
+
+## El problema
+
+En el generador de ofertas había dos fechas: inicio y **certificación**. De la
+certificación salía todo: el plazo de planificación y, de hecho, el final del
+encargo. Son cosas distintas:
+
+- La **certificación** es la auditoría externa. Muchas veces no tiene fecha
+  cuando se emite la oferta, porque depende de la agenda del certificador.
+- El **fin de contrato** son doce meses desde el inicio, la permanencia del
+  modelo. Se sabe en cuanto se sabe cuándo se arranca.
+
+Al estar unidas, sin fecha de auditoría no se podía emitir la oferta.
+
+## Ahora
+
+Tres fechas independientes en el generador:
+
+| Campo | Comportamiento |
+|---|---|
+| Inicio del proyecto | — |
+| Fin de contrato | **12 meses desde el inicio, automático.** Editable; si se toca, deja de arrastrarse y aparece un enlace para volver a los 12 meses |
+| Certificación | **Opcional.** Si aún no hay auditoría, se deja vacía |
+
+El plazo con el que se planifican las tareas va hasta la auditoría si la hay, y
+si no hasta el fin de contrato. Se muestra cuál se está usando.
+
+Lo mismo en la edición de ofertas, con botón «Poner a 12 meses del inicio».
+
+## Migración `v94`
+
+`fecha_fin` en `presupuestos`, con relleno a doce meses del inicio para lo ya
+emitido —**no se copia de la certificación**, que volvería a mezclarlas— y
+constraint `fecha_fin > fecha_inicio`.
+
+La certificación **no se restringe contra el fin**: puede caer después
+(auditoría al final del ciclo) o antes (certificación temprana y resto del año
+en mantenimiento). Solo se exige que sea posterior al inicio.
+
+El trigger de v93 se amplía en lugar de crear otro: dos triggers BEFORE INSERT
+sobre la misma tabla es una fuente de sorpresas.
+
+## Dos correcciones que hicieron falta para que «deje generar»
+
+**1 · La duración mínima se medía contra la auditoría.** La regla «Compromiso
+necesita al menos N meses» se comprobaba contra la certificación, así que una
+auditoría en el mes cinco bloqueaba la oferta aunque el contrato durase doce.
+Ahora se mide contra el fin de contrato, que es lo que determina si el modelo es
+viable. La auditoría temprana pasa a ser un aviso, no un error.
+
+**2 · `sumarMeses()` desbordaba de mes.** `setMonth` salta al mes siguiente
+cuando el destino tiene menos días: 31 de enero + 1 mes daba **3 de marzo**, y
+29 de febrero de un bisiesto + 12 meses daba **1 de marzo** en vez del 28 de
+febrero. Afectaba a toda fecha de contrato calculada desde un día 29, 30 o 31.
+Corregido al último día del mes de destino.
+
+## Verificación
+
+`scripts/test-fechas-oferta.mjs`: fin automático (incluidos 31 de enero y 29 de
+febrero bisiesto), generación sin certificación, generación con certificación
+temprana, certificación posterior al fin, contrato demasiado corto (sí bloquea) y
+fin anterior al inicio (sí bloquea). Todo correcto. App compilada.

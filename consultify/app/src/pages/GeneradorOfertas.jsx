@@ -21,9 +21,35 @@ export default function GeneradorOfertas({ publico = false }) {
   const [modelo, setModelo] = useState('Implicación');
   // Fechas en vez de meses: nadie sabe de memoria si su proyecto son ocho meses
   // o diez, pero todo el mundo sabe cuándo tiene la auditoría.
+  //
+  // Tres fechas, y son cosas distintas que antes estaban mezcladas:
+  //   · inicio        cuándo arranca el servicio.
+  //   · fin           cuándo termina el contrato. Doce meses desde el inicio,
+  //                   que es la permanencia del modelo.
+  //   · certificación cuándo es la auditoría externa. OPCIONAL: en muchas
+  //                   ofertas todavía no hay fecha, y antes eso impedía
+  //                   generar la oferta porque el fin del contrato se sacaba
+  //                   de ella.
   const [fechaInicio, setFechaInicio] = useState(hoyISO());
-  const [fechaCert, setFechaCert] = useState(sumarMeses(hoyISO(), 12));
-  const meses = mesesEntre(fechaInicio, fechaCert) || '';
+  const [fechaFin, setFechaFin] = useState(sumarMeses(hoyISO(), 12));
+  const [finTocado, setFinTocado] = useState(false);   // ¿lo ha puesto la persona a mano?
+  const [fechaCert, setFechaCert] = useState('');
+
+  // Al mover el inicio, el fin le sigue a doce meses mientras nadie lo haya
+  // cambiado a mano. En cuanto se toca, deja de arrastrarse.
+  const cambiarInicio = (v) => {
+    setFechaInicio(v);
+    if (!finTocado) setFechaFin(v ? sumarMeses(v, 12) : '');
+  };
+
+  // Plazo para planificar las tareas: hasta la auditoría si la hay, y si no,
+  // hasta el fin del contrato. Así la oferta se puede emitir sin fecha de
+  // certificación, que es lo normal cuando aún no se ha reservado auditoría.
+  const meses = mesesEntre(fechaInicio, fechaCert || fechaFin) || '';
+  // Al motor se le manda la duración del CONTRATO: es lo que determina si el
+  // modelo es viable. Con la certificación, una auditoría temprana bloqueaba la
+  // generación aunque el contrato durase doce meses.
+  const mesesContrato = mesesEntre(fechaInicio, fechaFin) || meses;
   const [tiene9001, setTiene9001] = useState(false); // "ya tengo la 9001" → −50% horas 9001
   const [cli, setCli] = useState({ nombre: '', apellidos: '', empresa: '', cif: '', cargo: '', email: '', telefono: '', direccion: '' });
   const location = useLocation();
@@ -94,8 +120,8 @@ export default function GeneradorOfertas({ publico = false }) {
   };
 
   const res = useMemo(
-    () => calcular(sel, modelo, { meses, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes }),
-    [sel, modelo, meses, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan, ajustes],
+    () => calcular(sel, modelo, { meses: mesesContrato, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes }),
+    [sel, modelo, mesesContrato, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan, ajustes],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -159,6 +185,7 @@ export default function GeneradorOfertas({ publico = false }) {
         // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
         complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
         fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
+        fecha_fin: fechaFin || null,
         fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
         fases_plan: Object.keys(fasesPlan || {}).length ? fasesPlan : null,
         precio_catalogo: res?.precioAntesDeAjustes ?? precioLead,
@@ -225,6 +252,7 @@ export default function GeneradorOfertas({ publico = false }) {
           // Sin estas dos, el cuadro de facturación del PDF arrancaba en la
           // fecha de hoy en lugar de en el inicio real del servicio.
           fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
+          fecha_fin: fechaFin || null,
           fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
           ajustes, fasesPlan, emisora_id: emisora,
@@ -521,7 +549,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 // Un modelo que no cabe se deshabilita y DICE por qué al pasar
                 // por encima. Dejarlo elegible para luego dar un error al
                 // generar es hacer perder el tiempo.
-                const veto = motivoNoDisponible({ inicio: fechaInicio, certificacion: fechaCert, normas: sel }, mid);
+                const veto = motivoNoDisponible({ inicio: fechaInicio, certificacion: fechaCert || fechaFin, normas: sel }, mid);
                 return (
                   <button key={mid} onClick={() => !veto && setModelo(mid)} disabled={!!veto} title={veto || ''}
                     className={`min-w-[96px] flex-1 rounded-xl border-[1.5px] p-3 text-center transition ${
@@ -534,31 +562,48 @@ export default function GeneradorOfertas({ publico = false }) {
                 );
               })}
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
               <div>
-                <label className="label" htmlFor="g-inicio">Inicio estimado del proyecto</label>
+                <label className="label" htmlFor="g-inicio">Inicio del proyecto</label>
                 <input id="g-inicio" type="date" className="input !py-1.5 !text-[13px]"
-                  value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                  value={fechaInicio} onChange={(e) => cambiarInicio(e.target.value)} />
               </div>
               <div>
-                <label className="label" htmlFor="g-cert">Fecha de certificación</label>
+                <label className="label" htmlFor="g-fin">Fin de contrato</label>
+                <input id="g-fin" type="date" className="input !py-1.5 !text-[13px]"
+                  value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setFinTocado(true); }} />
+                <p className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+                  {finTocado
+                    ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
+                        onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? sumarMeses(fechaInicio, 12) : ''); }}>
+                        Volver a 12 meses</button></>
+                    : '12 meses desde el inicio.'}
+                </p>
+              </div>
+              <div>
+                <label className="label" htmlFor="g-cert">
+                  Certificación <span className="font-normal text-[#7FA7B4]">— opcional</span>
+                </label>
                 <input id="g-cert" type="date" className="input !py-1.5 !text-[13px]"
                   value={fechaCert} onChange={(e) => setFechaCert(e.target.value)} />
+                <p className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+                  Si aún no hay auditoría, déjala vacía.
+                </p>
               </div>
               <div>
-                <p className="label">Plazo disponible</p>
+                <p className="label">Plazo para planificar</p>
                 <p className="mt-1 text-lg font-extrabold text-[#EAF4F7]">
                   {meses || '—'} <span className="text-[12px] font-bold text-[#7FA7B4]">{meses === 1 ? 'mes' : 'meses'}</span>
                 </p>
                 <p className="text-[11px] leading-snug text-[#7FA7B4]">
-                  Con él se planifican las tareas.
+                  Hasta {fechaCert ? 'la certificación' : 'el fin de contrato'}.
                 </p>
               </div>
             </div>
 
             {/* Lo que las fechas impiden o aconsejan */}
             {(() => {
-              const v = validarPlanificacion({ inicio: fechaInicio, certificacion: fechaCert, modelo, normas: sel });
+              const v = validarPlanificacion({ inicio: fechaInicio, certificacion: fechaCert, fin: fechaFin, modelo, normas: sel });
               if (!v.errores.length && !v.avisos.length) return null;
               return (
                 <div className="mt-3 space-y-1.5">

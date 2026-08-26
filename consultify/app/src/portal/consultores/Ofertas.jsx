@@ -8,6 +8,17 @@ import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.j
 import ContratoDeOferta from './ContratoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 
+/** Doce meses después de una fecha ISO. Respeta el fin de mes: 31 ene → 28 feb. */
+function sumar12(fechaISO) {
+  if (!fechaISO) return '';
+  const d = new Date(`${fechaISO}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
+  const dia = d.getDate();
+  d.setMonth(d.getMonth() + 12);
+  if (d.getDate() < dia) d.setDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
 // Histórico interno de ofertas (todas las del equipo).
 export default function Ofertas() {
   const { role } = useAuth();
@@ -91,6 +102,7 @@ export default function Ofertas() {
           fecha_emision: r.fecha_emision || null,
           fecha_inicio: r.fecha_inicio || null,
           fecha_primer_pago: r.fecha_primer_pago || r.fecha_inicio || null,
+          fecha_fin: r.fecha_fin || null,
           fecha_certificacion: r.fecha_certificacion || null,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
@@ -177,6 +189,7 @@ export default function Ofertas() {
         fecha_emision: e.fecha_emision || null,
         fecha_inicio: e.fecha_inicio || null,
         fecha_primer_pago: e.fecha_primer_pago || e.fecha_inicio || null,
+        fecha_fin: e.fecha_fin || (e.fecha_inicio ? sumar12(e.fecha_inicio) : null),
         fecha_certificacion: e.fecha_certificacion || null,
       };
       await updateRow('presupuestos', e.id, patch);
@@ -193,7 +206,8 @@ export default function Ofertas() {
             ref: e.numero_oferta || '', email: patch.email || '', telefono: patch.telefono || '',
             complejidad: e.complejidad, sedes: e.sedes, presupuesto_id: e.id,
             fecha_emision: patch.fecha_emision, fecha_inicio: patch.fecha_inicio,
-            fecha_primer_pago: patch.fecha_primer_pago, fecha_certificacion: patch.fecha_certificacion,
+            fecha_primer_pago: patch.fecha_primer_pago, fecha_fin: patch.fecha_fin,
+            fecha_certificacion: patch.fecha_certificacion,
           }),
         });
         const j = await resp.json().catch(() => null);
@@ -222,6 +236,7 @@ export default function Ofertas() {
           fecha_emision: oferta.fecha_emision || null,
           fecha_inicio: oferta.fecha_inicio || null,
           fecha_primer_pago: oferta.fecha_primer_pago || oferta.fecha_inicio || null,
+          fecha_fin: oferta.fecha_fin || null,
           fecha_certificacion: oferta.fecha_certificacion || null,
         }),
       });
@@ -246,6 +261,11 @@ export default function Ofertas() {
     } else if (e.fecha_inicio && e.fecha_primer_pago && mes(e.fecha_inicio) !== mes(e.fecha_primer_pago)) {
       a.pago = 'El primer pago cae en un mes distinto al del inicio del proyecto.';
     }
+    if (e.fecha_inicio && e.fecha_fin && e.fecha_fin <= e.fecha_inicio) {
+      a.fin = 'El fin de contrato debe ser posterior al inicio.';
+    }
+    // La certificación NO se compara con el fin: puede caer después (auditoría
+    // al final del ciclo) o antes (certificación temprana). Son cosas distintas.
     if (e.fecha_inicio && e.fecha_certificacion && e.fecha_certificacion <= e.fecha_inicio) {
       a.cert = 'La certificación debe ser posterior al inicio.';
     }
@@ -405,8 +425,15 @@ export default function Ofertas() {
                   // El primer pago sigue al inicio mientras no se toque a mano:
                   // lo normal es cobrar desde el mes en que arranca el servicio.
                   const ini = e.target.value;
-                  const seguia = !edicion.fecha_primer_pago || edicion.fecha_primer_pago === edicion.fecha_inicio;
-                  setEdicion({ ...edicion, fecha_inicio: ini, fecha_primer_pago: seguia ? ini : edicion.fecha_primer_pago });
+                  const pagoSeguia = !edicion.fecha_primer_pago || edicion.fecha_primer_pago === edicion.fecha_inicio;
+                  // El fin también sigue al inicio mientras esté a doce meses
+                  // exactos: si alguien lo movió a mano, se respeta.
+                  const finSeguia = !edicion.fecha_fin || edicion.fecha_fin === sumar12(edicion.fecha_inicio);
+                  setEdicion({
+                    ...edicion, fecha_inicio: ini,
+                    fecha_primer_pago: pagoSeguia ? ini : edicion.fecha_primer_pago,
+                    fecha_fin: finSeguia && ini ? sumar12(ini) : edicion.fecha_fin,
+                  });
                 }} />
             </div>
             <div>
@@ -417,10 +444,29 @@ export default function Ofertas() {
               {avisoFechas.pago && <p className="mt-1 text-[11px] font-bold text-brand-orange">{avisoFechas.pago}</p>}
             </div>
             <div>
-              <label className="label" htmlFor="of-cert">Certificación prevista</label>
+              <label className="label" htmlFor="of-fin">Fin de contrato</label>
+              <input id="of-fin" type="date" className="input !py-1.5 !text-[13px]"
+                value={edicion.fecha_fin || ''}
+                onChange={(e) => setEdicion({ ...edicion, fecha_fin: e.target.value })} />
+              {edicion.fecha_inicio && edicion.fecha_fin !== sumar12(edicion.fecha_inicio) && (
+                <button type="button" className="mt-1 text-[11px] font-bold text-brand-orange hover:underline"
+                  onClick={() => setEdicion({ ...edicion, fecha_fin: sumar12(edicion.fecha_inicio) })}>
+                  Poner a 12 meses del inicio
+                </button>
+              )}
+              {avisoFechas.fin && <p className="mt-1 text-[11px] font-bold text-red-300">{avisoFechas.fin}</p>}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="label" htmlFor="of-cert">
+                Certificación <span className="font-normal text-[#7FA7B4]">— opcional</span>
+              </label>
               <input id="of-cert" type="date" className="input !py-1.5 !text-[13px]"
                 value={edicion.fecha_certificacion || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_certificacion: e.target.value })} />
+              <p className="mt-1 text-[11px] text-[#7FA7B4]">La auditoría externa. No define el fin del contrato.</p>
               {avisoFechas.cert && <p className="mt-1 text-[11px] font-bold text-red-300">{avisoFechas.cert}</p>}
             </div>
           </div>

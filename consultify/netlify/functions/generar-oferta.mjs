@@ -75,6 +75,17 @@ const ORANGE = rgb(0.961, 0.651, 0.137); // #F5A623
 const MUTED = rgb(0.357, 0.42, 0.525);
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
+/** Suma meses a una fecha ISO respetando el fin de mes (31 ene + 1 = 28 feb). */
+function sumarMesesISO(fechaISO, meses) {
+  if (!fechaISO) return null;
+  const d = new Date(`${String(fechaISO).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const dia = d.getDate();
+  d.setMonth(d.getMonth() + meses);
+  if (d.getDate() < dia) d.setDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
 async function generarPDF(r, cli, anexo) {
   // Delega en documento-oferta-premium.mjs, que monta el documento desde cero
   // en cada llamada: por eso una oferta regenerada sale siempre con la
@@ -541,6 +552,9 @@ export default async (req) => {
   // Primer pago: por defecto el mes de inicio del proyecto. De aquí arranca el
   // cuadro de facturación.
   r.fecha_primer_pago = body.fecha_primer_pago || body.fecha_inicio || null;
+  // Fin de contrato, independiente de la certificación. Si no llega, se deriva
+  // a doce meses del inicio: es la permanencia del modelo.
+  r.fecha_fin = body.fecha_fin || (body.fecha_inicio ? sumarMesesISO(body.fecha_inicio, 12) : null);
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);
 

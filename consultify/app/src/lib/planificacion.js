@@ -60,7 +60,13 @@ export const hoyISO = () => new Date().toISOString().slice(0, 10);
 export function sumarMeses(iso, meses) {
   const d = aFecha(iso) || new Date();
   const r = new Date(d);
+  const dia = r.getDate();
   r.setMonth(r.getMonth() + meses);
+  // `setMonth` desborda al mes siguiente cuando el destino tiene menos días:
+  // 29 de febrero de un bisiesto + 12 meses daba 1 de marzo, y 31 de enero + 1
+  // daba 3 de marzo. Se corrige al último día del mes de destino, que es lo que
+  // espera cualquiera al sumar meses a una fecha de contrato.
+  if (r.getDate() < dia) r.setDate(0);
   return r.toISOString().slice(0, 10);
 }
 
@@ -71,10 +77,25 @@ export function sumarMeses(iso, meses) {
  * leerlos). La distinción importa: bloquear por todo acaba en gente buscando
  * cómo saltárselo.
  */
-export function validarPlanificacion({ inicio, certificacion, modelo, normas = [] }) {
+/**
+ * @param {object} p
+ * @param {string} p.inicio         inicio del servicio
+ * @param {string} [p.certificacion] auditoría externa. OPCIONAL.
+ * @param {string} [p.fin]           fin de contrato. Si no se pasa, se usa la
+ *   certificación por compatibilidad con las llamadas antiguas.
+ *
+ * La duración mínima de un modelo recurrente se mide contra el FIN DE CONTRATO,
+ * no contra la certificación: son doce meses de acompañamiento aunque la
+ * auditoría caiga en el mes cinco. Medirlo contra la certificación impedía
+ * emitir ofertas con auditoría temprana, que es un caso normal.
+ */
+export function validarPlanificacion({ inicio, certificacion, fin, modelo, normas = [] }) {
   const errores = [];
   const avisos = [];
-  const meses = mesesEntre(inicio, certificacion);
+  const finContrato = fin || certificacion;
+  const mesesContrato = mesesEntre(inicio, finContrato);
+  // Plazo de trabajo: hasta la auditoría si la hay, y si no hasta el fin.
+  const meses = mesesEntre(inicio, certificacion || finContrato);
 
   const fi = aFecha(inicio), fc = aFecha(certificacion);
   if (fi && fc && fc <= fi) {
@@ -96,13 +117,22 @@ export function validarPlanificacion({ inicio, certificacion, modelo, normas = [
     );
   }
 
-  // ── Regla 1 · plazo mínimo para los recurrentes ──
-  if (MODELOS_RECURRENTES.includes(modelo) && meses != null && meses < MESES_MINIMOS_RECURRENTE) {
+  // ── Regla 1 · duración mínima del contrato en los recurrentes ──
+  // Se mide contra el fin de contrato, no contra la auditoría.
+  if (MODELOS_RECURRENTES.includes(modelo) && mesesContrato != null && mesesContrato < MESES_MINIMOS_RECURRENTE) {
     errores.push(
-      `Quedan ${meses} ${meses === 1 ? 'mes' : 'meses'} hasta la certificación y el modelo ${modelo} ` +
-      `necesita al menos ${MESES_MINIMOS_RECURRENTE}. Con ese plazo, el sistema no llega a la auditoría ` +
-      'en condiciones. Para plazos cortos: Apoyo o Implantación.',
+      `El contrato dura ${mesesContrato} ${mesesContrato === 1 ? 'mes' : 'meses'} y el modelo ${modelo} ` +
+      `necesita al menos ${MESES_MINIMOS_RECURRENTE}. Amplía el fin de contrato o elige Apoyo o Implantación.`,
     );
+  }
+
+  // Aviso, no error: auditoría antes de que termine el contrato es normal
+  // (certificación temprana y el resto del año en mantenimiento).
+  if (certificacion && finContrato && certificacion !== finContrato) {
+    const mc = mesesEntre(inicio, certificacion);
+    if (MODELOS_RECURRENTES.includes(modelo) && mc != null && mc < 3) {
+      avisos.push(`Solo ${mc} ${mc === 1 ? 'mes' : 'meses'} hasta la auditoría: el sistema llegará muy justo, aunque el contrato siga después.`);
+    }
   }
 
   // Avisos de plazo, sin bloquear.
