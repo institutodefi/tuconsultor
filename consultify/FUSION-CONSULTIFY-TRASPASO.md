@@ -140,7 +140,7 @@ Hay **~154 apariciones de `consultify.pro`** en el código (HTML, funciones, JSX
 
 ⚠️ **Inconsistencia de email detectada:** conviven `hola@tuconsultor.com` (en index.html, ClientePortal, funciones de envío) y `hola@tuconsultor.com` (en páginas legales). Antes de reemplazar, el usuario debe decidir el email único (recomendado: `hola@tuconsultor.com`, que probablemente ya está verificado en Brevo). **No reemplazar en masa sin confirmar esto** — afecta al remitente de los correos (si el remitente no está verificado en Brevo, los correos no salen).
 
-Archivos con URLs a revisar: `public-site/index.html`, `public-site/blog/*`, `public-site/orbita.html`, `public-site/legal/aviso-legal.html`, `netlify.toml`, y funciones `blog-rss.mjs`, `agenda-feed.mjs`, `documento-oferta.mjs`, `generar-oferta.mjs`, `solicitar-brochure.mjs`, `admin-usuarios.mjs`.
+Archivos con URLs a revisar: `public-site/index.html`, `public-site/blog/*`, `public-site/orbita.html`, `public-site/legal/aviso-legal.html`, `netlify.toml`, y funciones `blog-rss.mjs`, `agenda-feed.mjs`, `documento-oferta-premium.mjs`, `generar-oferta.mjs`, `solicitar-brochure.mjs`, `admin-usuarios.mjs`.
 
 ---
 

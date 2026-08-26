@@ -135,7 +135,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   const importe = esImpl ? (r.formasPago?.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
   cover.drawText(eur0(importe), { x: MG, y: yImp + U * 1.5, size: 44, font: bold, color: BLANCO });
   const anchoImp = bold.widthOfTextAtSize(eur0(importe), 44);
-  cover.drawText(esMes ? '/mes · sin IVA' : 'sin IVA', { x: MG + anchoImp + U, y: yImp + U * 1.9, size: 10, font: reg, color: rgb(0.55, 0.72, 0.78) });
+  cover.drawText(esMes ? '/mes · sin impuestos' : 'sin impuestos', { x: MG + anchoImp + U, y: yImp + U * 1.9, size: 10, font: reg, color: rgb(0.55, 0.72, 0.78) });
   if (esImpl && r.formasPago) {
     cover.drawText(`con ${Math.round(r.formasPago.descuentoUnico * 100)} % de descuento por pago único`,
       { x: MG, y: yImp - U * 0.6, size: 9, font: reg, color: NARANJA });
@@ -284,9 +284,9 @@ export async function generarPDFOferta(r, cli, anexo) {
   yc -= U * 4;
   p.drawText(eur(esImpl ? (r.formasPago?.dos?.sinIva ?? r.precioCatalogo) : r.precioCatalogo),
     { x: MG + U * 3, y: yc, size: 26, font: bold, color: TINTA });
-  p.drawText(esMes ? '/mes sin IVA' : 'sin IVA', { x: MG + U * 3 + bold.widthOfTextAtSize(eur(r.precioCatalogo), 26) + U, y: yc + 3, size: 9.5, font: reg, color: APAGADO });
+  p.drawText(esMes ? '/mes sin impuestos' : 'sin impuestos', { x: MG + U * 3 + bold.widthOfTextAtSize(eur(r.precioCatalogo), 26) + U, y: yc + 3, size: 9.5, font: reg, color: APAGADO });
   yc -= U * 2.6;
-  p.drawText(`IVA 21 % · ${eur(r.iva)}     Total ${eur(r.totalConIva)}${esMes ? '/mes' : ''}`,
+  p.drawText('Impuestos indirectos no incluidos.',
     { x: MG + U * 3, y: yc, size: 9.5, font: reg, color: APAGADO });
   cursor = cursor - alturaCaja - U;
 
@@ -336,11 +336,11 @@ export async function generarPDFOferta(r, cli, anexo) {
       p.drawText(String.fromCharCode(65 + i), { x: x + U * 1.5, y: yy, size: 8, font: bold, color: elegida ? NARANJA : APAGADO });
       p.drawText(op.titulo, { x: x + U * 4, y: yy, size: 11.5, font: bold, color: TINTA });
       yy -= U * 3;
-      p.drawText(eur(op.total), { x: x + U * 1.5, y: yy, size: 16, font: bold, color: TINTA });
-      p.drawText('con IVA', { x: x + U * 1.5 + bold.widthOfTextAtSize(eur(op.total), 16) + 5, y: yy + 2, size: 7.5, font: reg, color: APAGADO });
+      p.drawText(eur(op.sinIva), { x: x + U * 1.5, y: yy, size: 16, font: bold, color: TINTA });
+      p.drawText('sin impuestos', { x: x + U * 1.5 + bold.widthOfTextAtSize(eur(op.sinIva), 16) + 5, y: yy + 2, size: 7.5, font: reg, color: APAGADO });
       yy -= U * 2.2;
       if (op.ahorro) p.drawText(`Ahorras ${eur(op.ahorro)}`, { x: x + U * 1.5, y: yy, size: 9, font: med, color: TEAL });
-      else if (op.cuota1) p.drawText(`${eur(op.cuota1)} + ${eur(op.cuota2)}`, { x: x + U * 1.5, y: yy, size: 9, font: med, color: APAGADO });
+      else if (op.cuota1SinIva) p.drawText(`${eur(op.cuota1SinIva)} + ${eur(op.cuota2SinIva)}`, { x: x + U * 1.5, y: yy, size: 9, font: med, color: APAGADO });
       yy -= U * 2.2;
       for (const l of partir(op.condicion, reg, 8.5, anchoCol - U * 3)) {
         p.drawText(l, { x: x + U * 1.5, y: yy, size: 8.5, font: reg, color: APAGADO });
@@ -371,7 +371,10 @@ export async function generarPDFOferta(r, cli, anexo) {
       asegurar(4);
       p.drawText('FECHA', { x: MG, y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       p.drawText('CONCEPTO', { x: MG + U * 13, y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
-      const hBase = 'BASE', hTot = 'TOTAL';
+      // Antes la segunda columna era el importe CON IVA. En un presupuesto sin
+      // impuestos eso no tiene sitio: se sustituye por el acumulado, que sí
+      // aporta (cuánto llevas comprometido a esa fecha).
+      const hBase = 'IMPORTE', hTot = 'ACUMULADO';
       p.drawText(hBase, { x: MG + ANCHO - U * 13 - med.widthOfTextAtSize(hBase, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       p.drawText(hTot, { x: MG + ANCHO - med.widthOfTextAtSize(hTot, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       cursor -= U * 1.2;
@@ -380,13 +383,15 @@ export async function generarPDFOferta(r, cli, anexo) {
 
       // Con cuota mensual no se listan doce filas iguales: se resume.
       const filas = r.tipo === 'mes' ? cuadro.filas.slice(0, 3) : cuadro.filas;
+      let acumulado = 0;
       for (const f of filas) {
         asegurar(3);
+        acumulado = Math.round((acumulado + Number(f.base || 0)) * 100) / 100;
         p.drawText(mesLargo(f.mes), { x: MG, y: cursor, size: 9.5, font: reg, color: TINTA });
         for (const l of partir(f.concepto, reg, 9.5, ANCHO - U * 27).slice(0, 1)) {
           p.drawText(l, { x: MG + U * 13, y: cursor, size: 9.5, font: reg, color: APAGADO });
         }
-        const b = eur(f.base), t = eur(f.total);
+        const b = eur(f.base), t = eur(acumulado);
         p.drawText(b, { x: MG + ANCHO - U * 13 - reg.widthOfTextAtSize(b, 9.5), y: cursor, size: 9.5, font: reg, color: APAGADO });
         p.drawText(t, { x: MG + ANCHO - med.widthOfTextAtSize(t, 9.5), y: cursor, size: 9.5, font: med, color: TINTA });
         cursor -= U * 2;
@@ -400,7 +405,7 @@ export async function generarPDFOferta(r, cli, anexo) {
 
       p.drawLine({ start: { x: MG, y: cursor + U * 0.8 }, end: { x: MG + ANCHO, y: cursor + U * 0.8 }, thickness: 0.6, color: LINEA });
       cursor -= U * 0.4;
-      const tot = `${eur(cuadro.totalBase)} + IVA · ${eur(cuadro.total)} en total`;
+      const tot = `${eur(cuadro.totalBase)} en total · impuestos indirectos no incluidos`;
       p.drawText(tot, { x: MG + ANCHO - bold.widthOfTextAtSize(tot, 10), y: cursor, size: 10, font: bold, color: TINTA });
       cursor -= U * 3;
     }

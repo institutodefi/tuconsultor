@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FASES, calcularFases, TARIFA_PROYECTO } from '../lib/fases.js';
+import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CÁLCULO POR FASES · Planes de Igualdad y Diversidad
@@ -150,8 +151,8 @@ export default function FasesPlanes({ planes, onTotal, onSeleccion }) {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-extrabold text-[#EAF4F7]">{eur(res.importe)}<span className="ml-1 text-[12px] font-bold text-[#7FA7B4]">sin IVA</span></p>
-            <p className="text-[11.5px] text-[#9FC0CB]">{eur(res.total)} con IVA</p>
+            <p className="text-2xl font-extrabold text-[#EAF4F7]">{eur(res.importe)}<span className="ml-1 text-[12px] font-bold text-[#7FA7B4]">{SUFIJO_SIN_IMPUESTOS}</span></p>
+            <p className="text-[11.5px] text-[#9FC0CB]">{LEYENDA_IMPUESTOS}</p>
           </div>
         </div>
       )}

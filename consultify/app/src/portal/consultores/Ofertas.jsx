@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { listAll, updateRow, deleteRow } from '../../lib/data.js';
+import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
 import { COMPLEJIDADES } from '../../lib/proyecto.js';
@@ -363,7 +364,7 @@ export default function Ofertas() {
             <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
               <th className="py-2">Nº oferta</th><th className="py-2">Fecha</th><th className="py-2">Cliente</th>
               <th className="py-2">Comercial</th><th className="py-2">Normas</th><th className="py-2">Modelo</th>
-              <th className="py-2 text-right">Importe</th><th className="py-2 text-right">Documentos</th>
+              <th className="py-2 text-right">Importe<br /><span className="text-[9.5px] font-semibold normal-case tracking-normal text-[#5E8494]">sin impuestos</span></th><th className="py-2 text-right">Documentos</th>
             </tr></thead>
             <tbody className="divide-y divide-navy-50">
               {lista.map(r => (
@@ -411,6 +412,7 @@ export default function Ofertas() {
               ))}
             </tbody>
           </table>
+            <p className="mt-2 text-[11px] font-medium text-[#7FA7B4]">{LEYENDA_IMPUESTOS}</p>
         </div>
       )}
 

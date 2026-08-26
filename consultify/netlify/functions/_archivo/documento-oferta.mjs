@@ -271,18 +271,27 @@ export async function generarPDFOferta(r, cli, anexo) {
   h2('5. Condiciones');
   const condiciones = [
     esImpl
-      ? 'Forma de pago: 50% por adelantado al inicio + 25% a mitad de proyecto + 25% antes de la auditoría externa.'
-      : (esMes ? 'Forma de pago: cuota mensual recurrente. Permanencia mínima 12 meses.' : 'Forma de pago: bolsa de horas prepagada al 100%.'),
+      ? 'Forma de pago: pago único al inicio con descuento, o dos cuotas del 50 % (a la firma y antes del inicio de las auditorías). Se detallan ambas más abajo.'
+      : (esMes
+          ? 'Forma de pago: cuota mensual recurrente durante los doce meses de duración del contrato. La cuota se '
+            + 'devenga íntegra cada mes, con independencia de las horas efectivamente empleadas en el periodo.'
+          : 'Forma de pago: bolsa de horas prepagada al 100%.'),
+    ...(esMes ? ['Renovación: un mes antes de la finalización del contrato se emitirá una oferta de renovación para el '
+      + 'siguiente periodo anual. La renovación requiere aceptación expresa y no opera de forma automática.'] : []),
     'Inicio del proyecto: el proyecto se iniciará al recibir el importe de la primera factura o cuota.',
     'Datos para el pago (transferencia): IBAN ES68 0049 5191 36 2216400367 · IBAN ES52 2100 2996 57 0200079589.',
+    'Impuestos indirectos no incluidos. Todos los importes de esta oferta se expresan sin impuestos. '
+      + 'El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se '
+      + 'repercute en factura. En operaciones intracomunitarias con NIF-IVA válido en VIES se aplica la '
+      + 'inversión del sujeto pasivo.',
     'Importe cerrado: precio fijo por el alcance descrito, con independencia del nº de sesiones.',
     'Incluye: documentación del sistema, formación al equipo, auditoría interna y acompañamiento a la certificación.',
     'No incluye: tasas de la entidad certificadora ni acompañamiento presencial a la auditoría externa (600 €/jornada).',
     'Validez de la oferta: 30 días naturales desde su fecha de emisión.',
     ...(r.formasPago ? [
       'FORMAS DE PAGO DE LA IMPLANTACIÓN · solo estas dos:',
-      `A · ${r.formasPago.unico.titulo}: ${r.formasPago.unico.condicion} Importe: ${(r.formasPago.unico.total).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} con IVA.`,
-      `B · ${r.formasPago.dos.titulo}: ${r.formasPago.dos.condicion} Importe: ${(r.formasPago.dos.total).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} con IVA, en dos cuotas iguales.`,
+      `A · ${r.formasPago.unico.titulo}: ${r.formasPago.unico.condicion} Importe: ${(r.formasPago.unico.sinIva).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}, impuestos indirectos no incluidos.`,
+      `B · ${r.formasPago.dos.titulo}: ${r.formasPago.dos.condicion} Importe: ${(r.formasPago.dos.sinIva).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}, impuestos indirectos no incluidos, en dos cuotas iguales.`,
       r.formasPago.nota,
     ] : []),
     ...(r.modeloMantenimiento ? [
@@ -518,7 +527,9 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
   page.drawRectangle({ x: M, y: panelY + panelH - 4, width: tableW, height: 4, color: ORANGE });
 
   // Cifra principal según el modelo
-  const cifra = esImpl && r.fraccionado ? eur(r.fraccionado.totalConIva) : eur(r.totalConIva);
+  // Presupuesto: SIEMPRE base sin impuestos. El impuesto aplicable (IVA, IGIC o
+  // IPSI) depende del domicilio fiscal del cliente y se repercute en factura.
+  const cifra = esImpl && r.fraccionado ? eur(r.fraccionado.totalSinIva) : eur(r.precioCatalogo);
   const etiquetaCifra = esImpl ? 'INVERSIÓN TOTAL DEL PROGRAMA'
     : (esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN TOTAL');
   const sufijo = esMes && !esImpl ? '/mes' : '';
@@ -531,7 +542,7 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
     const wc = bold.widthOfTextAtSize(cifra, tamCifra);
     page.drawText(sufijo, { x: M + 22 + wc + 6, y: panelY + panelH - 66, size: 13, font: reg, color: AZUL_CLARO });
   }
-  page.drawText('IVA incluido', { x: M + 22, y: panelY + panelH - 88, size: 8.5, font: reg, color: AZUL_CLARO });
+  page.drawText('Impuestos indirectos no incluidos', { x: M + 22, y: panelY + panelH - 88, size: 8.5, font: reg, color: AZUL_CLARO });
 
   // Dato secundario a la derecha del panel
   const derX = M + tableW - 165;
@@ -539,13 +550,13 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
     page.drawText('DURACIÓN', { x: derX, y: panelY + panelH - 32, size: 7.5, font: bold, color: ORANGE });
     page.drawText(`${r.fraccionado.meses} meses`, { x: derX, y: panelY + panelH - 52, size: 15, font: bold, color: BLANCO });
     page.drawText('EQUIVALE A', { x: derX, y: panelY + panelH - 72, size: 7.5, font: bold, color: ORANGE });
-    const mensual = r.fraccionado.totalConIva / r.fraccionado.meses;
+    const mensual = r.fraccionado.totalSinIva / r.fraccionado.meses;
     page.drawText(`${eur(mensual)}/mes`, { x: derX, y: panelY + panelH - 88, size: 10.5, font: bold, color: AZUL_CLARO });
   } else if (esMes) {
     page.drawText('COMPROMISO', { x: derX, y: panelY + panelH - 32, size: 7.5, font: bold, color: ORANGE });
     page.drawText('12 meses', { x: derX, y: panelY + panelH - 52, size: 15, font: bold, color: BLANCO });
     page.drawText('ANUAL EQUIVALENTE', { x: derX, y: panelY + panelH - 72, size: 7.5, font: bold, color: ORANGE });
-    page.drawText(eur(r.totalConIva * 12), { x: derX, y: panelY + panelH - 88, size: 10.5, font: bold, color: AZUL_CLARO });
+    page.drawText(eur(r.precioCatalogo * 12), { x: derX, y: panelY + panelH - 88, size: 10.5, font: bold, color: AZUL_CLARO });
   } else {
     page.drawText('MODALIDAD', { x: derX, y: panelY + panelH - 32, size: 7.5, font: bold, color: ORANGE });
     page.drawText('Pago único', { x: derX, y: panelY + panelH - 52, size: 15, font: bold, color: BLANCO });
@@ -560,14 +571,14 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
   ry -= 20;
 
   const base = esImpl && r.fraccionado ? r.fraccionado.totalSinIva : r.precioCatalogo;
-  const ivaImp = esImpl && r.fraccionado ? (r.fraccionado.totalConIva - r.fraccionado.totalSinIva) : r.iva;
-  const totalImp = esImpl && r.fraccionado ? r.fraccionado.totalConIva : r.totalConIva;
   const sufBase = esMes && !esImpl ? '/mes' : '';
 
+  // Sin línea de impuesto, base y total coinciden: una sola fila destacada
+  // evita repetir la misma cifra dos veces seguidas.
   const filas = [
-    [esImpl ? 'Programa completo de implantación' : (esMes ? 'Cuota mensual (base imponible)' : 'Bolsa de horas (base imponible)'), eur(base) + sufBase, false],
-    ['IVA (21%)', eur(ivaImp), false],
-    [esImpl ? 'TOTAL DEL PROGRAMA' : (esMes ? 'TOTAL MENSUAL' : 'TOTAL'), eur(totalImp) + sufBase, true],
+    [esImpl ? 'Programa completo de implantación · sin impuestos'
+            : (esMes ? 'Cuota mensual · sin impuestos' : 'Bolsa de horas · sin impuestos'),
+     eur(base) + sufBase, true],
   ];
   for (const [con, imp, destacado] of filas) {
     if (destacado) {
@@ -589,12 +600,14 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
 
   if (esImpl && r.fraccionado) {
     // Tres hitos en columnas
+    // Dos cuotas del 50 %, importes sin impuestos.
+    const c1 = r.fraccionado.cuota1SinIva ?? (r.fraccionado.totalSinIva / 2);
+    const c2 = r.fraccionado.cuota2SinIva ?? (r.fraccionado.totalSinIva - c1);
     const hitos = [
-      ['50%', 'Al inicio', eur(r.fraccionado.cuota1)],
-      ['25%', 'A mitad del proyecto', eur(r.fraccionado.cuota2)],
-      ['25%', 'Al finalizar', eur(r.fraccionado.cuota3)],
+      ['50%', 'A la firma', eur(c1)],
+      ['50%', 'Antes de las auditorías', eur(c2)],
     ];
-    const colW = tableW / 3;
+    const colW = tableW / hitos.length;
     hitos.forEach(([pct, cuando, imp], i) => {
       const cx = M + i * colW;
       page.drawRectangle({ x: cx + 2, y: ry - 44, width: colW - 8, height: 56, color: SOFT });
@@ -641,9 +654,14 @@ function presupuesto(page, r, esImpl, esMes, M, y, W, bold, reg, wrap) {
   });
   ry -= 40;
 
-  // Nota final
-  page.drawText('No incluye tasas de la entidad certificadora ni acompañamiento presencial a la auditoría externa (600 €/jornada).',
-    { x: M, y: ry, size: 7.5, font: reg, color: MUTED });
+  // Nota final. Se envuelve por si no cabe en una línea, y se devuelve la Y
+  // por debajo de la última línea dibujada: si no, el epígrafe siguiente se
+  // dibujaba encima de esta nota.
+  const notaFinal = 'No incluye tasas de la entidad certificadora ni acompañamiento presencial a la auditoría externa (600 €/jornada).';
+  for (const ln of wrap(notaFinal, reg, 7.5, tableW)) {
+    page.drawText(ln, { x: M, y: ry, size: 7.5, font: reg, color: MUTED });
+    ry -= 11;
+  }
 
-  return ry - 10; // devuelve la Y final para que el llamador continúe
+  return ry - 18; // Y final, con aire para el siguiente epígrafe
 }

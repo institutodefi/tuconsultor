@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
+import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../../lib/impuestos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MIS PROPUESTAS · el cliente acepta o rechaza
@@ -80,9 +81,10 @@ export default function MisOfertas({ ofertas, contratos = [], onCambio }) {
             <p className="mt-2 text-xl font-extrabold text-[#EAF4F7]">
               {eur(o.precio)}
               <span className="ml-1 text-[12px] font-bold text-[#7FA7B4]">
-                {o.tipo === 'mes' ? '/mes · sin IVA' : 'sin IVA'}
+                {o.tipo === 'mes' ? `/mes · ${SUFIJO_SIN_IMPUESTOS}` : SUFIJO_SIN_IMPUESTOS}
               </span>
             </p>
+            <p className="mt-1 text-[11px] text-[#7FA7B4]">{LEYENDA_IMPUESTOS}</p>
 
             {o.notas_oferta && (
               <p className="mt-2 whitespace-pre-line rounded-lg bg-[#0D3242] px-3 py-2 text-[12px] leading-relaxed text-[#B9D2DA]">

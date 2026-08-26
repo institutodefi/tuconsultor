@@ -4,6 +4,7 @@
 // oscuro de Órbita y añadirle el «desde» y el disclaimer de lib/legal.js.
 import { useMemo, useState } from 'react';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, compararModelos, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
+import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, siguienteNumeroOferta } from '../lib/data.js';
 import { useAuth } from '../lib/auth.jsx';
 
@@ -179,22 +180,18 @@ export default function Calculadora() {
                     {res.fraccionado ? (
                       <>
                         <tr><td className="py-2 font-semibold text-[#9FC0CB]">Duración implantación</td><td className="py-2 text-right font-bold">{res.fraccionado.meses} meses</td></tr>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalSinIva)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.totalConIva - res.fraccionado.totalSinIva)}</td></tr>
-                        <tr><td className="py-3 text-base font-extrabold">Total</td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.fraccionado.totalConIva)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% por adelantado</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota1)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% antes de auditoría externa</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota2)}</td></tr>
+                        <tr><td className="py-3 text-base font-extrabold">Total <span className="text-[11px] font-bold uppercase tracking-wide text-[#9FC0CB]">{SUFIJO_SIN_IMPUESTOS}</span></td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.fraccionado.totalSinIva)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% por adelantado</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota1SinIva)}</td></tr>
+                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">50% antes de auditoría externa</td><td className="py-2 text-right font-bold">{fmtEUR(res.fraccionado.cuota2SinIva)}</td></tr>
                       </>
                     ) : (
                       <>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">Subtotal</td><td className="py-2 text-right font-bold">{fmtEUR(res.precioCatalogo)}</td></tr>
-                        <tr><td className="py-2 font-semibold text-[#9FC0CB]">IVA 21 %</td><td className="py-2 text-right font-bold">{fmtEUR(res.iva)}</td></tr>
-                        <tr><td className="py-3 text-base font-extrabold">Total{res.tipo === 'mes' ? ' / mes' : ''}</td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.totalConIva)}</td></tr>
+                        <tr><td className="py-3 text-base font-extrabold">Total{res.tipo === 'mes' ? ' / mes' : ''} <span className="text-[11px] font-bold uppercase tracking-wide text-[#9FC0CB]">{SUFIJO_SIN_IMPUESTOS}</span></td><td className="py-3 text-right text-base font-extrabold text-[#EAF4F7]">{fmtEUR(res.precioCatalogo)}</td></tr>
                       </>
                     )}
                   </tbody>
                 </table>
-                <p className="mt-3 rounded-xl bg-[#0D3242] p-3 text-xs font-medium leading-relaxed text-[#CFE3E9]">{res.leyenda} Acompañamiento a auditoría: {fmtEUR(ACOMPANAMIENTO_AUDITORIA_DIA)}/jornada, siempre aparte.</p>
+                <p className="mt-3 rounded-xl bg-[#0D3242] p-3 text-xs font-medium leading-relaxed text-[#CFE3E9]">{res.leyenda} Acompañamiento a auditoría: {fmtEUR(ACOMPANAMIENTO_AUDITORIA_DIA)}/jornada, siempre aparte. <strong className="text-[#EAF4F7]">{LEYENDA_IMPUESTOS}</strong></p>
                 <button onClick={() => setComparar(c => !c)} className="mt-4 text-sm font-bold text-[#F9A83A] hover:underline">
                   {comparar ? 'Ocultar comparativa' : 'Comparar los 5 modelos →'}
                 </button>
@@ -264,22 +261,19 @@ export default function Calculadora() {
               <>
                 {res.fraccionado ? (
                   <>
-                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> sin IVA</span></p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{fmtEUR(res.fraccionado.totalConIva)} con IVA · {res.fraccionado.meses} meses de implantación</p>
+                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> {SUFIJO_SIN_IMPUESTOS}</span></p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">{res.fraccionado.meses} meses de implantación</p>
                     <div className="mt-3 space-y-1.5 rounded-2xl bg-white/10 p-3 text-sm font-semibold text-white/90">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-brand-orange/90">Pagos (IVA incluido)</p>
-                      <p>50% ahora: <strong>{fmtEUR(res.fraccionado.cuota1)}</strong></p>
-                      <p>50% antes de auditoría: <strong>{fmtEUR(res.fraccionado.cuota2)}</strong></p>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-brand-orange/90">Pagos {SUFIJO_SIN_IMPUESTOS}</p>
+                      <p>50% ahora: <strong>{fmtEUR(res.fraccionado.cuota1SinIva)}</strong></p>
+                      <p>50% antes de auditoría: <strong>{fmtEUR(res.fraccionado.cuota2SinIva)}</strong></p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{res.tipo === 'mes' ? ' /mes sin IVA' : ' sin IVA'}</span></p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{fmtEUR(res.totalConIva)} con IVA{res.tipo === 'mes' ? '/mes' : ''}</p>
+                    <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{res.tipo === 'mes' ? ` /mes ${SUFIJO_SIN_IMPUESTOS}` : ` ${SUFIJO_SIN_IMPUESTOS}`}</span></p>
                     <div className="mt-3 space-y-1 rounded-2xl bg-white/10 p-3 text-sm font-semibold text-white/90">
-                      <p className="flex justify-between"><span className="text-white/70">Base sin IVA</span><strong>{fmtEUR(res.precioCatalogo)}</strong></p>
-                      <p className="flex justify-between"><span className="text-white/70">IVA 21 %</span><strong>{fmtEUR(res.iva)}</strong></p>
-                      <p className="flex justify-between border-t border-white/15 pt-1"><span className="text-white/70">{res.tipo === 'mes' ? 'Pago mensual' : 'Pago único'} (IVA incl.)</span><strong>{fmtEUR(res.totalConIva)}</strong></p>
+                      <p className="flex justify-between"><span className="text-white/70">{res.tipo === 'mes' ? 'Pago mensual' : 'Pago único'}</span><strong>{fmtEUR(res.precioCatalogo)}</strong></p>
                     </div>
                   </>
                 )}
@@ -293,7 +287,7 @@ export default function Calculadora() {
             )}
             <div className="mt-5 border-t border-white/15 pt-4 text-xs font-medium leading-relaxed text-white/50">
               Precio de catálogo. Suelo de 350 €/mes en modelos recurrentes. Apoyo no contratable a &lt;60 días de auditoría externa.
-              <span className="mt-2 block font-semibold text-white/65">Canarias: IGIC no aplica (0% / exento). El IVA del 21 % se sustituye por la base sin impuesto.</span>
+              <span className="mt-2 block font-semibold text-white/65">{LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.</span>
             </div>
           </div>
         </aside>

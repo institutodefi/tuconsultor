@@ -179,3 +179,13 @@ body.wa-abierto .orbita-flotante {
   .tc-ens-fondo, .tc-ens { transition: none; }
   .tc-ens { transform: none; }
 }
+
+/* ── v188 · leyenda fiscal en bloques con precio ── */
+.tc-sin-impuestos {
+  margin: 18px auto 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}

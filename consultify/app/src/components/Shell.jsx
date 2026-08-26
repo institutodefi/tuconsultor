@@ -96,7 +96,7 @@ export default function Shell({ children }) {
         <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
         <img src="/app/marca/orbita-horizontal.svg" alt="Orbita.PMTools" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
-        <p className="mt-1">Precios sin IVA salvo indicación · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
+        <p className="mt-1">Precios sin impuestos. Impuestos indirectos no incluidos · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
         <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
           <a href="/legal/aviso-legal.html" className="transition hover:text-brand-orange">Aviso legal</a>
           <a href="/legal/privacidad.html" className="transition hover:text-brand-orange">Privacidad</a>

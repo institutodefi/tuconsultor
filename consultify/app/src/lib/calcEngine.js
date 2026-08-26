@@ -405,6 +405,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
         sinIva: dosSinIva, iva: r2(dosSinIva * IVA), total: r2(dosSinIva * (1 + IVA)),
         cuota1: r2(cuota * (1 + IVA)),
         cuota2: r2(dosSinIva * (1 + IVA) - r2(cuota * (1 + IVA))),
+        // Cuotas SIN impuestos: es lo que se enseña en oferta y presupuesto.
+        // El impuesto se determina al facturar según el domicilio fiscal.
+        cuota1SinIva: cuota,
+        cuota2SinIva: r2(dosSinIva - cuota),
         condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
       },
       nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
@@ -418,6 +422,8 @@ export function calcular(normaIds, modeloId, opts = {}) {
       totalConIva: r2(dosSinIva * (1 + IVA)),
       cuota1: formasPago.dos.cuota1,
       cuota2: formasPago.dos.cuota2,
+      cuota1SinIva: formasPago.dos.cuota1SinIva,
+      cuota2SinIva: formasPago.dos.cuota2SinIva,
       cuota3: 0,
       plan: formasPago.dos.condicion,
     };

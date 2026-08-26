@@ -19,7 +19,12 @@
   # vuelve a hacer falta un recurso en disco.
   included_files = [
     "consultify/netlify/functions/fuentes/**",
-    "consultify/netlify/functions/marca/**"
+    "consultify/netlify/functions/marca/**",
+    # `_archivo/` guarda código retirado que se conserva por trazabilidad.
+    # Netlify no despliega como función un .mjs suelto dentro de un subdirectorio
+    # (solo el patrón nombre/nombre.mjs), pero se excluye de forma explícita
+    # para que no dependa de ese detalle de implementación.
+    "!consultify/netlify/functions/_archivo/**"
   ]
 
 [functions."cobros-diario"]

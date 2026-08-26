@@ -281,3 +281,301 @@ mientras las URLs no se listen, el blog aporta poco a la autoridad del dominio.
 
 La solución es generar un sitemap de blog leyendo `blog_tuconsultor` de Supabase,
 o mejor, prerenderizar cada artículo como HTML estático en el build.
+
+---
+
+# v188 · Presupuestos sin impuestos
+
+## Regla aplicada
+
+Todo importe que ve un cliente se expresa **sin impuestos**, con la leyenda
+**«Impuestos indirectos no incluidos.»**
+
+Se ha hecho más que renombrar el 21 %: **se ha retirado el importe con IVA de
+las pantallas y documentos de presupuesto.** Anticipar un 21 % en una oferta es
+incorrecto en cuatro escenarios reales del negocio:
+
+- cliente canario → IGIC, no IVA;
+- Ceuta y Melilla → IPSI;
+- intracomunitario con NIF-IVA válido en VIES → inversión del sujeto pasivo,
+  factura sin repercutir;
+- extracomunitario → operación no sujeta.
+
+En todos ellos la cifra «con IVA» de la oferta no cuadraba con la factura.
+La leyenda pedida resuelve los cuatro casos.
+
+El cálculo del impuesto **sigue intacto** en `lib/facturacion.js`: hace falta
+para facturar y para el cuadro de cobros. Lo que cambia es qué se enseña.
+
+## Fuente única
+
+Nuevo `app/src/lib/impuestos.js` con `LEYENDA_IMPUESTOS`,
+`LEYENDA_IMPUESTOS_LARGA` y `SUFIJO_SIN_IMPUESTOS`. Si cambia la redacción,
+se toca en un solo sitio.
+
+## Motor
+
+`calcEngine.js` y `generar-oferta.mjs` devuelven ahora `cuota1SinIva` y
+`cuota2SinIva`. Antes solo existían las cuotas con IVA y la interfaz habría
+tenido que dividir a mano, con riesgo de descuadre por redondeo.
+
+Verificado: 7.750 € → 3.875 + 3.875 = 7.750 ✓ · pago único 7.362,50 € con
+ahorro de 387,50 € coherente ✓
+
+## Pantallas
+
+Calculadora · Generador de Ofertas · FasesPlanes · Mis Ofertas (portal cliente)
+· tabla de Ofertas (portal consultores, con subcabecera «sin impuestos») ·
+pie del Shell.
+
+Bundle compilado verificado: **0 apariciones de «IVA» en pantalla**.
+
+## Documentos
+
+PDF de oferta · PDF premium · PPTX · resumen por email · contrato ·
+condiciones comunes de `contenido-oferta.mjs`.
+
+Los tres formatos se han generado de verdad y auditado: las únicas menciones
+restantes a «IVA» son la cláusula explicativa, «NIF-IVA» y la referencia legal
+«Ley 37/1992 del IVA» en el marco normativo. Correcto.
+
+**Contrato:** redactado como «importe X, impuestos indirectos no incluidos.
+Sobre dicho importe se repercutirán los impuestos indirectos que resulten de
+aplicación conforme a la normativa vigente y al domicilio fiscal de la
+ORGANIZACIÓN en la fecha de devengo». Más sólido que fijar un 21 % que puede
+cambiar entre firma y factura.
+
+## Web pública
+
+`consultoria-como-servicio.html` (ES/EN) y `servicios/consultify.html` en sus
+tres idiomas. Clase `.tc-sin-impuestos` en `capas.css`.
+
+## Tres bugs preexistentes corregidos de paso
+
+1. **El PDF de oferta pintaba un plan de pago de tres hitos (50/25/25)** cuando
+   el motor solo calcula dos cuotas del 50 %. `cuota3` valía siempre 0, así que
+   salía una tercera columna con 0 €. Ahora son dos hitos.
+2. **La primera condición decía «50% al inicio + 25% a mitad + 25% antes de la
+   auditoría»**, contradiciendo tanto el plan visual como las formas de pago A y
+   B del mismo documento. Reescrita.
+3. **La nota final de la sección Inversión se solapaba con el título
+   «5. Condiciones»**: `presupuesto()` devolvía la Y sin descontar la línea que
+   acababa de dibujar. Ahora la nota se envuelve y devuelve la Y correcta.
+
+Además, quedaban tres menciones a «la plataforma TuConsultor IA» en
+`servicios/consultify.html` que se escaparon en v186. Ya dicen Orbita.PMTools.
+
+## Pendiente, sin tocar
+
+El pie del PDF premium solapa los tres logos (TuConsultor · Consultify ·
+Orbita). Es un bug de maquetación anterior, ajeno a este cambio.
+
+---
+
+# v189 · Compromiso anual, renovación y vencimiento de proyectos
+
+## 1 · La cláusula de horas se prestaba a una lectura peligrosa
+
+El texto decía que cumplidas las tareas del periodo «no existe obligación de
+consumir horas restantes». Un cliente podía leer que, agotadas las tareas del
+mes, decaía también la cuota de ese mes. Se ha añadido en la misma cláusula:
+
+> Esto no afecta al compromiso de pago. La cuota mensual se mantiene durante los
+> doce meses de duración del contrato, con independencia de las horas
+> efectivamente empleadas en cada periodo. La cuota retribuye la disponibilidad
+> del equipo y el resultado comprometido, no un consumo de horas: los meses de
+> menor carga compensan los de mayor carga a lo largo del año.
+
+Va solo en modelos recurrentes: en Implantación no aplica.
+
+Replicado en: Anexo III de la oferta (`contenido-oferta.mjs`), condiciones del
+PDF (`documento-oferta.mjs`) y cláusula «Qué incluye y qué no» del contrato.
+
+## 2 · Oferta de renovación un mes antes
+
+Cláusula nueva en la oferta y en la de Duración del contrato:
+
+> Un mes antes de la fecha de finalización se emitirá una oferta de renovación
+> para el siguiente periodo anual, con el alcance y la dedicación revisados.
+> La renovación requiere aceptación expresa: no opera de forma automática ni
+> por silencio.
+
+El contrato decía antes «prorrogables por periodos iguales salvo comunicación en
+contra» — prórroga tácita, que es lo contrario de lo acordado. Corregido.
+
+## 3 · Fecha de inicio y fecha de fin en proyectos
+
+**Migración `v92`**: `fecha_fin` y `renovacion_emitida` en `proyectos` y en
+`proyectos_cliente` (conviven las dos tablas; el panel lee la segunda, así que
+la fecha tenía que estar en ambas o el aviso no saltaría).
+
+Fecha de fin derivada cuando no se indica, por trigger en la base y por la misma
+regla en la pantalla:
+- recurrentes → inicio + 12 meses
+- Implantación → fecha de auditoría, o inicio + 12 meses
+- Apoyo → sin fecha: es una bolsa, no vence
+
+Constraint `fecha_fin > fecha_inicio` y vista `v_proyectos_vencimiento` con el
+semáforo calculado, para poder consultarlo desde SQL sin reimplementar la regla.
+
+## 4 · Semáforo de vencimiento
+
+`app/src/lib/proyectos.js`, fuente única de la regla:
+
+| Estado | Umbral | Significado |
+|---|---|---|
+| Vencido | fecha pasada | El contrato terminó y sigue abierto |
+| Rojo | ≤ 30 días | La oferta de renovación debería estar emitida |
+| Amarillo | ≤ 60 días | Toca preparar la renovación |
+
+El umbral de 30 días no es arbitrario: es la fecha en que, según la cláusula
+nueva, la oferta debe estar emitida. El amarillo da un mes de margen para
+prepararla.
+
+`renovacion_emitida` apaga el aviso. Sin eso, el aviso se queda encendido y en
+dos semanas el equipo deja de mirarlo.
+
+## 5 · Pantalla de Proyectos
+
+- Campos de fecha de inicio, fecha de fin y renovación emitida, con sugerencia
+  de fecha de fin según el modelo (se propone, no se impone).
+- Aviso en vivo dentro del formulario al fijar la fecha de fin.
+- Barra de avisos sobre la tabla, solo si hay algo que hacer.
+- Tabla ordenada por urgencia, con columnas de inicio, fin y vencimiento, y la
+  fila teñida cuando urge.
+- Validación: la fecha de fin debe ser posterior a la de inicio.
+
+## 6 · Panel de proyectos activos
+
+Ampliado `DashboardProyectos.jsx` en lugar de crear un panel nuevo: tener dos
+paneles de proyectos habría dividido la atención del equipo.
+
+- Tarjeta «Renovaciones pendientes», que filtra al pulsarla.
+- Sección «Vencimientos de contrato» con recuento por nivel y lista ordenada
+  por urgencia, con el borde de la sección en rojo o ámbar según lo peor que
+  haya.
+- Chip de vencimiento de contrato en cada proyecto de la lista.
+
+Se distinguen dos relojes que antes se mezclaban: el del **trabajo** (¿llega el
+proyecto a su fecha con las tareas hechas?) y el del **contrato** (¿cuándo vence
+y hay que renovar?). Un proyecto puede ir perfecto de tareas y estar a 20 días
+de vencer sin oferta emitida.
+
+## Verificación
+
+`scripts/test-proyectos.mjs`: fronteras exactas del semáforo (61 ok / 60 ámbar /
+31 ámbar / 30 rojo / 0 rojo / −1 vencido), fecha de fin por defecto en los cinco
+modelos, fin de mes (31 ene + 1 mes = 28 feb), silenciado por renovación
+emitida, orden por urgencia y exclusión de cerrados. Todo correcto.
+
+PDFs de oferta y contrato generados y auditados con las cláusulas nuevas.
+App compilada. Web: 0 fallos.
+
+---
+
+# v190 · Verificación de la regeneración de ofertas
+
+## Comprobación pedida: ¿se regeneran las cláusulas?
+
+**Sí.** Verificado end-to-end simulando el flujo real de regeneración.
+
+La cadena es: el botón «↻ Regenerar» de `Ofertas.jsx` llama a
+`/.netlify/functions/generar-oferta`, que ejecuta `calcular()` de nuevo y monta
+el documento desde cero llamando a `clausulas(r)` de `contenido-oferta.mjs`.
+
+**Ningún texto de cláusula se persiste en base de datos.** En `presupuestos`
+solo se guardan datos (normas, modelo, precio, fechas, URLs). El texto legal
+vive únicamente en el código, así que toda oferta regenerada sale con la
+redacción vigente en el momento de regenerarla.
+
+Prueba realizada sobre una oferta «antigua» con número emitido y precio
+guardado distinto al que calcularía hoy el motor:
+
+| Comprobación | PDF | PPTX |
+|---|---|---|
+| Compromiso de pago 12 meses (v189) | ✓ | ✓ |
+| Renovación un mes antes (v189) | ✓ | ✓ |
+| Impuestos indirectos no incluidos (v188) | ✓ | ✓ |
+| Ausentes en Implantación (correcto) | ✓ | ✓ |
+| Precio emitido respetado (no recalculado) | ✓ | — |
+
+## Sin riesgo de caché
+
+Cada regeneración sube el fichero con `Date.now()` en el nombre
+(`slug_1756192834.pdf`), así que la URL cambia y no hay posibilidad de que el
+CDN sirva la versión anterior. La fila de `presupuestos` se actualiza con la
+URL nueva.
+
+## Dos hallazgos
+
+**1 · `documento-oferta.mjs` está huérfano.** Nadie lo importa: `generar-oferta`
+usa `documento-oferta-premium.mjs`. El PDF que recibe el cliente es el premium.
+Se ha mantenido actualizado en v188 y v189 por si se reactiva, pero conviene
+decidir si se archiva: mantener dos generadores de PDF en paralelo es la vía
+directa a que uno se quede desfasado sin que nadie lo note.
+
+Nota relacionada: las cláusulas del Anexo III (donde viven el compromiso de pago
+y la renovación) solo existen en el premium y en el PPTX. El estándar tiene su
+propia sección 6 de confidencialidad, distinta. Es otra razón para archivarlo.
+
+**2 · Resto de IVA en el cuadro de facturación (corregido).**
+El cuadro de previsión de cobros del PDF premium tenía dos columnas, BASE y
+TOTAL, y TOTAL era la base multiplicada por 1,21. Se coló en v188 porque estaba
+en un bucle de dibujo y no en un literal buscable: una oferta de 7.100 €/mes
+mostraba 8.591 € en cada fila.
+
+Corregido sustituyendo la columna por **ACUMULADO**, que en un presupuesto sin
+impuestos sí aporta: cuánto lleva comprometido el cliente a cada fecha.
+
+Antes: `7.100,00 € · 8.591,00 €` (base · con IVA)
+Ahora: `7.100,00 € · 14.200,00 €` (importe · acumulado)
+
+---
+
+# v191 · Archivado de `documento-oferta.mjs`
+
+## Qué se ha hecho
+
+`consultify/netlify/functions/documento-oferta.mjs` →
+`consultify/netlify/functions/_archivo/documento-oferta.mjs`
+
+Con un `README.md` en la carpeta que explica qué era, por qué se retira y qué
+hacer si algún día hace falta un segundo formato de oferta (pista: no
+resucitarlo, sino añadir una variante dentro del premium que siga leyendo las
+cláusulas de `contenido-oferta.mjs`).
+
+## Por qué
+
+Estaba huérfano: ninguna función lo importaba. El PDF que recibe el cliente
+sale de `documento-oferta-premium.mjs` desde hace tiempo. Y los dos generadores
+ya habían divergido: el premium imprime las cláusulas del Anexo III desde
+`contenido-oferta.mjs` (compromiso de pago, renovación), y el archivado llevaba
+su propia sección de confidencialidad con otro texto.
+
+## Cómo se ha asegurado que no rompe nada
+
+- Búsqueda en todo el repositorio: cero `import`, cero referencias en
+  `netlify.toml` y `build-dist.mjs`. Solo dos comentarios en
+  `generar-oferta.mjs` y una línea en el documento de traspaso, los tres
+  corregidos.
+- `netlify.toml` excluye `_archivo/**` de `included_files`. Netlify no despliega
+  como función un `.mjs` suelto dentro de un subdirectorio, pero se excluye de
+  forma explícita para no depender de ese detalle.
+- Se importaron **las 22 funciones** una a una tras el movimiento.
+- Se regeneró un PDF de oferta completo: cláusulas de v189, impuestos de v188 y
+  columna ACUMULADO de v190, todo presente.
+- App compilada. Web: 0 fallos.
+
+## Hallazgo aparte: dependencia sin declarar
+
+Al importar todas las funciones apareció que **`copia-seguridad.mjs` importa
+`@supabase/supabase-js` y ese paquete no estaba en `package.json`**. Es una
+función programada (`schedule: '*/10 * * * *'`), así que venía fallando de forma
+silenciosa en cada ejecución: nadie la mira porque no tiene interfaz.
+
+No tiene relación con el archivado; salió porque esta vez se importaron todas.
+Añadida la dependencia (`^2.45.0`) y verificado que ya carga.
+
+**Conviene comprobar en el panel de Netlify si esa función tiene ejecuciones
+correctas recientes o solo errores.** Si llevaba tiempo caída, no hay copias de
+seguridad recientes.

@@ -12,8 +12,11 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import PptxGenJS from 'pptxgenjs';
 import { CATALOGO_ANEXO } from './catalogo-anexo.mjs';
-// PDF premium. Para volver a la versión anterior, cambiar por
-// './documento-oferta.mjs': la función expuesta es la misma.
+// Único generador del PDF de oferta. La variante anterior («Knowledgefy») se
+// archivó en `_archivo/` el 26/08/2026: llevaba tiempo sin usarse y su texto
+// legal ya había divergido del que se emite. Si hace falta otro formato, se
+// añade como variante aquí dentro, leyendo las cláusulas de
+// contenido-oferta.mjs, para que el texto legal siga teniendo una sola fuente.
 import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
@@ -73,7 +76,9 @@ const MUTED = rgb(0.357, 0.42, 0.525);
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
 async function generarPDF(r, cli, anexo) {
-  // Estructura "Knowledgefy": delega en el módulo documento-oferta.mjs.
+  // Delega en documento-oferta-premium.mjs, que monta el documento desde cero
+  // en cada llamada: por eso una oferta regenerada sale siempre con la
+  // redacción vigente de las cláusulas, no con la del día en que se emitió.
   const buf = await generarPDFOferta(r, cli, anexo);
   return Buffer.from(buf);
 }
@@ -136,7 +141,7 @@ async function generarPPTX(r, cli, anexo) {
   s.addText(esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN', { x: 0.6, y: 3.45, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.teal, charSpacing: 2 });
   s.addText([
     { text: fmtEur0(impPortada), options: { fontSize: 38, bold: true, color: C.blanco } },
-    { text: esMes ? '  /mes · sin IVA' : '  sin IVA', options: { fontSize: 11, color: C.claro } },
+    { text: esMes ? '  /mes · sin impuestos' : '  sin impuestos', options: { fontSize: 11, color: C.claro } },
   ], { x: 0.6, y: 3.7, w: 8.8, h: 0.7, fontFace: F });
   if (esImpl && r.formasPago) {
     s.addText('con ' + Math.round(r.formasPago.descuentoUnico * 100) + ' % de descuento por pago único',
@@ -176,7 +181,7 @@ async function generarPPTX(r, cli, anexo) {
   s.addText(esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO', { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
   s.addText(fmtEur(esImpl ? ((r.formasPago && r.formasPago.dos.sinIva) || r.precioCatalogo) : r.precioCatalogo),
     { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
-  s.addText('IVA 21 % · ' + fmtEur(r.iva) + '\nTotal ' + fmtEur(r.totalConIva) + (esMes ? '/mes' : ''),
+  s.addText('Impuestos indirectos no incluidos.',
     { x: 6.55, y: 2.0, w: 2.8, h: 0.5, fontFace: F, fontSize: 10, color: C.apagado });
 
   const ajustes = (r.ajustes || []).filter(function (a) { return a.efecto; });
@@ -202,7 +207,7 @@ async function generarPPTX(r, cli, anexo) {
       s.addShape(p.ShapeType.rect, { x: x, y: 3.25, w: 4.3, h: 1.55, fill: { color: C.blanco },
         line: { color: elegida ? C.naranja : C.linea, width: elegida ? 1.6 : 1 } });
       s.addText(String.fromCharCode(65 + i) + ' · ' + f.titulo, { x: x + 0.2, y: 3.38, w: 4, h: 0.3, fontFace: F, fontSize: 13, bold: true, color: C.tinta });
-      s.addText(fmtEur(f.total) + '  con IVA', { x: x + 0.2, y: 3.7, w: 4, h: 0.34, fontFace: F, fontSize: 15, bold: true, color: C.tinta });
+      s.addText(fmtEur(f.sinIva) + '  sin impuestos', { x: x + 0.2, y: 3.7, w: 4, h: 0.34, fontFace: F, fontSize: 15, bold: true, color: C.tinta });
       s.addText(f.id === 'unico' ? 'Ahorras ' + fmtEur(f.ahorro) : fmtEur(f.cuota1) + ' + ' + fmtEur(f.cuota2),
         { x: x + 0.2, y: 4.04, w: 4, h: 0.24, fontFace: F, fontSize: 10, bold: true, color: f.id === 'unico' ? C.teal : C.apagado });
       s.addText(f.condicion, { x: x + 0.2, y: 4.28, w: 3.95, h: 0.45, fontFace: F, fontSize: 8.5, color: C.apagado });
@@ -387,8 +392,8 @@ async function enviarCopiaInterna({ numeroOferta, cli, r, pdfBuf, url_pdf, url_p
 
   const normNames = r.normas.map((id) => NORMA_BY_ID[id].nombre).join(' + ');
   const precioTxt = r.fraccionado
-    ? `${eur(r.fraccionado.totalSinIva)} (proyecto, sin IVA) · ${eur(r.fraccionado.totalConIva)} con IVA`
-    : `${eur(r.precioCatalogo)}${r.tipo === 'mes' ? '/mes' : ''} (sin IVA) · ${eur(r.totalConIva)} con IVA`;
+    ? `${eur(r.fraccionado.totalSinIva)} (proyecto) · impuestos indirectos no incluidos`
+    : `${eur(r.precioCatalogo)}${r.tipo === 'mes' ? '/mes' : ''} · impuestos indirectos no incluidos`;
 
   const html = `
     <div style="font-family:Arial,sans-serif;color:#0C1424;font-size:14px;line-height:1.6">
@@ -489,14 +494,19 @@ export default async (req) => {
         dos: { ...r.formasPago.dos, sinIva: base, iva: r2(base * IVA_MOTOR),
                total: r2(base * (1 + IVA_MOTOR)),
                cuota1: r2(cuota * (1 + IVA_MOTOR)),
-               cuota2: r2(base * (1 + IVA_MOTOR) - r2(cuota * (1 + IVA_MOTOR))) },
+               cuota2: r2(base * (1 + IVA_MOTOR) - r2(cuota * (1 + IVA_MOTOR))),
+               // Cuotas sin impuestos: es lo que se imprime en la oferta.
+               cuota1SinIva: cuota,
+               cuota2SinIva: r2(base - cuota) },
       };
     }
     if (r.fraccionado) {
       const totalConIvaFrac = r2(r.precioCatalogo * (1 + IVA_MOTOR));
       const c1 = r2(totalConIvaFrac / 2);
+      const c1Sin = r2(r.precioCatalogo / 2);
       r.fraccionado = { ...r.fraccionado, totalSinIva: r.precioCatalogo, totalConIva: totalConIvaFrac,
-                        cuota1: c1, cuota2: r2(totalConIvaFrac - c1), cuota3: 0 };
+                        cuota1: c1, cuota2: r2(totalConIvaFrac - c1), cuota3: 0,
+                        cuota1SinIva: c1Sin, cuota2SinIva: r2(r.precioCatalogo - c1Sin) };
     }
   }
   r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;

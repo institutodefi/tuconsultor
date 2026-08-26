@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
+import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
@@ -13,7 +14,7 @@ import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 
 // Generador de ofertas: selección de normas + modelo + datos del cliente,
-// precio en vivo (sin/con IVA) y exportación a PDF/PPTX vía la función serverless.
+// precio en vivo (siempre sin impuestos) y exportación a PDF/PPTX vía la función serverless.
 export default function GeneradorOfertas({ publico = false }) {
   const { user } = useAuth();
   const [sel, setSel] = useState(['9001']);          // 9001 premarcada, pero se puede quitar
@@ -580,17 +581,16 @@ export default function GeneradorOfertas({ publico = false }) {
                   <>
                     <p className="mt-3 text-4xl font-extrabold tracking-tight">
                       {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
-                      {fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> sin IVA</span>
+                      {fmtEUR(res.fraccionado.totalSinIva)}<span className="text-base font-bold text-white/60"> {SUFIJO_SIN_IMPUESTOS}</span>
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{desde}{fmtEUR(res.fraccionado.totalConIva)} con IVA · {res.fraccionado.meses} meses</p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">{res.fraccionado.meses} meses de implantación</p>
                   </>
                 ) : (
                   <>
                     <p className="mt-3 text-4xl font-extrabold tracking-tight">
                       {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
-                      {fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{esMes ? ' /mes sin IVA' : ' sin IVA'}</span>
+                      {fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{esMes ? ` /mes ${SUFIJO_SIN_IMPUESTOS}` : ` ${SUFIJO_SIN_IMPUESTOS}`}</span>
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-white/70">{desde}{fmtEUR(res.totalConIva)} con IVA{esMes ? '/mes' : ''}</p>
                   </>
                 )}
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -613,12 +613,12 @@ export default function GeneradorOfertas({ publico = false }) {
                           className={`w-full rounded-xl border p-2.5 text-left transition ${on ? 'border-brand-orange bg-brand-orange/15' : 'border-white/15 hover:border-brand-orange/50'}`}>
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-[13px] font-bold text-white">{on ? '✓ ' : ''}{f.titulo}</span>
-                            <span className="text-[13px] font-extrabold text-white">{fmtEUR(f.total)}<span className="text-[10px] font-bold text-white/60"> con IVA</span></span>
+                            <span className="text-[13px] font-extrabold text-white">{fmtEUR(f.sinIva)}<span className="text-[10px] font-bold text-white/60"> {SUFIJO_SIN_IMPUESTOS}</span></span>
                           </div>
                           <p className="mt-0.5 text-[11px] leading-snug text-white/70">{f.condicion}</p>
                           {f.id === 'unico'
                             ? <p className="mt-0.5 text-[11px] font-bold text-brand-verdeTexto">Ahorras {fmtEUR(f.ahorro)}</p>
-                            : <p className="mt-0.5 text-[11px] text-white/60">{fmtEUR(f.cuota1)} + {fmtEUR(f.cuota2)}</p>}
+                            : <p className="mt-0.5 text-[11px] text-white/60">{fmtEUR(f.cuota1SinIva)} + {fmtEUR(f.cuota2SinIva)}</p>}
                         </button>
                       );
                     })}
@@ -725,8 +725,8 @@ export default function GeneradorOfertas({ publico = false }) {
                 <b className="block text-white/85">Aviso sobre esta oferta</b>
                 {publico ? DISCLAIMER_OFERTA : DISCLAIMER_CORTO}
               </p>
-              <p className="mt-2 text-white/50">
-                Canarias: IGIC no aplica (0 % / exento). El IVA del 21 % se sustituye por la base sin impuesto.
+              <p className="mt-2 font-semibold text-white/60">
+                {LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.
               </p>
             </div>
           </div>

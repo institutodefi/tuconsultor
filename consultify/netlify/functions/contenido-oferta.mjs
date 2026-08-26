@@ -73,7 +73,9 @@ export const EMISOR = emisorDe(null);
 /** Condiciones generales. `r` es el resultado del cálculo. */
 export function condiciones(r) {
   return [
-    'Precios sin IVA salvo indicación expresa. IVA del 21 % aplicable.',
+    'Impuestos indirectos no incluidos. Todos los importes se expresan sin impuestos. El impuesto aplicable '
+      + '(IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura. En '
+      + 'operaciones intracomunitarias con NIF-IVA válido en VIES se aplica la inversión del sujeto pasivo.',
     'Validez de la oferta: 30 días naturales desde su fecha de emisión.',
     'No incluye las tasas de la entidad de certificación ni los gastos de desplazamiento fuera de la Comunidad de Madrid.',
     ...(r?.modeloMantenimiento
@@ -120,8 +122,25 @@ export function clausulas(r) {
     ['2 · El modelo se basa en horas al mes y en tareas',
      'Lo que se contrata son dos cosas a la vez: una dedicación expresada en horas al mes y un conjunto de tareas concretas, las del Anexo I. Las horas dimensionan el esfuerzo; las tareas definen el resultado. Ninguna de las dos por separado describe el servicio.'],
     ['3 · Cumplidas las tareas y los objetivos, no hay obligación de más horas',
-     'Cuando las tareas del periodo están hechas y los objetivos alcanzados, el trabajo del periodo está completo. No existe obligación de consumir horas restantes en trabajo adicional. Lo que sí se mantiene es la asistencia técnica: resolución de dudas, apoyo ante incidencias y acompañamiento del sistema, sin coste añadido.'],
-    ['4 · Todo trabajo ajeno al alcance se presupuesta y factura aparte',
+     'Cuando las tareas del periodo están hechas y los objetivos alcanzados, el trabajo del periodo está completo. '
+     + 'No existe obligación de consumir horas restantes en trabajo adicional. Lo que sí se mantiene es la asistencia '
+     + 'técnica: resolución de dudas, apoyo ante incidencias y acompañamiento del sistema, sin coste añadido.'
+     // Sin esta segunda parte, la cláusula anterior se podía leer como que
+     // agotadas las tareas del mes decae la cuota de ese mes. No es así: lo
+     // que se contrata es un acompañamiento anual, y la cuota retribuye la
+     // disponibilidad del equipo, no un consumo de horas.
+     + (esImpl ? '' :
+       '\n\nEsto no afecta al compromiso de pago. La cuota mensual se mantiene durante los doce meses de duración '
+       + 'del contrato, con independencia de las horas efectivamente empleadas en cada periodo. La cuota retribuye la '
+       + 'disponibilidad del equipo y el resultado comprometido, no un consumo de horas: los meses de menor carga '
+       + 'compensan los de mayor carga a lo largo del año.')],
+    ...(esImpl ? [] : [
+      ['4 · Renovación al término del contrato',
+       'Un mes antes de la fecha de finalización del contrato se emitirá una oferta de renovación para el siguiente '
+       + 'periodo anual, con el alcance y la dedicación revisados según la situación del sistema en ese momento. '
+       + 'La renovación no es automática: requiere aceptación expresa de la organización.'],
+    ]),
+    [(esImpl ? '4' : '5') + ' · Todo trabajo ajeno al alcance se presupuesta y factura aparte',
      'Cualquier encargo que no figure en el Anexo I —nuevos sistemas, sedes adicionales, auditorías no previstas, formación específica o adaptaciones fuera del alcance— se presupuesta por separado antes de ejecutarse y se factura aparte. Nunca se ejecuta trabajo fuera de alcance sin presupuesto aceptado.'],
   ];
 }

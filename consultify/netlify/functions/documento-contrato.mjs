@@ -47,9 +47,11 @@ export async function generarPDFContrato(contrato, oferta = {}) {
   const EM = emisorDe({ emisora_id: contrato.emisora_id });
   const normas = nombresDeNormas({ normas: contrato.normas });
   const esImpl = contrato.modelo === 'Implantación';
-  const iva = Number(contrato.iva ?? 21);
   const importe = Number(contrato.importe || 0);
-  const totalConIva = Math.round(importe * (1 + iva / 100) * 100) / 100;
+  // NOTA: el contrato fija la BASE sin impuestos. El tipo impositivo no se
+  // imprime porque depende del domicilio fiscal del cliente en la fecha de
+  // devengo (IVA / IGIC / IPSI / inversión del sujeto pasivo / no sujeta).
+  // El cálculo del impuesto vive en lib/facturacion.js, para facturar.
 
   pdf.setTitle(`Contrato ${contrato.numero} · ${contrato.cliente_empresa}`);
   pdf.setAuthor(EM.razonSocial);
@@ -169,7 +171,7 @@ export async function generarPDFContrato(contrato, oferta = {}) {
     ['Número', contrato.numero],
     ['Fecha', fecha(contrato.fecha_contrato)],
     ['Modelo', contrato.modelo + (esImpl && contrato.meses ? ` · ${contrato.meses} meses` : '')],
-    ['Importe', `${fmtEur(importe)} + IVA`],
+    ['Importe', `${fmtEur(importe)} sin impuestos`],
   ];
   datos.forEach(([k, v], i) => {
     const x = MG + (i % 2) * (ANCHO / 2);
@@ -229,9 +231,17 @@ export async function generarPDFContrato(contrato, oferta = {}) {
     ['Duración',
      esImpl
        ? `El proyecto tiene una duración estimada de ${meses || '—'} meses desde su inicio efectivo. Termina cuando el objeto queda cumplido; no se prorroga tácitamente.`
-       : 'La duración es de doce meses desde la fecha de firma, prorrogables por periodos iguales salvo que cualquiera de las partes comunique lo contrario con treinta días de antelación.'],
+       : 'La duración es de doce meses desde la fecha de firma. El compromiso de ambas partes se extiende a la '
+         + 'totalidad de ese periodo.\n\nUn mes antes de la fecha de finalización, la CONSULTORA emitirá una oferta '
+         + 'de renovación para el siguiente periodo anual, con el alcance y la dedicación revisados. La renovación '
+         + 'requiere aceptación expresa de la ORGANIZACIÓN: no opera de forma automática ni por silencio.'],
     ['Precio',
-     `${fmtEur(importe)} más IVA (${iva} %), lo que hace un total de ${fmtEur(totalConIva)}${contrato.tipo === 'mes' ? ' al mes' : ''}.` +
+     // El contrato fija la base. El impuesto se determina al facturar según el
+     // domicilio fiscal del cliente: puede ser IVA, IGIC, IPSI, inversión del
+     // sujeto pasivo (intracomunitario con VIES) u operación no sujeta.
+     `${fmtEur(importe)}${contrato.tipo === 'mes' ? ' al mes' : ''}, impuestos indirectos no incluidos. ` +
+     'Sobre dicho importe se repercutirán los impuestos indirectos que resulten de aplicación conforme a la ' +
+     'normativa vigente y al domicilio fiscal de la ORGANIZACIÓN en la fecha de devengo.' +
      (contrato.forma_pago === 'unico'
        ? '\n\nForma de pago: un solo pago al inicio del proyecto, con el descuento por pago único ya aplicado al importe anterior.'
        : contrato.forma_pago === 'dos'
@@ -239,6 +249,10 @@ export async function generarPDFContrato(contrato, oferta = {}) {
          : '')],
     ['Qué incluye y qué no',
      'Lo contratado son dos cosas a la vez: una dedicación y un conjunto de tareas concretas. Cumplidas las tareas y alcanzados los objetivos del periodo, el trabajo está completo y no existe obligación de consumir horas restantes. Se mantiene la asistencia técnica sin coste añadido.\n\n' +
+     (esImpl ? '' :
+       'Lo anterior no altera el compromiso de pago: la cuota mensual se devenga íntegra durante los doce meses de '
+       + 'vigencia, con independencia de las horas efectivamente empleadas en cada periodo. La cuota retribuye la '
+       + 'disponibilidad del equipo y el resultado comprometido, no un consumo de horas.\n\n') +
      'Todo encargo ajeno al alcance —nuevos sistemas, sedes adicionales, auditorías no previstas, formación específica— se presupuesta por separado antes de ejecutarse y se factura aparte. Nunca se ejecuta trabajo fuera de alcance sin presupuesto aceptado.\n\n' +
      'No incluye las tasas de la entidad de certificación ni los gastos de desplazamiento fuera de la Comunidad de Madrid.'],
     ['Obligaciones de la ORGANIZACIÓN',
