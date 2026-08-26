@@ -7,7 +7,7 @@ import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { EMISORAS_BASE } from '../lib/emisoras.js';
-import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses } from '../lib/planificacion.js';
+import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses, MODELOS_PROYECTO } from '../lib/planificacion.js';
 import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
@@ -35,12 +35,35 @@ export default function GeneradorOfertas({ publico = false }) {
   const [finTocado, setFinTocado] = useState(false);   // ¿lo ha puesto la persona a mano?
   const [fechaCert, setFechaCert] = useState('');
 
-  // Al mover el inicio, el fin le sigue a doce meses mientras nadie lo haya
-  // cambiado a mano. En cuanto se toca, deja de arrastrarse.
+  // ── Cómo se comporta la fecha de fin, según el modelo ──
+  //
+  // RECURRENTES (Relación, Implicación, Compromiso): el fin es inicio + 12
+  // meses, la permanencia del modelo. Se calcula solo y se mantiene enganchado
+  // al inicio, porque ahí un fin distinto bloquea la emisión y no aporta nada:
+  // el contrato dura lo que dura.
+  //
+  // APOYO e IMPLANTACIÓN: el fin es MANUAL. No hay permanencia; lo que hay es
+  // un calendario de trabajo que decide quien oferta, y cada proyecto dura lo
+  // que dura. Se propone inicio + 12 meses como punto de partida, pero al
+  // tocarlo deja de arrastrarse.
+  const finEsManual = MODELOS_PROYECTO.includes(modelo);
+
   const cambiarInicio = (v) => {
     setFechaInicio(v);
-    if (!finTocado) setFechaFin(v ? sumarMeses(v, 12) : '');
+    // En recurrentes el fin va siempre pegado al inicio. En Apoyo e
+    // Implantación solo mientras nadie lo haya fijado a mano.
+    if (!finEsManual || !finTocado) setFechaFin(v ? sumarMeses(v, 12) : '');
   };
+
+  // Al cambiar de modelo a uno recurrente, el fin vuelve a los doce meses: si
+  // se venía de una implantación a cinco meses, ese fin dejaría la oferta
+  // bloqueada sin motivo aparente.
+  useEffect(() => {
+    if (!finEsManual && fechaInicio) {
+      const doce = sumarMeses(fechaInicio, 12);
+      if (fechaFin !== doce) { setFechaFin(doce); setFinTocado(false); }
+    }
+  }, [finEsManual, fechaInicio]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Plazo para planificar las tareas: hasta la auditoría si la hay, y si no,
   // hasta el fin del contrato. Así la oferta se puede emitir sin fecha de
@@ -49,7 +72,13 @@ export default function GeneradorOfertas({ publico = false }) {
   // Al motor se le manda la duración del CONTRATO: es lo que determina si el
   // modelo es viable. Con la certificación, una auditoría temprana bloqueaba la
   // generación aunque el contrato durase doce meses.
-  const mesesContrato = mesesEntre(fechaInicio, fechaFin) || meses;
+  //
+  // En Implantación es distinto: no hay permanencia, hay un calendario de
+  // trabajo. Manda el plazo hasta la auditoría si la hay, porque es la fecha
+  // que hay que cumplir; ese número es el que reparte las tareas por meses.
+  const mesesContrato = modelo === 'Implantación'
+    ? (meses || mesesEntre(fechaInicio, fechaFin) || '')
+    : (mesesEntre(fechaInicio, fechaFin) || meses);
   const [tiene9001, setTiene9001] = useState(false); // "ya tengo la 9001" → −50% horas 9001
   const [cli, setCli] = useState({ nombre: '', apellidos: '', empresa: '', cif: '', cargo: '', email: '', telefono: '', direccion: '' });
   const location = useLocation();
@@ -569,15 +598,21 @@ export default function GeneradorOfertas({ publico = false }) {
                   value={fechaInicio} onChange={(e) => cambiarInicio(e.target.value)} />
               </div>
               <div>
-                <label className="label" htmlFor="g-fin">Fin de contrato</label>
+                <label className="label" htmlFor="g-fin">
+                  {finEsManual ? 'Fin del proyecto' : 'Fin de contrato'}
+                </label>
                 <input id="g-fin" type="date" className="input !py-1.5 !text-[13px]"
-                  value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setFinTocado(true); }} />
-                <p className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
-                  {finTocado
-                    ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
-                        onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? sumarMeses(fechaInicio, 12) : ''); }}>
-                        Volver a 12 meses</button></>
-                    : '12 meses desde el inicio.'}
+                  value={fechaFin} readOnly={!finEsManual}
+                  aria-describedby="g-fin-nota"
+                  onChange={(e) => { if (finEsManual) { setFechaFin(e.target.value); setFinTocado(true); } }} />
+                <p id="g-fin-nota" className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+                  {!finEsManual
+                    ? <>Permanencia de 12 meses: va siempre pegado al inicio.</>
+                    : finTocado
+                      ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
+                          onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? sumarMeses(fechaInicio, 12) : ''); }}>
+                          Volver a 12 meses</button></>
+                      : 'Propuesto a 12 meses. Ajústalo al calendario real del proyecto.'}
                 </p>
               </div>
               <div>
@@ -740,7 +775,9 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 <div className="mt-4 flex gap-2">
                   <button onClick={() => generar('pdf')} disabled={estado === 'gen' || plazoMal} className="flex-1 rounded-xl bg-[#10394A] py-3 text-sm font-extrabold text-[#EAF4F7] transition hover:bg-white/90 disabled:opacity-50">
-                    {estado === 'gen' ? 'Generando…' : plazoMal ? `Mínimo ${res.minMeses} meses` : (publico ? 'Recibir mi propuesta' : 'Generar oferta')}
+                    {estado === 'gen' ? 'Generando…'
+                      : plazoMal ? `El plazo no llega al mínimo del modelo (${res.minMeses} meses)`
+                      : (publico ? 'Recibir mi propuesta' : 'Generar oferta')}
                   </button>
                 </div>
                 {error && <p className="mt-3 rounded-lg bg-red-500/20 p-2 text-xs font-bold text-red-100">{error}</p>}

@@ -286,6 +286,43 @@ export async function generarPDFOferta(r, cli, anexo) {
     }
   }
 
+  // ── 3c · Calendario del encargo ──
+  // Las tres fechas que definen el encargo, juntas y visibles. Antes solo se
+  // veían indirectamente (la de emisión en la portada, la de primer pago en el
+  // cuadro de facturación) y el cliente no tenía dónde leer cuándo empieza,
+  // cuándo termina y cuándo está prevista la auditoría.
+  {
+    const fmt = (f) => {
+      if (!f) return null;
+      const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
+      return Number.isNaN(d.getTime()) ? null
+        : d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+    };
+    const hitos = [
+      ['Inicio previsto', fmt(r.fecha_inicio)],
+      [esImpl ? 'Fin del proyecto' : 'Fin de contrato', fmt(r.fecha_fin)],
+      // La certificación es opcional: si no hay fecha se dice, en lugar de
+      // dejar un hueco que parezca un error del documento.
+      ['Certificación prevista', fmt(r.fecha_certificacion) || 'Por determinar'],
+    ].filter(([, v]) => v);
+
+    if (hitos.length) {
+      seccion('Calendario', 12);
+      asegurar(9);
+      const anchoCol = ANCHO / hitos.length;
+      const alturaCaja = U * 6.5;
+      p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: ANCHO, height: alturaCaja,
+        color: rgb(0.965, 0.976, 0.984) });
+      p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: U * 0.4, height: alturaCaja, color: NARANJA });
+      hitos.forEach(([etq, val], i) => {
+        const x = MG + i * anchoCol + U * 1.6;
+        p.drawText(etq.toUpperCase(), { x, y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.1 });
+        p.drawText(val, { x, y: cursor - U * 2.4, size: 11, font: bold, color: TINTA });
+      });
+      cursor -= alturaCaja + U * 0.5;
+    }
+  }
+
   // ── 4 · Inversión ──
   seccion('Inversión', esImpl ? 22 : 17);   // rótulo + caja de importe
   asegurar(14);

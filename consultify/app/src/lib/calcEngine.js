@@ -161,8 +161,20 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // Meses del proyecto: los indicados o el mínimo del modelo.
   const minMeses = mesesPorModelo(modeloId, normas.length);
   const mesesProyecto = Math.max(parseInt(opts.meses, 10) || minMeses, 1);
-  // Validación de plazo mínimo (no bloquea el cálculo; el front decide si genera).
-  const plazoOk = mesesProyecto >= minMeses;
+
+  // ── ¿El plazo impide emitir la oferta? ──
+  // Solo donde el plazo es parte de lo que se contrata:
+  //   · Recurrentes → hay permanencia y cuotas mensuales. Un contrato más corto
+  //     que el mínimo no es el producto.
+  //   · Apoyo → la bolsa se dimensiona por meses; un plazo menor al mínimo deja
+  //     el trabajo sin encaje.
+  //   · Implantación → NO. No hay cuotas: se paga en uno o dos pagos por un
+  //     alcance cerrado. Que el calendario sea de seis meses en vez de doce es
+  //     una decisión de planificación, no un impedimento para ofertar. Antes
+  //     bloqueaba la emisión, porque MESES_MODELO.Implantación vale 12 y el
+  //     plazo se comprobaba igual para todos los modelos.
+  const plazoCorto = mesesProyecto < minMeses;
+  const plazoOk = modeloId === 'Implantación' ? true : !plazoCorto;
 
   // ── Reglas comerciales vigentes y aplicables a esta oferta ──
   const ctx = {
@@ -445,6 +457,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
     meses: mesesProyecto,
     minMeses,
     plazoOk,
+    plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
     tiene9001,
     horas: h,
     hTotal,

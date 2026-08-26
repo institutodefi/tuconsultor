@@ -221,8 +221,14 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                       )}
                     </Link>
                     <span className="text-[11px] text-[#7FA7B4]">
-                      {o.modelo} · {(o.normas || []).join(' + ')} · {fmtFecha(o.fecha_emision || o.creado)}
+                      {o.modelo} · {(o.normas || []).join(' + ')} · emitida {fmtFecha(o.fecha_emision || o.creado)}
                     </span>
+                    {(o.fecha_inicio || o.fecha_fin) && (
+                      <span className="block text-[11px] text-[#7FA7B4]">
+                        {fmtFecha(o.fecha_inicio)} → {fmtFecha(o.fecha_fin)}
+                        {' · cert. '}{o.fecha_certificacion ? fmtFecha(o.fecha_certificacion) : 'sin fecha'}
+                      </span>
+                    )}
                   </span>
                   {o.estado && <span className={`chip !px-2 !py-0 text-[10px] ${COLOR_ESTADO_OFERTA[o.estado] || 'bg-white/5 text-[#9FC0CB]'}`}>{o.estado}</span>}
                   <span className="text-[11.5px] font-bold text-[#9FC0CB]">

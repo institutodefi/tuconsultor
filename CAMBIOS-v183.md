@@ -947,3 +947,134 @@ Corregido al último día del mes de destino.
 febrero bisiesto), generación sin certificación, generación con certificación
 temprana, certificación posterior al fin, contrato demasiado corto (sí bloquea) y
 fin anterior al inicio (sí bloquea). Todo correcto. App compilada.
+
+---
+
+# v198 · El plazo solo bloquea donde forma parte del producto
+
+## La regla, por modelo
+
+| Modelo | ¿El plazo impide emitir? | Por qué |
+|---|---|---|
+| **Implantación** | **No** | No hay cuotas: se paga en uno o dos pagos por un alcance cerrado. Un calendario de seis meses en vez de doce es una decisión de planificación, no un impedimento. Se avisa, se emite |
+| **Apoyo** | **Sí** | La bolsa se dimensiona por meses, y el mínimo sube con el nº de sistemas (3, o 4 con más de dos). Con menos plazo las horas no encajan |
+| **Recurrentes** | **Sí** | Hay permanencia y cuotas mensuales. Un contrato más corto que el mínimo no es ese modelo |
+
+## Qué pasaba antes
+
+`plazoOk` del motor se calculaba igual para todos: `mesesProyecto >= minMeses`.
+Y `MESES_MODELO.Implantación` vale **12**. Así que una implantación a ocho meses
+—perfectamente normal— deshabilitaba el botón con «Mínimo 12 meses», aunque en
+implantación no hay permanencia que respetar.
+
+Ahora `plazoOk` es siempre `true` en Implantación y se añade `plazoCorto`, que es
+informativo y alimenta el aviso.
+
+En Implantación el plazo que se manda al motor pasa a ser el del **calendario de
+trabajo** (hasta la auditoría si la hay), no el del contrato: es la fecha que hay
+que cumplir y la que reparte las tareas por meses.
+
+## Hallazgo: había dos mínimos distintos para lo mismo
+
+- `MESES_MINIMOS_RECURRENTE = 6` en `planificacion.js`
+- `MESES_MODELO.Compromiso = 12` en `calcEngine.js`
+
+Con un contrato recurrente de seis meses, la validación no daba error —cumplía
+el 6— pero el botón se bloqueaba igual, porque el motor exigía 12. Mensaje y
+bloqueo decían cosas distintas y no había forma de entender por qué no se podía
+generar.
+
+Unificado: la validación usa `mesesPorModelo()`, el mismo que el motor. La
+permanencia real de un recurrente son doce meses, así que ese es el mínimo. La
+constante se conserva marcada como obsoleta porque está exportada.
+
+El texto del botón bloqueado pasa de «Mínimo 12 meses» a «El plazo no llega al
+mínimo del modelo (12 meses)», que dice de dónde viene la restricción.
+
+## Verificación
+
+`scripts/test-plazos-modelo.mjs`: Implantación a 12, 8, 6, 3 y 2 meses (nunca
+bloquea, avisa por debajo del mínimo); Apoyo con 1 y 3 sistemas contra sus
+mínimos respectivos; recurrentes a 12, 6 y 4; e Implantación con auditoría
+temprana. Todo correcto, y sin regresión en `test-fechas-oferta.mjs`.
+
+---
+
+# v199 · La fecha de fin se comporta según el modelo
+
+| Modelo | Fecha de fin |
+|---|---|
+| **Apoyo**, **Implantación** | **Manual.** Se propone inicio + 12 meses, pero se edita libremente: cada proyecto dura lo que dura |
+| **Relación**, **Implicación**, **Compromiso** | **Automática.** Inicio + 12 meses, pegada al inicio y en solo lectura |
+
+## Por qué en los recurrentes se bloquea el campo
+
+La permanencia son doce meses: un fin distinto no representa nada real y, en
+cambio, deja la oferta sin poder emitirse. Dejarlo editable solo abre la puerta
+a un bloqueo que cuesta entender.
+
+El campo va en `readOnly` con la nota «Permanencia de 12 meses: va siempre
+pegado al inicio», para que se vea que no es un fallo sino una regla.
+
+## Reenganche al cambiar de modelo
+
+Si se venía de una Implantación con fin a cinco meses y se cambia a Compromiso,
+el fin vuelve a los doce meses automáticamente. Sin esto, la oferta quedaría
+bloqueada por un valor heredado del modelo anterior, sin nada en pantalla que
+explicara por qué.
+
+Mismo comportamiento en el generador y en la edición de ofertas.
+
+## Verificación
+
+`scripts/test-fin-por-modelo.mjs`: los cinco modelos y si su fin es manual;
+recurrentes siempre a doce meses y sin bloqueo; un fin corto forzado en
+recurrente que se reengancha; Implantación con fin a 6, 3 y 2 meses (respetado,
+no bloquea, avisa); y Apoyo con fin manual, donde los criterios sí siguen
+aplicando y un plazo por debajo del mínimo bloquea.
+
+App compilada.
+
+---
+
+# v200 · Las tres fechas del encargo, visibles
+
+Inicio, fin y certificación prevista se ven ahora en los cuatro sitios donde
+hacen falta. Antes solo asomaban de refilón: la de emisión en la portada del PDF
+y la de primer pago dentro del cuadro de facturación. El cliente no tenía dónde
+leer cuándo empieza, cuándo termina y cuándo está prevista la auditoría.
+
+## PDF de oferta
+
+Bloque **Calendario** entre el alcance y la inversión, con las tres fechas en
+columnas sobre banda gris con filo naranja.
+
+La etiqueta central se adapta: **«Fin del proyecto»** en Implantación,
+**«Fin de contrato»** en los recurrentes.
+
+Y si no hay fecha de auditoría, pone **«Por determinar»** en lugar de dejar un
+hueco: un espacio en blanco en un documento de cliente parece un fallo del
+documento, no una decisión.
+
+## PowerPoint
+
+Las tres fechas se añaden a la ficha de datos de la slide «La propuesta». Es lo
+que se proyecta en la reunión, que es justo donde surgen las preguntas de
+calendario.
+
+## Tabla de ofertas
+
+Columna **Calendario** nueva: `01/10/26 → 01/10/27` y debajo `cert. 15/06/27` o
+`cert. sin fecha`. Antes había que abrir la edición de cada oferta para saber
+cuándo empezaba.
+
+## Cartera de la ficha de empresa
+
+Segunda línea en cada oferta con el mismo formato, y la fecha de emisión pasa a
+decir «emitida» para no confundirla con el inicio.
+
+## Verificación
+
+PDF generado en tres variantes —recurrente con certificación, recurrente sin
+ella e implantación— y revisado el bloque en el render. PPTX generado y
+comprobado que las tres fechas y sus etiquetas llegan al XML. App compilada.

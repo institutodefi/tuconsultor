@@ -4,9 +4,18 @@ import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
 import { COMPLEJIDADES } from '../../lib/proyecto.js';
+import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
 import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.jsx';
 import ContratoDeOferta from './ContratoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
+
+/** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
+function fFecha(f) {
+  if (!f) return '—';
+  const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? '—'
+    : d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
 
 /** Doce meses después de una fecha ISO. Respeta el fin de mes: 31 ene → 28 feb. */
 function sumar12(fechaISO) {
@@ -252,6 +261,19 @@ export default function Ofertas() {
   // Avisos de coherencia entre fechas. Se avisa, no se bloquea: hay casos
   // legítimos (anticipo antes de arrancar, arranque a mitad de mes que se
   // factura al siguiente) y quien edita sabe lo que hace.
+  // En Apoyo e Implantación el fin lo decide quien oferta; en los recurrentes es
+  // la permanencia de doce meses y va pegado al inicio.
+  const finManual = MODELOS_PROYECTO.includes(edicion?.modelo);
+
+  // Al pasar a un modelo recurrente, el fin vuelve a los doce meses: venir de
+  // una implantación de cinco meses dejaría la oferta bloqueada sin motivo
+  // visible al regenerarla.
+  useEffect(() => {
+    if (!edicion || finManual || !edicion.fecha_inicio) return;
+    const doce = sumar12(edicion.fecha_inicio);
+    if (edicion.fecha_fin !== doce) setEdicion((x) => ({ ...x, fecha_fin: doce }));
+  }, [finManual, edicion?.fecha_inicio, edicion?.modelo]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const avisoFechas = (() => {
     const e = edicion || {};
     const a = {};
@@ -428,7 +450,11 @@ export default function Ofertas() {
                   const pagoSeguia = !edicion.fecha_primer_pago || edicion.fecha_primer_pago === edicion.fecha_inicio;
                   // El fin también sigue al inicio mientras esté a doce meses
                   // exactos: si alguien lo movió a mano, se respeta.
-                  const finSeguia = !edicion.fecha_fin || edicion.fecha_fin === sumar12(edicion.fecha_inicio);
+                  // Recurrentes: siempre. Apoyo/Implantación: solo si estaba
+                  // en los doce meses por defecto, es decir, sin tocar.
+                  const finSeguia = !finManual
+                    || !edicion.fecha_fin
+                    || edicion.fecha_fin === sumar12(edicion.fecha_inicio);
                   setEdicion({
                     ...edicion, fecha_inicio: ini,
                     fecha_primer_pago: pagoSeguia ? ini : edicion.fecha_primer_pago,
@@ -444,11 +470,18 @@ export default function Ofertas() {
               {avisoFechas.pago && <p className="mt-1 text-[11px] font-bold text-brand-orange">{avisoFechas.pago}</p>}
             </div>
             <div>
-              <label className="label" htmlFor="of-fin">Fin de contrato</label>
+              <label className="label" htmlFor="of-fin">
+                {finManual ? 'Fin del proyecto' : 'Fin de contrato'}
+              </label>
               <input id="of-fin" type="date" className="input !py-1.5 !text-[13px]"
-                value={edicion.fecha_fin || ''}
-                onChange={(e) => setEdicion({ ...edicion, fecha_fin: e.target.value })} />
-              {edicion.fecha_inicio && edicion.fecha_fin !== sumar12(edicion.fecha_inicio) && (
+                value={edicion.fecha_fin || ''} readOnly={!finManual}
+                onChange={(e) => { if (finManual) setEdicion({ ...edicion, fecha_fin: e.target.value }); }} />
+              <p className="mt-1 text-[11px] text-[#7FA7B4]">
+                {finManual
+                  ? 'Lo marca el calendario del proyecto.'
+                  : 'Permanencia de 12 meses desde el inicio.'}
+              </p>
+              {finManual && edicion.fecha_inicio && edicion.fecha_fin !== sumar12(edicion.fecha_inicio) && (
                 <button type="button" className="mt-1 text-[11px] font-bold text-brand-orange hover:underline"
                   onClick={() => setEdicion({ ...edicion, fecha_fin: sumar12(edicion.fecha_inicio) })}>
                   Poner a 12 meses del inicio
@@ -513,6 +546,7 @@ export default function Ofertas() {
             <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
               <th className="py-2">Nº oferta</th><th className="py-2">Fecha</th><th className="py-2">Cliente</th>
               <th className="py-2">Comercial</th><th className="py-2">Normas</th><th className="py-2">Modelo</th>
+              <th className="py-2">Calendario</th>
               <th className="py-2 text-right">Importe<br /><span className="text-[9.5px] font-semibold normal-case tracking-normal text-[#5E8494]">sin impuestos</span></th><th className="py-2 text-right">Documentos</th>
             </tr></thead>
             <tbody className="divide-y divide-navy-50">
@@ -538,6 +572,20 @@ export default function Ofertas() {
                     </span>
                   </td>
                   <td className="py-2.5 font-semibold">{r.modelo}</td>
+                  {/* Las tres fechas del encargo: antes había que abrir la
+                      edición para saber cuándo empezaba y cuándo terminaba. */}
+                  <td className="py-2.5 whitespace-nowrap text-[11.5px] leading-tight">
+                    {r.fecha_inicio || r.fecha_fin ? (
+                      <>
+                        <span className="block font-semibold text-[#CFE3E9]">
+                          {fFecha(r.fecha_inicio)} → {fFecha(r.fecha_fin)}
+                        </span>
+                        <span className="block text-[#7FA7B4]">
+                          cert. {r.fecha_certificacion ? fFecha(r.fecha_certificacion) : 'sin fecha'}
+                        </span>
+                      </>
+                    ) : <span className="text-[#7FA7B4]">—</span>}
+                  </td>
                   <td className="py-2.5 text-right font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</td>
                   <td className="py-2.5 text-right whitespace-nowrap">
                     {(r.url_pdf || r.url_pptx) ? (

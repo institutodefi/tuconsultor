@@ -173,6 +173,19 @@ async function generarPPTX(r, cli, anexo) {
   ];
   if (r.complejidad) datos.push(['Complejidad', r.complejidad]);
   if (r.sedes && r.sedes > 1) datos.push(['Sedes o alcances', String(r.sedes)]);
+  // Las tres fechas del encargo, también aquí: el PPT es lo que se proyecta en
+  // la reunión y es donde surgen las preguntas de calendario.
+  const fFecha = (f) => {
+    if (!f) return null;
+    const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
+    return Number.isNaN(d.getTime()) ? null
+      : d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+  if (r.fecha_inicio) datos.push(['Inicio previsto', fFecha(r.fecha_inicio)]);
+  if (r.fecha_fin) datos.push([esImpl ? 'Fin del proyecto' : 'Fin de contrato', fFecha(r.fecha_fin)]);
+  if (r.fecha_inicio || r.fecha_certificacion) {
+    datos.push(['Certificación prevista', fFecha(r.fecha_certificacion) || 'Por determinar']);
+  }
   datos.forEach(function (par, i) {
     const x = 0.6 + (i % 3) * 3.0, y = 2.6 + Math.floor(i / 3) * 0.95;
     s.addText(par[0].toUpperCase(), { x: x, y: y, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });

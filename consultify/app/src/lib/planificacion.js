@@ -1,3 +1,4 @@
+import { mesesPorModelo } from './calcEngine.js';
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICACIÓN POR FECHAS
 //
@@ -27,6 +28,13 @@ export const MODELOS_RECURRENTES = ['Relación', 'Implicación', 'Compromiso'];
 export const MODELOS_PROYECTO = ['Apoyo', 'Implantación'];
 
 /** Meses mínimos hasta la certificación para poder ofertar un recurrente. */
+/**
+ * @deprecated Convivían dos mínimos distintos para el mismo modelo: este 6 y el
+ * `MESES_MODELO` del motor, que dice 12 para los recurrentes. El resultado era
+ * que el aviso decía «necesita al menos 6» mientras el botón se bloqueaba por
+ * no llegar a 12. La permanencia real de un recurrente son doce meses, así que
+ * manda `mesesPorModelo()`. Se conserva la constante porque está exportada.
+ */
 export const MESES_MINIMOS_RECURRENTE = 6;
 
 /** Identificadores que no son sistemas de gestión certificables. */
@@ -117,13 +125,47 @@ export function validarPlanificacion({ inicio, certificacion, fin, modelo, norma
     );
   }
 
-  // ── Regla 1 · duración mínima del contrato en los recurrentes ──
-  // Se mide contra el fin de contrato, no contra la auditoría.
-  if (MODELOS_RECURRENTES.includes(modelo) && mesesContrato != null && mesesContrato < MESES_MINIMOS_RECURRENTE) {
-    errores.push(
-      `El contrato dura ${mesesContrato} ${mesesContrato === 1 ? 'mes' : 'meses'} y el modelo ${modelo} ` +
-      `necesita al menos ${MESES_MINIMOS_RECURRENTE}. Amplía el fin de contrato o elige Apoyo o Implantación.`,
-    );
+  // ── Regla 1 · duración mínima, solo donde el plazo forma parte del producto ──
+  //
+  // RECURRENTES: hay permanencia y cuotas mensuales. Un contrato más corto que
+  // el mínimo simplemente no es ese modelo. Bloquea.
+  if (MODELOS_RECURRENTES.includes(modelo) && mesesContrato != null) {
+    // Mismo mínimo que aplica el motor, para que el mensaje y el bloqueo del
+    // botón digan lo mismo.
+    const min = mesesPorModelo(modelo, normas.length);
+    if (mesesContrato < min) {
+      errores.push(
+        `El contrato dura ${mesesContrato} ${mesesContrato === 1 ? 'mes' : 'meses'} y el modelo ${modelo} ` +
+        `tiene una permanencia mínima de ${min}. Amplía el fin de contrato o elige Apoyo o Implantación.`,
+      );
+    }
+  }
+
+  // APOYO: la bolsa de horas se dimensiona por meses, y el mínimo sube con el
+  // número de sistemas. Con menos plazo, las horas no tienen dónde encajar.
+  // Bloquea.
+  if (modelo === 'Apoyo' && mesesContrato != null) {
+    const min = mesesPorModelo('Apoyo', normas.length);
+    if (mesesContrato < min) {
+      errores.push(
+        `La bolsa de Apoyo para ${normas.length} sistema${normas.length === 1 ? '' : 's'} necesita al menos ` +
+        `${min} meses y el plazo es de ${mesesContrato}. Amplía la fecha de fin o reduce el alcance.`,
+      );
+    }
+  }
+
+  // IMPLANTACIÓN: NO bloquea. No hay cuotas —se paga en uno o dos pagos por un
+  // alcance cerrado—, así que un calendario corto es una decisión de
+  // planificación que hay que advertir, no impedir.
+  if (modelo === 'Implantación' && meses != null) {
+    const min = mesesPorModelo('Implantación', normas.length);
+    if (meses < min) {
+      avisos.push(
+        `${meses} ${meses === 1 ? 'mes' : 'meses'} para implantar ${normas.length} ` +
+        `sistema${normas.length === 1 ? '' : 's'}: por debajo de los ${min} habituales. ` +
+        'Se puede ofertar, pero el calendario irá apretado y conviene decírselo al cliente.',
+      );
+    }
   }
 
   // Aviso, no error: auditoría antes de que termine el contrato es normal
