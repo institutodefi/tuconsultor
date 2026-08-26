@@ -768,3 +768,60 @@ regenerar» como desde «↻ Regenerar» y desde la edición rápida de normas.
 | Oferta antigua sin fechas | fecha de hoy | mes actual | 12 |
 
 App compilada.
+
+---
+
+# v195 · Cartera comercial en la ficha de empresa
+
+Caja plegable «Ofertas, contratos y proyectos» en `FichaEmpresa.jsx`, con
+minidashboard y tres pestañas. Solo en empresas marcadas como cliente.
+
+## El problema de fondo: cuatro tablas que no se conocen
+
+Para saber qué había con un cliente tocaba pasear por Ofertas, Contratos y
+Proyectos buscando por nombre en cada pantalla. Y las tablas no están unidas:
+
+| Tabla | Cruza por |
+|---|---|
+| `presupuestos` | `cif` |
+| `contratos` | `cliente_cif` |
+| `clientes` | `cif` |
+| `proyectos` | cuelga de `clientes.id`, no de `empresas` |
+
+**La única llave común es el CIF**, y se normaliza antes de comparar: en la base
+el mismo CIF aparece como `B-84.867.670`, `b84867670` y `B84867670 `. Sin
+normalizar, la ficha saldría vacía aunque hubiera cinco ofertas emitidas.
+
+Cuando una oferta no trae CIF se compara por nombre normalizado (sin forma
+jurídica ni acentos). Es menos fiable, así que esas coincidencias **se marcan en
+la interfaz** con «~ por nombre»: quien mira debe poder desconfiar del dato.
+
+## Minidashboard
+
+Cuatro cifras: ofertas (con las que siguen sin cerrar), contratos (con los
+firmados), proyectos activos y **comprometido al año** — recurrentes a doce
+meses más proyectos cerrados, contando solo lo vivo.
+
+Debajo, **una sola alerta**, la más urgente: contrato vencido → vence en menos de
+30 días → menos de 60 → ofertas sin cerrar → sin proyectos activos. Se eligió una
+y no una lista a propósito: cinco avisos no se leen y el urgente se pierde.
+
+## Decisiones
+
+- **Carga bajo demanda.** Son cuatro tablas y la ficha se abre muchas veces solo
+  para mirar un teléfono. Se piden al desplegar la caja, no al abrir la ficha.
+- **Se abre por la pestaña que tiene algo.** Proyectos si los hay, si no
+  contratos, si no ofertas. Abrir siempre en Proyectos con la lista vacía hace
+  pensar que no hay nada cuando hay tres ofertas abiertas.
+- **Si la empresa no tiene CIF**, el mensaje de lista vacía lo dice: es la llave
+  del cruce y sin él no se encuentra nada.
+
+## Verificación
+
+`scripts/test-cartera.mjs`: cruce con tres formatos distintos del mismo CIF,
+coincidencia por nombre cuando falta el CIF, exclusión de empresas ajenas
+(ofertas, contratos y proyectos), recuento de abiertas, comprometido anual,
+renovaciones, elección de alerta, orden por fecha descendente, normalización de
+razón social y casos vacíos (empresa sin datos y empresa nula). Todo correcto.
+
+App compilada.

@@ -11,6 +11,7 @@ import HomologacionNormas from './HomologacionNormas.jsx';
 import ServiciosProveedor from '../../components/ServiciosProveedor.jsx';
 import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
+import CarteraEmpresa from './CarteraEmpresa.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha de empresa (una sola entidad para cliente / proveedor / potencial).
@@ -828,6 +829,15 @@ export default function FichaEmpresa({
           puedeEditar={puedeEditar} onCambio={onCambio} onAbrirContacto={onAbrirContacto} desnudo
         />
       </Caja>
+
+      {/* Cartera comercial · plegada.
+          No se abre sola: la carga son cuatro tablas y la ficha se abre muchas
+          veces solo para mirar un teléfono. Al desplegar se piden los datos. */}
+      {empresa.es_cliente && (
+        <Caja titulo="Ofertas, contratos y proyectos" resumen="ver estado del cliente">
+          <CarteraEmpresa empresa={empresa} />
+        </Caja>
+      )}
 
       {/* Datos fiscales · plegado */}
       <Caja titulo="Datos fiscales y de contacto" resumen={resumenDireccion || empresa.email || 'sin datos'}>
