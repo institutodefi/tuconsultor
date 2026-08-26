@@ -1078,3 +1078,50 @@ decir «emitida» para no confundirla con el inicio.
 PDF generado en tres variantes —recurrente con certificación, recurrente sin
 ella e implantación— y revisado el bloque en el render. PPTX generado y
 comprobado que las tres fechas y sus etiquetas llegan al XML. App compilada.
+
+---
+
+# v201 · Rejilla del bloque de fechas del generador
+
+Ajuste sobre el bloque que ya se añadió en v197 y v199 (inicio, fin,
+certificación y plazo en el paso «2 · Modelo de servicio»).
+
+Estaba en `sm:grid-cols-4`: cuatro columnas desde 640 px de ancho. A ese tamaño
+las etiquetas partían en dos líneas y descuadraban la fila —el mismo problema
+que ya tenía «Inicio estimado del proyecto» con solo tres columnas—. Pasa a
+`sm:grid-cols-2 xl:grid-cols-4`, con los campos alineados arriba para que las
+notas de distinta longitud no desplacen unos inputs respecto a otros.
+
+---
+
+# v202 · Alineación de los bloques de fechas
+
+Las casillas quedaban a distinta altura. La causa es que cada celda apilaba
+etiqueta, campo y nota sin altura fija: una etiqueta de dos líneas —«Inicio
+estimado del proyecto» era el caso visible— o una nota más larga empujaban el
+campo hacia abajo y lo sacaban de la línea de sus vecinos.
+
+Ahora cada celda es una columna flex con tres alturas mínimas fijas:
+
+| Zona | Generador | Edición |
+|---|---|---|
+| Etiqueta | `min-h-[34px]`, alineada abajo | `min-h-[32px]` |
+| Campo | `h-[38px]` | `h-[34px]` |
+| Nota | `min-h-[30px]` | `min-h-[28px]` |
+
+Con la etiqueta pegada al borde inferior de su caja, dé una o dos líneas, el
+campo arranca siempre a la misma altura.
+
+Detalles que hacían falta para que cuadrase de verdad:
+
+- **«Plazo para planificar» no tiene campo**, sino una cifra. Se le da la misma
+  altura que a los inputs para que quede a la altura de las fechas y no flotando
+  por encima.
+- **Dos celdas no tenían nota** y por eso su recuadro terminaba antes que los
+  demás: «Inicio del proyecto» y «Fecha del primer pago». Se les ha puesto una
+  útil («Desde aquí se cuenta todo lo demás», «Por defecto, el mes del inicio»)
+  en lugar de un hueco vacío.
+- **Los avisos de validación ocupan el sitio de la nota** en vez de añadirse
+  debajo: así el bloque no crece de altura cuando aparece un aviso.
+
+Aplicado en el generador de ofertas y en la edición del histórico.

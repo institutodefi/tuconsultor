@@ -431,17 +431,17 @@ export default function Ofertas() {
               primer pago arranca el cuadro de facturación. Antes ninguna se
               podía tocar aquí y el PDF se fechaba solo, con el día en que se
               regenerase. */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="label" htmlFor="of-emision">Fecha de emisión</label>
-              <input id="of-emision" type="date" className="input !py-1.5 !text-[13px]"
+          <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex flex-col">
+              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-emision">Fecha de emisión</label>
+              <input id="of-emision" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
                 value={edicion.fecha_emision || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_emision: e.target.value })} />
-              <p className="mt-1 text-[11px] text-[#7FA7B4]">Fecha del PDF y de los 30 días de validez.</p>
+              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">Fecha del PDF y de los 30 días de validez.</p>
             </div>
-            <div>
-              <label className="label" htmlFor="of-inicio">Inicio previsto del proyecto</label>
-              <input id="of-inicio" type="date" className="input !py-1.5 !text-[13px]"
+            <div className="flex flex-col">
+              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-inicio">Inicio previsto del proyecto</label>
+              <input id="of-inicio" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
                 value={edicion.fecha_inicio || ''}
                 onChange={(e) => {
                   // El primer pago sigue al inicio mientras no se toque a mano:
@@ -461,22 +461,27 @@ export default function Ofertas() {
                     fecha_fin: finSeguia && ini ? sumar12(ini) : edicion.fecha_fin,
                   });
                 }} />
+              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">Arranca el calendario del encargo.</p>
             </div>
-            <div>
-              <label className="label" htmlFor="of-pago">Fecha del primer pago</label>
-              <input id="of-pago" type="date" className="input !py-1.5 !text-[13px]"
+            <div className="flex flex-col">
+              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-pago">Fecha del primer pago</label>
+              <input id="of-pago" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
                 value={edicion.fecha_primer_pago || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_primer_pago: e.target.value })} />
-              {avisoFechas.pago && <p className="mt-1 text-[11px] font-bold text-brand-orange">{avisoFechas.pago}</p>}
+              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug">
+                {avisoFechas.pago
+                  ? <span className="font-bold text-brand-orange">{avisoFechas.pago}</span>
+                  : <span className="text-[#7FA7B4]">Por defecto, el mes del inicio.</span>}
+              </p>
             </div>
-            <div>
-              <label className="label" htmlFor="of-fin">
+            <div className="flex flex-col">
+              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-fin">
                 {finManual ? 'Fin del proyecto' : 'Fin de contrato'}
               </label>
-              <input id="of-fin" type="date" className="input !py-1.5 !text-[13px]"
+              <input id="of-fin" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
                 value={edicion.fecha_fin || ''} readOnly={!finManual}
                 onChange={(e) => { if (finManual) setEdicion({ ...edicion, fecha_fin: e.target.value }); }} />
-              <p className="mt-1 text-[11px] text-[#7FA7B4]">
+              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">
                 {finManual
                   ? 'Lo marca el calendario del proyecto.'
                   : 'Permanencia de 12 meses desde el inicio.'}
@@ -487,20 +492,20 @@ export default function Ofertas() {
                   Poner a 12 meses del inicio
                 </button>
               )}
-              {avisoFechas.fin && <p className="mt-1 text-[11px] font-bold text-red-300">{avisoFechas.fin}</p>}
+              {avisoFechas.fin && <p className="text-[11px] font-bold text-red-300">{avisoFechas.fin}</p>}
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label className="label" htmlFor="of-cert">
+            <div className="flex flex-col">
+              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-cert">
                 Certificación <span className="font-normal text-[#7FA7B4]">— opcional</span>
               </label>
-              <input id="of-cert" type="date" className="input !py-1.5 !text-[13px]"
+              <input id="of-cert" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
                 value={edicion.fecha_certificacion || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_certificacion: e.target.value })} />
-              <p className="mt-1 text-[11px] text-[#7FA7B4]">La auditoría externa. No define el fin del contrato.</p>
-              {avisoFechas.cert && <p className="mt-1 text-[11px] font-bold text-red-300">{avisoFechas.cert}</p>}
+              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">La auditoría externa. No define el fin del contrato.</p>
+              {avisoFechas.cert && <p className="text-[11px] font-bold text-red-300">{avisoFechas.cert}</p>}
             </div>
           </div>
           {/* Notas: las que salen en el documento y las que no. Separadas a

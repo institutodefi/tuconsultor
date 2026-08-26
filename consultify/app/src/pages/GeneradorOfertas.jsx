@@ -591,47 +591,66 @@ export default function GeneradorOfertas({ publico = false }) {
                 );
               })}
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
-              <div>
-                <label className="label" htmlFor="g-inicio">Inicio del proyecto</label>
-                <input id="g-inicio" type="date" className="input !py-1.5 !text-[13px]"
+            {/* Cuatro columnas solo cuando hay sitio de verdad. Con
+                `sm:grid-cols-4` se apretaban desde 640 px y las etiquetas
+                partían en dos líneas, descuadrando la fila.
+
+                Alineación: cada celda es una columna flex con tres alturas
+                fijas —etiqueta, campo y nota—. Sin ellas, una etiqueta que
+                ocupa dos líneas o una nota más larga desplazan el campo de su
+                columna y los recuadros quedan a distinta altura. */}
+            <div className="mt-4 grid gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-col">
+                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-inicio">
+                  Inicio del proyecto
+                </label>
+                <input id="g-inicio" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
                   value={fechaInicio} onChange={(e) => cambiarInicio(e.target.value)} />
+                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                  Desde aquí se cuenta todo lo demás.
+                </p>
               </div>
-              <div>
-                <label className="label" htmlFor="g-fin">
+
+              <div className="flex flex-col">
+                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-fin">
                   {finEsManual ? 'Fin del proyecto' : 'Fin de contrato'}
                 </label>
-                <input id="g-fin" type="date" className="input !py-1.5 !text-[13px]"
+                <input id="g-fin" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
                   value={fechaFin} readOnly={!finEsManual}
                   aria-describedby="g-fin-nota"
                   onChange={(e) => { if (finEsManual) { setFechaFin(e.target.value); setFinTocado(true); } }} />
-                <p id="g-fin-nota" className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+                <p id="g-fin-nota" className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
                   {!finEsManual
-                    ? <>Permanencia de 12 meses: va siempre pegado al inicio.</>
+                    ? 'Permanencia de 12 meses: va pegado al inicio.'
                     : finTocado
                       ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
                           onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? sumarMeses(fechaInicio, 12) : ''); }}>
                           Volver a 12 meses</button></>
-                      : 'Propuesto a 12 meses. Ajústalo al calendario real del proyecto.'}
+                      : 'Propuesto a 12 meses. Ajústalo al calendario real.'}
                 </p>
               </div>
-              <div>
-                <label className="label" htmlFor="g-cert">
-                  Certificación <span className="font-normal text-[#7FA7B4]">— opcional</span>
+
+              <div className="flex flex-col">
+                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-cert">
+                  Certificación <span className="ml-1 font-normal normal-case tracking-normal text-[#7FA7B4]">— opcional</span>
                 </label>
-                <input id="g-cert" type="date" className="input !py-1.5 !text-[13px]"
+                <input id="g-cert" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
                   value={fechaCert} onChange={(e) => setFechaCert(e.target.value)} />
-                <p className="mt-1 text-[11px] leading-snug text-[#7FA7B4]">
+                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
                   Si aún no hay auditoría, déjala vacía.
                 </p>
               </div>
-              <div>
-                <p className="label">Plazo para planificar</p>
-                <p className="mt-1 text-lg font-extrabold text-[#EAF4F7]">
-                  {meses || '—'} <span className="text-[12px] font-bold text-[#7FA7B4]">{meses === 1 ? 'mes' : 'meses'}</span>
+
+              <div className="flex flex-col">
+                <p className="label !mb-0 flex min-h-[34px] items-end leading-tight">Plazo para planificar</p>
+                {/* Misma altura que los campos, para que la cifra quede a la
+                    altura de las fechas y no flotando por encima. */}
+                <p className="mt-1.5 flex h-[38px] items-center text-lg font-extrabold leading-none text-[#EAF4F7]">
+                  {meses || '—'}
+                  <span className="ml-1.5 text-[12px] font-bold text-[#7FA7B4]">{meses === 1 ? 'mes' : 'meses'}</span>
                 </p>
-                <p className="text-[11px] leading-snug text-[#7FA7B4]">
-                  Hasta {fechaCert ? 'la certificación' : 'el fin de contrato'}.
+                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                  Hasta {fechaCert ? 'la certificación' : (finEsManual ? 'el fin del proyecto' : 'el fin de contrato')}.
                 </p>
               </div>
             </div>
