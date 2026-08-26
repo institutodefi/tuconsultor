@@ -654,3 +654,117 @@ encimados.
 Cuadro probado con inicio en octubre de 2026: 12 filas, primer mes = mes de
 inicio, último = septiembre de 2027, acumulado correcto y total 4.200 €.
 PDF generado y revisado a nivel visual. App compilada.
+
+---
+
+# v193 · Corrección: el cuadro seguía saliendo a 3 meses en ofertas ya emitidas
+
+## Qué falló
+
+v192 arregló el fallback (`|| 3` → `|| 12` en recurrentes), pero **ese fallback
+solo actúa cuando no llega `meses`**. Las ofertas ya emitidas llevan su `meses`
+guardado en la fila de `presupuestos`, y `Ofertas.jsx` lo reenvía tal cual al
+regenerar. Una oferta con `meses: 3` guardado seguía saliendo con tres cuotas
+por mucho que se regenerara.
+
+## La raíz: `meses` significa dos cosas distintas
+
+- En **Implantación** → duración del proyecto. Tres meses son tres meses.
+- En **recurrentes** → plazo hasta la certificación (3, 6, 8…). **No es la
+  duración del contrato**, que es siempre de doce meses de permanencia.
+
+El cuadro estaba usando el primer significado para los dos casos.
+
+## La corrección
+
+El número de cuotas de un modelo recurrente ya no depende de `r.meses`: es
+siempre doce, la permanencia del modelo.
+
+```js
+const MESES_PERMANENCIA = 12;
+const mesesCuadro = r.tipo === 'mes' ? MESES_PERMANENCIA : r.meses;
+```
+
+`r.meses` se sigue usando donde sí significa duración: cronograma, plan de
+trabajo y reparto de tareas del Anexo I.
+
+Esto arregla **todas las ofertas ya emitidas sin tocar la base de datos**: basta
+con regenerarlas.
+
+## Verificado con tres escenarios
+
+| Caso | Cuotas | Primer mes | Total |
+|---|---|---|---|
+| Antigua, `meses: 3` guardado | 12 | mes de inicio | 4.200 € |
+| Antigua, sin `fecha_inicio` | 12 | mes actual | 4.200 € |
+| Nueva, `meses: 12` | 12 | mes de inicio | 4.200 € |
+
+## Si tras desplegar sigue saliendo a 3
+
+Comprobar en este orden:
+1. Que el deploy de Netlify ha terminado (la función es serverless: hasta que no
+   se redespliega, sigue ejecutándose la versión anterior).
+2. Que al pulsar «↻ Regenerar» no aparece el diálogo de conflicto de precio sin
+   resolver: mientras esté abierto, no se regenera nada.
+3. Que la URL del PDF que se está abriendo es la nueva. Cada regeneración crea
+   un fichero con timestamp distinto; si la URL es la misma de antes, el
+   documento no llegó a regenerarse.
+
+---
+
+# v194 · Fechas de la oferta: emisión, inicio y primer pago
+
+## Migración `v93`
+
+Dos campos nuevos en `presupuestos` (`fecha_inicio` y `fecha_certificacion` ya
+existían desde v84):
+
+- **`fecha_emision`** — cuándo se emite la oferta.
+- **`fecha_primer_pago`** — cuándo se emite la primera factura. Por defecto, el
+  mes de inicio del proyecto.
+
+Con relleno de lo ya emitido (`fecha_emision = creado::date`,
+`fecha_primer_pago = fecha_inicio`), constraint de coherencia
+(`fecha_primer_pago >= fecha_emision`) y trigger de valores por defecto al
+insertar, para que no dependa solo de la pantalla.
+
+## Un fallo que sale a la luz con esto
+
+El PDF **se fechaba con el día en que se generaba el documento**, no con el día
+en que se emitió la oferta. Regenerar en agosto una oferta emitida en marzo la
+fechaba en agosto. Y como las condiciones dicen «validez de 30 días naturales
+desde su fecha de emisión», cada regeneración reabría el plazo sin que nadie lo
+hubiera decidido.
+
+Ahora el documento lleva `fecha_emision`. Si falta (ofertas anteriores a la
+migración), sigue cayendo a la fecha de hoy.
+
+## Pantalla de edición de ofertas
+
+Bloque de cuatro fechas: emisión, inicio previsto, primer pago y certificación.
+
+- **El primer pago sigue al inicio** mientras no se toque a mano. En cuanto se
+  edita, deja de arrastrarse: hay casos reales en que no coinciden (anticipo
+  antes de arrancar, o arranque a mitad de mes que se factura al siguiente).
+- **Avisos, no bloqueos.** Si el pago cae en un mes distinto al del inicio, o es
+  anterior a la emisión, se avisa en naranja y se deja guardar. Quien edita sabe
+  lo que hace; un bloqueo aquí solo obligaría a inventar fechas falsas.
+
+Las cuatro se guardan y se envían al regenerar, tanto desde «Guardar y
+regenerar» como desde «↻ Regenerar» y desde la edición rápida de normas.
+
+## En el documento
+
+- La portada lleva la fecha de emisión.
+- El cuadro de facturación arranca en la **fecha del primer pago**, no en la de
+  inicio: son campos distintos precisamente porque pueden no coincidir.
+
+## Verificado
+
+| Caso | Fecha del PDF | Primer cobro | Cuotas |
+|---|---|---|---|
+| Emisión marzo, inicio y pago octubre | 15 de marzo de 2026 | octubre de 2026 | 12 |
+| Pago un mes después del inicio | 26 de agosto de 2026 | octubre de 2026 | 12 |
+| Oferta antigua sin fechas | fecha de hoy | mes actual | 12 |
+
+App compilada.

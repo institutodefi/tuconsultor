@@ -49,6 +49,20 @@ const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, ma
 const eur0 = (v) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v || 0) + ' €';
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
+/**
+ * Fecha del documento. Es la de EMISIÓN de la oferta, no la del día en que se
+ * genera el PDF: si no, regenerar una oferta de marzo en agosto la fecharía en
+ * agosto y, con los 30 días de validez que constan en las condiciones, le
+ * reabriría el plazo sin que nadie lo decidiera.
+ */
+const fechaDoc = (r) => {
+  const f = r?.fecha_emision;
+  if (!f) return HOY();
+  const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(d.getTime()) ? HOY()
+    : d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
 export async function generarPDFOferta(r, cli, anexo) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -143,7 +157,7 @@ export async function generarPDFOferta(r, cli, anexo) {
 
   // Pie de portada
   cover.drawText(`Oferta ${r.numero || ''}`.trim(), { x: MG, y: U * 5.5, size: 8.5, font: med, color: rgb(0.45, 0.6, 0.68) });
-  cover.drawText(HOY(), { x: MG, y: U * 3.5, size: 8.5, font: reg, color: rgb(0.35, 0.5, 0.58) });
+  cover.drawText(fechaDoc(r), { x: MG, y: U * 3.5, size: 8.5, font: reg, color: rgb(0.35, 0.5, 0.58) });
   const pieCover = EM.pieCorto;
   cover.drawText(pieCover, { x: A4[0] - MG - reg.widthOfTextAtSize(pieCover, 8), y: U * 3.5, size: 8, font: reg, color: rgb(0.35, 0.5, 0.58) });
 
@@ -355,9 +369,26 @@ export async function generarPDFOferta(r, cli, anexo) {
   // «12.000 € de implantación» no dice si entran este mes o repartidos en un
   // año, que es lo que el cliente necesita saber para su tesorería.
   {
+    // ── Cuántas cuotas se listan ──
+    // Ojo con `r.meses`: en una Implantación es la duración del proyecto, pero
+    // en un modelo recurrente es el plazo hasta la certificación (3, 6, 8…),
+    // NO la duración del contrato. El contrato recurrente es siempre de doce
+    // meses de permanencia, así que el cuadro lista doce cuotas aunque la
+    // certificación llegue antes.
+    //
+    // Esto también arregla las ofertas ya emitidas: llevan su `meses` guardado
+    // en la fila del presupuesto y al regenerarlas se reenvía tal cual. Si el
+    // número de cuotas dependiera de ese dato, una oferta antigua con meses: 3
+    // seguiría saliendo con tres cuotas por mucho que se regenerara.
+    const MESES_PERMANENCIA = 12;
+    const mesesCuadro = r.tipo === 'mes' ? MESES_PERMANENCIA : r.meses;
+
     const cuadro = cuadroFacturacion({
       tipo: r.tipo, importe: r.precioCatalogo,
-      firma: r.fecha_inicio || null, meses: r.meses,
+      // Arranca en la fecha del primer pago, que por defecto es el mes de
+      // inicio del proyecto pero puede diferir (anticipo, o arranque a mitad
+      // de mes que se factura al siguiente).
+      firma: r.fecha_primer_pago || r.fecha_inicio || null, meses: mesesCuadro,
       formaPago: r.formaPagoElegida || r.forma_pago,
       certificacion: r.fecha_certificacion || null,
     });

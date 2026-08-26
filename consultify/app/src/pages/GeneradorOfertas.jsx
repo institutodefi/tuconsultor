@@ -158,7 +158,8 @@ export default function GeneradorOfertas({ publico = false }) {
         // Todo lo que define el encargo, para poder regenerar la oferta igual
         // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
         complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
-        fecha_inicio: fechaInicio || null, fecha_certificacion: fechaCert || null,
+        fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
+        fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
         fases_plan: Object.keys(fasesPlan || {}).length ? fasesPlan : null,
         precio_catalogo: res?.precioAntesDeAjustes ?? precioLead,
         ajuste_oferta: res?.ajusteOferta ?? 0,
@@ -223,7 +224,8 @@ export default function GeneradorOfertas({ publico = false }) {
           meses: res.meses, tiene9001, direccion: cli.direccion,
           // Sin estas dos, el cuadro de facturación del PDF arrancaba en la
           // fecha de hoy en lugar de en el inicio real del servicio.
-          fecha_inicio: fechaInicio || null, fecha_certificacion: fechaCert || null,
+          fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
+          fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
           ajustes, fasesPlan, emisora_id: emisora,
           notas_oferta: notas || null, notas_internas: notasInternas || null,

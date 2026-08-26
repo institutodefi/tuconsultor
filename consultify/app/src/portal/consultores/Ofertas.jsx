@@ -61,7 +61,10 @@ export default function Ofertas() {
           complejidad: r.complejidad, sedes: r.sedes,
           // Las fechas guardadas mandan: si no se envían, el cuadro de
           // facturación se recalcula desde hoy y no desde el inicio real.
-          fecha_inicio: r.fecha_inicio || null, fecha_certificacion: r.fecha_certificacion || null,
+          fecha_emision: r.fecha_emision || null,
+          fecha_inicio: r.fecha_inicio || null,
+          fecha_primer_pago: r.fecha_primer_pago || r.fecha_inicio || null,
+          fecha_certificacion: r.fecha_certificacion || null,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),
@@ -144,6 +147,10 @@ export default function Ofertas() {
         email: e.email?.trim() || null, telefono: e.telefono?.trim() || null,
         normas: e.normas, modelo: e.modelo, tipo: calc.tipo, precio: calc.precioCatalogo,
         complejidad: e.complejidad || null, sedes: e.sedes || 1,
+        fecha_emision: e.fecha_emision || null,
+        fecha_inicio: e.fecha_inicio || null,
+        fecha_primer_pago: e.fecha_primer_pago || e.fecha_inicio || null,
+        fecha_certificacion: e.fecha_certificacion || null,
       };
       await updateRow('presupuestos', e.id, patch);
       setRows((rs) => rs.map((x) => (x.id === e.id ? { ...x, ...patch } : x)));
@@ -158,6 +165,8 @@ export default function Ofertas() {
             empresa: patch.empresa, contacto: patch.nombre || '', cif: e.cif || '',
             ref: e.numero_oferta || '', email: patch.email || '', telefono: patch.telefono || '',
             complejidad: e.complejidad, sedes: e.sedes, presupuesto_id: e.id,
+            fecha_emision: patch.fecha_emision, fecha_inicio: patch.fecha_inicio,
+            fecha_primer_pago: patch.fecha_primer_pago, fecha_certificacion: patch.fecha_certificacion,
           }),
         });
         const j = await resp.json().catch(() => null);
@@ -183,6 +192,10 @@ export default function Ofertas() {
           empresa: oferta.empresa || '', contacto: oferta.nombre || '', cif: oferta.cif || '', cargo: oferta.cargo || '',
           ref: oferta.numero_oferta || '', comercial: oferta.comercial || 'Alejandro',
           email: oferta.email || '', presupuesto_id: oferta.id,
+          fecha_emision: oferta.fecha_emision || null,
+          fecha_inicio: oferta.fecha_inicio || null,
+          fecha_primer_pago: oferta.fecha_primer_pago || oferta.fecha_inicio || null,
+          fecha_certificacion: oferta.fecha_certificacion || null,
         }),
       });
       let j = null; try { j = await resp.json(); } catch { j = null; }
@@ -193,6 +206,24 @@ export default function Ofertas() {
     } catch (e) { setMsg('Error al regenerar con las nuevas normas.'); }
     setGenId(null);
   }
+
+  // Avisos de coherencia entre fechas. Se avisa, no se bloquea: hay casos
+  // legítimos (anticipo antes de arrancar, arranque a mitad de mes que se
+  // factura al siguiente) y quien edita sabe lo que hace.
+  const avisoFechas = (() => {
+    const e = edicion || {};
+    const a = {};
+    const mes = (f) => (f ? String(f).slice(0, 7) : null);
+    if (e.fecha_emision && e.fecha_primer_pago && e.fecha_primer_pago < e.fecha_emision) {
+      a.pago = 'El primer pago es anterior a la emisión de la oferta.';
+    } else if (e.fecha_inicio && e.fecha_primer_pago && mes(e.fecha_inicio) !== mes(e.fecha_primer_pago)) {
+      a.pago = 'El primer pago cae en un mes distinto al del inicio del proyecto.';
+    }
+    if (e.fecha_inicio && e.fecha_certificacion && e.fecha_certificacion <= e.fecha_inicio) {
+      a.cert = 'La certificación debe ser posterior al inicio.';
+    }
+    return a;
+  })();
 
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando ofertas…</p>;
 
@@ -322,6 +353,48 @@ export default function Ofertas() {
                   : '—'}
               </p>
               {edicion.precio != null && <p className="text-[11px] text-[#7FA7B4]">antes: {fmtEUR(edicion.precio)}</p>}
+            </div>
+          </div>
+
+          {/* ── Fechas de la oferta ──
+              Las tres condicionan el documento: la de emisión lo fecha y abre
+              los 30 días de validez, la de inicio ordena el cronograma y la del
+              primer pago arranca el cuadro de facturación. Antes ninguna se
+              podía tocar aquí y el PDF se fechaba solo, con el día en que se
+              regenerase. */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="label" htmlFor="of-emision">Fecha de emisión</label>
+              <input id="of-emision" type="date" className="input !py-1.5 !text-[13px]"
+                value={edicion.fecha_emision || ''}
+                onChange={(e) => setEdicion({ ...edicion, fecha_emision: e.target.value })} />
+              <p className="mt-1 text-[11px] text-[#7FA7B4]">Fecha del PDF y de los 30 días de validez.</p>
+            </div>
+            <div>
+              <label className="label" htmlFor="of-inicio">Inicio previsto del proyecto</label>
+              <input id="of-inicio" type="date" className="input !py-1.5 !text-[13px]"
+                value={edicion.fecha_inicio || ''}
+                onChange={(e) => {
+                  // El primer pago sigue al inicio mientras no se toque a mano:
+                  // lo normal es cobrar desde el mes en que arranca el servicio.
+                  const ini = e.target.value;
+                  const seguia = !edicion.fecha_primer_pago || edicion.fecha_primer_pago === edicion.fecha_inicio;
+                  setEdicion({ ...edicion, fecha_inicio: ini, fecha_primer_pago: seguia ? ini : edicion.fecha_primer_pago });
+                }} />
+            </div>
+            <div>
+              <label className="label" htmlFor="of-pago">Fecha del primer pago</label>
+              <input id="of-pago" type="date" className="input !py-1.5 !text-[13px]"
+                value={edicion.fecha_primer_pago || ''}
+                onChange={(e) => setEdicion({ ...edicion, fecha_primer_pago: e.target.value })} />
+              {avisoFechas.pago && <p className="mt-1 text-[11px] font-bold text-brand-orange">{avisoFechas.pago}</p>}
+            </div>
+            <div>
+              <label className="label" htmlFor="of-cert">Certificación prevista</label>
+              <input id="of-cert" type="date" className="input !py-1.5 !text-[13px]"
+                value={edicion.fecha_certificacion || ''}
+                onChange={(e) => setEdicion({ ...edicion, fecha_certificacion: e.target.value })} />
+              {avisoFechas.cert && <p className="mt-1 text-[11px] font-bold text-red-300">{avisoFechas.cert}</p>}
             </div>
           </div>
           {/* Notas: las que salen en el documento y las que no. Separadas a

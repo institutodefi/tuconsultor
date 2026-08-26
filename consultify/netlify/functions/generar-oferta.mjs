@@ -534,6 +534,13 @@ export default async (req) => {
   // servicio que empieza en octubre facturaba desde agosto.
   r.fecha_inicio = body.fecha_inicio || null;
   r.fecha_certificacion = body.fecha_certificacion || null;
+  // Fecha de emisión: la del documento y el arranque de los 30 días de validez.
+  // Sin esto el PDF se fechaba con el día en que se generaba, así que regenerar
+  // una oferta de marzo en agosto la fechaba en agosto y reabría el plazo.
+  r.fecha_emision = body.fecha_emision || null;
+  // Primer pago: por defecto el mes de inicio del proyecto. De aquí arranca el
+  // cuadro de facturación.
+  r.fecha_primer_pago = body.fecha_primer_pago || body.fecha_inicio || null;
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);
 
