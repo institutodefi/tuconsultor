@@ -104,11 +104,25 @@ export default function Proyectos() {
   // Enriquece una tarea con el código de su cliente (para el código CLI-Txxx-By).
   const conCod = (t) => ({ ...t, codigo_cliente: codigoCli(t.cliente_id) });
 
-  // Permitir abrir un proyecto por querystring (?proyecto=ID) desde Clientes.
+  // Llegada desde otra pantalla:
+  //   ?proyecto=ID  abre ese proyecto
+  //   ?cliente=ID   abre el primer proyecto de ese cliente, para no aterrizar
+  //                 en un listado que hay que volver a filtrar a mano
+  const [urlAplicada, setUrlAplicada] = useState(false);
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('proyecto');
-    if (q) setSel(q);
-  }, []);
+    if (urlAplicada || !proyectos?.length) return;
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get('proyecto');
+    const cli = q.get('cliente');
+    if (id) setSel(id);
+    else if (cli) {
+      const suyos = proyectos.filter((p) => String(p.cliente_id) === String(cli));
+      // El activo primero: es el que se quiere ver al venir de una ficha.
+      const elegido = suyos.find((p) => p.estado === 'activo') || suyos[0];
+      if (elegido) setSel(elegido.id);
+    }
+    setUrlAplicada(true);
+  }, [proyectos, urlAplicada]);
 
   const proyecto = useMemo(() => proyectos.find(p => String(p.id) === String(sel)) || null, [proyectos, sel]);
   const cliente = useMemo(() => clientes.find(c => String(c.id) === String(proyecto?.cliente_id)) || null, [clientes, proyecto]);

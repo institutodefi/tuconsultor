@@ -1240,3 +1240,52 @@ embudo y las de la ficha de empresa cuadren entre sí.
 sin estado marcado, rechazadas incluyendo caducadas, tasa sobre resueltas,
 proyectos por estado, contrato firmado sin proyecto detectado, y que deje de
 contar como pendiente en cuanto se abre el proyecto. App compilada.
+
+---
+
+# v205 · Crear proyecto desde cero y tarjetas enlazadas
+
+## El caso que faltaba: empresa sin ofertas
+
+En v204 el alta de proyecto solo existía colgando de una oferta o un contrato.
+Una empresa sin nada —clientes que ya trabajaban con nosotros antes de que las
+ofertas estuvieran en el sistema, o trabajos que no vienen de una oferta— se
+quedaba con un panel de ceros y el mensaje «Sin ofertas, contratos ni
+proyectos», sin nada que pulsar.
+
+Botón **«+ Nuevo proyecto»** siempre visible en la caja. Sin origen, el
+formulario pide normas y modelo, y propone el nombre a partir de lo elegido
+mientras nadie lo escriba a mano.
+
+Si la empresa no tiene ficha de cliente el botón queda deshabilitado y se
+explica por qué: los proyectos cuelgan de `clientes`, no de `empresas`, y sin
+ficha no hay dónde colgarlo.
+
+El mensaje de lista vacía deja de ser un callejón sin salida: ahora apunta al
+botón.
+
+## Tarjetas enlazadas
+
+Las cifras del panel llevan a la pantalla que gestiona ese dato:
+
+| Tarjeta | Destino |
+|---|---|
+| Ofertas · Aceptadas · Rechazadas | `/consultores/ofertas?empresa=NOMBRE` |
+| Contratos | igual — se gestionan desde su oferta |
+| Proy. activos · Proy. cerrados | `/consultores/proyectos?cliente=ID` |
+
+Pulsar un número y no poder ir a lo que cuenta es la frustración clásica de un
+panel.
+
+`Proy. pendientes` no enlaza: no son proyectos que existan, sino contratos
+firmados sin proyecto. Llevar a la pantalla de proyectos para no encontrarlos
+sería peor que no enlazar; ese dato ya tiene su propio aviso con el botón para
+abrirlos.
+
+## `ProyectosConfig` acepta `?cliente=ID`
+
+Solo entendía `?proyecto=ID`. Ahora, al llegar con un cliente, abre su proyecto
+activo —o el primero que tenga— en lugar de aterrizar en un listado que hay que
+volver a filtrar a mano.
+
+App compilada y rutas verificadas en el bundle.

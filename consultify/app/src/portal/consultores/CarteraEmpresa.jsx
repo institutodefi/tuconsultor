@@ -41,13 +41,25 @@ const TONO_ALERTA = {
   gris:  'border-[#1E5468] bg-[#0D3242] text-[#9FC0CB]',
 };
 
-function Cifra({ etiqueta, valor, tono = 'text-[#EAF4F7]', pie }) {
-  return (
-    <div className="rounded-xl border border-[#1E5468] bg-[#0D3242] px-3 py-2.5">
+/**
+ * Una cifra del panel. Con `a` se convierte en enlace a la pantalla que
+ * gestiona ese dato: pulsar un número y no poder ir a lo que cuenta es la
+ * frustración clásica de un panel.
+ */
+function Cifra({ etiqueta, valor, tono = 'text-[#EAF4F7]', pie, a, titulo }) {
+  const cuerpo = (
+    <>
       <p className={`text-xl font-extrabold leading-none ${tono}`}>{valor}</p>
       <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{etiqueta}</p>
       {pie && <p className="mt-0.5 text-[10.5px] text-[#7FA7B4]">{pie}</p>}
-    </div>
+    </>
+  );
+  const clases = 'block rounded-xl border border-[#1E5468] bg-[#0D3242] px-3 py-2.5';
+  if (!a) return <div className={clases}>{cuerpo}</div>;
+  return (
+    <Link to={a} title={titulo} className={`${clases} transition hover:border-brand-orange`}>
+      {cuerpo}
+    </Link>
   );
 }
 
@@ -92,6 +104,10 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
     return () => { vivo = false; };
   }, [empresa?.id]);
 
+  // Destinos de los enlaces. Las ofertas se filtran por nombre de empresa
+  // porque el listado busca por texto; los proyectos, por id de cliente.
+  const aOfertas = `/consultores/ofertas?empresa=${encodeURIComponent(empresa?.nombre || '')}`;
+
   const cartera = useMemo(() => carteraDe(empresa, datos || {}), [empresa, datos]);
   const { ofertas, contratos, proyectos, resumen: R } = cartera;
 
@@ -107,6 +123,8 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
       })?.id
       || null;
   }, [datos, empresa]);
+
+  const aProyectos = clienteId ? `/consultores/proyectos?cliente=${clienteId}` : '/consultores/proyectos';
 
   // Tras crear un proyecto se recarga solo esa tabla: recargar las cuatro por
   // un alta es tiempo de espera que no aporta.
@@ -138,13 +156,13 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
           Primera fila: cómo va la relación comercial. Segunda: en qué estado
           está el trabajo. Se separan porque responden a preguntas distintas. */}
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-        <Cifra etiqueta="Ofertas" valor={R.ofertas}
+        <Cifra etiqueta="Ofertas" valor={R.ofertas} a={aOfertas} titulo="Ver las ofertas de esta empresa"
           pie={R.ofertasAbiertas ? `${R.ofertasAbiertas} sin cerrar` : 'todas resueltas'}
           tono={R.ofertasAbiertas ? 'text-brand-orange' : 'text-[#EAF4F7]'} />
-        <Cifra etiqueta="Aceptadas" valor={R.aceptadas}
+        <Cifra etiqueta="Aceptadas" valor={R.aceptadas} a={aOfertas} titulo="Ver las ofertas de esta empresa"
           pie={R.tasaAceptacion != null ? `${R.tasaAceptacion}% de las resueltas` : 'ninguna resuelta'}
           tono={R.aceptadas ? 'text-emerald-300' : 'text-[#EAF4F7]'} />
-        <Cifra etiqueta="Rechazadas" valor={R.rechazadas}
+        <Cifra etiqueta="Rechazadas" valor={R.rechazadas} a={aOfertas} titulo="Ver las ofertas de esta empresa"
           pie={R.rechazadas ? 'rechazadas o caducadas' : null}
           tono={R.rechazadas ? 'text-red-300' : 'text-[#EAF4F7]'} />
         <Cifra etiqueta="Comprometido / año" valor={fmtEur(R.facturacionAnual)}
@@ -152,17 +170,17 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
       </div>
 
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-        <Cifra etiqueta="Contratos" valor={R.contratos}
+        <Cifra etiqueta="Contratos" valor={R.contratos} a={aOfertas} titulo="Los contratos se gestionan desde su oferta"
           pie={R.contratosFirmados ? `${R.contratosFirmados} firmado${R.contratosFirmados > 1 ? 's' : ''}` : null} />
         {/* Pendiente = contrato firmado sin proyecto abierto. Es el hueco que
             de verdad hay que vigilar: trabajo vendido sin arrancar. */}
         <Cifra etiqueta="Proy. pendientes" valor={R.proyPendientes}
           pie={R.proyPendientes ? 'firmados sin abrir' : 'nada sin arrancar'}
           tono={R.proyPendientes ? 'text-brand-orange' : 'text-[#EAF4F7]'} />
-        <Cifra etiqueta="Proy. activos" valor={R.proyectosActivos}
+        <Cifra etiqueta="Proy. activos" valor={R.proyectosActivos} a={aProyectos} titulo="Ver los proyectos de este cliente"
           pie={R.proyPausados ? `${R.proyPausados} en pausa` : null}
           tono={R.proyectosActivos ? 'text-emerald-300' : 'text-[#EAF4F7]'} />
-        <Cifra etiqueta="Proy. cerrados" valor={R.proyCerrados}
+        <Cifra etiqueta="Proy. cerrados" valor={R.proyCerrados} a={aProyectos} titulo="Ver los proyectos de este cliente"
           pie={R.proyectos ? `${R.proyectos} en total` : null} />
       </div>
 
@@ -171,6 +189,24 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
         <p className={`rounded-xl border px-3 py-2 text-[12px] font-bold ${TONO_ALERTA[R.alerta.nivel]}`}>
           {R.alerta.texto}
         </p>
+      )}
+
+      {/* Crear proyecto está siempre a mano, con o sin ofertas detrás: hay
+          clientes que ya trabajaban con nosotros antes de que las ofertas
+          existieran en el sistema, y trabajos que no vienen de una oferta. */}
+      {!alta && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11.5px] text-[#7FA7B4]">
+            {clienteId
+              ? 'Puedes abrir un proyecto desde una oferta, desde un contrato o desde cero.'
+              : 'Esta empresa aún no tiene ficha de cliente: créala para poder abrir proyectos.'}
+          </p>
+          <button type="button" disabled={!clienteId}
+            onClick={() => setAlta({ origen: null, tipo: null })}
+            className="rounded-full bg-brand-orange px-3.5 py-1.5 text-[12px] font-extrabold text-[#0A2B3A] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+            + Nuevo proyecto
+          </button>
+        </div>
       )}
 
       {alta && (
@@ -203,7 +239,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
       {sinNada ? (
         <Vacio>
           Sin ofertas, contratos ni proyectos a nombre de esta empresa.
-          {!empresa?.cif && ' Añade el CIF: es la llave con la que se cruzan.'}
+          {!empresa?.cif
+            ? ' Añade el CIF: es la llave con la que se cruzan.'
+            : ' Puedes abrir un proyecto directamente con el botón de arriba.'}
         </Vacio>
       ) : (
         <>
