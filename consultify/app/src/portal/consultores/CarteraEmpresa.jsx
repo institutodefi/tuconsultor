@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
 import { carteraDe, fmtEur, fmtFecha } from '../../lib/cartera.js';
+import AltaProyecto from './AltaProyecto.jsx';
 import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -71,6 +72,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
   const [pestana, setPestana] = useState('proyectos');
+  const [alta, setAlta] = useState(null);   // { origen, tipo } mientras se da de alta
 
   useEffect(() => {
     let vivo = true;
@@ -93,6 +95,28 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
   const cartera = useMemo(() => carteraDe(empresa, datos || {}), [empresa, datos]);
   const { ofertas, contratos, proyectos, resumen: R } = cartera;
 
+  // Ficha de cliente de esta empresa: los proyectos cuelgan de ahí, no de la
+  // ficha del CRM. Sin ella no se puede abrir un proyecto.
+  const clienteId = useMemo(() => {
+    if (!datos || !empresa) return null;
+    const c = carteraDe(empresa, datos);
+    return c.proyectos[0]?.cliente_id
+      || (datos.clientes || []).find((x) => {
+        const n = (s) => String(s || '').toUpperCase().replace(/[\s.-]/g, '');
+        return (n(x.cif) && n(x.cif) === n(empresa.cif));
+      })?.id
+      || null;
+  }, [datos, empresa]);
+
+  // Tras crear un proyecto se recarga solo esa tabla: recargar las cuatro por
+  // un alta es tiempo de espera que no aporta.
+  const trasCrear = async () => {
+    setAlta(null);
+    const proyectos_cliente = await listTable('proyectos_cliente').catch(() => datos.proyectos);
+    setDatos((d) => ({ ...d, proyectos: proyectos_cliente }));
+    setPestana('proyectos');
+  };
+
   // Se abre por la pestaña que tiene algo que enseñar, en orden de relevancia:
   // lo que está vivo primero. Abrir siempre en «Proyectos» con la lista vacía
   // hace pensar que no hay nada cuando sí hay tres ofertas abiertas.
@@ -110,18 +134,36 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
 
   return (
     <div className="space-y-3">
-      {/* ── Minidashboard ── */}
+      {/* ── Minidashboard ──
+          Primera fila: cómo va la relación comercial. Segunda: en qué estado
+          está el trabajo. Se separan porque responden a preguntas distintas. */}
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
         <Cifra etiqueta="Ofertas" valor={R.ofertas}
-          pie={R.ofertasAbiertas ? `${R.ofertasAbiertas} sin cerrar` : null}
+          pie={R.ofertasAbiertas ? `${R.ofertasAbiertas} sin cerrar` : 'todas resueltas'}
           tono={R.ofertasAbiertas ? 'text-brand-orange' : 'text-[#EAF4F7]'} />
-        <Cifra etiqueta="Contratos" valor={R.contratos}
-          pie={R.contratosFirmados ? `${R.contratosFirmados} firmado${R.contratosFirmados > 1 ? 's' : ''}` : null} />
-        <Cifra etiqueta="Proyectos activos" valor={R.proyectosActivos}
-          pie={R.proyectos !== R.proyectosActivos ? `${R.proyectos} en total` : null}
-          tono={R.proyectosActivos ? 'text-emerald-300' : 'text-[#EAF4F7]'} />
+        <Cifra etiqueta="Aceptadas" valor={R.aceptadas}
+          pie={R.tasaAceptacion != null ? `${R.tasaAceptacion}% de las resueltas` : 'ninguna resuelta'}
+          tono={R.aceptadas ? 'text-emerald-300' : 'text-[#EAF4F7]'} />
+        <Cifra etiqueta="Rechazadas" valor={R.rechazadas}
+          pie={R.rechazadas ? 'rechazadas o caducadas' : null}
+          tono={R.rechazadas ? 'text-red-300' : 'text-[#EAF4F7]'} />
         <Cifra etiqueta="Comprometido / año" valor={fmtEur(R.facturacionAnual)}
           pie={R.ultimaActividad ? `últ. ${fmtFecha(R.ultimaActividad)}` : null} />
+      </div>
+
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+        <Cifra etiqueta="Contratos" valor={R.contratos}
+          pie={R.contratosFirmados ? `${R.contratosFirmados} firmado${R.contratosFirmados > 1 ? 's' : ''}` : null} />
+        {/* Pendiente = contrato firmado sin proyecto abierto. Es el hueco que
+            de verdad hay que vigilar: trabajo vendido sin arrancar. */}
+        <Cifra etiqueta="Proy. pendientes" valor={R.proyPendientes}
+          pie={R.proyPendientes ? 'firmados sin abrir' : 'nada sin arrancar'}
+          tono={R.proyPendientes ? 'text-brand-orange' : 'text-[#EAF4F7]'} />
+        <Cifra etiqueta="Proy. activos" valor={R.proyectosActivos}
+          pie={R.proyPausados ? `${R.proyPausados} en pausa` : null}
+          tono={R.proyectosActivos ? 'text-emerald-300' : 'text-[#EAF4F7]'} />
+        <Cifra etiqueta="Proy. cerrados" valor={R.proyCerrados}
+          pie={R.proyectos ? `${R.proyectos} en total` : null} />
       </div>
 
       {/* Una sola alerta, la más urgente. Una lista de cinco no se lee. */}
@@ -129,6 +171,33 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
         <p className={`rounded-xl border px-3 py-2 text-[12px] font-bold ${TONO_ALERTA[R.alerta.nivel]}`}>
           {R.alerta.texto}
         </p>
+      )}
+
+      {alta && (
+        <AltaProyecto origen={alta.origen} tipo={alta.tipo} clienteId={clienteId}
+          onCerrar={() => setAlta(null)} onCreado={trasCrear} />
+      )}
+
+      {/* Contratos firmados sin proyecto: se ofrecen para abrirlos de una vez,
+          en lugar de dejar que el aviso se quede ahí sin acción posible. */}
+      {!alta && R.contratosSinProyecto?.length > 0 && (
+        <div className="rounded-xl border border-brand-orange/40 bg-brand-orange/[0.07] px-3 py-2.5">
+          <p className="text-[12px] font-bold text-brand-orange">
+            {R.contratosSinProyecto.length === 1
+              ? 'Hay un contrato firmado sin proyecto abierto'
+              : `Hay ${R.contratosSinProyecto.length} contratos firmados sin proyecto abierto`}
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {R.contratosSinProyecto.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+                <span className="font-bold text-[#EAF4F7]">{c.numero}</span>
+                <span className="text-[#7FA7B4]">{c.modelo} · {(c.normas || []).join(' + ')}</span>
+                <button type="button" onClick={() => setAlta({ origen: c, tipo: 'contrato' })}
+                  className="font-bold text-brand-orange hover:underline">Abrir proyecto →</button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {sinNada ? (
@@ -198,6 +267,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                       className="shrink-0 text-[11px] font-bold text-brand-verdeTexto hover:underline"
                       title="Abrir el contrato en PDF">PDF</a>
                   )}
+                  <button type="button" onClick={() => setAlta({ origen: c, tipo: 'contrato' })}
+                    className="shrink-0 text-[11px] font-bold text-brand-orange hover:underline"
+                    title="Abrir un proyecto con los datos de este contrato">+ proyecto</button>
                 </li>
               ))}
             </ul>
@@ -247,6 +319,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                         className="text-[11px] font-bold text-[#9FC0CB] hover:underline"
                         title="Abrir la presentación">PPT</a>
                     )}
+                    <button type="button" onClick={() => setAlta({ origen: o, tipo: 'oferta' })}
+                      className="text-[11px] font-bold text-brand-orange hover:underline"
+                      title="Abrir un proyecto con los datos de esta oferta">+ proyecto</button>
                   </span>
                 </li>
               ))}

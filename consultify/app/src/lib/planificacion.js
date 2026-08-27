@@ -47,6 +47,23 @@ const aFecha = (v) => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
+/**
+ * Fecha → 'aaaa-mm-dd' EN HORA LOCAL.
+ *
+ * No usar `toISOString()` para esto. `aFecha` construye la fecha a medianoche
+ * local; en España (UTC+1/+2) `toISOString()` la pasa a UTC y retrocede al día
+ * anterior. Efecto real: 26/08/2026 + 12 meses daba **25/08/2027**, y como
+ * `mesesEntre` resta un mes cuando el día aún no ha llegado, el plazo salía de
+ * **11 meses** y bloqueaba la emisión de la oferta. En el servidor (UTC) no se
+ * reproducía, así que el fallo solo se veía en España.
+ */
+const aISO = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dia}`;
+};
+
 /** Meses enteros entre dos fechas, redondeando hacia arriba: un proyecto de
  *  7 meses y medio necesita 8 meses de planificación, no 7. */
 export function mesesEntre(desde, hasta) {
@@ -62,9 +79,28 @@ export function mesesEntre(desde, hasta) {
 }
 
 /** Fecha de hoy en formato de campo de fecha. */
-export const hoyISO = () => new Date().toISOString().slice(0, 10);
+export const hoyISO = () => aISO(new Date());
 
 /** Suma meses a una fecha, para proponer una de certificación razonable. */
+/**
+ * Fin de contrato de un modelo recurrente: doce meses **y un día** desde el
+ * inicio.
+ *
+ * El día de más no es un capricho: del 26/08/2026 al 26/08/2027 hay doce meses
+ * de calendario, pero el último día del contrato es el 25, porque el 26 ya
+ * pertenece al periodo siguiente. Con el fin en el mismo día del mes, cualquier
+ * cuenta que mire «hasta cuándo cubre» se queda a un día de los doce meses
+ * completos. Poniendo el fin en el 27 el contrato cubre los doce meses enteros
+ * y el plazo nunca sale corto por un día.
+ */
+export function finContratoRecurrente(inicioISO) {
+  if (!inicioISO) return '';
+  const d = aFecha(sumarMeses(inicioISO, 12));
+  if (!d) return '';
+  d.setDate(d.getDate() + 1);
+  return aISO(d);
+}
+
 export function sumarMeses(iso, meses) {
   const d = aFecha(iso) || new Date();
   const r = new Date(d);
@@ -75,7 +111,7 @@ export function sumarMeses(iso, meses) {
   // daba 3 de marzo. Se corrige al último día del mes de destino, que es lo que
   // espera cualquiera al sumar meses a una fecha de contrato.
   if (r.getDate() < dia) r.setDate(0);
-  return r.toISOString().slice(0, 10);
+  return aISO(r);
 }
 
 /**

@@ -7,7 +7,7 @@ import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { EMISORAS_BASE } from '../lib/emisoras.js';
-import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses, MODELOS_PROYECTO } from '../lib/planificacion.js';
+import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses, finContratoRecurrente, MODELOS_PROYECTO } from '../lib/planificacion.js';
 import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
@@ -31,7 +31,7 @@ export default function GeneradorOfertas({ publico = false }) {
   //                   generar la oferta porque el fin del contrato se sacaba
   //                   de ella.
   const [fechaInicio, setFechaInicio] = useState(hoyISO());
-  const [fechaFin, setFechaFin] = useState(sumarMeses(hoyISO(), 12));
+  const [fechaFin, setFechaFin] = useState(finContratoRecurrente(hoyISO()));
   const [finTocado, setFinTocado] = useState(false);   // ¿lo ha puesto la persona a mano?
   const [fechaCert, setFechaCert] = useState('');
 
@@ -52,17 +52,22 @@ export default function GeneradorOfertas({ publico = false }) {
     setFechaInicio(v);
     // En recurrentes el fin va siempre pegado al inicio. En Apoyo e
     // Implantación solo mientras nadie lo haya fijado a mano.
-    if (!finEsManual || !finTocado) setFechaFin(v ? sumarMeses(v, 12) : '');
+    if (!finTocado) setFechaFin(v ? finPorDefecto(v) : '');
   };
 
-  // Al cambiar de modelo a uno recurrente, el fin vuelve a los doce meses: si
-  // se venía de una implantación a cinco meses, ese fin dejaría la oferta
-  // bloqueada sin motivo aparente.
+  // Fin sugerido: en recurrentes, doce meses y un día (contrato completo); en
+  // Apoyo e Implantación, doce meses como punto de partida a ajustar.
+  function finPorDefecto(ini) {
+    return finEsManual ? sumarMeses(ini, 12) : finContratoRecurrente(ini);
+  }
+
+  // Al cambiar de modelo, el fin se recalcula si nadie lo ha tocado: venir de
+  // una implantación a cinco meses dejaría un contrato recurrente demasiado
+  // corto y bloqueado sin motivo visible.
   useEffect(() => {
-    if (!finEsManual && fechaInicio) {
-      const doce = sumarMeses(fechaInicio, 12);
-      if (fechaFin !== doce) { setFechaFin(doce); setFinTocado(false); }
-    }
+    if (finTocado || !fechaInicio) return;
+    const sug = finPorDefecto(fechaInicio);
+    if (fechaFin !== sug) setFechaFin(sug);
   }, [finEsManual, fechaInicio]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Plazo para planificar las tareas: hasta la auditoría si la hay, y si no,
@@ -616,17 +621,17 @@ export default function GeneradorOfertas({ publico = false }) {
                   {finEsManual ? 'Fin del proyecto' : 'Fin de contrato'}
                 </label>
                 <input id="g-fin" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
-                  value={fechaFin} readOnly={!finEsManual}
+                  value={fechaFin}
                   aria-describedby="g-fin-nota"
-                  onChange={(e) => { if (finEsManual) { setFechaFin(e.target.value); setFinTocado(true); } }} />
+                  onChange={(e) => { setFechaFin(e.target.value); setFinTocado(true); }} />
                 <p id="g-fin-nota" className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
-                  {!finEsManual
-                    ? 'Permanencia de 12 meses: va pegado al inicio.'
-                    : finTocado
-                      ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
-                          onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? sumarMeses(fechaInicio, 12) : ''); }}>
-                          Volver a 12 meses</button></>
-                      : 'Propuesto a 12 meses. Ajústalo al calendario real.'}
+                  {finTocado
+                    ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
+                        onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? finPorDefecto(fechaInicio) : ''); }}>
+                        Volver al valor por defecto</button></>
+                    : finEsManual
+                      ? 'Propuesto a 12 meses. Ajústalo al calendario real.'
+                      : '12 meses y un día: cubre el contrato completo. Editable.'}
                 </p>
               </div>
 

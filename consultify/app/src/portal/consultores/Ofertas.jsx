@@ -17,15 +17,27 @@ function fFecha(f) {
     : d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
-/** Doce meses después de una fecha ISO. Respeta el fin de mes: 31 ene → 28 feb. */
-function sumar12(fechaISO) {
+/**
+ * Fin sugerido según el modelo.
+ *   · recurrentes → doce meses y UN DÍA: con el fin en el mismo día del mes, el
+ *     contrato se queda a un día de cubrir los doce meses completos y el plazo
+ *     sale de once, que bloquea la emisión.
+ *   · Apoyo e Implantación → doce meses, como punto de partida a ajustar.
+ *
+ * Se formatea en hora local: `toISOString()` pasa a UTC y en España retrocede
+ * al día anterior, que es de donde venía el desfase.
+ */
+function finSugerido(fechaISO, manual) {
   if (!fechaISO) return '';
-  const d = new Date(`${fechaISO}T12:00:00`);
+  const d = new Date(`${String(fechaISO).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return '';
   const dia = d.getDate();
   d.setMonth(d.getMonth() + 12);
-  if (d.getDate() < dia) d.setDate(0);
-  return d.toISOString().slice(0, 10);
+  if (d.getDate() < dia) d.setDate(0);      // 31 ene → 28 feb
+  if (!manual) d.setDate(d.getDate() + 1);  // el día que completa el contrato
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // Histórico interno de ofertas (todas las del equipo).
@@ -198,7 +210,7 @@ export default function Ofertas() {
         fecha_emision: e.fecha_emision || null,
         fecha_inicio: e.fecha_inicio || null,
         fecha_primer_pago: e.fecha_primer_pago || e.fecha_inicio || null,
-        fecha_fin: e.fecha_fin || (e.fecha_inicio ? sumar12(e.fecha_inicio) : null),
+        fecha_fin: e.fecha_fin || (e.fecha_inicio ? finSugerido(e.fecha_inicio, finManual) : null),
         fecha_certificacion: e.fecha_certificacion || null,
       };
       await updateRow('presupuestos', e.id, patch);
@@ -270,7 +282,7 @@ export default function Ofertas() {
   // visible al regenerarla.
   useEffect(() => {
     if (!edicion || finManual || !edicion.fecha_inicio) return;
-    const doce = sumar12(edicion.fecha_inicio);
+    const doce = finSugerido(edicion.fecha_inicio, finManual);
     if (edicion.fecha_fin !== doce) setEdicion((x) => ({ ...x, fecha_fin: doce }));
   }, [finManual, edicion?.fecha_inicio, edicion?.modelo]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -454,11 +466,11 @@ export default function Ofertas() {
                   // en los doce meses por defecto, es decir, sin tocar.
                   const finSeguia = !finManual
                     || !edicion.fecha_fin
-                    || edicion.fecha_fin === sumar12(edicion.fecha_inicio);
+                    || edicion.fecha_fin === finSugerido(edicion.fecha_inicio, finManual);
                   setEdicion({
                     ...edicion, fecha_inicio: ini,
                     fecha_primer_pago: pagoSeguia ? ini : edicion.fecha_primer_pago,
-                    fecha_fin: finSeguia && ini ? sumar12(ini) : edicion.fecha_fin,
+                    fecha_fin: finSeguia && ini ? finSugerido(ini, finManual) : edicion.fecha_fin,
                   });
                 }} />
               <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">Arranca el calendario del encargo.</p>
@@ -479,19 +491,18 @@ export default function Ofertas() {
                 {finManual ? 'Fin del proyecto' : 'Fin de contrato'}
               </label>
               <input id="of-fin" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
-                value={edicion.fecha_fin || ''} readOnly={!finManual}
-                onChange={(e) => { if (finManual) setEdicion({ ...edicion, fecha_fin: e.target.value }); }} />
+                value={edicion.fecha_fin || ''}
+                onChange={(e) => setEdicion({ ...edicion, fecha_fin: e.target.value })} />
               <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">
-                {finManual
-                  ? 'Lo marca el calendario del proyecto.'
-                  : 'Permanencia de 12 meses desde el inicio.'}
+                {edicion.fecha_inicio && edicion.fecha_fin !== finSugerido(edicion.fecha_inicio, finManual)
+                  ? <button type="button" className="font-bold text-brand-orange hover:underline"
+                      onClick={() => setEdicion({ ...edicion, fecha_fin: finSugerido(edicion.fecha_inicio, finManual) })}>
+                      Volver al valor por defecto
+                    </button>
+                  : finManual
+                    ? 'Lo marca el calendario del proyecto.'
+                    : '12 meses y un día desde el inicio.'}
               </p>
-              {finManual && edicion.fecha_inicio && edicion.fecha_fin !== sumar12(edicion.fecha_inicio) && (
-                <button type="button" className="mt-1 text-[11px] font-bold text-brand-orange hover:underline"
-                  onClick={() => setEdicion({ ...edicion, fecha_fin: sumar12(edicion.fecha_inicio) })}>
-                  Poner a 12 meses del inicio
-                </button>
-              )}
               {avisoFechas.fin && <p className="text-[11px] font-bold text-red-300">{avisoFechas.fin}</p>}
             </div>
           </div>

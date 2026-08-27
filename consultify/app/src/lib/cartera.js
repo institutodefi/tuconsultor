@@ -27,6 +27,7 @@
 
 import { normalizarCif } from './crm.js';
 import { semaforo as semaforoProyecto, necesitaRenovacion } from './proyectos.js';
+import { etapaDe, GANADAS, PERDIDAS } from './ofertas.js';
 
 /** Normaliza un nombre de empresa para comparar: sin forma jurídica ni ruido. */
 export function normalizarNombre(s) {
@@ -109,6 +110,29 @@ function resumir(ofertas, contratos, proyectos) {
 
   const renovaciones = activos.filter(necesitaRenovacion).length;
 
+  // ── Ofertas ganadas y perdidas ──
+  // Misma clasificación que el embudo de la pantalla de Ofertas, para que las
+  // cifras cuadren entre las dos vistas. Una oferta con contrato cuenta como
+  // aceptada aunque su campo `estado` no se haya llegado a tocar: lo que manda
+  // es que se firmó.
+  const etapas = ofertas.map((o) => etapaDe(o, contratos));
+  const aceptadas = etapas.filter((e) => GANADAS.includes(e)).length;
+  const rechazadas = etapas.filter((e) => PERDIDAS.includes(e)).length;
+  // La tasa se calcula solo sobre lo resuelto: contar como pérdidas las que
+  // siguen esperando respuesta hundiría el porcentaje sin motivo.
+  const resueltas = aceptadas + rechazadas;
+  const tasaAceptacion = resueltas ? Math.round((aceptadas / resueltas) * 100) : null;
+
+  // ── Proyectos por estado ──
+  // «Pendiente» no es un estado de la tabla: es un contrato firmado que aún no
+  // tiene proyecto abierto. Es el hueco que hay que vigilar, porque ahí hay
+  // trabajo vendido que nadie ha arrancado.
+  const idsConProyecto = new Set(proyectos.map((p) => String(p.contrato_id || '')));
+  const pendientes = firmados.filter((c) => !idsConProyecto.has(String(c.id)));
+  const proyPendientes = pendientes.length;
+  const proyCerrados = proyectos.filter((p) => p.estado === 'cerrado').length;
+  const proyPausados = proyectos.filter((p) => p.estado === 'pausado').length;
+
   // Lo que hay que mirar primero. Se elige UNA sola cosa a propósito: una lista
   // de cinco avisos no se lee, y el más urgente se pierde entre los demás.
   let alerta = null;
@@ -118,6 +142,7 @@ function resumir(ofertas, contratos, proyectos) {
   if (vencido) alerta = { nivel: 'rojo', texto: `Contrato vencido hace ${Math.abs(vencido.sem.dias)} días` };
   else if (rojo) alerta = { nivel: 'rojo', texto: `Contrato vence en ${rojo.sem.dias} días · renovación pendiente` };
   else if (ambar) alerta = { nivel: 'ambar', texto: `Contrato vence en ${ambar.sem.dias} días · prepara la renovación` };
+  else if (proyPendientes) alerta = { nivel: 'ambar', texto: `${proyPendientes} contrato${proyPendientes > 1 ? 's' : ''} firmado${proyPendientes > 1 ? 's' : ''} sin proyecto abierto` };
   else if (abiertas.length) alerta = { nivel: 'ambar', texto: `${abiertas.length} oferta${abiertas.length > 1 ? 's' : ''} sin cerrar` };
   else if (!activos.length && contratos.length) alerta = { nivel: 'gris', texto: 'Sin proyectos activos' };
 
@@ -132,6 +157,9 @@ function resumir(ofertas, contratos, proyectos) {
     proyectos: proyectos.length, proyectosActivos: activos.length,
     renovaciones, alerta, facturacionAnual,
     ultimaActividad: fechas.length ? fechas[fechas.length - 1] : null,
+    aceptadas, rechazadas, tasaAceptacion,
+    proyPendientes, proyCerrados, proyPausados,
+    contratosSinProyecto: pendientes,   // para poder ofrecer el alta directa
   };
 }
 

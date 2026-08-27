@@ -1125,3 +1125,118 @@ Detalles que hacían falta para que cuadrase de verdad:
   debajo: así el bloque no crece de altura cuando aparece un aviso.
 
 Aplicado en el generador de ofertas y en la edición del histórico.
+
+---
+
+# v203 · Fin de contrato: 12 meses y un día, editable
+
+## La causa real del «11 meses»: un bug de zona horaria
+
+`hoyISO()` y `sumarMeses()` formateaban con **`toISOString()`**, que convierte a
+UTC. `aFecha()` construye la fecha a medianoche **local**, así que en España
+(UTC+1/+2) el paso a UTC retrocedía al día anterior:
+
+```
+26/08/2026 + 12 meses  →  25/08/2027   (debía ser 26/08/2027)
+```
+
+Y como `mesesEntre` resta un mes cuando el día del mes aún no ha llegado, el
+plazo salía de **11 meses** y bloqueaba la emisión. En el servidor, que va en
+UTC, no se reproducía: el fallo solo se veía en España, que es donde se usa.
+
+Corregido con un formateador local (`aISO`). Verificado con `TZ=Europe/Madrid` y
+con `TZ=UTC`: mismo resultado en las dos.
+
+## El día extra
+
+Nuevo `finContratoRecurrente()`: doce meses **y un día** desde el inicio.
+
+Del 26/08/2026 al 26/08/2027 hay doce meses de calendario, pero el último día
+cubierto es el 25: el 26 ya pertenece al periodo siguiente. Con el fin en el
+mismo día del mes, el contrato se queda a un día de cubrir los doce completos.
+Poniéndolo un día después, el contrato cubre el año entero y el plazo no puede
+salir corto por un día de diferencia.
+
+Aplicado también en el backend, para las ofertas que llegan sin fecha de fin.
+
+## El campo pasa a ser editable en todos los modelos
+
+En v199 lo dejé en solo lectura para los recurrentes, para evitar que un valor
+raro bloqueara la oferta. Con el desfase de zona horaria eso resultó ser justo
+lo contrario de lo que hacía falta: el valor «raro» lo estaba poniendo el propio
+sistema y no había forma de corregirlo a mano.
+
+Ahora se edita en los cinco modelos, con enlace **«Volver al valor por
+defecto»** cuando difiere del sugerido. El valor por defecto sigue dependiendo
+del modelo: doce meses y un día en recurrentes, doce meses en Apoyo e
+Implantación.
+
+## Verificación
+
+`scripts/test-fin-recurrente.mjs`, ejecutado en UTC y en Europe/Madrid: fin
+sugerido para cinco fechas de inicio (incluidos 31 de enero, 31 de diciembre y
+29 de febrero bisiesto), que el plazo resultante sea de doce meses en todas y
+que ninguna bloquee la emisión, más un fin puesto a mano que se respeta.
+
+---
+
+# v204 · Alta de proyecto desde oferta o contrato, y métricas de la cartera
+
+## Alta de proyecto en dos clics
+
+Botón **«+ proyecto»** en cada oferta y cada contrato de la ficha de empresa.
+Abre un formulario con el nombre, las normas, el modelo y las fechas ya
+rellenados desde el origen: solo queda confirmar.
+
+Antes había que ir a la pantalla de Proyectos, buscar el cliente y teclear a
+mano lo que ya estaba escrito en el contrato.
+
+## Migración `v95`: de qué contrato viene cada proyecto
+
+`proyectos_cliente` no guardaba su origen. Sin ese dato no se puede responder a
+la pregunta que importa: **qué contratos están firmados y todavía no tienen
+proyecto abierto** — trabajo vendido que nadie ha arrancado.
+
+Se añaden `contrato_id` y `oferta_id` (hay proyectos que arrancan con la oferta
+aceptada y el contrato aún sin firmar), más la vista
+`v_contratos_sin_proyecto` para consultarlo desde SQL.
+
+El relleno de lo existente solo vincula los casos **seguros**: un cliente con
+exactamente un contrato firmado y exactamente un proyecto. Con dos de
+cualquiera de los dos no hay forma de saber cuál va con cuál, y adivinar dejaría
+datos falsos indistinguibles de los buenos.
+
+## Métricas nuevas
+
+**Ofertas:** aceptadas, rechazadas y tasa de aceptación.
+
+La tasa se calcula **solo sobre lo resuelto**. Contar como pérdidas las que
+siguen esperando respuesta hundiría el porcentaje sin motivo: una empresa con
+tres ofertas recién enviadas no tiene un 0 % de aceptación, tiene tres ofertas
+pendientes.
+
+Una oferta con contrato firmado cuenta como aceptada aunque su campo `estado`
+no se haya llegado a tocar: lo que manda es que se firmó.
+
+**Proyectos:** pendientes, activos, en pausa y cerrados.
+
+«Pendiente» no es un estado de la tabla, es un contrato firmado sin proyecto.
+Cuando aparece, la ficha lo muestra en un aviso con el botón para abrirlo ahí
+mismo, en lugar de dejar el aviso sin acción posible.
+
+## Refactor necesario
+
+`etapaDe()` y `ETAPAS` vivían dentro de `components/EstadosOferta.jsx`. Se han
+movido a `lib/ofertas.js`: un módulo de lógica no debería importar un componente
+de React para clasificar una fila, y el módulo de cartera lo necesita.
+
+`EstadosOferta.jsx` lo reexporta para no romper lo que ya importaba de ahí.
+Que las dos vistas usen la misma función es lo que hace que las cifras del
+embudo y las de la ficha de empresa cuadren entre sí.
+
+## Verificación
+
+`scripts/test-cartera.mjs` ampliado: aceptadas contando la que tiene contrato
+sin estado marcado, rechazadas incluyendo caducadas, tasa sobre resueltas,
+proyectos por estado, contrato firmado sin proyecto detectado, y que deje de
+contar como pendiente en cuanto se abre el proyecto. App compilada.

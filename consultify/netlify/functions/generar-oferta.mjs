@@ -76,14 +76,20 @@ const MUTED = rgb(0.357, 0.42, 0.525);
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
 /** Suma meses a una fecha ISO respetando el fin de mes (31 ene + 1 = 28 feb). */
-function sumarMesesISO(fechaISO, meses) {
+function sumarMesesISO(fechaISO, meses, masUnDia = false) {
   if (!fechaISO) return null;
   const d = new Date(`${String(fechaISO).slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return null;
   const dia = d.getDate();
   d.setMonth(d.getMonth() + meses);
-  if (d.getDate() < dia) d.setDate(0);
-  return d.toISOString().slice(0, 10);
+  if (d.getDate() < dia) d.setDate(0);      // 31 ene → 28 feb
+  if (masUnDia) d.setDate(d.getDate() + 1);
+  // Se formatea en local: la fecha se creó al mediodía justamente para que
+  // `toISOString` no cambie de día, pero se deja explícito para no depender de
+  // ese detalle.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 async function generarPDF(r, cli, anexo) {
@@ -567,7 +573,10 @@ export default async (req) => {
   r.fecha_primer_pago = body.fecha_primer_pago || body.fecha_inicio || null;
   // Fin de contrato, independiente de la certificación. Si no llega, se deriva
   // a doce meses del inicio: es la permanencia del modelo.
-  r.fecha_fin = body.fecha_fin || (body.fecha_inicio ? sumarMesesISO(body.fecha_inicio, 12) : null);
+  // Doce meses y un día en los recurrentes: con el fin en el mismo día del mes
+  // el contrato se queda a un día de los doce completos y el plazo sale de once.
+  r.fecha_fin = body.fecha_fin
+    || (body.fecha_inicio ? sumarMesesISO(body.fecha_inicio, 12, r.tipo === 'mes' && modelo !== 'Implantación') : null);
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);
 
