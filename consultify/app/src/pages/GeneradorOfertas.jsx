@@ -108,6 +108,10 @@ export default function GeneradorOfertas({ publico = false }) {
   const [pideInfo, setPideInfo] = useState(false);   // "Otra norma · pide info": abre formulario de solicitud
   const [infoState, setInfoState] = useState('idle');// idle | sending | ok | error
   const [reglas, setReglas] = useState([]);          // reglas comerciales vigentes
+  const [aplicarReglas, setAplicarReglas] = useState(true);   // ¿se aplican en esta oferta?
+  // Tarifa pactada por sistema, para clientes antiguos con precios heredados.
+  const [clienteAntiguo, setClienteAntiguo] = useState(false);
+  const [preciosSistema, setPreciosSistema] = useState({});
   // ── Características del proyecto ──
   const [complejidad, setComplejidad] = useState('media');
   const [sedes, setSedes] = useState(1);
@@ -154,8 +158,13 @@ export default function GeneradorOfertas({ publico = false }) {
   };
 
   const res = useMemo(
-    () => calcular(sel, modelo, { meses: mesesContrato, tiene9001, reglas, canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes }),
-    [sel, modelo, mesesContrato, tiene9001, reglas, publico, complejidad, sedes, equipo, fasesPlan, ajustes],
+    () => calcular(sel, modelo, {
+      meses: mesesContrato, tiene9001, reglas, aplicarReglas,
+      canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes,
+      preciosSistema: clienteAntiguo ? preciosSistema : null,
+    }),
+    [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
+     equipo, fasesPlan, ajustes, clienteAntiguo, preciosSistema],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -467,6 +476,69 @@ export default function GeneradorOfertas({ publico = false }) {
             <div className="mt-4"><FasesPlanes planes={sel} onSeleccion={setFasesPlan} /></div>
           )}
 
+          {/* ── Tarifa y reglas · solo en el generador interno ──
+              Dos cosas que hasta ahora no se podían tocar desde la oferta:
+              apagar las reglas comerciales para ver el precio limpio, y fijar
+              la tarifa de un cliente antiguo sin inventar un descuento. */}
+          {!publico && res?.desgloseSistemas && (
+            <div className="mt-4 rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0D3242] p-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">Tarifa y reglas</h3>
+
+              <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                <input type="checkbox" className="mt-0.5" checked={aplicarReglas}
+                  onChange={(e) => setAplicarReglas(e.target.checked)} />
+                <span className="text-[13px] leading-snug">
+                  <span className="font-bold text-[#EAF4F7]">Aplicar las reglas comerciales activas</span>
+                  <span className="block text-[11.5px] text-[#9FC0CB]">
+                    {reglas.length
+                      ? `${reglas.length} regla${reglas.length === 1 ? '' : 's'} vigente${reglas.length === 1 ? '' : 's'}. Desmárcalo para ver el precio de catálogo sin campañas ni recargos.`
+                      : 'No hay reglas vigentes ahora mismo.'}
+                  </span>
+                </span>
+              </label>
+
+              <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                <input type="checkbox" className="mt-0.5" checked={clienteAntiguo}
+                  onChange={(e) => { setClienteAntiguo(e.target.checked); if (!e.target.checked) setPreciosSistema({}); }} />
+                <span className="text-[13px] leading-snug">
+                  <span className="font-bold text-[#EAF4F7]">Cliente antiguo con tarifa pactada</span>
+                  <span className="block text-[11.5px] text-[#9FC0CB]">
+                    Fija el precio de los sistemas que tengan precio heredado. Los que dejes en blanco
+                    siguen la regla de catálogo, con su suelo de {res.volumen?.suelo ?? 350} €.
+                  </span>
+                </span>
+              </label>
+
+              {clienteAntiguo && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {res.desgloseSistemas.map((s) => (
+                    <div key={s.id} className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] px-3 py-2">
+                      <label className="label !mb-1" htmlFor={`ps-${s.id}`}>{s.nombre}</label>
+                      <div className="flex items-center gap-2">
+                        <input id={`ps-${s.id}`} type="number" min="0" step="25"
+                          className="input h-[32px] !py-0 !text-[13px]"
+                          placeholder={String(s.manual ? '' : s.precio)}
+                          value={preciosSistema[s.id] ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setPreciosSistema((x) => {
+                              const n = { ...x };
+                              if (v === '') delete n[s.id]; else n[s.id] = Number(v);
+                              return n;
+                            });
+                          }} />
+                        <span className="text-[12px] font-bold text-[#7FA7B4]">€/mes</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-[#7FA7B4]">
+                        {s.manual ? 'Precio pactado' : `Catálogo: ${s.precio} €${s.suelo ? ' (suelo)' : ''}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Características del proyecto · solo en el generador interno */}
           {!publico && (
             <div className="mt-4 rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0D3242] p-4">
@@ -734,6 +806,56 @@ export default function GeneradorOfertas({ publico = false }) {
                     })}
                     <p className="text-[10.5px] leading-snug text-white/50">{res.formasPago.nota}</p>
                   </div>
+                )}
+
+                {/* ── Cómo se forma la cuota ──
+                    Sin este desglose, un cliente que pregunta «¿y si quito la
+                    14001?» obliga a rehacer la oferta para responder. */}
+                {res.volumen && (
+                  <div className="space-y-1.5 rounded-2xl bg-white/10 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">
+                      Cómo se forma la cuota
+                    </p>
+                    {res.desgloseSistemas.map((s) => (
+                      <p key={s.id} className="flex justify-between gap-2 text-[12px]">
+                        <span className="text-white/75">
+                          {s.nombre}
+                          {s.manual && <span className="ml-1 text-[10px] font-bold text-brand-orange">pactado</span>}
+                          {s.suelo && <span className="ml-1 text-[10px] text-white/40">mínimo</span>}
+                        </span>
+                        <span className="font-bold text-white">{fmtEUR(s.precio)}</span>
+                      </p>
+                    ))}
+                    {res.volumen.importePresencial > 0 && (
+                      <p className="flex justify-between gap-2 text-[12px]">
+                        <span className="text-white/75">Horas presenciales</span>
+                        <span className="font-bold text-white">{fmtEUR(res.volumen.importePresencial)}</span>
+                      </p>
+                    )}
+                    <p className="flex justify-between gap-2 border-t border-white/15 pt-1.5 text-[12px]">
+                      <span className="text-white/75">Subtotal</span>
+                      <span className="font-bold text-white">{fmtEUR(res.volumen.subtotal)}</span>
+                    </p>
+                    {res.volumen.pct > 0 && (
+                      <p className="flex justify-between gap-2 text-[12px]">
+                        <span className="text-brand-verdeTexto">
+                          Descuento por {res.volumen.nSistemas} sistemas · {res.volumen.pct} %
+                          {res.volumen.pct === res.volumen.tope && <span className="ml-1 text-[10px] text-white/40">tope</span>}
+                        </span>
+                        <span className="font-bold text-brand-verdeTexto">−{fmtEUR(res.volumen.importeDto)}</span>
+                      </p>
+                    )}
+                    <p className="text-[10.5px] leading-snug text-white/50">
+                      Mínimo {fmtEUR(res.volumen.suelo)} por sistema. Descuento por volumen: 5 % con 2, 10 % con 3,
+                      15 % con 4 o más. Nunca más del {res.volumen.tope} %.
+                    </p>
+                  </div>
+                )}
+
+                {!res.reglasActivas && (
+                  <p className="rounded-2xl bg-brand-orange/15 p-2.5 text-[11.5px] font-bold text-brand-orange">
+                    Reglas comerciales desactivadas: este es el precio de catálogo.
+                  </p>
                 )}
 
                 {/* Reglas comerciales aplicadas a esta oferta */}

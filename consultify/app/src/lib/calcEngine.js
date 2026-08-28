@@ -119,6 +119,37 @@ export const MODELOS = {
 
 export const MODELO_IDS = Object.keys(MODELOS);
 
+// ════════════════════════════════════════════════════════════════════════════
+// PRECIO DE LOS MODELOS RECURRENTES
+//
+// El precio de una cuota se forma SUMANDO el precio de cada sistema, y sobre
+// esa suma se aplica un descuento por volumen.
+//
+// Antes el suelo de 350 € se aplicaba al TOTAL de la oferta, no a cada sistema.
+// Efecto: en Relación, uno y dos sistemas costaban casi lo mismo (350 € y
+// 450 €), porque con pocas horas ambos caían bajo el suelo y el segundo sistema
+// apenas se notaba. Con el suelo por sistema, dos sistemas parten de 700 € y el
+// descuento por volumen es lo que premia agrupar, de forma explícita y acotada.
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Cuota mínima por sistema y mes en los modelos recurrentes. */
+export const SUELO_POR_SISTEMA = 350;
+
+/** Tope del descuento por volumen. Nunca se baja más de aquí. */
+export const TOPE_DESCUENTO_VOLUMEN = 15;
+
+/**
+ * Descuento por número de sistemas: 5 % con 2, 10 % con 3, 15 % con 4 o más.
+ * El tope existe para que añadir sistemas no acabe regalando el servicio.
+ */
+export function descuentoVolumen(nSistemas) {
+  const n = Math.max(1, Number(nSistemas) || 1);
+  if (n <= 1) return 0;
+  if (n === 2) return 5;
+  if (n === 3) return 10;
+  return TOPE_DESCUENTO_VOLUMEN;
+}
+
 // Duración por defecto (meses) de cada modelo de relación ("acuerdo").
 export const MESES_MODELO = {
   Apoyo: 3,
@@ -186,7 +217,11 @@ export function calcular(normaIds, modeloId, opts = {}) {
     perfiles: perfilesDe(opts.equipo || {}),
     personasEquipo: totalEquipo(opts.equipo || {}),
   };
-  const reglas = reglasAplicables(opts.reglas, ctx);
+  // Las reglas comerciales se pueden desactivar para esta oferta: a veces hace
+  // falta ver el precio de catálogo limpio, sin descuentos de campaña ni
+  // recargos, para saber desde dónde se está negociando.
+  const usarReglas = opts.aplicarReglas !== false;
+  const reglas = usarReglas ? reglasAplicables(opts.reglas, ctx) : [];
   const traza = [];
   const anotar = (r, detalle) => traza.push({
     id: r.id, nombre: r.nombre, tipo: r.tipo, efecto: describirEfecto(r), detalle,
@@ -208,6 +243,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
     .map((n) => ({ norma: n.id, con: n.solapeCon, factor: n.solapeFactor }));
 
   const raw = { J1: 0, J2: 0, J3: 0, Senior: 0 };
+  // Desglose por sistema, solo para los modelos de cuota mensual.
+  const horasPorSistema = [];
+  let horasPresenciales = null;
 
   // Los planes (igualdad, diversidad) NO pasan por aquí: se cobran por sus
   // fases a tarifa plana, más abajo. Si contaran también aquí, se sumarían dos
@@ -221,10 +259,16 @@ export function calcular(normaIds, modeloId, opts = {}) {
     const fFondo = m.factorFondo ?? 1;
     for (const n of genericas) raw[n.nivel] += n.hApoyo * fFondo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else {
-    for (const n of genericas) raw[n.nivel] += m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+    for (const n of genericas) {
+      const hn = m.hSist * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
+      raw[n.nivel] += hn;
+      // Se anotan aparte para poder precio-por-sistema más abajo.
+      horasPorSistema.push({ id: n.id, nombre: n.nombre, nivel: n.nivel, horas: hn });
+    }
     if (m.hPres > 0) {
       const lider = normas.some(n => n.nivel === 'J3') ? 'J3' : 'J2';
       raw[lider] += m.hPres; // por cliente, no por sistema
+      horasPresenciales = { nivel: lider, horas: m.hPres };
     }
   }
 
@@ -319,6 +363,62 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // que enseña el panel de fases, que es de donde sale.
   let precioCatalogo = Math.ceil(precioGenerico / m.paso) * m.paso + Math.round(importePlanes);
   if (m.suelo > 0 && !importePlanes) precioCatalogo = Math.max(m.suelo, precioCatalogo);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PRECIO POR SISTEMA (modelos de cuota mensual)
+  //
+  // La cuota se forma sumando lo que cuesta cada sistema, cada uno con su suelo
+  // de 350 €/mes, y aplicando después el descuento por volumen. Sustituye al
+  // cálculo global, que dejaba el segundo y el tercer sistema casi sin efecto
+  // porque el suelo se comparaba contra el total.
+  //
+  // `preciosSistema` permite fijar a mano el precio de un sistema concreto: es
+  // lo que hace falta para respetar la tarifa de un cliente antiguo sin tocar
+  // el catálogo ni inventar un descuento que no cuadra.
+  // ══════════════════════════════════════════════════════════════════════════
+  let desgloseSistemas = null;
+  let volumen = null;
+  if (m.tipo === 'mes' && horasPorSistema.length && !importePlanes) {
+    const manual = opts.preciosSistema || {};
+
+    desgloseSistemas = horasPorSistema.map((s) => {
+      const fijado = Number(manual[s.id]);
+      if (Number.isFinite(fijado) && fijado > 0) {
+        return { ...s, horas: Math.ceil(s.horas), precio: Math.round(fijado * 100) / 100, manual: true, suelo: false };
+      }
+      // Coordinación: el 10 % que ya se sumaba al total, repartido donde se
+      // genera, para que el precio del sistema incluya lo que cuesta llevarlo.
+      const hCoord = (s.nivel === 'J2' || s.nivel === 'J3') ? s.horas * 1.10 : s.horas;
+      const horas = Math.ceil(hCoord);
+      const bruto = Math.ceil((horas * tarifa[s.nivel] * (1 + margen)) / m.paso) * m.paso;
+      const precio = Math.max(SUELO_POR_SISTEMA, bruto);
+      return { ...s, horas, precio, manual: false, suelo: precio === SUELO_POR_SISTEMA && bruto < SUELO_POR_SISTEMA };
+    });
+
+    // Las horas presenciales son por cliente, no por sistema: se suman una vez.
+    let importePresencial = 0;
+    if (horasPresenciales) {
+      const t = tarifa[horasPresenciales.nivel];
+      importePresencial = Math.ceil((horasPresenciales.horas * t * (1 + margen)) / m.paso) * m.paso;
+    }
+
+    const sumaSistemas = desgloseSistemas.reduce((a, s) => a + s.precio, 0);
+    const subtotal = sumaSistemas + importePresencial;
+    const pct = descuentoVolumen(desgloseSistemas.length);
+    const importeDto = Math.round(subtotal * (pct / 100) * 100) / 100;
+
+    volumen = {
+      nSistemas: desgloseSistemas.length,
+      sumaSistemas: Math.round(sumaSistemas * 100) / 100,
+      importePresencial,
+      subtotal: Math.round(subtotal * 100) / 100,
+      pct, importeDto,
+      total: Math.round((subtotal - importeDto) * 100) / 100,
+      tope: TOPE_DESCUENTO_VOLUMEN,
+      suelo: SUELO_POR_SISTEMA,
+    };
+    precioCatalogo = volumen.total;
+  }
 
   // ── Regla 4 · DESCUENTOS y RECARGOS sobre el precio de catálogo ──
   // Se aplican DESPUÉS del suelo: si no, un descuento sobre una cuota que ya
@@ -457,6 +557,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
     meses: mesesProyecto,
     minMeses,
     plazoOk,
+    desgloseSistemas,   // qué aporta cada sistema a la cuota
+    volumen,            // subtotal, % de descuento por volumen e importe
+    reglasActivas: usarReglas,   // si estaban aplicándose las reglas comerciales
     plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
     tiene9001,
     horas: h,

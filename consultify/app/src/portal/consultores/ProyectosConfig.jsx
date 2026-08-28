@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
+import AltaProyecto from './AltaProyecto.jsx';
 import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, horasCoordinacion, bloquesEjecucion, trocearEnBloques, codigoTarea } from '../../lib/planCliente.js';
 import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
@@ -59,6 +60,8 @@ function EditorBloques({ tarea, bloquesIniciales, onPersistir, onAdd, onQuitar }
 
 export default function Proyectos() {
   const [clientes, setClientes] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
+  const [alta, setAlta] = useState(false);
   const [proyectos, setProyectos] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
   const [festivos, setFestivos] = useState([]);
@@ -92,6 +95,9 @@ export default function Proyectos() {
 
   const cargar = () => {
     listTable('clientes').then(setClientes).catch(e => { setClientes([]); setMsg('No se pudieron cargar los clientes: ' + (e?.message || e)); });
+    // Las empresas del CRM son la lista buena para elegir cliente al abrir un
+    // proyecto: `clientes` es la tabla operativa y va por detrás.
+    listTable('empresas').then(setEmpresas).catch(() => setEmpresas([]));
     listTable('proyectos_cliente').then(setProyectos).catch(() => setProyectos([]));
     listTable('tareas_catalogo').then(setCatalogo).catch(() => setCatalogo([]));
     listTable('festivos').then(setFestivos).catch(() => setFestivos([]));
@@ -276,18 +282,11 @@ export default function Proyectos() {
 
   const nombreConsultor = (id) => { const c = equipo.find(x => String(x.id) === String(id)); return c ? `${c.nombre} ${c.apellidos || ''}`.trim() : '—'; };
 
-  async function nuevoProyecto() {
-    if (!clientes.length) { setMsg('Crea primero un cliente.'); return; }
-    const lista = clientes.map((c, i) => `${i + 1}. ${c.empresa}`).join('\n');
-    const idx = Number(prompt(`¿Para qué cliente?\n${lista}\n\nEscribe el número:`, '1'));
-    const cli = clientes[idx - 1];
-    if (!cli) return;
-    const nombre = prompt('Nombre del proyecto:', 'Proyecto 1');
-    if (!nombre) return;
-    const nuevo = await insertRow('proyectos_cliente', { cliente_id: cli.id, nombre, normas: [], modelo: 'Implicación', estado: 'activo', meses_estimados: 3 });
-    cargar();
-    if (nuevo?.id) setSel(nuevo.id);
-  }
+  // El alta vivía aquí con dos `prompt()` encadenados —uno pedía el número de
+  // una lista numerada de clientes— y creaba el proyecto con `normas: []` y el
+  // modelo fijo en 'Implicación'. De ahí salían los proyectos que aparecen en
+  // la tabla con «—» en Normas y Modelo. Ahora lo hace `AltaProyecto`, que pide
+  // ambas cosas y lista las empresas del CRM marcadas como cliente.
 
   async function guardarConfig() {
     if (!proyecto) return;
@@ -383,19 +382,25 @@ export default function Proyectos() {
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Configuración de proyectos</h1>
       </div>
 
-      {/* Selector de proyecto activo */}
-      <div className="card">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex-1 min-w-[240px]">
-            <label className="label" htmlFor="sel-proy">Proyecto (vinculado a su cliente matriz)</label>
-            <select id="sel-proy" className="input w-full max-w-xl" value={sel} onChange={e => setSel(e.target.value)}>
-              <option value="">— Selecciona un proyecto activo —</option>
-              {activos.map(p => <option key={p.id} value={p.id}>{nombreCli(p.cliente_id)} · {p.nombre}</option>)}
-            </select>
+      {/* Alta de proyecto.
+          El desplegable «Selecciona un proyecto activo» se ha quitado: duplicaba
+          lo que ya hace el «Abrir →» de la tabla de abajo, y solo listaba los
+          activos, así que un proyecto pausado o cerrado no aparecía por ninguna
+          de las dos vías. */}
+      {alta ? (
+        <AltaProyecto empresas={empresas} clientes={clientes}
+          onCerrar={() => setAlta(false)}
+          onCreado={(nuevo) => { setAlta(false); cargar(); if (nuevo?.id) setSel(nuevo.id); }} />
+      ) : (
+        <div className="card">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-[#9FC0CB]">
+              Abre un proyecto para cualquier empresa marcada como cliente, o entra en uno existente desde la tabla.
+            </p>
+            <button onClick={() => setAlta(true)} className="btn-orange !px-4 !py-2">+ Nuevo proyecto</button>
           </div>
-          <button onClick={nuevoProyecto} className="btn-orange !px-4 !py-2">+ Nuevo proyecto</button>
         </div>
-      </div>
+      )}
 
       {/* Lista de proyectos */}
       <div className="card">
@@ -442,7 +447,7 @@ export default function Proyectos() {
       </div>
 
       {!proyecto ? (
-        <p className="card text-sm font-medium text-[#9FC0CB]">Selecciona un proyecto. Los proyectos se crean desde la pestaña Clientes.</p>
+        <p className="card text-sm font-medium text-[#9FC0CB]">Abre un proyecto de la tabla para configurar sus normas, su modelo y sus tareas.</p>
       ) : (
         <>
           {/* Cabecera */}

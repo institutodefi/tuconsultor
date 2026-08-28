@@ -1289,3 +1289,125 @@ activo —o el primero que tenga— en lugar de aterrizar en un listado que hay 
 volver a filtrar a mano.
 
 App compilada y rutas verificadas en el bundle.
+
+---
+
+# v206 · Configuración de proyectos: el alta usa las empresas del CRM
+
+## El error de la pantalla
+
+El proyecto que aparecía con **«—» en Normas y en Modelo** no era un fallo de
+visualización: se creó así. El alta era esta:
+
+```js
+const idx = Number(prompt(`¿Para qué cliente?\n${lista}\n\nEscribe el número:`));
+const nombre = prompt('Nombre del proyecto:', 'Proyecto 1');
+insertRow('proyectos_cliente', { cliente_id, nombre, normas: [], modelo: 'Implicación', … });
+```
+
+Dos `prompt()` encadenados —uno pedía teclear el número de una lista numerada— y
+las normas fijas a lista vacía. Todo proyecto creado por esa vía nacía sin
+normas y con el modelo puesto por defecto, contradiciendo lo que la persona
+hubiera escrito en el nombre.
+
+Ahora el alta usa el mismo `AltaProyecto` de la ficha de empresa, que pide
+normas, modelo y fechas.
+
+## Dos listas de clientes distintas
+
+`ProyectosConfig` listaba la tabla `clientes`; la pestaña Empresas usa
+`empresas` con `es_cliente`. Son tablas distintas: `empresas` es el CRM que se
+mantiene al día, `clientes` la operativa de la que cuelgan proyectos y tareas.
+El resultado era que una empresa dada de alta como cliente en el CRM no aparecía
+al crear un proyecto.
+
+Nuevo `lib/clienteDeEmpresa.js`: se listan siempre **las empresas marcadas como
+cliente** y, al guardar, se resuelve su ficha operativa por CIF normalizado —o
+por razón social si no hay CIF— **creándola si no existe**.
+
+Crear la ficha al vuelo es deliberado: la alternativa es un error pidiendo dar
+de alta el cliente en otra pantalla, que obliga a abandonar lo que se estaba
+haciendo para teclear datos que ya están en el CRM.
+
+## Fuera el desplegable de proyecto
+
+«— Selecciona un proyecto activo —» duplicaba lo que ya hace el «Abrir →» de la
+tabla, y encima solo listaba los activos: un proyecto pausado o cerrado no era
+accesible por ninguna de las dos vías. Quitado.
+
+El pie decía «Los proyectos se crean desde la pestaña Clientes», que ya no es
+cierto. Corregido.
+
+## Verificación
+
+`scripts/test-cliente-empresa.mjs`: filtrado de empresas cliente (proveedores
+excluidos, orden alfabético), resolución por CIF con formatos distintos
+(`B-84.867.670` ↔ `b84867670 `), resolución por razón social cuando no hay CIF,
+y casos nulos. App compilada.
+
+---
+
+# v207 · Precio de los recurrentes: suma por sistema y descuento por volumen
+
+## El error
+
+En Relación, Implicación y Compromiso el precio salía de las horas totales y el
+**suelo de 350 € se comparaba contra el total de la oferta**, no contra cada
+sistema. Con pocas horas, casi todo caía bajo el suelo y los sistemas
+adicionales apenas se notaban:
+
+| Relación | Antes | Ahora |
+|---|---|---|
+| 1 sistema | 350 € | 350 € |
+| 2 sistemas | **450 €** | 665 € |
+| 3 sistemas | 575 € | 945 € |
+| 4 sistemas | 700 € | 1.190 € |
+
+Dos sistemas costaban 100 € más que uno. El segundo se estaba regalando.
+
+## La regla nueva
+
+1. Se calcula el precio de **cada sistema** por separado, con su parte de
+   coordinación, y cada uno tiene un **mínimo de 350 €/mes**.
+2. Las horas presenciales se suman una sola vez: son por cliente, no por
+   sistema.
+3. Sobre el subtotal se aplica el **descuento por volumen**: 5 % con dos
+   sistemas, 10 % con tres, **15 % con cuatro o más**, y nunca más del 15 %.
+
+El descuento por volumen sustituye al «regalo» implícito que hacía el suelo
+global: ahora agrupar sistemas sigue saliendo a cuenta, pero de forma explícita,
+acotada y visible en la oferta.
+
+No afecta a Apoyo ni a Implantación, que no son cuotas.
+
+## Cliente antiguo con tarifa pactada
+
+Casilla **«Cliente antiguo con tarifa pactada»** que abre un campo por sistema
+para fijar su precio heredado. Los que se dejen en blanco siguen la regla de
+catálogo con su suelo.
+
+Es lo que hacía falta para respetar el precio de un cliente de hace años sin
+tocar el catálogo ni inventar un descuento porcentual que no cuadra con nada.
+
+## Interruptor de reglas comerciales
+
+Casilla **«Aplicar las reglas comerciales activas»**, marcada por defecto.
+Desmarcarla da el precio de catálogo limpio, sin campañas ni recargos, que es
+desde donde se negocia. El panel avisa cuando están desactivadas.
+
+## Desglose visible
+
+El panel de precio muestra ahora cómo se forma la cuota: cada sistema con su
+importe (marcando los pactados y los que están en el mínimo), las presenciales,
+el subtotal, el descuento por volumen y la regla al pie.
+
+Sin esto, un cliente que pregunta «¿y si quito la 14001?» obliga a rehacer la
+oferta para poder responder.
+
+## Verificación
+
+`scripts/test-precio-sistemas.mjs`: escala de descuento (incluido que nunca pasa
+del 15 % con 5, 9 o 50 sistemas), que el precio siempre sube al añadir sistemas
+en los tres modelos, que cada sistema respeta el suelo, precio pactado por
+sistema con los demás siguiendo la regla, que un precio 0 se ignora, el
+interruptor de reglas, y que Apoyo e Implantación no se ven afectados.

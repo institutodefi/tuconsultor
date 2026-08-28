@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { insertRow } from '../../lib/data.js';
 import { NORMAS, MODELO_IDS } from '../../lib/calcEngine.js';
+import { empresasCliente, asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Alta rápida de proyecto desde una oferta o un contrato
@@ -30,8 +31,22 @@ function nombrePropuesto(origen) {
   return [normas || 'Proyecto', origen.modelo].filter(Boolean).join(' · ');
 }
 
-export default function AltaProyecto({ origen = null, tipo, clienteId, onCerrar, onCreado }) {
+/**
+ * @param {object}   p
+ * @param {object}  [p.origen]     oferta o contrato del que nace, si lo hay
+ * @param {string}  [p.clienteId]  ficha de `clientes` ya resuelta (ficha de empresa)
+ * @param {object[]}[p.empresas]   empresas del CRM, para elegir cuando no hay
+ *                                 cliente fijado (pantalla de Proyectos)
+ * @param {object[]}[p.clientes]   fichas de `clientes`, para resolver la empresa
+ */
+export default function AltaProyecto({ origen = null, tipo, clienteId, empresas, clientes = [], onCerrar, onCreado }) {
   const desdeCero = !origen;
+  // Cuando no llega un cliente fijado hay que elegir empresa. Se listan las del
+  // CRM marcadas como cliente, que es la misma lista de la pestaña Empresas: la
+  // pantalla de Proyectos leía `clientes` y enseñaba otra distinta.
+  const eligeEmpresa = !clienteId && Array.isArray(empresas);
+  const opciones = eligeEmpresa ? empresasCliente(empresas) : [];
+  const [empresaId, setEmpresaId] = useState('');
   const [form, setForm] = useState({
     nombre: nombrePropuesto(origen),
     normas: origen?.normas || [],
@@ -54,7 +69,8 @@ export default function AltaProyecto({ origen = null, tipo, clienteId, onCerrar,
   const [error, setError] = useState(null);
 
   async function crear() {
-    if (!clienteId) {
+    if (eligeEmpresa && !empresaId) { setError('Elige la empresa del proyecto.'); return; }
+    if (!eligeEmpresa && !clienteId) {
       setError('Esta empresa no tiene ficha de cliente. Créala antes de abrir el proyecto.');
       return;
     }
@@ -65,8 +81,16 @@ export default function AltaProyecto({ origen = null, tipo, clienteId, onCerrar,
     }
     setGuardando(true); setError(null);
     try {
+      // Si se eligió empresa, se resuelve su ficha operativa (creándola si no
+      // existía) para poder colgar el proyecto.
+      let idCliente = clienteId;
+      if (eligeEmpresa) {
+        const emp = opciones.find((e) => String(e.id) === String(empresaId));
+        const r = await asegurarCliente(emp, clientes);
+        idCliente = r.id;
+      }
       const fila = await insertRow('proyectos_cliente', {
-        cliente_id: clienteId,
+        cliente_id: idCliente,
         nombre: form.nombre.trim(),
         normas: form.normas,
         modelo: form.modelo || null,
@@ -100,6 +124,23 @@ export default function AltaProyecto({ origen = null, tipo, clienteId, onCerrar,
         <button type="button" onClick={onCerrar}
           className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Cancelar</button>
       </div>
+
+      {eligeEmpresa && (
+        <div className="mt-3">
+          <label className="label !mb-1" htmlFor="ap-empresa">Empresa</label>
+          <select id="ap-empresa" className="input h-[34px] !py-0 !text-[13px]"
+            value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
+            <option value="">— Elige la empresa —</option>
+            {opciones.map((e) => (
+              <option key={e.id} value={e.id}>{e.nombre}{e.cif ? ` · ${e.cif}` : ''}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-[#7FA7B4]">
+            {opciones.length} empresa{opciones.length === 1 ? '' : 's'} marcada{opciones.length === 1 ? '' : 's'} como
+            cliente en la pestaña Empresas.
+          </p>
+        </div>
+      )}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2">
