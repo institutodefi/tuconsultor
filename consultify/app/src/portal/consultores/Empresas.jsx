@@ -5,6 +5,7 @@ import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES } from '../../lib/crm.js';
 import FichaEmpresa from './FichaEmpresa.jsx';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { diagnosticarCrm, informeTexto } from '../../lib/diagnosticoCrm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -101,24 +102,36 @@ export default function Empresas() {
 
   const abrirContacto = (id) => navigate({ pathname: '../contactos', search: `?c=${id}` });
 
-  // ── Ficha (nueva o existente) ──
-  if (nueva || empresa) {
-    return (
-      <FichaEmpresa
-        empresa={nueva ? {} : empresa}
-        empresas={empresas} contactos={contactos} vinculos={vinculos}
-        puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
-        onCambio={cargar}
-        onSeleccionar={seleccionar}
-        onCerrar={() => { setNueva(false); setParams({}); cargar(); }}
-        onAbrirContacto={abrirContacto}
-      />
-    );
-  }
+  // La ficha se abre EN DIÁLOGO sobre el listado. Antes sustituía la pantalla
+  // entera con un `return` temprano: al cerrarla se volvía al listado desde
+  // arriba, con el filtro y el desplazamiento perdidos, y no había forma de
+  // consultar un dato de otra empresa sin salir de la que se estaba editando.
+  const fichaAbierta = nueva || !!empresa;
+  const cerrarFicha = () => { setNueva(false); setParams({}); cargar(); };
 
   // ── Listado ──
   return (
     <div className="space-y-5">
+      {fichaAbierta && (
+        <DialogoFicha
+          titulo={nueva ? 'Nueva empresa' : (empresa?.nombre || 'Empresa')}
+          subtitulo={nueva ? 'Alta en el CRM' : [empresa?.cif, empresa?.es_cliente ? 'Cliente' : null, empresa?.es_proveedor ? 'Proveedor' : null].filter(Boolean).join(' · ')}
+          onCerrar={cerrarFicha}
+          ancho="1100px"
+        >
+          <FichaEmpresa
+            empresa={nueva ? {} : empresa}
+            empresas={empresas} contactos={contactos} vinculos={vinculos}
+            puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
+            onCambio={cargar}
+            onSeleccionar={seleccionar}
+            onCerrar={cerrarFicha}
+            onAbrirContacto={abrirContacto}
+            enDialogo
+          />
+        </DialogoFicha>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">CRM</p>

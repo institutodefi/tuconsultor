@@ -8,6 +8,7 @@ import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
 import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.jsx';
 import ContratoDeOferta from './ContratoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
 function fFecha(f) {
@@ -793,10 +794,17 @@ export default function Ofertas() {
 
       {/* Modal: editar normas de una oferta y regenerar */}
       {editNormas && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditNormas(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-[#10394A] p-6 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-extrabold text-[#EAF4F7]">Normas de la oferta</h3>
-            <p className="mt-1 text-sm font-medium text-[#9FC0CB]">{editNormas.oferta.numero_oferta} · {editNormas.oferta.empresa}</p>
+        <DialogoFicha
+          titulo="Normas de la oferta"
+          subtitulo={`${editNormas.oferta.numero_oferta} · ${editNormas.oferta.empresa}`}
+          onCerrar={() => setEditNormas(null)}
+          ancho="560px"
+          pie={<>
+            <button onClick={() => setEditNormas(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+            <button onClick={guardarNormasYRegenerar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar y regenerar</button>
+          </>}
+        >
+          <div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {NORMAS.map(n => {
                 const on = editNormas.normas.includes(n.id);
@@ -810,12 +818,8 @@ export default function Ofertas() {
                 );
               })}
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setEditNormas(null)} className="rounded-xl px-4 py-2 text-sm font-bold text-[#9FC0CB] hover:bg-[#0D3242]">Cancelar</button>
-              <button onClick={guardarNormasYRegenerar} className="btn-orange !px-4 !py-2 !text-sm">Guardar y regenerar</button>
-            </div>
           </div>
-        </div>
+        </DialogoFicha>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { descargarTareaICS, descargarAgendaICS } from '../../lib/ics.js';
 import BoxEquipo from './BoxEquipo.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
 import { EFICIENCIA } from '../../lib/calcEngine.js';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 import {
   YEAR_AGENDA, FESTIVOS_2026, MESES, TOPE_ANUAL, MAX_HORAS_DIA, DIAS_VACACIONES,
   PCT_PRODUCTIVO, PCT_GESTION, PCT_COORDINACION, PCT_PROC_INTERNO, TIPOS_TAREA, TIPO_BY_ID,
@@ -155,12 +156,13 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
   const proyectoAuto = proyDeOrigen ? nombreProyecto(proyDeOrigen) : '—';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4" onClick={onCerrar}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[22px] bg-[#10394A] p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-extrabold">{editando ? 'Editar tarea' : 'Nueva tarea'}</h3>
-          <button onClick={onCerrar} className="rounded-full px-2.5 py-1 text-[#7FA7B4] hover:bg-[#0D3242] hover:text-[#CFE3E9]" aria-label="Cerrar">✕</button>
-        </div>
+    <DialogoFicha
+      titulo={editando ? 'Editar tarea' : 'Nueva tarea'}
+      subtitulo={proyectoAuto !== '—' ? proyectoAuto : undefined}
+      onCerrar={onCerrar}
+      haycambios={!!f.titulo?.trim()}
+      ancho="620px"
+    >
 
         <div className="space-y-3">
           <div>
@@ -323,19 +325,18 @@ function ModalTarea({ tarea, fecha, consultorId, consultores, proyectos, cliente
           {editando
             ? <button onClick={() => onBorrar(tarea.id)} className="text-sm font-bold text-red-300 hover:underline">Eliminar tarea</button>
             : <span />}
-          <div className="flex gap-2">
-            <button onClick={onCerrar} className="btn-ghost">Cancelar</button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onCerrar} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
             {f.titulo.trim() && (
               <button type="button" onClick={() => descargarTareaICS({ ...f, id: tarea?.id }, '')}
-                className="btn-ghost" title="Descargar esta tarea (.ics) para tu calendario">⤓ Calendario</button>
+                className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Descargar esta tarea (.ics) para tu calendario">⤓ Calendario</button>
             )}
-            <button onClick={guardar} disabled={guardando || !f.titulo.trim()} className="btn-orange">
+            <button onClick={guardar} disabled={guardando || !f.titulo.trim()} className="btn-orange !px-4 !py-1.5 text-[13px]">
               {guardando ? 'Guardando…' : 'Guardar tarea'}
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </DialogoFicha>
   );
 }
 

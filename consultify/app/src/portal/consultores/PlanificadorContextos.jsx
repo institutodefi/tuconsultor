@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { useAuth } from '../../lib/auth.jsx';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR CONTEXTOS
@@ -275,18 +276,13 @@ export default function PlanificadorContextos() {
         </>
       )}
       {ayudaDe && (
-        <div className="fixed inset-0 z-[9500] flex items-start justify-center overflow-auto bg-black/55 p-4 sm:p-10"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setAyudaDe(null); }}>
-          <div role="dialog" aria-modal="true" aria-label={`Ayuda de ${ayudaDe.codigo}`}
-            className="w-full max-w-xl rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0A2B3A] p-5 shadow-2xl">
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div>
-                <code className="text-[12px] font-extrabold text-brand-orange">{ayudaDe.codigo}</code>
-                <h2 className="text-[15.5px] font-extrabold text-[#EAF4F7]">{ayudaDe.titulo}</h2>
-              </div>
-              <button onClick={() => setAyudaDe(null)} aria-label="Cerrar"
-                className="rounded-lg px-2 py-0.5 text-lg font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">×</button>
-            </div>
+        <DialogoFicha
+          titulo={ayudaDe.titulo}
+          subtitulo={ayudaDe.codigo}
+          onCerrar={() => setAyudaDe(null)}
+          ancho="640px"
+        >
+          <div>
 
             {puedeEditarAyuda ? (
               <>
@@ -315,7 +311,7 @@ export default function PlanificadorContextos() {
               </div>
             )}
           </div>
-        </div>
+        </DialogoFicha>
       )}
     </div>
   );

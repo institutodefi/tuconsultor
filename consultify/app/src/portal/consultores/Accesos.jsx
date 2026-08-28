@@ -4,6 +4,7 @@ import { ROL_LABEL } from '../../lib/permisos.js';
 import { NORMAS } from '../../lib/calcEngine.js';
 import { ROLES_CLIENTE, ROL_CLIENTE_LABEL } from '../../lib/permisos.js';
 import { listTable, insertRow, deleteRow, updateRow } from '../../lib/data.js';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 const ROLES_ASIGNABLES = ['superadmin', 'admin', 'director', 'consultor', 'gestion'];
 const ROLES_DOMINIO = ['director', 'consultor'];
@@ -313,11 +314,24 @@ export default function Accesos() {
         )}
       </div>
 
-      {/* Modal de edición de perfil (superadmin) */}
+      {/* Edición de perfil (superadmin).
+          Tenía su propio modal escrito a mano: sin Escape, sin atrapar el foco
+          y cerrándose con cualquier clic que soltara fuera, aunque el gesto
+          hubiera empezado dentro seleccionando texto. Ahora usa el diálogo
+          común, que resuelve esas tres cosas. */}
       {editando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/70 p-4" onClick={() => setEditando(null)}>
-          <div className="w-full max-w-lg rounded-2xl bg-[#10394A] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-extrabold text-[#EAF4F7]">Editar perfil</h2>
+        <DialogoFicha
+          titulo="Editar perfil"
+          subtitulo={`${editando.nombre || ''} ${editando.apellidos || ''}`.trim() || editando.email}
+          onCerrar={() => setEditando(null)}
+          haycambios
+          ancho="640px"
+          pie={<>
+            <button onClick={() => setEditando(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+            <button onClick={guardarPerfil} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>
+          </>}
+        >
+          <div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div><label className="label">Nombre</label><input className="input" value={editando.nombre} onChange={e => setEditando({ ...editando, nombre: e.target.value })} /></div>
               <div><label className="label">Apellidos</label><input className="input" value={editando.apellidos} onChange={e => setEditando({ ...editando, apellidos: e.target.value })} /></div>
@@ -344,12 +358,8 @@ export default function Accesos() {
                 </div>
               </div>
             </div>
-            <div className="mt-5 flex gap-3">
-              <button onClick={guardarPerfil} className="btn-primary">Guardar</button>
-              <button onClick={() => setEditando(null)} className="btn-ghost">Cancelar</button>
-            </div>
           </div>
-        </div>
+        </DialogoFicha>
       )}
     </div>
   );

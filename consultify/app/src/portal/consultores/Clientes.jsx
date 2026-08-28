@@ -4,6 +4,7 @@ import { listTable, insertRow, updateRow, deleteRow, siguienteCodigoCliente, hol
 import { NORMAS, NORMA_BY_ID } from '../../lib/calcEngine.js';
 import { useAuth } from '../../lib/auth.jsx';
 import SemaforoCobros from './SemaforoCobros.jsx';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 const VACIO = { codigo: '', cif_matriz: '', empresa: '', contacto: '', contacto_apellidos: '', email: '', telefono: '', director_proyecto_id: '', jefe_cuenta_id: '' };
 
@@ -339,10 +340,16 @@ export default function Clientes() {
         )}
       </div>
 
-      {/* Alta / edición */}
+      {/* Alta / edición en diálogo */}
       {form && (
-        <form onSubmit={guardarCliente} className="card">
-          <h3 className="font-extrabold">{form.id ? `Editar · ${form.empresa}` : 'Nuevo cliente'}</h3>
+        <DialogoFicha
+          titulo={form.id ? 'Editar cliente' : 'Nuevo cliente'}
+          subtitulo={form.empresa || 'Alta en la ficha operativa'}
+          onCerrar={() => setForm(null)}
+          haycambios
+          ancho="1000px"
+        >
+        <form onSubmit={guardarCliente}>
 
           {/* Fila 1 · Identificación del cliente */}
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -396,6 +403,7 @@ export default function Clientes() {
             {holdedMsg && <p className={`text-sm font-bold ${holdedMsg.err ? 'text-red-300' : 'text-green-600'}`}>{holdedMsg.t}</p>}
           </div>
         </form>
+        </DialogoFicha>
       )}
 
       {!cliente && !form && (

@@ -1597,3 +1597,109 @@ El lote de Brevo lo escribí llamando a `brevoFn('alta', {…})`, pero esa funci
 recibe **un solo argumento**. Habría fallado en la primera ejecución. Corregido
 para usar el mismo payload que el envío individual: si no, unos contactos
 llegan a Brevo con empresa y otros sin ella.
+
+---
+
+# v211 · Toda la edición pasa a diálogo modal
+
+## El componente ya existía y no lo usaba nadie
+
+`components/DialogoFicha.jsx` estaba huérfano, como pasó con
+`documento-oferta.mjs` y con `Proyectos.jsx`. Se ha reforzado y aplicado en las
+nueve pantallas donde se edita algo.
+
+## Qué se ha reforzado
+
+| | Antes | Ahora |
+|---|---|---|
+| Escape | solo en el componente sin usar | en todas |
+| Foco atrapado dentro | no | sí |
+| Foco vuelve al abrir/cerrar | no | sí |
+| Cierre por clic fuera | al soltar el ratón, viniera de donde viniera | solo si el gesto **empezó** fuera |
+| Aviso de cambios sin guardar | no | sí, donde hay formulario |
+| Botonera fija abajo | no | sí, en formularios largos |
+| Móvil | centrado, se salía por arriba | anclado abajo, donde llega el pulgar |
+
+El detalle del clic fuera importaba de verdad: seleccionar texto dentro de un
+campo y soltar el ratón un poco fuera **cerraba el formulario y se perdía lo
+escrito**. Pasaba en los cuatro modales que estaban hechos a mano.
+
+Y el foco: al abrir aterriza en el **primer campo**, no en el botón de cerrar,
+que es lo que hacía el componente original.
+
+## Pantallas convertidas
+
+- **Contactos** — alta y edición
+- **Empresas** — la ficha completa. Antes sustituía la pantalla entera con un
+  `return` temprano: al cerrar se volvía al listado desde arriba, con el filtro
+  y el desplazamiento perdidos. Ahora la lista sigue detrás.
+- **Clientes** — alta y edición
+- **Ofertas** — normas de la oferta
+- **Reglas comerciales** — alta y edición
+- **Accesos** — editar perfil
+- **Agenda** — nueva tarea y edición
+- **Control del sistema** — casuísticas
+- **Planificador de contextos** — ayuda de tarea
+
+Cuatro de ellas tenían su propio modal escrito a mano, cada uno con sus propios
+defectos. Ahora comparten uno.
+
+`GatePoliticas` se queda como está a propósito: es un bloqueo legal que **no
+debe poder cerrarse** con Escape ni pulsando fuera.
+
+## Detalle en la ficha de empresa
+
+Dentro del diálogo se oculta el «← Todas las empresas»: con la × de la esquina
+al lado, dos formas de cerrar en el mismo sitio confunden más de lo que ayudan.
+
+---
+
+# v212 · Importar datos desde VIES
+
+## Qué había
+
+La consulta a VIES ya existía y **ya devolvía razón social y dirección**, pero la
+interfaz solo ofrecía traer el nombre. La dirección se veía en pantalla y había
+que copiarla a mano, campo por campo.
+
+## Qué se importa ahora
+
+Razón social, dirección, código postal, población y país, cada uno con su
+casilla. Se importa lo que se marque, no todo de golpe.
+
+**El backend trocea la dirección**, que VIES entrega como texto libre en el
+formato de cada país. Se cubre el patrón común en la UE —última línea con código
+postal y población— con sus variantes:
+
+| País | Formato | Se reconoce |
+|---|---|---|
+| ES, IT, DE | `28013 MADRID` | ✓ |
+| PT | `1100-052 LISBOA` (código partido) | ✓ |
+| IT | `MILANO 20121` (invertido) | ✓ |
+| BE, LU | `B-1000 BRUXELLES` (prefijo de país) | ✓ |
+| NL | `1012 LG AMSTERDAM` | ✓ |
+
+Lo que no encaja con ningún patrón **se deja entero en «Dirección»**. Un campo
+con el texto completo es mejor que tres campos con datos repartidos mal.
+
+**La provincia no se deduce.** En España VIES no la publica, y sacarla del
+código postal exigiría una tabla que envejece. Se deja vacía antes que
+rellenarla a ojo.
+
+## Decisiones de la interfaz
+
+- **Solo se ofrecen los campos que aportan algo.** Uno que ya coincide no
+  aparece: una lista con cinco casillas de las que tres no cambian nada se marca
+  entera sin mirar.
+- **Marcados por defecto solo los campos vacíos.** Rellenar un hueco es seguro;
+  sustituir un dato existente es una decisión de quien mira.
+- **Si un campo pisaría algo distinto, se dice**: «sustituye a "Sonae"». Sin
+  eso, importar borraría en silencio una razón social corregida a mano.
+- **Los datos entran en el formulario, no en la base.** Se revisan y se guarda
+  después, como cualquier otra edición.
+
+## Verificación
+
+`scripts/test-vies.mjs`: los cinco formatos de dirección de la UE, direcciones
+de tres líneas, y los casos límite —vacío, nulo, sin patrón reconocible, país
+fuera de la lista— comprobando que en ninguno se inventa un dato.

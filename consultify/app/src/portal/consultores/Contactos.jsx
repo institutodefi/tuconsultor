@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../lib/crm.js';
@@ -506,12 +507,22 @@ export default function Contactos() {
         </div>
       )}
 
-      {/* Formulario de alta o edición, en tarjeta aparte sobre la tabla */}
+      {/* Alta y edición en diálogo: encima de la lista, sin empujar la tabla
+          hacia abajo ni obligar a buscar dónde ha aparecido el formulario. */}
       {form && (
-        <FormContacto
-          form={form} setForm={setForm} empresas={empresas}
-          onCancelar={() => setForm(null)} onGuardar={guardar}
-        />
+        <DialogoFicha
+          titulo={form.id ? 'Editar contacto' : 'Nuevo contacto'}
+          subtitulo={form.id ? `${form.nombre} ${form.apellidos || ''}`.trim() : 'Todo contacto necesita empresa y correo'}
+          onCerrar={() => setForm(null)}
+          haycambios
+          ancho="760px"
+          pie={<>
+            <button onClick={() => setForm(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+            <button onClick={guardar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>
+          </>}
+        >
+          <FormContacto form={form} setForm={setForm} empresas={empresas} />
+        </DialogoFicha>
       )}
       )}
     </div>
@@ -602,12 +613,10 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
 // ════════════════════════════════════════════════════════════════════════════
 // Alta y edición de contacto
 // ════════════════════════════════════════════════════════════════════════════
-function FormContacto({ form, setForm, empresas, onCancelar, onGuardar }) {
+function FormContacto({ form, setForm, empresas }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   return (
-    <div className="card space-y-3">
-      <h3 className="text-base font-extrabold text-[#EAF4F7]">{form.id ? 'Editar contacto' : 'Nuevo contacto'}</h3>
-
+    <div className="space-y-3">
       <div className="form-grid">
         <div className="campo"><label className="label" htmlFor="ct-nombre">Nombre*</label>
           <input id="ct-nombre" className="input" value={form.nombre} onChange={set('nombre')} /></div>
@@ -655,11 +664,6 @@ function FormContacto({ form, setForm, empresas, onCancelar, onGuardar }) {
           onChange={(e) => setForm({ ...form, consentimiento_marketing: e.target.checked, _teniaConsent: form.consentimiento_marketing })} />
         <span>Ha dado su <strong className="text-[#EAF4F7]">consentimiento</strong> para comunicaciones comerciales (RGPD). Necesario para Brevo.</span>
       </label>
-
-      <div className="flex justify-end gap-2">
-        <button onClick={onCancelar} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
-        <button onClick={onGuardar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>
-      </div>
     </div>
   );
 }

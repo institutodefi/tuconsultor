@@ -76,7 +76,7 @@ function Campo({ label, obligatorio, valor, onCambio, ancho = 1, tono }) {
 
 export default function FichaEmpresa({
   empresa, empresas, contactos, vinculos,
-  puedeEditar, puedeBorrar, onCambio, onSeleccionar, onCerrar, onAbrirContacto,
+  puedeEditar, puedeBorrar, onCambio, onSeleccionar, onCerrar, onAbrirContacto, enDialogo = false,
 }) {
   const esNueva = !empresa?.id;
   const [form, setForm] = useState(null);
@@ -130,6 +130,50 @@ export default function FichaEmpresa({
     } catch (e) {
       setVies({ estado: 'hecho', comprobado: false, motivo: `No se pudo consultar: ${e?.message || e}` });
     }
+  }
+
+  // ── Qué se puede traer de VIES ─────────────────────────────────────────────
+  // Solo lo que aporta algo: un campo que ya coincide no se ofrece, porque
+  // una lista con cinco casillas de las que tres no cambian nada se marca
+  // entera sin mirar.
+  const [importar, setImportar] = useState(() => new Set());
+
+  const importables = useMemo(() => {
+    if (vies?.estado !== 'hecho') return [];
+    const p = vies.partes || {};
+    const cand = [
+      ['nombre', 'Razón social', vies.nombre],
+      ['direccion', 'Dirección', p.direccion],
+      ['cp', 'C. postal', p.cp],
+      ['poblacion', 'Población', p.poblacion],
+      ['pais', 'País', p.pais || vies.paisNombre],
+    ];
+    const igual = (a, b) => String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
+    return cand
+      .filter(([, , valor]) => valor)
+      .filter(([campo, , valor]) => !igual(valor, vista[campo]))
+      .map(([campo, etq, valor]) => ({
+        campo, etq, valor,
+        // Si el campo ya tenía algo distinto, se dice: importar no debería
+        // borrar un dato corregido a mano sin que se vea.
+        actual: vista[campo] || null,
+      }));
+  }, [vies, vista]);
+
+  // Al llegar datos nuevos se marcan por defecto los campos VACÍOS: rellenar un
+  // hueco es seguro, sustituir un dato existente es una decisión.
+  useEffect(() => {
+    if (vies?.estado !== 'hecho') { setImportar(new Set()); return; }
+    setImportar(new Set(importables.filter((d) => !d.actual).map((d) => d.campo)));
+  }, [vies?.estado, vies?.consultado]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  function importarDeVies() {
+    const cambios = {};
+    for (const d of importables) if (importar.has(d.campo)) cambios[d.campo] = d.valor;
+    if (!Object.keys(cambios).length) return;
+    // Entra en el formulario, no en la base: quien importa revisa y guarda.
+    setForm((f) => ({ ...(f || vista), ...cambios }));
+    setMsg?.({ t: `${Object.keys(cambios).length} dato(s) traídos de VIES. Revísalos y guarda.` });
   }
 
   async function probarHolded() {
@@ -548,11 +592,53 @@ export default function FichaEmpresa({
                 </span>
               )}
             </div>
-            {vies?.estado === 'hecho' && vies.nombre && vies.nombre !== vista.nombre && (
-              <button type="button" onClick={() => setForm((f) => ({ ...(f || vista), nombre: vies.nombre }))}
-                className="mt-1 text-[11px] font-bold text-brand-orange hover:underline">
-                Usar «{vies.nombre}» como razón social
-              </button>
+            {/* ── Importar los datos que devuelve VIES ──
+                Antes solo se ofrecía la razón social, y la dirección se veía
+                pero había que copiarla a mano campo por campo. Aquí se listan
+                todos los datos disponibles con una casilla cada uno: se importa
+                lo que se elija, no todo a ciegas. Los que ya coinciden no
+                aparecen, y los que pisarían un dato distinto avisan de ello. */}
+            {vies?.estado === 'hecho' && importables.length > 0 && (
+              <div className="mt-2 rounded-xl border border-brand-orange/40 bg-brand-orange/[0.07] p-2.5">
+                <p className="text-[11.5px] font-extrabold text-brand-orange">
+                  VIES devuelve {importables.length} dato{importables.length === 1 ? '' : 's'} para esta ficha
+                </p>
+                <div className="mt-1.5 space-y-1">
+                  {importables.map((d) => (
+                    <label key={d.campo} className="flex cursor-pointer items-start gap-2 text-[12px]">
+                      <input type="checkbox" className="mt-0.5" checked={importar.has(d.campo)}
+                        onChange={() => setImportar((s) => {
+                          const n = new Set(s);
+                          if (n.has(d.campo)) n.delete(d.campo); else n.add(d.campo);
+                          return n;
+                        })} />
+                      <span className="min-w-0">
+                        <span className="font-bold text-[#EAF4F7]">{d.etq}:</span>{' '}
+                        <span className="text-[#DFF1F5]">{d.valor}</span>
+                        {d.actual && (
+                          <span className="block text-[11px] text-amber-200">
+                            sustituye a «{d.actual}»
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={importarDeVies} disabled={!importar.size}
+                    className="btn-orange !px-3 !py-1 text-[11.5px] disabled:opacity-40">
+                    Importar {importar.size} de {importables.length}
+                  </button>
+                  <button type="button"
+                    onClick={() => setImportar(new Set(importables.map((d) => d.campo)))}
+                    className="text-[11px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">
+                    Marcar todos
+                  </button>
+                  <span className="text-[11px] text-[#7FA7B4]">
+                    Se copian a la ficha; hay que guardar después.
+                  </span>
+                </div>
+              </div>
             )}
 
             {!duplicada && cif.mensaje && (
@@ -776,7 +862,11 @@ export default function FichaEmpresa({
     <div className="space-y-2.5">
       {/* Cabecera compacta */}
       <div className="rounded-xl border border-[#1E5468] bg-[#10394A] p-3">
-        <button onClick={onCerrar} className="mb-1.5 text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">← Todas las empresas</button>
+        {/* Dentro del diálogo hay una × arriba: dos formas de cerrar en la
+            misma esquina confunden más de lo que ayudan. */}
+        {!enDialogo && (
+          <button onClick={onCerrar} className="mb-1.5 text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">← Todas las empresas</button>
+        )}
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">

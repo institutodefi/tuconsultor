@@ -7,6 +7,7 @@ import {
 } from '../../lib/reglas.js';
 import { NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO } from '../../lib/proyecto.js';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // REGLAS COMERCIALES
@@ -145,13 +146,20 @@ export default function ReglasComerciales() {
 
       {/* ── Formulario de alta / edición ── */}
       {form && (
-        <section className="card space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold uppercase tracking-wider text-brand-orange">
-              {form.id ? 'Editar regla' : 'Nueva regla'}
-            </h2>
-            <button onClick={() => setForm(null)} className="text-xs font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">Cancelar</button>
-          </div>
+        <DialogoFicha
+          titulo={form.id ? 'Editar regla comercial' : 'Nueva regla comercial'}
+          subtitulo={form.nombre || 'Se aplica a toda oferta que cumpla la condición'}
+          onCerrar={() => setForm(null)}
+          haycambios
+          ancho="900px"
+          pie={<>
+            <button onClick={() => setForm(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+            <button onClick={guardar} disabled={guardando} className="btn-orange !px-4 !py-1.5 text-[13px] disabled:opacity-50">
+              {guardando ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Añadir regla'}
+            </button>
+          </>}
+        >
+        <div className="space-y-4">
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -354,13 +362,8 @@ export default function ReglasComerciales() {
             </ul>
           )}
 
-          <div className="flex gap-3">
-            <button onClick={guardar} disabled={guardando} className="btn-orange">
-              {guardando ? 'Guardando…' : form.id ? 'Guardar cambios' : 'Añadir regla'}
-            </button>
-            <button onClick={() => setForm(null)} className="btn-ghost">Cancelar</button>
-          </div>
-        </section>
+        </div>
+        </DialogoFicha>
       )}
 
       {/* ── Listado ── */}

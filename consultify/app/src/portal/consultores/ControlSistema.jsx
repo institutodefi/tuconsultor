@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { NORMAS, NORMA_BY_ID, MODELO_IDS } from '../../lib/calcEngine.js';
+import DialogoFicha from '../../components/DialogoFicha.jsx';
 
 const TIPOS = [
   { id: 'produccion', nombre: 'Producción / Proyecto' },
@@ -135,12 +136,14 @@ export default function ControlSistema() {
 
       {/* Modal alta/edición de casuística */}
       {edit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4" onClick={() => setEdit(null)}>
-          <form onSubmit={guardar} className="w-full max-w-lg rounded-[22px] bg-[#10394A] p-6 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <h3 className="text-lg font-extrabold">{edit.id ? 'Editar casuística' : 'Nueva casuística'}</h3>
-              <p className="text-xs font-semibold text-[#9FC0CB]">{norma?.nombre} · modelo {edit.modelo}</p>
-            </div>
+        <DialogoFicha
+          titulo={edit.id ? 'Editar casuística' : 'Nueva casuística'}
+          subtitulo={`${norma?.nombre || ''} · modelo ${edit.modelo}`}
+          onCerrar={() => setEdit(null)}
+          haycambios
+          ancho="640px"
+        >
+          <form onSubmit={guardar} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Proceso *</label><input required className="input" placeholder="PE1 PLANIFICACIÓN ESTRATÉGICA" value={edit.proceso || ''} onChange={(e) => setEdit({ ...edit, proceso: e.target.value })} /></div>
               <div><label className="label">Subproceso</label><input className="input" placeholder="S1 PE1 GESTIÓN DEL CONTEXTO" value={edit.subproceso || ''} onChange={(e) => setEdit({ ...edit, subproceso: e.target.value })} /></div>
@@ -155,12 +158,14 @@ export default function ControlSistema() {
               <div><label className="label">Horas</label><input type="number" min="0" step="0.01" className="input" value={edit.horas_base ?? ''} onChange={(e) => setEdit({ ...edit, horas_base: e.target.value })} /></div>
             </div>
             {err && <p className="text-sm font-bold text-red-300">{err}</p>}
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setEdit(null)} className="btn-ghost">Cancelar</button>
-              <button className="btn-orange">{edit.id ? 'Guardar' : 'Crear'}</button>
+            {/* La botonera va dentro del <form> para que Enter envíe: sacarla
+                al pie del diálogo la dejaría fuera del formulario. */}
+            <div className="flex justify-end gap-2 border-t border-[#1E5468] pt-3">
+              <button type="button" onClick={() => setEdit(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+              <button className="btn-orange !px-4 !py-1.5 text-[13px]">{edit.id ? 'Guardar' : 'Crear'}</button>
             </div>
           </form>
-        </div>
+        </DialogoFicha>
       )}
     </div>
   );
