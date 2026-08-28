@@ -123,7 +123,7 @@ export default function ResumenAgenda({ tareas, yo }) {
           </p>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TRAMOS.map((tr) => {
             const n = porTramo[tr.k].length;
             const activo = tramoAbierto === tr.k;

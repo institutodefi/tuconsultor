@@ -170,7 +170,7 @@ export default function Sistemas() {
         {grupos.length === 0 ? (
           <p className="text-sm font-medium text-[#7FA7B4]">Sin tareas para esta norma. Añade la primera.</p>
         ) : (
-          <table className="w-full min-w-[960px] text-sm">
+          <div className="-mx-1 overflow-x-auto px-1"><table className="w-full min-w-[960px] text-sm">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Proceso</th>
@@ -204,7 +204,7 @@ export default function Sistemas() {
                 <td></td>
               </tr>
             </tfoot>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

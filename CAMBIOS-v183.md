@@ -1411,3 +1411,120 @@ del 15 % con 5, 9 o 50 sistemas), que el precio siempre sube al añadir sistemas
 en los tres modelos, que cada sistema respeta el suelo, precio pactado por
 sistema con los demás siguiendo la regla, que un precio 0 se ignora, el
 interruptor de reglas, y que Apoyo e Implantación no se ven afectados.
+
+---
+
+# v208 · Tarifa pactada al editar, y el precio de una oferta emitida deja de pisarse
+
+## El fallo grave que salió al comprobar el guardado
+
+`guardarEdicion()` hacía esto:
+
+```js
+const patch = { …, precio: calc.precioCatalogo };
+```
+
+**Recalculaba y guardaba siempre.** Corregir un teléfono en una oferta ya
+emitida le cambiaba el importe. Con el cambio de regla de precios de v207 el
+salto es brutal: la oferta de la captura, emitida por **537 €/mes**, pasaba a
+**945 €** por guardar cualquier campo. El aviso de conflicto existía para
+«↻ Regenerar», pero no para «Guardar», que es por donde se toca la oferta.
+
+Ahora, si el precio de hoy difiere del emitido, se pregunta antes de guardar
+nada, con dos salidas claras: **mantener el emitido** o **actualizar al de hoy**.
+
+## Segundo fallo: el PDF no cuadraba con el CRM
+
+Al regenerar desde «Guardar y regenerar», el POST no enviaba `fases_plan`,
+`ajustes` ni `override`. El backend recalculaba con el plan entero, sin el trato
+pactado y con la tarifa de catálogo, así que el documento salía con un importe
+distinto del que se acababa de guardar.
+
+El propio código avisaba de esto —«una oferta de 10.296 € se convertía en
+14.553 €»— pero solo se había arreglado el cálculo local, no el envío.
+
+Corregido en los dos caminos: «Guardar y regenerar» y «↻ Regenerar» mandan ahora
+fases, ajustes, precios pactados, el interruptor de reglas y el override del
+precio. Y `calcular()` del servidor recibe los mismos parámetros que el del
+navegador.
+
+## Tarifa pactada también al editar
+
+Las dos casillas del generador —**reglas comerciales** y **cliente antiguo con
+tarifa pactada**— están ahora en la edición de ofertas, con un campo por sistema
+y el subtotal con su descuento por volumen a la vista.
+
+Sin esto, una oferta de cliente antiguo había que rehacerla desde cero para
+respetar su precio heredado.
+
+## Migración `v96`
+
+`precios_sistema` (jsonb), `cliente_antiguo` y `aplicar_reglas` en
+`presupuestos`, con constraint: no puede haber precios pactados sin marcar la
+oferta como de cliente antiguo, porque sería un descuento sin trazabilidad.
+
+Sin persistir estos campos, al regenerar la oferta el motor volvía a aplicar el
+catálogo y el documento salía con otro importe.
+
+## Verificación
+
+`scripts/test-guardado-ofertas.mjs`: que el precio de hoy difiere del emitido y
+por tanto debe pedirse confirmación; que con tarifa pactada se reproduce
+exactamente el importe emitido (537 €); que los precios pactados ignoran el
+suelo de 350 €; mezcla de pactados y catálogo con su descuento por volumen; y
+que fases y ajustes siguen respetándose. Sin regresión en
+`test-precio-sistemas.mjs`.
+
+---
+
+# v209 · Interfaz más compacta y responsiva
+
+## La causa de que todo ocupara tanto
+
+Las etiquetas tenían `tracking-[0.16em]`. Con ese espaciado, «Inicio previsto
+del proyecto» no cabía en una línea y partía en dos, descuadrando la fila
+entera. Bajado a `0.08em`: cabe en una y se sigue leyendo como rótulo.
+
+Además, cada pantalla resolvía la alineación a mano con `min-h-[32px]`,
+`h-[34px]`, `h-[38px]`… valores distintos en cada sitio y que había que repetir
+en cada campo nuevo.
+
+## Cuatro clases que lo resuelven una vez
+
+```
+.form-grid    1 columna en móvil · 2 en tableta · 4 en escritorio ancho
+.campo        columna flex con las tres zonas
+.campo .label alineada abajo: da igual si ocupa una o dos líneas
+.campo-nota   reserva su hueco aunque esté vacía
+```
+
+Con la variante `.denso` para bloques secundarios. Las alturas escritas a mano
+en el generador y en la edición de ofertas se han sustituido por estas clases.
+
+## Densidad general
+
+- `.card`: padding de 16/24 px → 14/20 px.
+- `.input`: de 44 px a 36 px de alto.
+- `.label`: 12 px → 11 px y menos margen inferior.
+- Tabla de ofertas: filas y cabecera más ajustadas, texto a 13 px.
+
+## Responsive: dos problemas reales corregidos
+
+**Rejillas que saltaban a 4 columnas desde 640 px.** Un campo de fecha en una
+cuarta parte de una pantalla de 640 px es ilegible. Ahora saltan a 4 desde
+1280 px, con 2 columnas en el tramo intermedio.
+
+**Tarjetas de cifras a 1 columna en móvil.** En `ResumenAgenda`,
+`DashboardProyectos` y `RegistroAccesos` los paneles de cuatro cifras se
+apilaban en vertical y ocupaban toda la pantalla. Pasan a 2 columnas: caben de
+sobra y el panel se ve de un vistazo.
+
+**Dos tablas anchas sin scroll horizontal.** `ControlSistema` (760 px) y
+`Sistemas` (960 px) tenían `min-w` pero ningún contenedor con `overflow-x-auto`:
+en móvil desbordaban la página entera en lugar de desplazarse dentro de su
+tarjeta. Envueltas.
+
+## Sin regresión
+
+`test-guardado-ofertas.mjs` y `test-precio-sistemas.mjs` siguen pasando: el
+cambio es de presentación y no toca el motor de precios.

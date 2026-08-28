@@ -106,7 +106,7 @@ export default function ControlSistema() {
               <button onClick={() => setEdit(VACIA(normaSel, modelo))} className="btn-ghost !px-3 !py-1.5 text-sm">+ Añadir</button>
             </div>
             {items.length > 0 ? (
-              <table className="w-full min-w-[760px] text-sm">
+              <div className="-mx-1 overflow-x-auto px-1"><table className="w-full min-w-[760px] text-sm">
                 <thead><tr className="border-b border-[#1E5468] text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                   <th className="px-5 py-2.5">Proceso - Subproceso</th><th className="px-5 py-2.5">Descripción</th>
                   <th className="px-5 py-2.5">Tipo</th><th className="px-5 py-2.5 text-right">Horas</th><th className="px-5 py-2.5 text-right">Acciones</th>
@@ -125,7 +125,7 @@ export default function ControlSistema() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             ) : (
               <p className="px-5 py-6 text-center text-sm font-medium text-[#9FC0CB]">Sin casuísticas para este modelo. Usa «Añadir».</p>
             )}

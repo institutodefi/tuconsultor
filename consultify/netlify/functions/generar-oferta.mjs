@@ -490,7 +490,17 @@ export default async (req) => {
 
   const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false } = body;
   // `fecha_inicio` y `fecha_certificacion` se leen más abajo, al enriquecer `r`.
-  const r = calcular(normas, modelo, { meses, tiene9001 });
+  // El motor del servidor recibe lo mismo que el del navegador. Sin `fasesPlan`,
+  // `ajustes` y `preciosSistema` recalculaba con el plan entero, sin el trato
+  // pactado y con la tarifa de catálogo: el PDF salía con un importe distinto
+  // al que se acababa de guardar en el CRM.
+  const r = calcular(normas, modelo, {
+    meses, tiene9001,
+    fasesPlan: body.fasesPlan || body.fases_plan || undefined,
+    ajustes: body.ajustes || [],
+    preciosSistema: body.preciosSistema || body.precios_sistema || null,
+    aplicarReglas: body.aplicar_reglas !== false,
+  });
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
 
   // ── Reglas comerciales ──

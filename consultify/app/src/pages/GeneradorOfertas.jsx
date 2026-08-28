@@ -510,13 +510,13 @@ export default function GeneradorOfertas({ publico = false }) {
               </label>
 
               {clienteAntiguo && (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="form-grid-3 denso mt-3">
                   {res.desgloseSistemas.map((s) => (
                     <div key={s.id} className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] px-3 py-2">
                       <label className="label !mb-1" htmlFor={`ps-${s.id}`}>{s.nombre}</label>
                       <div className="flex items-center gap-2">
                         <input id={`ps-${s.id}`} type="number" min="0" step="25"
-                          className="input h-[32px] !py-0 !text-[13px]"
+                          className="input"
                           placeholder={String(s.manual ? '' : s.precio)}
                           value={preciosSistema[s.id] ?? ''}
                           onChange={(e) => {
@@ -529,7 +529,7 @@ export default function GeneradorOfertas({ publico = false }) {
                           }} />
                         <span className="text-[12px] font-bold text-[#7FA7B4]">€/mes</span>
                       </div>
-                      <p className="mt-1 text-[11px] text-[#7FA7B4]">
+                      <p className="campo-nota">
                         {s.manual ? 'Precio pactado' : `Catálogo: ${s.precio} €${s.suelo ? ' (suelo)' : ''}`}
                       </p>
                     </div>
@@ -676,27 +676,27 @@ export default function GeneradorOfertas({ publico = false }) {
                 fijas —etiqueta, campo y nota—. Sin ellas, una etiqueta que
                 ocupa dos líneas o una nota más larga desplazan el campo de su
                 columna y los recuadros quedan a distinta altura. */}
-            <div className="mt-4 grid gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="flex flex-col">
-                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-inicio">
+            <div className="form-grid mt-4">
+              <div className="campo">
+                <label className="label" htmlFor="g-inicio">
                   Inicio del proyecto
                 </label>
-                <input id="g-inicio" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
+                <input id="g-inicio" type="date" className="input"
                   value={fechaInicio} onChange={(e) => cambiarInicio(e.target.value)} />
-                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                <p className="campo-nota">
                   Desde aquí se cuenta todo lo demás.
                 </p>
               </div>
 
-              <div className="flex flex-col">
-                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-fin">
+              <div className="campo">
+                <label className="label" htmlFor="g-fin">
                   {finEsManual ? 'Fin del proyecto' : 'Fin de contrato'}
                 </label>
-                <input id="g-fin" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
+                <input id="g-fin" type="date" className="input"
                   value={fechaFin}
                   aria-describedby="g-fin-nota"
                   onChange={(e) => { setFechaFin(e.target.value); setFinTocado(true); }} />
-                <p id="g-fin-nota" className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                <p id="g-fin-nota" className="campo-nota">
                   {finTocado
                     ? <>Fijado a mano. <button type="button" className="font-bold text-brand-orange hover:underline"
                         onClick={() => { setFinTocado(false); setFechaFin(fechaInicio ? finPorDefecto(fechaInicio) : ''); }}>
@@ -707,26 +707,26 @@ export default function GeneradorOfertas({ publico = false }) {
                 </p>
               </div>
 
-              <div className="flex flex-col">
-                <label className="label !mb-0 flex min-h-[34px] items-end leading-tight" htmlFor="g-cert">
+              <div className="campo">
+                <label className="label" htmlFor="g-cert">
                   Certificación <span className="ml-1 font-normal normal-case tracking-normal text-[#7FA7B4]">— opcional</span>
                 </label>
-                <input id="g-cert" type="date" className="input mt-1.5 h-[38px] !py-0 !text-[13px]"
+                <input id="g-cert" type="date" className="input"
                   value={fechaCert} onChange={(e) => setFechaCert(e.target.value)} />
-                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                <p className="campo-nota">
                   Si aún no hay auditoría, déjala vacía.
                 </p>
               </div>
 
-              <div className="flex flex-col">
-                <p className="label !mb-0 flex min-h-[34px] items-end leading-tight">Plazo para planificar</p>
+              <div className="campo">
+                <p className="label">Plazo para planificar</p>
                 {/* Misma altura que los campos, para que la cifra quede a la
                     altura de las fechas y no flotando por encima. */}
-                <p className="mt-1.5 flex h-[38px] items-center text-lg font-extrabold leading-none text-[#EAF4F7]">
+                <p className="mt-1 flex h-9 items-center text-lg font-extrabold leading-none text-[#EAF4F7]">
                   {meses || '—'}
                   <span className="ml-1.5 text-[12px] font-bold text-[#7FA7B4]">{meses === 1 ? 'mes' : 'meses'}</span>
                 </p>
-                <p className="mt-1.5 min-h-[30px] text-[11px] leading-snug text-[#7FA7B4]">
+                <p className="campo-nota">
                   Hasta {fechaCert ? 'la certificación' : (finEsManual ? 'el fin del proyecto' : 'el fin de contrato')}.
                 </p>
               </div>

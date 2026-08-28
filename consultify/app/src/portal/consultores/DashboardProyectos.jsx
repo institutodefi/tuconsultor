@@ -128,7 +128,7 @@ export default function DashboardProyectos() {
       </div>
 
       {/* Las cifras */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-5">
         {[
           ['Proyectos activos', resumen.activos, 'text-[#EAF4F7]', 'activos'],
           ['Con el plazo en riesgo', resumen.riesgo, resumen.riesgo ? 'text-red-300' : 'text-[#EAF4F7]', 'riesgo'],
@@ -156,7 +156,7 @@ export default function DashboardProyectos() {
           </p>
         </div>
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             ['Vencidos', venc.vencido, 'vencido'],
             [`≤ ${DIAS_AVISO_ROJO} días`, venc.rojo, 'rojo'],

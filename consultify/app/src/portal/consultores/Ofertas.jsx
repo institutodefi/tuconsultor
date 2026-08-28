@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { listAll, updateRow, deleteRow } from '../../lib/data.js';
 import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
@@ -62,7 +62,13 @@ export default function Ofertas() {
   // Abrir la edición completa de una oferta. Lo llaman el lápiz de la tabla y
   // los enlaces que llegan desde la ficha de empresa.
   const abrirEdicion = (r) => {
-    setEdicion({ ...r, normas: [...(r.normas || [])], sedes: r.sedes || 1, complejidad: r.complejidad || 'media' });
+    setEdicion({
+      ...r, normas: [...(r.normas || [])], sedes: r.sedes || 1, complejidad: r.complejidad || 'media',
+      precios_sistema: r.precios_sistema || {},
+      // Las banderas de decisión de precio son de esta sesión de edición, no
+      // del registro: se limpian al abrir para que el aviso vuelva a saltar.
+      _precioDecidido: false, _mantenerPrecio: false,
+    });
     setMsg(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -99,6 +105,11 @@ export default function Ofertas() {
       try {
         const hoy = calcular(r.normas || [], r.modelo, {
           meses: r.meses, complejidad: r.complejidad, sedes: r.sedes,
+          // Con los mismos parámetros que se guardaron: si no, el aviso saltaba
+          // por una diferencia que no existe.
+          fasesPlan: r.fases_plan || undefined, ajustes: r.ajustes || [],
+          preciosSistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
+          aplicarReglas: r.aplicar_reglas !== false,
         });
         if (hoy && Math.abs(hoy.precioCatalogo - Number(r.precio)) > 0.5) {
           setAvisoPrecio({ oferta: r, guardado: Number(r.precio), hoy: hoy.precioCatalogo });
@@ -125,6 +136,12 @@ export default function Ofertas() {
           fecha_primer_pago: r.fecha_primer_pago || r.fecha_inicio || null,
           fecha_fin: r.fecha_fin || null,
           fecha_certificacion: r.fecha_certificacion || null,
+          // Todo lo que condiciona el precio, para que el documento salga igual
+          // que lo que enseña el CRM.
+          fases_plan: r.fases_plan || null,
+          ajustes: r.ajustes || [],
+          precios_sistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
+          aplicar_reglas: r.aplicar_reglas !== false,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),
@@ -195,7 +212,29 @@ export default function Ofertas() {
       const calc = calcular(e.normas, e.modelo, {
         meses: e.meses, complejidad: e.complejidad, sedes: e.sedes,
         fasesPlan: e.fases_plan || undefined, ajustes: e.ajustes || [],
+        preciosSistema: e.cliente_antiguo ? (e.precios_sistema || null) : null,
+        aplicarReglas: e.aplicar_reglas !== false,
       });
+
+      // ── El precio de una oferta EMITIDA no se pisa al guardar ──
+      // `precio: calc.precioCatalogo` recalculaba siempre, así que corregir un
+      // teléfono cambiaba el importe de una oferta ya enviada. Con el cambio de
+      // regla de precios de v207 el salto es enorme: una de 537 €/mes pasaba a
+      // 945 € por guardar cualquier campo.
+      //
+      // Ahora, si el precio de hoy difiere del emitido, se pregunta. El aviso
+      // ya existía para «↻ Regenerar»; faltaba aquí, que es por donde se toca
+      // la oferta de verdad.
+      const yaEmitida = !!e.numero_oferta && Number.isFinite(Number(e.precio));
+      const difiere = yaEmitida && Math.abs(calc.precioCatalogo - Number(e.precio)) > 0.5;
+      if (difiere && !e._precioDecidido) {
+        setAvisoPrecio({
+          oferta: e, guardado: Number(e.precio), hoy: calc.precioCatalogo, alGuardar: regenerar,
+        });
+        return;   // no se guarda nada hasta que se decida qué precio vale
+      }
+      // Si se decidió mantener el emitido, ese es el que se guarda y se manda.
+      const precioFinal = e._mantenerPrecio ? Number(e.precio) : calc.precioCatalogo;
       const completo = [e.contacto_nombre, e.contacto_apellidos].filter(Boolean).join(' ').trim();
       const patch = {
         empresa: e.empresa.trim(),
@@ -205,18 +244,23 @@ export default function Ofertas() {
         cargo: e.cargo?.trim() || null, cif: e.cif?.trim() || null,
         notas_oferta: e.notas_oferta || null, notas_internas: e.notas_internas || null,
         email: e.email?.trim() || null, telefono: e.telefono?.trim() || null,
-        normas: e.normas, modelo: e.modelo, tipo: calc.tipo, precio: calc.precioCatalogo,
+        normas: e.normas, modelo: e.modelo, tipo: calc.tipo, precio: precioFinal,
         complejidad: e.complejidad || null, sedes: e.sedes || 1,
         fecha_emision: e.fecha_emision || null,
         fecha_inicio: e.fecha_inicio || null,
         fecha_primer_pago: e.fecha_primer_pago || e.fecha_inicio || null,
         fecha_fin: e.fecha_fin || (e.fecha_inicio ? finSugerido(e.fecha_inicio, finManual) : null),
         fecha_certificacion: e.fecha_certificacion || null,
+        cliente_antiguo: !!e.cliente_antiguo,
+        precios_sistema: e.cliente_antiguo && Object.keys(e.precios_sistema || {}).length
+          ? e.precios_sistema : null,
+        aplicar_reglas: e.aplicar_reglas !== false,
       };
       await updateRow('presupuestos', e.id, patch);
       setRows((rs) => rs.map((x) => (x.id === e.id ? { ...x, ...patch } : x)));
       setEdicion(null);
-      setMsg(`Oferta actualizada · ${fmtEUR(calc.precioCatalogo)}${calc.tipo === 'mes' ? '/mes' : ''}.`);
+      setMsg(`Oferta actualizada · ${fmtEUR(precioFinal)}${calc.tipo === 'mes' ? '/mes' : ''}`
+        + (e._mantenerPrecio ? ' (se mantuvo el precio emitido).' : '.'));
       if (regenerar) {
         setGenId(e.id);
         const resp = await fetch('/.netlify/functions/generar-oferta', {
@@ -229,6 +273,18 @@ export default function Ofertas() {
             fecha_emision: patch.fecha_emision, fecha_inicio: patch.fecha_inicio,
             fecha_primer_pago: patch.fecha_primer_pago, fecha_fin: patch.fecha_fin,
             fecha_certificacion: patch.fecha_certificacion,
+            // Sin estos tres el backend recalcula con el plan entero, sin el
+            // trato pactado y sin la tarifa del cliente antiguo: el PDF salía
+            // con un importe distinto al que acabábamos de guardar.
+            fases_plan: e.fases_plan || null,
+            ajustes: e.ajustes || [],
+            precios_sistema: patch.precios_sistema,
+            // Y el override cierra el asunto: manda el precio que se guardó.
+            override: {
+              precioCatalogo: precioFinal,
+              horas: calc.horas, hTotal: calc.hTotal,
+              reglas: (calc.reglas || []).map((x) => ({ nombre: x.nombre, efecto: x.efecto })),
+            },
           }),
         });
         const j = await resp.json().catch(() => null);
@@ -276,6 +332,22 @@ export default function Ofertas() {
   // En Apoyo e Implantación el fin lo decide quien oferta; en los recurrentes es
   // la permanencia de doce meses y va pegado al inicio.
   const finManual = MODELOS_PROYECTO.includes(edicion?.modelo);
+
+  // Cálculo en vivo de la oferta abierta, para poder enseñar el desglose por
+  // sistema y los campos de tarifa pactada mientras se edita.
+  const calcEdicion = useMemo(() => {
+    if (!edicion?.normas?.length || !edicion.modelo) return null;
+    try {
+      return calcular(edicion.normas, edicion.modelo, {
+        meses: edicion.meses, complejidad: edicion.complejidad, sedes: edicion.sedes,
+        fasesPlan: edicion.fases_plan || undefined, ajustes: edicion.ajustes || [],
+        preciosSistema: edicion.cliente_antiguo ? (edicion.precios_sistema || null) : null,
+        aplicarReglas: edicion.aplicar_reglas !== false,
+      });
+    } catch { return null; }
+  }, [edicion?.normas, edicion?.modelo, edicion?.meses, edicion?.complejidad, edicion?.sedes,
+      edicion?.fases_plan, edicion?.ajustes, edicion?.cliente_antiguo, edicion?.precios_sistema,
+      edicion?.aplicar_reglas]);
 
   // Al pasar a un modelo recurrente, el fin vuelve a los doce meses: venir de
   // una implantación de cinco meses dejaría la oferta bloqueada sin motivo
@@ -338,18 +410,47 @@ export default function Ofertas() {
             <b>{fmtEUR(avisoPrecio.hoy)}</b>.
           </p>
           <p className="text-[12px] leading-relaxed text-[#9FC0CB]">
-            Regenerar con el precio de hoy deja el mismo número de oferta con un importe distinto
-            al que recibió el cliente. Si el precio ha de cambiar, lo limpio es emitir una oferta nueva.
+            {avisoPrecio.alGuardar === undefined
+              ? 'Regenerar con el precio de hoy deja el mismo número de oferta con un importe distinto al que recibió el cliente. Si el precio ha de cambiar, lo limpio es emitir una oferta nueva.'
+              : 'Guardar con el precio de hoy cambia el importe de una oferta ya emitida. Si el cliente la aceptó por el importe anterior, mantén el emitido; si el precio se ha renegociado, actualízalo.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: false }); }}
-              className="btn-orange !px-4 !py-1.5 text-xs">
-              Regenerar con {fmtEUR(avisoPrecio.guardado)} · el precio emitido
-            </button>
-            <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: true }); }}
-              className="btn-ghost !px-3 !py-1.5 text-xs">
-              Recalcular a {fmtEUR(avisoPrecio.hoy)}
-            </button>
+            {/* El aviso salta desde dos sitios: «↻ Regenerar» (solo documentos)
+                y «Guardar» (que además escribe el precio en la base). Los
+                botones tienen que hacer lo que corresponda en cada caso. */}
+            {avisoPrecio.alGuardar === undefined ? (
+              <>
+                <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: false }); }}
+                  className="btn-orange !px-4 !py-1.5 text-xs">
+                  Regenerar con {fmtEUR(avisoPrecio.guardado)} · el precio emitido
+                </button>
+                <button onClick={() => { const o = avisoPrecio.oferta; setAvisoPrecio(null); generar(o, { forzarPrecioNuevo: true }); }}
+                  className="btn-ghost !px-3 !py-1.5 text-xs">
+                  Recalcular a {fmtEUR(avisoPrecio.hoy)}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => {
+                    const regen = avisoPrecio.alGuardar;
+                    setEdicion((x) => ({ ...x, _precioDecidido: true, _mantenerPrecio: true }));
+                    setAvisoPrecio(null);
+                    setTimeout(() => guardarEdicion(regen), 0);
+                  }}
+                  className="btn-orange !px-4 !py-1.5 text-xs">
+                  Guardar manteniendo {fmtEUR(avisoPrecio.guardado)} · el precio emitido
+                </button>
+                <button onClick={() => {
+                    const regen = avisoPrecio.alGuardar;
+                    setEdicion((x) => ({ ...x, _precioDecidido: true, _mantenerPrecio: false }));
+                    setAvisoPrecio(null);
+                    setTimeout(() => guardarEdicion(regen), 0);
+                  }}
+                  className="btn-ghost !px-3 !py-1.5 text-xs">
+                  Actualizar a {fmtEUR(avisoPrecio.hoy)}
+                </button>
+              </>
+            )}
             <button onClick={() => setAvisoPrecio(null)} className="btn-ghost !px-3 !py-1.5 text-xs">Cancelar</button>
           </div>
         </section>
@@ -375,7 +476,7 @@ export default function Ofertas() {
             </h2>
             <button onClick={() => setEdicion(null)} className="text-xs font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Cancelar</button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="form-grid">
             <div><label className="label" htmlFor="of-empresa">Empresa <span className="text-brand-orange">*</span></label>
               <input id="of-empresa" className="input !py-1.5 !text-[13px]" value={edicion.empresa || ''} onChange={(e) => setEdicion({ ...edicion, empresa: e.target.value })} /></div>
             {/* Nombre y apellidos POR SEPARADO, como el resto de formularios: unidos
@@ -413,7 +514,7 @@ export default function Ofertas() {
               </p>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="form-grid">
             <div><label className="label" htmlFor="of-modelo">Modelo</label>
               <select id="of-modelo" className="input !py-1.5 !text-[13px]" value={edicion.modelo} onChange={(e) => setEdicion({ ...edicion, modelo: e.target.value })}>
                 {MODELO_IDS.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -443,17 +544,17 @@ export default function Ofertas() {
               primer pago arranca el cuadro de facturación. Antes ninguna se
               podía tocar aquí y el PDF se fechaba solo, con el día en que se
               regenerase. */}
-          <div className="grid gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex flex-col">
-              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-emision">Fecha de emisión</label>
-              <input id="of-emision" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
+          <div className="form-grid">
+            <div className="campo">
+              <label className="label" htmlFor="of-emision">Fecha de emisión</label>
+              <input id="of-emision" type="date" className="input"
                 value={edicion.fecha_emision || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_emision: e.target.value })} />
-              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">Fecha del PDF y de los 30 días de validez.</p>
+              <p className="campo-nota">Fecha del PDF y de los 30 días de validez.</p>
             </div>
-            <div className="flex flex-col">
-              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-inicio">Inicio previsto del proyecto</label>
-              <input id="of-inicio" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
+            <div className="campo">
+              <label className="label" htmlFor="of-inicio">Inicio previsto del proyecto</label>
+              <input id="of-inicio" type="date" className="input"
                 value={edicion.fecha_inicio || ''}
                 onChange={(e) => {
                   // El primer pago sigue al inicio mientras no se toque a mano:
@@ -473,27 +574,27 @@ export default function Ofertas() {
                     fecha_fin: finSeguia && ini ? finSugerido(ini, finManual) : edicion.fecha_fin,
                   });
                 }} />
-              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">Arranca el calendario del encargo.</p>
+              <p className="campo-nota">Arranca el calendario del encargo.</p>
             </div>
-            <div className="flex flex-col">
-              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-pago">Fecha del primer pago</label>
-              <input id="of-pago" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
+            <div className="campo">
+              <label className="label" htmlFor="of-pago">Fecha del primer pago</label>
+              <input id="of-pago" type="date" className="input"
                 value={edicion.fecha_primer_pago || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_primer_pago: e.target.value })} />
-              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug">
+              <p className="campo-nota">
                 {avisoFechas.pago
                   ? <span className="font-bold text-brand-orange">{avisoFechas.pago}</span>
                   : <span className="text-[#7FA7B4]">Por defecto, el mes del inicio.</span>}
               </p>
             </div>
-            <div className="flex flex-col">
-              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-fin">
+            <div className="campo">
+              <label className="label" htmlFor="of-fin">
                 {finManual ? 'Fin del proyecto' : 'Fin de contrato'}
               </label>
-              <input id="of-fin" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
+              <input id="of-fin" type="date" className="input"
                 value={edicion.fecha_fin || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_fin: e.target.value })} />
-              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">
+              <p className="campo-nota">
                 {edicion.fecha_inicio && edicion.fecha_fin !== finSugerido(edicion.fecha_inicio, finManual)
                   ? <button type="button" className="font-bold text-brand-orange hover:underline"
                       onClick={() => setEdicion({ ...edicion, fecha_fin: finSugerido(edicion.fecha_inicio, finManual) })}>
@@ -507,15 +608,75 @@ export default function Ofertas() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex flex-col">
-              <label className="label !mb-0 flex min-h-[32px] items-end leading-tight" htmlFor="of-cert">
+          {/* ── Tarifa pactada y reglas ──
+              Lo mismo que ofrece el generador, disponible también al editar:
+              una oferta de cliente antiguo se corrige aquí, y sin esto había
+              que rehacerla desde cero para respetar su precio heredado. */}
+          {calcEdicion?.desgloseSistemas && (
+            <div className="rounded-xl border border-[#1E5468] bg-[#0D3242] p-3">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <input type="checkbox" className="mt-0.5" checked={edicion.aplicar_reglas !== false}
+                  onChange={(ev) => setEdicion({ ...edicion, aplicar_reglas: ev.target.checked })} />
+                <span className="text-[12.5px] leading-snug">
+                  <span className="font-bold text-[#EAF4F7]">Aplicar las reglas comerciales activas</span>
+                  <span className="block text-[11px] text-[#9FC0CB]">Desmárcalo para el precio de catálogo limpio.</span>
+                </span>
+              </label>
+
+              <label className="mt-2.5 flex cursor-pointer items-start gap-2.5">
+                <input type="checkbox" className="mt-0.5" checked={!!edicion.cliente_antiguo}
+                  onChange={(ev) => setEdicion({
+                    ...edicion, cliente_antiguo: ev.target.checked,
+                    precios_sistema: ev.target.checked ? (edicion.precios_sistema || {}) : {},
+                  })} />
+                <span className="text-[12.5px] leading-snug">
+                  <span className="font-bold text-[#EAF4F7]">Cliente antiguo con tarifa pactada</span>
+                  <span className="block text-[11px] text-[#9FC0CB]">
+                    Los sistemas en blanco siguen el catálogo, con su mínimo de {calcEdicion.volumen?.suelo ?? 350} €.
+                  </span>
+                </span>
+              </label>
+
+              {edicion.cliente_antiguo && (
+                <div className="form-grid denso mt-2.5">
+                  {calcEdicion.desgloseSistemas.map((s) => (
+                    <div key={s.id} className="rounded-lg border border-[#1E5468] bg-[#0B2E3D] px-2.5 py-2">
+                      <label className="label !mb-1" htmlFor={`ed-ps-${s.id}`}>{s.nombre}</label>
+                      <input id={`ed-ps-${s.id}`} type="number" min="0" step="25"
+                        className="input"
+                        placeholder={String(s.manual ? '' : s.precio)}
+                        value={edicion.precios_sistema?.[s.id] ?? ''}
+                        onChange={(ev) => {
+                          const v = ev.target.value;
+                          const n = { ...(edicion.precios_sistema || {}) };
+                          if (v === '') delete n[s.id]; else n[s.id] = Number(v);
+                          setEdicion({ ...edicion, precios_sistema: n });
+                        }} />
+                      <p className="mt-0.5 text-[10.5px] text-[#7FA7B4]">
+                        {s.manual ? 'pactado' : `catálogo ${s.precio} €${s.suelo ? ' (mín.)' : ''}`}
+                      </p>
+                    </div>
+                  ))}
+                  {calcEdicion.volumen?.pct > 0 && (
+                    <p className="text-[11px] text-[#9FC0CB] sm:col-span-2 lg:col-span-4">
+                      Subtotal {fmtEUR(calcEdicion.volumen.subtotal)} − {calcEdicion.volumen.pct} % por{' '}
+                      {calcEdicion.volumen.nSistemas} sistemas = <b className="text-[#EAF4F7]">{fmtEUR(calcEdicion.volumen.total)}</b>
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="form-grid">
+            <div className="campo">
+              <label className="label" htmlFor="of-cert">
                 Certificación <span className="font-normal text-[#7FA7B4]">— opcional</span>
               </label>
-              <input id="of-cert" type="date" className="input mt-1.5 h-[34px] !py-0 !text-[13px]"
+              <input id="of-cert" type="date" className="input"
                 value={edicion.fecha_certificacion || ''}
                 onChange={(e) => setEdicion({ ...edicion, fecha_certificacion: e.target.value })} />
-              <p className="mt-1.5 min-h-[28px] text-[11px] leading-snug text-[#7FA7B4]">La auditoría externa. No define el fin del contrato.</p>
+              <p className="campo-nota">La auditoría externa. No define el fin del contrato.</p>
               {avisoFechas.cert && <p className="text-[11px] font-bold text-red-300">{avisoFechas.cert}</p>}
             </div>
           </div>
@@ -560,16 +721,16 @@ export default function Ofertas() {
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[860px] text-sm">
             <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-              <th className="py-2">Nº oferta</th><th className="py-2">Fecha</th><th className="py-2">Cliente</th>
-              <th className="py-2">Comercial</th><th className="py-2">Normas</th><th className="py-2">Modelo</th>
-              <th className="py-2">Calendario</th>
-              <th className="py-2 text-right">Importe<br /><span className="text-[9.5px] font-semibold normal-case tracking-normal text-[#5E8494]">sin impuestos</span></th><th className="py-2 text-right">Documentos</th>
+              <th className="py-1.5">Nº oferta</th><th className="py-1.5">Fecha</th><th className="py-1.5">Cliente</th>
+              <th className="py-1.5">Comercial</th><th className="py-1.5">Normas</th><th className="py-1.5">Modelo</th>
+              <th className="py-1.5">Calendario</th>
+              <th className="py-1.5 text-right">Importe<br /><span className="text-[9.5px] font-semibold normal-case tracking-normal text-[#5E8494]">sin impuestos</span></th><th className="py-1.5 text-right">Documentos</th>
             </tr></thead>
             <tbody className="divide-y divide-navy-50">
               {lista.map(r => (
                 <tr key={r.id} id={`oferta-${r.id}`}
                   className={edicion && String(edicion.id) === String(r.id) ? 'bg-brand-orange/[0.07]' : undefined}>
-                  <td className="py-2.5 align-top font-extrabold text-[#EAF4F7]">
+                  <td className="py-2 align-top font-extrabold text-[#EAF4F7]">
                     {r.numero_oferta || '—'}
                     {/* El contrato y el proyecto cuelgan de aquí: el proyecto
                         SIEMPRE nace de un contrato, nunca suelto. */}
@@ -577,20 +738,20 @@ export default function Ofertas() {
                       (c) => String(c.presupuesto_id) === String(r.id) && c.estado !== 'anulado')}
                       onCambio={cargar} />
                   </td>
-                  <td className="py-2.5 font-medium text-[#9FC0CB]">{(r.creado || '').slice(0, 10)}</td>
-                  <td className="py-2.5 font-bold">{r.empresa || '—'}<br /><span className="text-xs font-medium text-[#9FC0CB]">{r.nombre || ''}</span></td>
-                  <td className="py-2.5 font-semibold">{r.comercial || 'Alejandro'}</td>
-                  <td className="py-2.5 font-semibold">
+                  <td className="py-2 font-medium text-[#9FC0CB]">{(r.creado || '').slice(0, 10)}</td>
+                  <td className="py-2 font-bold">{r.empresa || '—'}<br /><span className="text-xs font-medium text-[#9FC0CB]">{r.nombre || ''}</span></td>
+                  <td className="py-2 font-semibold">{r.comercial || 'Alejandro'}</td>
+                  <td className="py-2 font-semibold">
                     <span className="inline-flex items-center gap-1.5">
                       {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
                       <button onClick={() => abrirEdicion(r)}
                         className="text-xs font-bold text-[#7FA7B4] hover:text-[#F9A83A]" title="Editar la oferta completa">✎</button>
                     </span>
                   </td>
-                  <td className="py-2.5 font-semibold">{r.modelo}</td>
+                  <td className="py-2 font-semibold">{r.modelo}</td>
                   {/* Las tres fechas del encargo: antes había que abrir la
                       edición para saber cuándo empezaba y cuándo terminaba. */}
-                  <td className="py-2.5 whitespace-nowrap text-[11.5px] leading-tight">
+                  <td className="py-2 whitespace-nowrap text-[11.5px] leading-tight">
                     {r.fecha_inicio || r.fecha_fin ? (
                       <>
                         <span className="block font-semibold text-[#CFE3E9]">
@@ -602,8 +763,8 @@ export default function Ofertas() {
                       </>
                     ) : <span className="text-[#7FA7B4]">—</span>}
                   </td>
-                  <td className="py-2.5 text-right font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</td>
-                  <td className="py-2.5 text-right whitespace-nowrap">
+                  <td className="py-2 text-right font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</td>
+                  <td className="py-2 text-right whitespace-nowrap">
                     {(r.url_pdf || r.url_pptx) ? (
                       <span className="inline-flex gap-2 items-center">
                         {r.url_pdf && <a href={r.url_pdf} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PDF</a>}

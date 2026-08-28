@@ -85,7 +85,7 @@ export default function RegistroAccesos() {
         </button>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[['Líneas', resumen.total], ['Personas', resumen.personas], ['Entradas', resumen.entradas], ['Entradas fallidas', resumen.fallidas]].map(([k, v]) => (
           <div key={k} className={`rounded-xl p-3 ${k === 'Entradas fallidas' && v > 0 ? 'bg-red-500/12' : 'bg-[#0D3242]'}`}>
             <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{k}</p>
