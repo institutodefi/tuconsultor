@@ -1,7 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import TablaLista from '../../components/TablaLista.jsx';
-import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../lib/crm.js';
@@ -18,7 +16,7 @@ import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../
 // ════════════════════════════════════════════════════════════════════════════
 
 const VACIO = {
-  nombre: '', apellidos: '', cargo: '', email: '', telefono: '',
+  nombre: '', apellidos: '', cargo: '', email: '', telefono: '', movil: '',
   consentimiento_marketing: false, _empresa_id: '', _rol: 'secundario',
 };
 
@@ -44,6 +42,11 @@ export default function Contactos() {
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
   const [sync, setSync] = useState(false);
+  // Selección múltiple para las acciones en lote, y fila desplegada para editar
+  // sin salir de la tabla. Antes había que abrir una ficha lateral por contacto.
+  const [marcados, setMarcados] = useState(() => new Set());
+  const [abierta, setAbierta] = useState(null);   // id del contacto desplegado
+  const [lote, setLote] = useState(null);         // resultado de la última acción masiva
 
   const sel = params.get('c');
   const seleccionar = (id) => { setForm(null); if (id) setParams({ c: String(id) }); else setParams({}); };
@@ -100,6 +103,109 @@ export default function Contactos() {
     !vinculos.some((v) => String(v.contacto_id) === String(c.id)) || !emailValido(c.email)).length,
     [contactos, vinculos]);
 
+  // ── Acciones en lote ──────────────────────────────────────────────────────
+  // Van de una en una contra la base, no en bloque, y a propósito: si falla el
+  // contacto 7 de 40, los 6 primeros quedan hechos y el informe dice cuáles
+  // fallaron. Un `update ... in (...)` que revienta a medias deja el lote en un
+  // estado que nadie sabe leer.
+  const seleccionados = useMemo(
+    () => lista.filter((c) => marcados.has(String(c.id))),
+    [lista, marcados],
+  );
+
+  const alternar = (id) => setMarcados((s) => {
+    const n = new Set(s); const k = String(id);
+    if (n.has(k)) n.delete(k); else n.add(k);
+    return n;
+  });
+  // Marca o desmarca solo lo que se está viendo: con un filtro puesto, marcar
+  // «todos» y que se llevara por delante contactos que no están en pantalla
+  // sería una sorpresa desagradable.
+  const alternarTodos = () => setMarcados((s) =>
+    seleccionados.length === lista.length && lista.length
+      ? new Set()
+      : new Set(lista.map((c) => String(c.id))));
+
+  async function enLote(nombreAccion, fn) {
+    if (!seleccionados.length) return;
+    setLote({ trabajando: true, hechos: 0, total: seleccionados.length, fallos: [] });
+    const fallos = [];
+    let hechos = 0;
+    for (const c of seleccionados) {
+      try { await fn(c); hechos += 1; }
+      catch (e) { fallos.push({ c, error: e?.message || String(e) }); }
+      setLote({ trabajando: true, hechos, total: seleccionados.length, fallos });
+    }
+    setLote({ trabajando: false, hechos, total: seleccionados.length, fallos, accion: nombreAccion });
+    setMarcados(new Set());
+    await cargar();
+  }
+
+  const loteConsentimiento = (valor) => enLote(
+    valor ? 'consentimiento concedido' : 'consentimiento retirado',
+    (c) => updateRow('contactos', c.id, {
+      consentimiento_marketing: valor,
+      // La fecha solo se pone al conceder: al retirar se conserva, porque es la
+      // prueba de cuándo se tuvo y hay que poder demostrarla.
+      ...(valor && !c.consentimiento_marketing ? { consentimiento_fecha: new Date().toISOString() } : {}),
+    }),
+  );
+
+  const loteBrevo = () => enLote('enviados a Brevo', async (c) => {
+    if (!emailValido(c.email)) throw new Error('sin email válido');
+    if (!c.consentimiento_marketing) throw new Error('sin consentimiento RGPD');
+    // Mismo payload que el envío individual: si aquí se manda otra cosa, unos
+    // contactos llegan a Brevo con empresa y otros sin ella.
+    const emps = empresasDe(c.id);
+    const ppal = (emps.find((x) => x.vinc.rol === 'directivo') || emps[0])?.e;
+    const r = await brevoFn({ action: 'sincronizar_cliente', cliente: {
+      email: c.email, contacto: c.nombre, contacto_apellidos: c.apellidos,
+      empresa: ppal?.nombre || '', cif: ppal?.cif || '', cargo: c.cargo || '',
+      telefono: c.movil || c.telefono || '', web: ppal?.web || '',
+      tipo: ppal?.es_proveedor && !ppal?.es_cliente ? 'Proveedor'
+          : ppal?.estado_comercial === 'potencial' ? 'Potencial' : 'Cliente',
+    } });
+    if (!r?.ok) throw new Error(r?.error || 'error de Brevo');
+    await updateRow('contactos', c.id, {
+      brevo_sincronizado_en: new Date().toISOString(), brevo_id: r.id || c.brevo_id,
+    });
+  });
+
+  const loteBorrar = () => {
+    if (!confirm(`Se van a eliminar ${seleccionados.length} contacto(s). Esta acción no se puede deshacer.`)) return;
+    return enLote('eliminados', (c) => deleteRow('contactos', c.id));
+  };
+
+  /** Copia al portapapeles los correos de los seleccionados, listos para pegar. */
+  async function loteCopiarCorreos() {
+    const correos = seleccionados.map((c) => c.email).filter(emailValido);
+    if (!correos.length) { setMsg({ err: true, t: 'Ninguno de los marcados tiene email válido.' }); return; }
+    try {
+      await navigator.clipboard.writeText(correos.join('; '));
+      setMsg({ t: `${correos.length} correo(s) copiados al portapapeles.` });
+    } catch {
+      setMsg({ err: true, t: 'El navegador no dejó copiar. Selecciónalos a mano.' });
+    }
+  }
+
+  /** Exporta los seleccionados (o toda la lista filtrada) a CSV. */
+  function exportarCSV() {
+    const filas = seleccionados.length ? seleccionados : lista;
+    const cab = ['Nombre', 'Apellidos', 'Cargo', 'Email', 'Móvil', 'Teléfono', 'Empresa', 'Consentimiento'];
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const cuerpo = filas.map((c) => [
+      c.nombre, c.apellidos, c.cargo, c.email, c.movil, c.telefono,
+      empresasDe(c.id).map((x) => x.e.nombre).join(' · '),
+      c.consentimiento_marketing ? 'sí' : 'no',
+    ].map(esc).join(';'));
+    // BOM: sin él, Excel abre el CSV en ASCII y destroza los acentos.
+    const csv = '\uFEFF' + [cab.map(esc).join(';'), ...cuerpo].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `contactos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
   // ── Guardar ───────────────────────────────────────────────────────────────
   async function guardar() {
     if (!form.nombre?.trim()) { setMsg({ err: true, t: 'El nombre es obligatorio.' }); return; }
@@ -125,6 +231,7 @@ export default function Contactos() {
         cargo: form.cargo?.trim() || null,
         email: form.email.trim(),
         telefono: form.telefono?.trim() || null,
+        movil: form.movil?.trim() || null,
         consentimiento_marketing: !!form.consentimiento_marketing,
       };
       if (form.consentimiento_marketing && !form._teniaConsent) payload.consentimiento_fecha = new Date().toISOString();
@@ -258,203 +365,301 @@ export default function Contactos() {
         <span className="text-xs font-semibold text-[#7FA7B4]">{lista.length} de {contactos.length}</span>
       </div>
 
-      {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-          {/* Listado */}
-          <TablaLista
-              destacada={sel}
-              filas={lista}
-              onFila={(c) => seleccionar(c.id)}
-              vacio={contactos.length === 0 ? 'Sin contactos todavía.' : 'Ninguno con ese filtro.'}
-              columnas={[
-                { k: 'nombre', etq: 'Nombre', ancho: '30%', pinta: (c) => {
-                    const emps = empresasDe(c.id);
-                    const st = semaforoContacto(c, emps.length);
-                    return (
-                      <span className="flex items-center gap-2">
-                        <span className={`h-2 w-2 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
-                          title={st.motivos.join(' · ') || 'Ficha completa'} />
-                        <span className="truncate font-bold">{c.nombre} {c.apellidos || ''}</span>
-                        {c.consentimiento_marketing && (
-                          <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300">RGPD</span>
-                        )}
-                      </span>
-                    );
-                  } },
-                { k: 'empresa', etq: 'Empresa', ancho: '32%', clase: 'text-[#B9D2DA]', pinta: (c) => {
-                    const emps = empresasDe(c.id);
-                    if (!emps.length) return <span className="font-bold text-red-300">sin empresa</span>;
-                    return <span className="block truncate" title={emps.map((x) => x.e.nombre).join(' · ')}>
-                      {emps.map((x) => x.e.nombre).join(' · ')}</span>;
-                  } },
-                { k: 'email', etq: 'Correo', ancho: '24%', clase: 'text-[#9FC0CB]', pinta: (c) =>
-                    emailValido(c.email)
-                      ? <span className="block truncate">{c.email}</span>
-                      : <span className="font-bold text-red-300">sin correo válido</span> },
-                { k: 'telefono', etq: 'Teléfono', ancho: '14%', clase: 'text-[#9FC0CB]', pinta: (c) =>
-                    c.movil || c.telefono || <span className="text-[#5E8494]">—</span> },
-              ]}
-            />
-
-          {/* Detalle / formulario */}
-          <div>
-            {form ? (
-              <div className="card space-y-3">
-                <h3 className="text-lg font-extrabold text-[#EAF4F7]">{form.id ? 'Editar contacto' : 'Nuevo contacto'}</h3>
-
-                <div className="flex gap-2">
-                  <label className="block flex-1 text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Nombre*
-                    <input className="input !mt-1" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></label>
-                  <label className="block flex-1 text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Apellidos
-                    <input className="input !mt-1" value={form.apellidos || ''} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} /></label>
-                </div>
-                <label className="block text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Cargo
-                  <input className="input !mt-1" value={form.cargo || ''} onChange={(e) => setForm({ ...form, cargo: e.target.value })} /></label>
-                <div className="flex gap-2">
-                  <label className="block flex-1 text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Email*
-                    <input className={`input !mt-1 ${form.email && !emailValido(form.email) ? '!border-red-500/60' : ''}`}
-                      value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                  </label>
-                  <label className="block flex-1 text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Teléfono
-                    <input className="input !mt-1" value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></label>
-                </div>
-                {form.email && !emailValido(form.email) && (
-                  <p className="text-xs font-bold text-red-300">Ese email no tiene forma válida.</p>
-                )}
-
-                {/* Empresa obligatoria en el alta */}
-                {!form.id && (
-                  <div className="space-y-2 rounded-xl border border-brand-verde/40 bg-[#0B2E3D] p-3">
-                    <p className="text-[11px] font-extrabold uppercase tracking-wide text-brand-verdeTexto">Empresa a la que pertenece*</p>
-                    <select className="input" value={form._empresa_id}
-                      onChange={(e) => setForm({ ...form, _empresa_id: e.target.value })}>
-                      <option value="">— elige una empresa —</option>
-                      {[...empresas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
-                        .map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.cif ? ` · ${e.cif}` : ''}</option>)}
-                    </select>
-                    <select className="input" value={form._rol}
-                      onChange={(e) => setForm({ ...form, _rol: e.target.value })}>
-                      <option value="secundario">{ROL_LABEL.secundario}</option>
-                      {ROLES_CONTACTO.map((r) => <option key={r.k} value={r.k}>{r.label}</option>)}
-                    </select>
-                    <p className="text-xs text-[#7FA7B4]">
-                      Ningún contacto puede quedar sin empresa. Si la empresa aún no existe, créala primero en «Empresas».
-                    </p>
-                  </div>
-                )}
-
-                <label className="flex items-start gap-2 rounded-xl bg-white/5 p-3 text-sm font-semibold text-[#9FC0CB]">
-                  <input type="checkbox" className="mt-0.5" checked={!!form.consentimiento_marketing}
-                    onChange={(e) => setForm({ ...form, consentimiento_marketing: e.target.checked, _teniaConsent: form.consentimiento_marketing })} />
-                  <span>Ha dado su <strong className="text-[#EAF4F7]">consentimiento</strong> para comunicaciones comerciales (RGPD). Necesario para Brevo.</span>
-                </label>
-
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setForm(null)} className="btn-ghost !px-4 !py-2 text-sm">Cancelar</button>
-                  <button onClick={guardar} className="btn-orange !px-4 !py-2 text-sm">Guardar</button>
-                </div>
-              </div>
-            ) : contacto ? (
-              (() => {
-                const emps = empresasDe(contacto.id);
-                const s = semaforoContacto(contacto, emps.length);
-                return (
-                  <div className="card space-y-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`} />
-                          <h3 className="text-lg font-extrabold text-[#EAF4F7]">{contacto.nombre} {contacto.apellidos || ''}</h3>
-                        </div>
-                        {contacto.cargo && <p className="text-sm font-semibold text-[#9FC0CB]">{contacto.cargo}</p>}
-                        <p className="text-sm text-[#7FA7B4]">
-                          {emailValido(contacto.email) ? contacto.email : <span className="font-bold text-red-300">sin email válido</span>}
-                          {contacto.telefono ? ` · ${contacto.telefono}` : ''}
-                        </p>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {contacto.consentimiento_marketing
-                            ? <span className="chip bg-emerald-500/15 text-emerald-300">✓ Consentimiento RGPD</span>
-                            : <span className="chip bg-white/5 text-[#7FA7B4]">Sin consentimiento</span>}
-                          {contacto.brevo_sincronizado_en && <span className="chip bg-brand-verde/15 text-brand-verdeTexto">En Brevo</span>}
-                        </div>
-                      </div>
-                      {puedeEditar && (
-                        <div className="flex shrink-0 gap-2">
-                          <button onClick={() => setForm({ ...contacto, _teniaConsent: contacto.consentimiento_marketing })}
-                            className="btn-ghost !px-3 !py-1.5 text-xs">✎ Editar</button>
-                          {puedeBorrar && (
-                            <button onClick={() => borrar(contacto)}
-                              className="rounded-xl border border-red-500/40 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/10">🗑</button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {s.motivos.length > 0 && (
-                      <ul className="space-y-0.5 rounded-xl bg-red-500/10 p-3 text-xs font-bold text-red-300">
-                        {s.motivos.map((m) => <li key={m}>· {m}</li>)}
-                      </ul>
-                    )}
-
-                    {puedeEditar && (
-                      <div className="rounded-xl border border-[#1E5468] p-3">
-                        <button onClick={() => sincronizarBrevo(contacto)}
-                          disabled={sync || !emailValido(contacto.email) || !contacto.consentimiento_marketing}
-                          className="btn-orange !px-4 !py-2 text-sm disabled:opacity-40">
-                          {sync ? 'Enviando…' : '✉ Enviar a Brevo (doble opt-in)'}
-                        </button>
-                        {(!emailValido(contacto.email) || !contacto.consentimiento_marketing) && (
-                          <p className="mt-2 text-xs font-semibold text-[#7FA7B4]">
-                            {!emailValido(contacto.email) ? 'Necesita un email válido. ' : ''}
-                            {!contacto.consentimiento_marketing ? 'Necesita el consentimiento RGPD.' : ''}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <div>
-                      <h4 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">
-                        Empresas ({emps.length})
-                      </h4>
-                      {emps.length === 0 && (
-                        <p className="rounded-xl bg-red-500/10 p-3 text-sm font-bold text-red-300">
-                          No pertenece a ninguna empresa. Asígnalo desde la ficha de la empresa.
-                        </p>
-                      )}
-                      <div className="space-y-2">
-                        {emps.map(({ e, vincs }) => (
-                          <button key={e.id} onClick={() => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
-                            className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-[#0D3242] p-2.5 text-left hover:border-brand-verde">
-                            <div className="min-w-0 flex-1">
-                              <span className="font-bold text-[#EAF4F7]">{e.nombre}</span>
-                              <span className="ml-2 text-xs text-[#7FA7B4]">{e.cif || 'sin CIF'}</span>
-                            </div>
-                            {/* Todos los roles que ocupa en ESTA empresa. Antes se
-                                repetía la empresa entera por cada uno. */}
-                            <span className="flex flex-wrap gap-1">
-                              {vincs.map((v) => (
-                                <span key={v.id}
-                                  className={`chip !px-2 !py-0 text-[10px] ${
-                                    v.principal ? 'bg-brand-orange/15 text-brand-orange' : 'bg-brand-verde/15 text-brand-verdeTexto'}`}>
-                                  {v.principal ? '★ ' : ''}{ROL_LABEL[v.rol] || 'Secundario'}
-                                </span>
-                              ))}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()
-            ) : (
-              <div className="card flex h-full items-center justify-center py-16 text-center text-sm text-[#7FA7B4]">
-                Selecciona un contacto para ver su ficha y sus empresas.
-              </div>
-            )}
-          </div>
+      {/* ── Barra de acciones en lote ──
+          Aparece solo con algo marcado: una barra permanente con los botones
+          apagados es ruido en cada visita. */}
+      {marcados.size > 0 && (
+        <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-brand-orange/50 bg-[#10394A] px-3 py-2 shadow-lg">
+          <span className="text-[12.5px] font-extrabold text-brand-orange">
+            {marcados.size} marcado{marcados.size === 1 ? '' : 's'}
+          </span>
+          <button onClick={loteCopiarCorreos} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Copiar correos</button>
+          <button onClick={exportarCSV} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Exportar CSV</button>
+          {puedeEditar && <>
+            <button onClick={() => loteConsentimiento(true)} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Dar consentimiento</button>
+            <button onClick={() => loteConsentimiento(false)} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Retirar</button>
+            <button onClick={loteBrevo} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Enviar a Brevo</button>
+          </>}
+          {puedeBorrar && (
+            <button onClick={loteBorrar}
+              className="rounded-full border border-red-500/40 px-2.5 py-1 text-[11.5px] font-bold text-red-300 hover:bg-red-500/10">
+              Eliminar
+            </button>
+          )}
+          <button onClick={() => setMarcados(new Set())} className="ml-auto text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">
+            Quitar selección
+          </button>
         </div>
       )}
+
+      {lote && (
+        <div className={`rounded-xl px-3 py-2 text-[12.5px] font-bold ${lote.fallos.length ? 'bg-amber-400/10 text-amber-200' : 'bg-emerald-500/10 text-emerald-300'}`}>
+          {lote.trabajando
+            ? `Procesando ${lote.hechos} de ${lote.total}…`
+            : <>
+                {lote.hechos} de {lote.total} {lote.accion}.
+                {lote.fallos.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 font-medium">
+                    {lote.fallos.slice(0, 5).map(({ c, error }) => (
+                      <li key={c.id}>· {c.nombre} {c.apellidos || ''}: {error}</li>
+                    ))}
+                    {lote.fallos.length > 5 && <li>· y {lote.fallos.length - 5} más</li>}
+                  </ul>
+                )}
+                <button onClick={() => setLote(null)} className="ml-2 underline">cerrar</button>
+              </>}
+        </div>
+      )}
+
+      {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
+        <div className="overflow-x-auto rounded-2xl border border-[#1E5468]">
+          <table className="w-full min-w-[720px] text-[13px]">
+            <thead>
+              <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
+                <th className="w-9 px-2 py-1.5">
+                  <input type="checkbox" aria-label="Marcar todos los visibles"
+                    checked={lista.length > 0 && seleccionados.length === lista.length}
+                    onChange={alternarTodos} />
+                </th>
+                <th className="px-2 py-1.5">Nombre</th>
+                <th className="px-2 py-1.5">Correo</th>
+                <th className="px-2 py-1.5">Móvil</th>
+                <th className="px-2 py-1.5">Empresa</th>
+                <th className="w-16 px-2 py-1.5 text-right">Ficha</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#153F52]">
+              {lista.map((c) => {
+                const emps = empresasDe(c.id);
+                const st = semaforoContacto(c, emps.length);
+                const marcado = marcados.has(String(c.id));
+                const desplegada = String(abierta) === String(c.id);
+                return (
+                  <Fragment key={c.id}>
+                    <tr className={marcado ? 'bg-brand-orange/[0.07]' : desplegada ? 'bg-white/[0.04]' : undefined}>
+                      <td className="px-2 py-1">
+                        <input type="checkbox" checked={marcado} onChange={() => alternar(c.id)}
+                          aria-label={`Marcar ${c.nombre}`} />
+                      </td>
+                      <td className="px-2 py-1">
+                        <button onClick={() => setAbierta(desplegada ? null : c.id)}
+                          className="flex w-full items-center gap-1.5 text-left">
+                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
+                            title={st.motivos.join(' · ') || 'Ficha completa'} />
+                          <span className="truncate font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
+                          {c.consentimiento_marketing && (
+                            <span className="chip !px-1 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300">RGPD</span>
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-2 py-1 text-[#9FC0CB]">
+                        {emailValido(c.email)
+                          ? <a href={`mailto:${c.email}`} className="block truncate hover:text-brand-orange">{c.email}</a>
+                          : <span className="font-bold text-red-300">sin correo</span>}
+                      </td>
+                      <td className="px-2 py-1 whitespace-nowrap text-[#9FC0CB]">
+                        {c.movil || c.telefono
+                          ? <a href={`tel:${(c.movil || c.telefono).replace(/\s/g, '')}`} className="hover:text-brand-orange">{c.movil || c.telefono}</a>
+                          : <span className="text-[#5E8494]">—</span>}
+                      </td>
+                      <td className="px-2 py-1 text-[#B9D2DA]">
+                        {emps.length
+                          ? <span className="block truncate" title={emps.map((x) => x.e.nombre).join(' · ')}>
+                              {emps.map((x) => x.e.nombre).join(' · ')}</span>
+                          : <span className="font-bold text-red-300">sin empresa</span>}
+                      </td>
+                      <td className="px-2 py-1 text-right">
+                        <button onClick={() => setAbierta(desplegada ? null : c.id)}
+                          className="text-[11px] font-bold text-[#7FA7B4] hover:text-brand-orange"
+                          aria-expanded={desplegada}>
+                          {desplegada ? 'Cerrar ▲' : 'Abrir ▼'}
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Edición desplegada bajo su propia fila: se ve a quién se
+                        está editando sin perder de vista el resto de la lista. */}
+                    {desplegada && (
+                      <tr className="bg-[#0B2E3D]">
+                        <td colSpan={6} className="px-3 py-3">
+                          <FichaContacto
+                            contacto={c} empresas={emps} puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
+                            sync={sync}
+                            onEditar={() => setForm({ ...c, _teniaConsent: c.consentimiento_marketing })}
+                            onBorrar={() => borrar(c)}
+                            onBrevo={() => sincronizarBrevo(c)}
+                            onEmpresa={(e) => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+              {!lista.length && (
+                <tr><td colSpan={6} className="px-3 py-8 text-center text-[#7FA7B4]">
+                  {contactos.length === 0 ? 'Sin contactos todavía.' : 'Ninguno con ese filtro.'}
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Formulario de alta o edición, en tarjeta aparte sobre la tabla */}
+      {form && (
+        <FormContacto
+          form={form} setForm={setForm} empresas={empresas}
+          onCancelar={() => setForm(null)} onGuardar={guardar}
+        />
+      )}
+      )}
+    </div>
+  );
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// Ficha desplegada bajo la fila del contacto
+// ════════════════════════════════════════════════════════════════════════════
+function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onEditar, onBorrar, onBrevo, onEmpresa }) {
+  const s = semaforoContacto(contacto, empresas.length);
+  const puedeBrevo = emailValido(contacto.email) && contacto.consentimiento_marketing;
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 text-[12.5px]">
+          <p className="font-extrabold text-[#EAF4F7]">
+            {contacto.nombre} {contacto.apellidos || ''}
+            {contacto.cargo && <span className="ml-2 font-semibold text-[#9FC0CB]">{contacto.cargo}</span>}
+          </p>
+          <p className="mt-0.5 text-[#7FA7B4]">
+            {emailValido(contacto.email) ? contacto.email : <span className="font-bold text-red-300">sin email válido</span>}
+            {contacto.movil ? ` · móvil ${contacto.movil}` : ''}
+            {contacto.telefono ? ` · tel. ${contacto.telefono}` : ''}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {contacto.consentimiento_marketing
+              ? <span className="chip !py-0 bg-emerald-500/15 text-[10px] text-emerald-300">✓ Consentimiento RGPD</span>
+              : <span className="chip !py-0 bg-white/5 text-[10px] text-[#7FA7B4]">Sin consentimiento</span>}
+            {contacto.brevo_sincronizado_en && <span className="chip !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
+          </div>
+        </div>
+        {puedeEditar && (
+          <div className="flex shrink-0 flex-wrap gap-1.5">
+            <button onClick={onEditar} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">✎ Editar</button>
+            <button onClick={onBrevo} disabled={sync || !puedeBrevo}
+              title={puedeBrevo ? 'Alta con doble opt-in' : 'Necesita email válido y consentimiento RGPD'}
+              className="btn-ghost !px-2.5 !py-1 text-[11.5px] disabled:opacity-40">
+              {sync ? 'Enviando…' : '✉ Brevo'}
+            </button>
+            {puedeBorrar && (
+              <button onClick={onBorrar}
+                className="rounded-full border border-red-500/40 px-2.5 py-1 text-[11.5px] font-bold text-red-300 hover:bg-red-500/10">
+                Eliminar
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {s.motivos.length > 0 && (
+        <ul className="space-y-0.5 rounded-lg bg-red-500/10 px-2.5 py-2 text-[11.5px] font-bold text-red-300">
+          {s.motivos.map((m) => <li key={m}>· {m}</li>)}
+        </ul>
+      )}
+
+      <div>
+        <p className="label !mb-1.5">Empresas ({empresas.length})</p>
+        {empresas.length === 0 ? (
+          <p className="rounded-lg bg-red-500/10 px-2.5 py-2 text-[11.5px] font-bold text-red-300">
+            No pertenece a ninguna empresa. Asígnalo desde la ficha de la empresa.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {empresas.map(({ e, vincs }) => (
+              <button key={e.id} onClick={() => onEmpresa(e)}
+                className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2.5 py-1.5 text-left hover:border-brand-verde">
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[#EAF4F7]">{e.nombre}</span>
+                <span className="text-[11px] text-[#7FA7B4]">{e.cif || 'sin CIF'}</span>
+                <span className="flex flex-wrap gap-1">
+                  {vincs.map((v) => (
+                    <span key={v.id} className={`chip !px-1.5 !py-0 text-[9.5px] ${
+                      v.principal ? 'bg-brand-orange/15 text-brand-orange' : 'bg-brand-verde/15 text-brand-verdeTexto'}`}>
+                      {v.principal ? '★ ' : ''}{ROL_LABEL[v.rol] || 'Secundario'}
+                    </span>
+                  ))}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Alta y edición de contacto
+// ════════════════════════════════════════════════════════════════════════════
+function FormContacto({ form, setForm, empresas, onCancelar, onGuardar }) {
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  return (
+    <div className="card space-y-3">
+      <h3 className="text-base font-extrabold text-[#EAF4F7]">{form.id ? 'Editar contacto' : 'Nuevo contacto'}</h3>
+
+      <div className="form-grid">
+        <div className="campo"><label className="label" htmlFor="ct-nombre">Nombre*</label>
+          <input id="ct-nombre" className="input" value={form.nombre} onChange={set('nombre')} /></div>
+        <div className="campo"><label className="label" htmlFor="ct-apellidos">Apellidos</label>
+          <input id="ct-apellidos" className="input" value={form.apellidos || ''} onChange={set('apellidos')} /></div>
+        <div className="campo"><label className="label" htmlFor="ct-cargo">Cargo</label>
+          <input id="ct-cargo" className="input" value={form.cargo || ''} onChange={set('cargo')} /></div>
+        <div className="campo"><label className="label" htmlFor="ct-email">Correo*</label>
+          <input id="ct-email" type="email" value={form.email || ''} onChange={set('email')}
+            className={`input ${form.email && !emailValido(form.email) ? '!border-red-500/60' : ''}`} />
+          {form.email && !emailValido(form.email) && (
+            <p className="campo-nota !text-red-300">Ese correo no tiene forma válida.</p>
+          )}
+        </div>
+        <div className="campo"><label className="label" htmlFor="ct-movil">Móvil</label>
+          <input id="ct-movil" type="tel" className="input" value={form.movil || ''} onChange={set('movil')} />
+          <p className="campo-nota">El de la persona, para avisos urgentes.</p></div>
+        <div className="campo"><label className="label" htmlFor="ct-tel">Teléfono</label>
+          <input id="ct-tel" type="tel" className="input" value={form.telefono || ''} onChange={set('telefono')} />
+          <p className="campo-nota">Fijo o centralita.</p></div>
+      </div>
+
+      {!form.id && (
+        <div className="space-y-2 rounded-xl border border-brand-verde/40 bg-[#0B2E3D] p-3">
+          <p className="label !mb-0 text-brand-verdeTexto">Empresa a la que pertenece*</p>
+          <div className="form-grid-3">
+            <select className="input" value={form._empresa_id} onChange={set('_empresa_id')}>
+              <option value="">— elige una empresa —</option>
+              {[...empresas].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
+                .map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.cif ? ` · ${e.cif}` : ''}</option>)}
+            </select>
+            <select className="input" value={form._rol} onChange={set('_rol')}>
+              <option value="secundario">{ROL_LABEL.secundario}</option>
+              {ROLES_CONTACTO.map((r) => <option key={r.k} value={r.k}>{r.label}</option>)}
+            </select>
+          </div>
+          <p className="text-[11.5px] text-[#7FA7B4]">
+            Ningún contacto puede quedar sin empresa. Si aún no existe, créala antes en «Empresas».
+          </p>
+        </div>
+      )}
+
+      <label className="flex items-start gap-2 rounded-xl bg-white/5 p-2.5 text-[12.5px] font-semibold text-[#9FC0CB]">
+        <input type="checkbox" className="mt-0.5" checked={!!form.consentimiento_marketing}
+          onChange={(e) => setForm({ ...form, consentimiento_marketing: e.target.checked, _teniaConsent: form.consentimiento_marketing })} />
+        <span>Ha dado su <strong className="text-[#EAF4F7]">consentimiento</strong> para comunicaciones comerciales (RGPD). Necesario para Brevo.</span>
+      </label>
+
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancelar} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
+        <button onClick={onGuardar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>
+      </div>
     </div>
   );
 }

@@ -1528,3 +1528,72 @@ tarjeta. Envueltas.
 
 `test-guardado-ofertas.mjs` y `test-precio-sistemas.mjs` siguen pasando: el
 cambio es de presentación y no toca el motor de precios.
+
+---
+
+# v210 · Contactos: tabla compacta, edición desplegable y acciones en lote
+
+## Tabla
+
+Cuatro columnas: **Nombre · Correo · Móvil · Empresa**, más la casilla de
+selección y el botón de abrir. Filas de una línea, 13 px, con el semáforo de
+ficha completa reducido a un punto. Correo y móvil son enlaces `mailto:` y
+`tel:`, que en móvil es lo que se usa.
+
+Sustituye al esquema de dos columnas (listado a la izquierda, ficha a la
+derecha), que dejaba media pantalla vacía mientras no hubiera nada seleccionado
+y obligaba a mirar a otro sitio para leer la ficha.
+
+## Edición desplegable
+
+La ficha se abre **bajo la propia fila del contacto**: se ve a quién se está
+mirando sin perder de vista el resto de la lista. Dentro van los datos, los
+avisos de ficha incompleta, los botones de editar, Brevo y eliminar, y las
+empresas con sus roles.
+
+## Acciones en lote
+
+Barra que aparece **solo cuando hay algo marcado** — una barra permanente con
+botones apagados es ruido en cada visita:
+
+- Copiar correos al portapapeles
+- Exportar CSV (con BOM, si no Excel destroza los acentos)
+- Dar y retirar consentimiento RGPD
+- Enviar a Brevo
+- Eliminar
+
+Se ejecutan **de una en una contra la base**, no en bloque. Es más lento, pero
+si falla el contacto 7 de 40 los seis primeros quedan hechos y el informe dice
+cuáles fallaron y por qué. Un `update … in (…)` que revienta a medias deja el
+lote en un estado que nadie sabe leer.
+
+«Marcar todos» marca **solo lo que se está viendo**: con un filtro puesto, que
+se llevara por delante contactos fuera de pantalla sería una sorpresa
+desagradable.
+
+Al retirar el consentimiento **se conserva `consentimiento_fecha`**: es la
+prueba de cuándo se tuvo y hay que poder demostrarla.
+
+## Migración `v97`: la columna `movil` no existía
+
+Pediste móvil en la tabla y resultó que **`contactos` no tiene esa columna**.
+Y sin embargo tres pantallas ya la leían:
+
+- `MisDatosCliente.jsx` la pide al cliente **y la intenta guardar**
+- `SinProyectos.jsx` la muestra
+- el listado hacía `c.movil || c.telefono`
+
+Es decir: un cliente escribía su móvil en su ficha y **ese dato se perdía al
+guardar**, en silencio. Justo el dato que hace falta para avisar de una
+auditoría con poca antelación.
+
+La migración añade la columna y la rellena con el teléfono existente solo
+cuando tiene forma de móvil español (empieza por 6 o 7, nueve dígitos). Si no
+la tiene, se deja vacía antes que inventar el dato.
+
+## Un fallo evitado sobre la marcha
+
+El lote de Brevo lo escribí llamando a `brevoFn('alta', {…})`, pero esa función
+recibe **un solo argumento**. Habría fallado en la primera ejecución. Corregido
+para usar el mismo payload que el envío individual: si no, unos contactos
+llegan a Brevo con empresa y otros sin ella.
