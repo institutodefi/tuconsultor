@@ -90,18 +90,6 @@ export default function FichaEmpresa({
   const [contactosNuevos, setContactosNuevos] = useState([]);   // contactos apuntados durante el alta
   const recienGuardada = useRef(false);   // se declara aquí: el efecto de más abajo la lee
 
-  // Empresa NUEVA: llega `{}` sin id, así que hay que abrir el formulario sola.
-  // Sin esto la pantalla se quedaba en modo lectura de una empresa vacía: no
-  // había nada que rellenar y por eso no se podían crear a mano.
-  useEffect(() => {
-    // `recienGuardada` evita el bucle: al guardar se hace setForm(null), y sin
-    // esta guarda el efecto volvía a abrir un formulario VACÍO encima. Parecía
-    // que el alta no había hecho nada.
-    if (empresa && !empresa.id && form === null && !recienGuardada.current) {
-      setForm({ es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', pais: 'España' });
-    }
-  }, [empresa, form]);
-
   // Un fallo al guardar no puede quedarse en un mensajito que se pierde: se
   // lleva la vista al aviso y se anuncia a los lectores de pantalla.
   function fallar(texto, extra = {}) {
@@ -182,8 +170,22 @@ export default function FichaEmpresa({
     catch (e) { setDiag({ ok: false, conclusion: `No se pudo contactar con la función: ${e?.message || e}` }); }
   }
 
+  // ── Qué formulario se abre al montar o al cambiar de empresa ──
+  //
+  // Había DOS efectos haciendo esto, y uno de ellos dependía del objeto
+  // `empresa` completo. Para un alta el padre pasa `{}`, que es un objeto NUEVO
+  // en cada render suyo: el efecto se disparaba una y otra vez y competía con
+  // el otro por decidir el contenido de `form`. El alta quedaba en un formulario
+  // que se rehacía solo mientras se escribía.
+  //
+  // Ahora es uno, y depende de `empresa?.id`, que sí es estable: `undefined`
+  // mientras se da de alta, y el id real una vez existe.
   useEffect(() => {
-    setForm(esNueva ? { pais: 'España', es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', ...empresa } : null);
+    setForm(esNueva
+      ? { pais: 'España', es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', ...empresa }
+      : null);
+    // Al guardar un alta se hace `setForm(null)`; sin esta guarda el efecto
+    // volvería a abrir un formulario vacío encima y parecería que no se guardó.
     if (recienGuardada.current) recienGuardada.current = false;
     else setMsg(null);
     setHolded({ estado: 'inactivo' });

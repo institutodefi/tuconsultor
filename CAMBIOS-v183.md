@@ -1861,3 +1861,44 @@ restaura.
 Un enlace a una empresa que ya no existe dejaba el listado tal cual, sin
 explicar por qué no se abría nada. Ahora lo dice, con un enlace para volver a
 ver todas.
+
+---
+
+# v216 · Alta de empresa: limpieza de los efectos que abrían el formulario
+
+## Lo primero, y lo más probable
+
+El fallo de «no funciona crear empresa» es **casi con seguridad el bucle de
+`DialogoFicha` corregido en v215**, que aún no está desplegado: al pulsar
+«+ Nueva empresa» se abría el diálogo y la pelea de foco dejaba la pantalla
+bloqueada. Desde fuera se ve igual que si el botón no hiciera nada.
+
+## Aun así, había una duplicación peligrosa
+
+`FichaEmpresa` tenía **dos efectos distintos decidiendo el contenido de `form`**
+para el mismo caso:
+
+```js
+useEffect(() => { …abrir formulario si es nueva… }, [empresa, form]);
+useEffect(() => { setForm(esNueva ? {…} : null); … }, [empresa?.id]);
+```
+
+El primero dependía del objeto `empresa` completo, y para un alta el padre
+pasaba `{}` escrito en el JSX: **un objeto nuevo en cada render suyo**. El
+efecto se disparaba una y otra vez y competía con el segundo por decidir qué
+había en el formulario.
+
+No llegaba a reabrirlo gracias a la guarda `form === null`, pero era una
+condición de carrera esperando a que alguien tocara cualquiera de los dos.
+
+Ahora hay **un solo efecto**, con dependencia estable (`empresa?.id`:
+`undefined` mientras se da de alta, el id real cuando existe), y el padre pasa
+una constante congelada en lugar de `{}` inline.
+
+## Comprobado
+
+Simulado el ciclo: el formulario se abre **una sola vez** y lo escrito se
+conserva entre pulsaciones; al abrir una empresa existente el formulario no se
+abre. Y los helpers que corren antes del `if (form)` —`semaforoEmpresa`,
+`candidatasMatriz`, `validarCif`— se han probado con `{}`, `null` y `undefined`:
+ninguno lanza, así que la ficha no se rompe al montarse vacía.

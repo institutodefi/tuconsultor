@@ -10,6 +10,11 @@ import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../component
 import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { diagnosticarCrm, informeTexto } from '../../lib/diagnosticoCrm.js';
 
+// Referencia estable para el alta. Con `{}` escrito en el JSX se creaba un
+// objeto nuevo en cada render y los efectos de la ficha que dependían de él se
+// disparaban sin parar.
+const EMPRESA_NUEVA = Object.freeze({});
+
 // ════════════════════════════════════════════════════════════════════════════
 // EMPRESAS · pestaña única del CRM.
 // Sustituye a las tres antiguas (Empresas · Clientes · Clientes potenciales):
@@ -167,7 +172,7 @@ export default function Empresas() {
           ancho="1100px"
         >
           <FichaEmpresa
-            empresa={nueva ? {} : empresa}
+            empresa={nueva ? EMPRESA_NUEVA : empresa}
             empresas={empresas} contactos={contactos} vinculos={vinculos}
             puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
             onCambio={cargar}
