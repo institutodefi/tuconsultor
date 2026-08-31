@@ -144,6 +144,49 @@ const NORMALIZAR = {
   },
 };
 
+
+/**
+ * Traduce un error de Postgres a algo accionable.
+ *
+ * `invalid input syntax for type integer: "537.3"` no le dice nada a quien está
+ * intentando guardar una oferta, y menos aún que la solución sea aplicar una
+ * migración. Se detectan los casos que se han dado de verdad y se dice qué
+ * hacer; el mensaje original se conserva al final para poder rastrearlo.
+ */
+export function explicarErrorBd(error, tabla) {
+  const m = error?.message || String(error || '');
+
+  // Columna numérica que aún es `int` y recibe decimales. Pasa desde que los
+  // precios llevan céntimos (descuento por volumen del 5/10/15 %).
+  const dec = m.match(/invalid input syntax for type integer: "([\d.]+)"/i);
+  if (dec) {
+    return `La base de datos aún guarda los precios como número entero y este vale ${dec[1]}. `
+      + 'Falta aplicar la migración v100 (precios con céntimos) en Supabase. '
+      + `Detalle: ${m}`;
+  }
+
+  // Columna que no existe: migración pendiente o schema cache sin recargar.
+  const col = m.match(/could not find the '([^']+)' column/i)
+           || m.match(/column "([^"]+)" of relation/i);
+  if (col) {
+    return `El campo «${col[1]}»${tabla ? ` de ${tabla}` : ''} no existe todavía en la base. `
+      + 'Falta aplicar una migración, o recargar el esquema en Supabase. '
+      + `Detalle: ${m}`;
+  }
+
+  if (/violates check constraint/i.test(m)) {
+    const c = m.match(/constraint "([^"]+)"/i);
+    return `La base rechaza estos datos por la regla «${c?.[1] || 'de coherencia'}». `
+      + `Revisa los valores antes de guardar. Detalle: ${m}`;
+  }
+
+  if (/duplicate key value/i.test(m)) {
+    return `Ya existe un registro con ese valor único. Detalle: ${m}`;
+  }
+
+  return m;
+}
+
 export async function insertRow(table, row) {
   if (NORMALIZAR[table]) row = NORMALIZAR[table](row);
   if (DEMO) { const r = { id: uid(), creado: new Date().toISOString(), ...row }; demo()[table].unshift(r); return r; }

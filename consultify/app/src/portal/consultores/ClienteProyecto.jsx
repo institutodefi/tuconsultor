@@ -72,7 +72,12 @@ export default function ClienteProyecto({ cliente, normasCliente, equipo, onCamb
       })
       .catch(() => { setTareas([]); setTodasTareas([]); });
   };
-  useEffect(cargar, [cliente.id]);
+  // `useEffect(cargar, [])` NO: lo que devuelva `cargar` lo toma React como
+  // función de limpieza. Aquí devolvía la promesa de `listTable`, y al
+  // desmontar la pantalla React intentaba llamarla: «r is not a function», con
+  // el error apareciendo en la pantalla a la que se navegaba, no en esta.
+  // Envuelto en una arrow, el efecto no devuelve nada.
+  useEffect(() => { cargar(); }, [cliente.id]);
 
   const [todasTareas, setTodasTareas] = useState([]); // todas las cliente_tareas (todos los clientes)
 

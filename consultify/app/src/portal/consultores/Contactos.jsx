@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
 import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
-import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
+import { listTable, insertRow, updateRow, deleteRow, brevoFn , explicarErrorBd } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL , nombreVisible } from '../../lib/crm.js';
 
@@ -220,7 +220,7 @@ export default function Contactos() {
       }
       setForm(null); cargar();
     } catch (e) {
-      setMsg({ err: true, t: 'No se pudo guardar: ' + (e.message || '') });
+      setMsg({ err: true, t: 'No se pudo guardar: ' + explicarErrorBd(e, 'contactos') });
     }
   }
 

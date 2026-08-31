@@ -2252,3 +2252,104 @@ marcar el adelanto en ofertas que no son de cuota.
 La caja del pago adelantado se dibujaba encima de la de la cuota: partía del
 cursor de texto en vez de del final de la caja anterior, y la sección no
 reservaba altura para ella. Corregido y verificado en el render.
+
+---
+
+# v225 · Corregido «r is not a function» al cambiar de pantalla
+
+## El informe con versión ya sirvió
+
+`Versión: v221.0.0 · 2026-08-31 12:24` — código actual, fallo nuevo. Sin ese
+dato habríamos vuelto a discutir si estaba desplegado.
+
+## El error
+
+```js
+const cargar = () => listTable('tareas_catalogo').then(setCatalogo).catch(…);
+useEffect(cargar, []);
+```
+
+**React usa lo que devuelve el efecto como función de limpieza.** Aquí `cargar`
+devolvía la promesa de `listTable`, así que al desmontar la pantalla React
+intentaba llamarla: `r is not a function`.
+
+Lo que despista es dónde aparece: el fallo estaba en **`Sistemas`** (ruta
+`/sistemas`), pero salta **al abandonarla**, así que el informe lo registra en la
+pantalla a la que se navega — `/proyectos/planificador`. Se busca donde no está.
+
+## Corregido en los cinco sitios
+
+`Sistemas`, `ProyectosConfig`, `Clientes`, `Dashboard` y `ClienteProyecto`
+usaban `useEffect(cargar, deps)`. Envueltos en `useEffect(() => { cargar(); }, deps)`,
+que no devuelve nada.
+
+Solo `Sistemas` reventaba hoy —es el único cuyo `cargar` devolvía la promesa—
+pero los otros cuatro fallarían en cuanto alguien les añadiera un `return` o los
+hiciera `async`. Es una trampa que se arma sola.
+
+## `scripts/buscar-efectos.py`
+
+Detecta las tres formas de caer:
+
+```js
+useEffect(cargar, [])            // si `cargar` devuelve algo
+useEffect(() => setX(1), [])     // devuelve el resultado de setX
+useEffect(async () => {…}, [])   // devuelve una promesa
+```
+
+Ignora los comentarios —la primera versión se señalaba a sí misma— y devuelve
+código de error, así que puede encadenarse en el proceso de empaquetado.
+
+Ejecutado sobre todo el proyecto: **cero casos**.
+
+---
+
+# v226 · Los precios admiten céntimos
+
+## El error
+
+```
+No se pudo guardar: invalid input syntax for type integer: "537.3"
+```
+
+`presupuestos.precio` es de tipo `int`, de cuando todo importe salía redondeado
+al escalón de 25 €. Desde la v207 el precio de los modelos recurrentes se forma
+sumando cada sistema y aplicando un descuento por volumen del 5, 10 o 15 %, y
+**ese porcentaje casi nunca da un entero**. Comprobado en el motor: Compromiso
+con dos sistemas sale a 1.377,50 €; con cuatro, a 1.997,50 €.
+
+## Migración `v100`
+
+`presupuestos.precio`, `precio_catalogo` y los `precio_mes` / `precio_total` de
+las dos tablas de proyectos pasan a `numeric(12,2)`.
+
+La alternativa era redondear en la aplicación, pero eso significa que **la oferta
+enseña un importe y la base guarda otro**. Un céntimo de diferencia entre lo
+ofertado y lo facturado es justo el detalle que un cliente detecta y que obliga a
+dar explicaciones.
+
+`contratos.importe` ya era `numeric(12,2)` desde la v83: esto alinea el resto,
+porque el importe de un contrato y el de la oferta de la que nace tienen que
+poder ser el mismo número.
+
+## Los errores de base ahora se explican
+
+Nuevo `explicarErrorBd()` en `lib/data.js`. «invalid input syntax for type
+integer» no le dice nada a quien está guardando una oferta, y menos aún que la
+solución sea aplicar una migración. Traduce los casos que se han dado de verdad:
+
+| Error de Postgres | Lo que se lee ahora |
+|---|---|
+| `invalid input syntax for type integer: "537.3"` | «La base aún guarda los precios como número entero y este vale 537,3. Falta aplicar la migración v100» |
+| `could not find the 'x' column` | «El campo «x» no existe todavía. Falta una migración o recargar el esquema» |
+| `violates check constraint "y"` | «La base rechaza estos datos por la regla «y»» |
+| `duplicate key value` | «Ya existe un registro con ese valor único» |
+
+El mensaje original se conserva al final, para poder rastrearlo. Aplicado en
+Ofertas, Ficha de empresa y Contactos.
+
+## Migraciones pendientes, en un archivo
+
+`migraciones-v98-v100-TODAS.sql`: v98 (varios directivos), v99 (pago adelantado
+y contacto) y v100 (céntimos), dentro de una transacción y validadas con el
+parser de PostgreSQL.

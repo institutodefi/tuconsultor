@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { insertRow, updateRow, deleteRow, holdedFn, brevoFn } from '../../lib/data.js';
+import { insertRow, updateRow, deleteRow, holdedFn, brevoFn , explicarErrorBd } from '../../lib/data.js';
 import {
   validarCif, normalizarCif, emailValido, semaforoEmpresa,
   candidatasMatriz, ESTADOS_COMERCIALES,
@@ -458,7 +458,7 @@ export default function FichaEmpresa({
       // El motivo real de la base de datos, sin adornos. Y como un mensaje suelto
       // no ha bastado las veces anteriores, se lanza además el diagnóstico: así
       // el motivo y la causa aparecen juntos sin tener que ir a buscarlos.
-      const m = e?.message || e?.details || e?.hint || String(e);
+      const m = explicarErrorBd(e, 'empresas') || e?.details || e?.hint || String(e);
       const cod = e?.code ? ` [${e.code}]` : '';
       setRastro((r) => [...(r || []), { t: `ERROR${cod}: ${m}`, ok: false }]);
       fallar(`No se pudo guardar${cod}: ${m}`);

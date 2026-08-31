@@ -18,7 +18,12 @@ export default function Sistemas() {
   const [filtro, setFiltro] = useState('');
 
   const cargar = () => listTable('tareas_catalogo').then(setCatalogo).catch(() => setCatalogo([]));
-  useEffect(cargar, []);
+  // `useEffect(cargar, [])` NO: lo que devuelva `cargar` lo toma React como
+  // función de limpieza. Aquí devolvía la promesa de `listTable`, y al
+  // desmontar la pantalla React intentaba llamarla: «r is not a function», con
+  // el error apareciendo en la pantalla a la que se navegaba, no en esta.
+  // Envuelto en una arrow, el efecto no devuelve nada.
+  useEffect(() => { cargar(); }, []);
 
   // Agrupa las tareas de la norma por subproceso, cruzando los 4 modelos en columnas.
   // Cada grupo tiene: subproceso, proceso, orden, y por modelo la fila {id, horas_base}.

@@ -111,7 +111,12 @@ export default function Proyectos() {
     listTable('consultores').then(setEquipo).catch(() => {});
     listTable('cliente_tareas').then(all => setTareas(all)).catch(() => setTareas([]));
   };
-  useEffect(cargar, []);
+  // `useEffect(cargar, [])` NO: lo que devuelva `cargar` lo toma React como
+  // función de limpieza. Aquí devolvía la promesa de `listTable`, y al
+  // desmontar la pantalla React intentaba llamarla: «r is not a function», con
+  // el error apareciendo en la pantalla a la que se navegaba, no en esta.
+  // Envuelto en una arrow, el efecto no devuelve nada.
+  useEffect(() => { cargar(); }, []);
   // Enriquece una tarea con el código de su cliente (para el código CLI-Txxx-By).
   const conCod = (t) => ({ ...t, codigo_cliente: codigoCli(t.cliente_id) });
 

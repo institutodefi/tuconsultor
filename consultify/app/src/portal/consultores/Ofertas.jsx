@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { listAll, updateRow, deleteRow } from '../../lib/data.js';
+import { listAll, updateRow, deleteRow , explicarErrorBd } from '../../lib/data.js';
 import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
@@ -298,7 +298,13 @@ export default function Ofertas() {
         setMsg(j?.ok ? 'Oferta actualizada y documentos regenerados.' : `Guardada, pero los documentos no se regeneraron: ${j?.error || 'error de red'}`);
         if (j?.ok) cargar();
       }
-    } catch (err) { setMsg('No se pudo guardar: ' + (err?.message || err)); setGenId(null); }
+    } catch (err) {
+      // El motivo traducido: «invalid input syntax for type integer» no dice
+      // nada a quien está guardando una oferta, y menos aún que falte aplicar
+      // una migración.
+      setMsg('No se pudo guardar: ' + explicarErrorBd(err, 'presupuestos'));
+      setGenId(null);
+    }
   }
 
   // Guarda las normas editadas en la oferta y la regenera con ellas.

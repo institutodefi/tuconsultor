@@ -84,7 +84,12 @@ export default function Clientes() {
     listTable('proyectos_cliente').then(setProyectos).catch(() => setProyectos([]));
     listTable('cliente_contactos').then(setContactos).catch(() => setContactos([]));
   };
-  useEffect(cargar, []);
+  // `useEffect(cargar, [])` NO: lo que devuelva `cargar` lo toma React como
+  // función de limpieza. Aquí devolvía la promesa de `listTable`, y al
+  // desmontar la pantalla React intentaba llamarla: «r is not a function», con
+  // el error apareciendo en la pantalla a la que se navegaba, no en esta.
+  // Envuelto en una arrow, el efecto no devuelve nada.
+  useEffect(() => { cargar(); }, []);
 
   const cliente = useMemo(() => clientes.find(c => String(c.id) === String(sel)) || null, [clientes, sel]);
   const emps = useMemo(() => empresas.filter(e => String(e.cliente_id) === String(sel)), [empresas, sel]);
