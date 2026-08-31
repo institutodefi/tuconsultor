@@ -79,6 +79,13 @@ export default function Proyectos() {
   const [porPagP, setPorPagP] = useState('25');
   const [pagP, setPagP] = useState(0);
 
+  // Estos dos se declaraban 25 líneas MÁS ABAJO y el `useMemo` de aquí los usa
+  // durante el render. Como son `const`, en cuanto se escribía algo en el
+  // buscador saltaba «Cannot access 'nombreCli' before initialization» y la
+  // pantalla se caía entera. Mismo fallo que tenía la ficha de empresa.
+  const nombreCli = (id) => clientes.find(c => String(c.id) === String(id))?.empresa || '—';
+  const codigoCli = (id) => clientes.find(c => String(c.id) === String(id))?.codigo || 'CLI';
+
   const proyectosFiltrados = useMemo(() => {
     const q = buscaP.trim().toLowerCase();
     if (!q) return proyectos;
@@ -105,8 +112,6 @@ export default function Proyectos() {
     listTable('cliente_tareas').then(all => setTareas(all)).catch(() => setTareas([]));
   };
   useEffect(cargar, []);
-  const nombreCli = (id) => clientes.find(c => String(c.id) === String(id))?.empresa || '—';
-  const codigoCli = (id) => clientes.find(c => String(c.id) === String(id))?.codigo || 'CLI';
   // Enriquece una tarea con el código de su cliente (para el código CLI-Txxx-By).
   const conCod = (t) => ({ ...t, codigo_cliente: codigoCli(t.cliente_id) });
 

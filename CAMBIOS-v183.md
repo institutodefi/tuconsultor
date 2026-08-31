@@ -1943,3 +1943,199 @@ reintentar sin recargar, y recargar.
 
 A partir de ahora, cuando algo falle habrá un texto que pegar en lugar de una
 pantalla negra que describir.
+
+---
+
+# v218 · Corregido «Cannot access before initialization»
+
+## El error
+
+El informe de la barrera de v217 dio el fallo exacto en un intento:
+
+```
+Error: Cannot access 'ae' before initialization
+Ruta: /app/consultores/empresas?e=f0aa646d-…
+```
+
+Es la **zona muerta temporal** de JavaScript: una variable `const` leída antes
+de su declaración. Con el código minificado se llamaba `ae`; en el original es
+**`vista`**, en `FichaEmpresa`.
+
+Lo introduje yo en **v212**, al añadir la importación desde VIES. El `useMemo`
+de `importables` lee `vista[campo]` en la **línea 142** y `vista` se declaraba en
+la **210**. Como el `useMemo` se ejecuta durante el render, saltaba antes de
+llegar a la declaración: la ficha entera se caía al abrirse, y sin barrera de
+errores eso era una pantalla en blanco.
+
+Explica los tres síntomas seguidos: congelada, blanca y «no funciona crear».
+
+## Corregido
+
+`vista` se declara ahora al principio del componente, antes de todo lo que la
+usa. Es donde debió estar desde el principio.
+
+## Y había otro igual, sin detectar
+
+Nuevo `scripts/buscar-tdz.py`, que busca variables de componente usadas antes de
+declararse dentro de `useMemo`. Encontró un segundo caso:
+
+**`ProyectosConfig`** — el `useMemo` que filtra proyectos llama a `nombreCli()`,
+declarada 25 líneas más abajo. Solo se disparaba **al escribir en el buscador**,
+porque con la caja vacía el `useMemo` devuelve antes de llegar a esa línea. Una
+bomba de relojería: la pantalla se caía al teclear.
+
+Ambos helpers movidos arriba.
+
+El script queda para pasarlo antes de empaquetar. Distingue el uso real del
+falso positivo: `useLote(lista, () => cargar())` es seguro, porque la llamada va
+dentro de una función que se ejecuta más tarde; `vista[campo]` dentro de un
+`useMemo` no lo es.
+
+---
+
+# v219 · Foto nueva de Alejandro San Nicolás
+
+Sustituida en `quienes-somos.html` (ES y EN), que son las dos páginas donde
+aparecía.
+
+Dos versiones generadas desde el original de 1400×1050:
+
+- `web/equipo/alejandro-san-nicolas.jpg` — 330×360, para la ficha de la web.
+  Se muestra a 110×120, así que el triple de resolución cubre pantallas retina
+  sin engordar: 17 KB.
+- `web/equipo/alejandro-san-nicolas-sq.jpg` — 400×400 cuadrada, para avatares
+  del CRM cuando haga falta. 21 KB.
+
+El recorte está centrado en la cara, con `object-position: center 30%` para que
+el encuadre no corte la barba al reescalar.
+
+## De paso, dos arreglos
+
+**La foto pasa a servirse desde nuestro dominio.** Estaba enlazada al WordPress
+antiguo (`tuconsultor.com/wp-content/uploads/…`). Una imagen alojada fuera
+desaparece el día que se apague ese sitio, y mientras tanto es una petición a
+otro servidor en cada visita.
+
+**`width` y `height` explícitos** en la etiqueta, para que el navegador reserve
+el hueco y la página no dé el salto de maquetación al cargar la imagen.
+
+Las demás fotos del equipo siguen apuntando al WordPress antiguo. Conviene
+traerlas también cuando se actualice la lista de personas.
+
+## Pendiente
+
+Falta saber a quién hay que quitar del equipo.
+
+---
+
+# v220 · Equipo: retirada la sección «Team» y arregladas las fotos rotas
+
+## Retirados
+
+Camila Kuklis, Pablo Hernández, Patricia Luengo y José Villalba, en
+`quienes-somos.html` **y en su versión inglesa**, que va en un archivo aparte y
+es fácil de olvidar.
+
+Se ha quitado la sección «Team» entera, no solo las cuatro tarjetas: dejar el
+titular «Especialistas en los diferentes ámbitos de la gestión» sobre una
+rejilla vacía se vería peor que no tenerla. El bloque de «Tú puedes ser el
+próximo · Ficha de candidatos», que va justo después, cubre esa función mientras
+llegan los nuevos.
+
+Queda el **Board** con Alejandro San Nicolás y Fátima Ballesteros.
+
+## Las fotos estaban rotas, todas
+
+En la captura se veían los iconos de imagen fallida. La causa: todas las fotos
+del equipo se enlazaban al WordPress antiguo
+(`tuconsultor.com/wp-content/uploads/…`), que **responde 403**. Comprobado.
+
+Es decir: la página de equipo llevaba tiempo enseñando fichas sin foto a
+cualquiera que la visitara.
+
+- **Alejandro** → foto nueva, servida desde `/equipo/` (v219).
+- **Fátima** → marcador SVG con sus iniciales sobre el azul de marca, 1 KB.
+  Mejor un avatar sobrio que un icono de imagen rota. **Hace falta su foto** para
+  sustituirlo.
+
+Ya no queda ninguna referencia a `wp-content` en toda la web.
+
+## Pendiente
+
+1. La foto de Fátima Ballesteros.
+2. Los nuevos integrantes del equipo: nombre, cargo, descripción, LinkedIn y foto.
+
+## Aviso sobre el CRM
+
+Las cuatro personas retiradas **no aparecen en el código de la aplicación**, pero
+sí pueden tener ficha en la tabla `consultores` con proyectos y tareas
+asignados. Antes de borrarlas ahí conviene reasignar su trabajo; marcarlas como
+inactivas (`activo = false`) es más seguro que eliminarlas, porque un borrado
+deja tareas y agendas apuntando a alguien que ya no existe.
+
+---
+
+# v221 · Retrato de primer plano para la ficha de Alejandro
+
+Sustituida la foto de v219 por el primer plano, que funciona mucho mejor al
+tamaño al que se muestra: la ficha son **110×120 píxeles**, y en ese espacio un
+plano medio deja la cara demasiado pequeña para reconocerla.
+
+Regeneradas las dos versiones desde el original de 1050×1400:
+
+- `alejandro-san-nicolas.jpg` — 330×360 (proporción 11:12, la de la ficha),
+  recortada con algo de aire sobre la cabeza y cortada a la altura del pecho.
+  20 KB.
+- `alejandro-san-nicolas-sq.jpg` — 400×400, de la coronilla al final de la
+  barba, para avatares del CRM. 26 KB.
+
+Retirado el `object-position: center 30%` que se puso en v219: hacía falta con
+el plano medio, donde la cara quedaba en el tercio superior. Con un primer plano
+ya centrado, ese desplazamiento descuadraría el encuadre.
+
+Comprobado reduciendo la imagen a 110×120 reales: la cara sigue reconociéndose.
+
+---
+
+# v222 · La versión desplegada, a la vista
+
+## El bundle del error es el mismo de la vez anterior
+
+El informe apunta a `index-BuU_DKMJ.js`, **el mismo fichero que en el error de
+v218**. Compilando el código actual sale `index-CtX8lrv0.js`. El nombre lleva un
+hash del contenido: si fuera el mismo código, sería el mismo nombre.
+
+Es decir, **v218 no está desplegada**: el arreglo de `vista` en `FichaEmpresa`
+existe en el código (línea 98, antes de sus usos en 149 y 154) pero no en
+producción.
+
+Sin `?e=`, `FichaEmpresa` solo se monta al pulsar «+ Nueva empresa». Por eso el
+síntoma es exactamente ese.
+
+## Para no volver a discutirlo
+
+**La versión ahora viaja dentro del bundle.** Vite inyecta número y fecha de
+compilación, y aparecen en dos sitios:
+
+- En el **informe de errores**, justo debajo del mensaje.
+- En el **pie de la aplicación**, discreto.
+
+Se han perdido dos rondas arreglando cosas que ya estaban arregladas. Con la
+versión a la vista, el primer dato del informe dirá si el fallo viene de código
+nuevo o de código viejo sin desplegar.
+
+Numeración alineada con el proyecto: `package.json` pasa de `2.0.0` a `221.0.0`.
+
+## Segundo barrido de zonas muertas
+
+`scripts/buscar-tdz.py` mejorado: ahora distingue si el uso está dentro de una
+función diferida —segura— o dentro de un `useMemo` que corre en el render.
+
+Cinco avisos, los cinco revisados uno a uno: cuatro son la palabra buscada
+dentro de un texto («…eliminar N cliente(s)…») y uno es una variable local
+homónima dentro de una función. **Ningún caso real pendiente.**
+
+## Qué comprobar tras desplegar
+
+En el pie de la aplicación debe leerse **v221.0.0** o superior. Si sigue
+apareciendo otra cosa, el despliegue no ha llegado.

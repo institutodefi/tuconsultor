@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { ROL_LABEL, can } from '../lib/permisos.js';
+import { SELLO } from '../version.js';
 
 export default function Shell({ children }) {
   const { user, role, realRole, logout, demo, verEconomico , verComo, resetVista } = useAuth();
@@ -97,6 +98,10 @@ export default function Shell({ children }) {
         <img src="/app/marca/orbita-horizontal.svg" alt="Orbita.PMTools" className="mx-auto mb-3 h-8 w-auto opacity-90" />
         <p>Consultify · Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid</p>
         <p className="mt-1">Precios sin impuestos. Impuestos indirectos no incluidos · <a href="/" className="transition hover:text-brand-orange">consultify.tuconsultor.com</a></p>
+        {/* La versión desplegada, a la vista. Comprobar si un arreglo está
+            realmente en producción no debería requerir mirar el nombre del
+            fichero JavaScript en las herramientas del navegador. */}
+        <p className="mt-1 opacity-60" title="Versión desplegada">{SELLO}</p>
         <p className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]">
           <a href="/legal/aviso-legal.html" className="transition hover:text-brand-orange">Aviso legal</a>
           <a href="/legal/privacidad.html" className="transition hover:text-brand-orange">Privacidad</a>

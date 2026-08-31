@@ -90,6 +90,13 @@ export default function FichaEmpresa({
   const [contactosNuevos, setContactosNuevos] = useState([]);   // contactos apuntados durante el alta
   const recienGuardada = useRef(false);   // se declara aquí: el efecto de más abajo la lee
 
+  // Lo que se ENSEÑA: el formulario si está abierto, y si no la empresa
+  // guardada. Se declara aquí arriba a propósito: la usan el bloque de VIES y
+  // varios `useMemo` que corren durante el render, y estaba declarada 70 líneas
+  // más abajo. Como es `const`, leerla antes lanzaba
+  // «Cannot access before initialization» y la ficha entera se caía al abrirse.
+  const vista = form || empresa || {};
+
   // Un fallo al guardar no puede quedarse en un mensajito que se pierde: se
   // lleva la vista al aviso y se anuncia a los lectores de pantalla.
   function fallar(texto, extra = {}) {
@@ -207,7 +214,6 @@ export default function FichaEmpresa({
     [empresa, mios],
   );
 
-  const vista = form || empresa || {};
   const cif = validarCif(vista.cif);
   const matrices = useMemo(() => candidatasMatriz(empresas, empresa?.id), [empresas, empresa?.id]);
   const matriz = empresa?.empresa_matriz_id

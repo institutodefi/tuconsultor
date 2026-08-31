@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { SELLO } from '../version.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // BARRERA DE ERRORES
@@ -38,6 +39,9 @@ export default class BarreraErrores extends Component {
     const { error, pila } = this.state;
     return [
       `Error: ${error?.message || error}`,
+      // La versión, lo primero después del error: sin ella no se sabe si el
+      // fallo viene de código ya corregido o de código nuevo.
+      `Versión: ${SELLO}`,
       `Ruta: ${window.location.pathname}${window.location.search}`,
       `Navegador: ${navigator.userAgent}`,
       `Fecha: ${new Date().toISOString()}`,
@@ -57,6 +61,7 @@ export default class BarreraErrores extends Component {
           <p className="mt-1 text-[13px] text-[#DFF1F5]">
             El resto de la aplicación sigue funcionando: puedes cambiar de pantalla desde el menú.
           </p>
+          <p className="mt-1 text-[11.5px] font-bold text-[#7FA7B4]">{SELLO}</p>
 
           <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-xl bg-[#0A2B3A] p-3 text-[12px] leading-relaxed text-red-200">
             {error?.message || String(error)}
