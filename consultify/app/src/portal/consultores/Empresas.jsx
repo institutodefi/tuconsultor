@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SincronizarCrm from '../../components/SincronizarCrm.jsx';
-import { listTable } from '../../lib/data.js';
+import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES } from '../../lib/crm.js';
 import FichaEmpresa from './FichaEmpresa.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
+import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { diagnosticarCrm, informeTexto } from '../../lib/diagnosticoCrm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -92,6 +94,45 @@ export default function Empresas() {
     });
   }, [empresas, q, filtro, semaforos]);
 
+  // ── Acciones en lote ──
+  const lote = useLote(lista, cargar);
+
+  const marcarComo = (campo, valor, etq) => lote.ejecutar(etq,
+    (e) => updateRow('empresas', e.id, { [campo]: valor }));
+
+  const loteEstado = (estado) => lote.ejecutar(`marcadas como ${estado}`,
+    (e) => updateRow('empresas', e.id, { estado_comercial: estado }));
+
+  const loteBorrar = () => lote.ejecutarConAviso(
+    'eliminadas',
+    `Se van a eliminar ${lote.nMarcados} empresa(s). Sus contactos quedarán sin empresa. No se puede deshacer.`,
+    (e) => deleteRow('empresas', e.id),
+  );
+
+  const loteCSV = () => exportarCSV(
+    lote.seleccionados.length ? lote.seleccionados : lista,
+    [
+      ['Nombre', (e) => e.nombre], ['CIF', (e) => e.cif],
+      ['Dirección', (e) => e.direccion], ['CP', (e) => e.cp],
+      ['Población', (e) => e.poblacion], ['Provincia', (e) => e.provincia],
+      ['País', (e) => e.pais], ['Email', (e) => e.email], ['Teléfono', (e) => e.telefono],
+      ['Cliente', (e) => (e.es_cliente ? 'sí' : 'no')],
+      ['Proveedor', (e) => (e.es_proveedor ? 'sí' : 'no')],
+      ['Estado', (e) => e.estado_comercial],
+    ],
+    'empresas',
+  );
+
+  // Esta pantalla no tiene barra de mensajes propia: el aviso se da con el
+  // mismo informe que usan las demás acciones del lote.
+  const [avisoCopia, setAvisoCopia] = useState(null);
+  const loteCorreos = async () => {
+    const r = await copiarCorreos(lote.seleccionados);
+    setAvisoCopia(r.ok ? `${r.n} correo(s) copiados al portapapeles.`
+      : (r.error || 'Ninguna de las marcadas tiene email válido.'));
+    setTimeout(() => setAvisoCopia(null), 4000);
+  };
+
   const empresa = sel ? empresas.find((e) => String(e.id) === String(sel)) : null;
   const sinRevisar = empresas.filter((e) => e.revisado === false).length;
   const rojas = useMemo(() => [...semaforos.values()].filter((s) => s.color === 'rojo').length, [semaforos]);
@@ -152,6 +193,23 @@ export default function Empresas() {
       </div>
 
       {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orange">Modo demo: los cambios no se guardan.</div>}
+
+      <BarraLote n={lote.nMarcados} onLimpiar={lote.limpiar}>
+        <BotonLote onClick={loteCorreos}>Copiar correos</BotonLote>
+        <BotonLote onClick={loteCSV}>Exportar CSV</BotonLote>
+        {puedeEditar && <>
+          <BotonLote onClick={() => marcarComo('es_cliente', true, 'marcadas como cliente')}>Marcar cliente</BotonLote>
+          <BotonLote onClick={() => marcarComo('es_proveedor', true, 'marcadas como proveedor')}>Marcar proveedor</BotonLote>
+          <BotonLote onClick={() => loteEstado('activo')}>Estado: activo</BotonLote>
+          <BotonLote onClick={() => loteEstado('potencial')}>Estado: potencial</BotonLote>
+        </>}
+        {puedeBorrar && <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>}
+      </BarraLote>
+
+      <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado} nombreDe={(e) => e.nombre} />
+      {avisoCopia && (
+        <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-[12.5px] font-bold text-emerald-300">{avisoCopia}</p>
+      )}
 
       {diagBd && !diagBd.cargando && (
         <div className="space-y-2 rounded-xl border border-[#1E5468] bg-[#0D3242] p-3 text-[11.5px] leading-snug text-[#B9D2DA]">
@@ -229,6 +287,9 @@ export default function Empresas() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-[#0D3242] text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
                 <tr>
+                  <th className="w-9 px-2 py-2.5">
+                    <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
+                  </th>
                   <th className="px-5 py-2.5 text-left">Empresa</th>
                   <th className="hidden px-3 py-2.5 text-left sm:table-cell">Tipo</th>
                   <th className="hidden px-3 py-2.5 text-left md:table-cell">Estado</th>
@@ -237,7 +298,7 @@ export default function Empresas() {
               </thead>
               <tbody>
                 {lista.length === 0 && (
-                  <tr><td colSpan={4} className="px-5 py-10 text-center text-[#7FA7B4]">
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[#7FA7B4]">
                     {empresas.length === 0 ? (
                       errorCarga ? (
                         <>
@@ -266,9 +327,18 @@ export default function Empresas() {
                 {lista.map((e) => {
                   const s = semaforos.get(String(e.id));
                   return (
-                    <tr key={e.id} onClick={() => seleccionar(e.id)}
-                      className="cursor-pointer border-b border-[#1E5468]/60 last:border-0 hover:bg-[#10394A]">
-                      <td className="px-5 py-3">
+                    <tr key={e.id}
+                      className={`border-b border-[#1E5468]/60 last:border-0 hover:bg-[#10394A] ${
+                        lote.marcados.has(String(e.id)) ? 'bg-brand-orange/[0.07]' : ''}`}>
+                      {/* La casilla va fuera del área que abre la ficha: marcar
+                          para un lote y abrir para editar son gestos distintos
+                          y no deben confundirse. */}
+                      <td className="px-2 py-3" onClick={(ev) => ev.stopPropagation()}>
+                        <input type="checkbox" aria-label={`Marcar ${e.nombre}`}
+                          checked={lote.marcados.has(String(e.id))}
+                          onChange={() => lote.alternar(e.id)} />
+                      </td>
+                      <td className="cursor-pointer px-5 py-3" onClick={() => seleccionar(e.id)}>
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO[s.color]}`}
                             title={s.motivos.join(' · ') || 'Ficha completa'} />
@@ -279,17 +349,17 @@ export default function Empresas() {
                           {e.empresa_matriz_id ? ' · filial' : ''}
                         </div>
                       </td>
-                      <td className="hidden px-3 py-3 sm:table-cell">
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-3 sm:table-cell">
                         <span className="inline-flex flex-wrap gap-1">
                           {e.es_cliente && <span className="chip bg-brand-orange/15 !px-2 !py-0.5 text-[10px] text-brand-orange">Cliente</span>}
                           {e.es_proveedor && <span className="chip bg-brand-verde/15 !px-2 !py-0.5 text-[10px] text-brand-verdeTexto">Proveedor</span>}
                           {!e.es_cliente && !e.es_proveedor && <span className="text-[10px] text-[#7FA7B4]">—</span>}
                         </span>
                       </td>
-                      <td className="hidden px-3 py-3 text-xs font-semibold text-[#9FC0CB] md:table-cell">
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-3 text-xs font-semibold text-[#9FC0CB] md:table-cell">
                         {ESTADOS_COMERCIALES.find((x) => x.k === e.estado_comercial)?.label || 'Potencial'}
                       </td>
-                      <td className="px-3 py-3 text-right text-xs font-bold text-[#9FC0CB]">{s.n}</td>
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer px-3 py-3 text-right text-xs font-bold text-[#9FC0CB]">{s.n}</td>
                     </tr>
                   );
                 })}

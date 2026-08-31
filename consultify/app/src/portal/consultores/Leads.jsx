@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { listTable, updateRow } from '../../lib/data.js';
+import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
+import { BarraLote, BotonLote, InformeLote } from '../../components/BarraLote.jsx';
+import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 
 const ESTADOS = ['nuevo', 'contactado', 'propuesta', 'ganado', 'perdido'];
 const CHIP = {
@@ -46,6 +48,39 @@ export default function Leads() {
     });
   }, [leads, q, filtro]);
 
+  // ── Acciones en lote ──
+  // Los leads llegan de golpe desde la web: poder marcar veinte y pasarlos a
+  // «contactado» de una vez es lo que hace que la bandeja se vacíe.
+  const lote = useLote(lista, cargar);
+
+  const loteEstado = (estado) => lote.ejecutar(`pasados a «${estado}»`,
+    (l) => updateRow('leads', l.id, { estado }));
+
+  const loteBorrar = () => lote.ejecutarConAviso(
+    'eliminados',
+    `Se van a eliminar ${lote.nMarcados} lead(s). No se puede deshacer.`,
+    (l) => deleteRow('leads', l.id),
+  );
+
+  const loteCSV = () => exportarCSV(
+    lote.seleccionados.length ? lote.seleccionados : lista,
+    [
+      ['Nombre', (l) => l.nombre], ['Empresa', (l) => l.empresa],
+      ['Email', (l) => l.email], ['Teléfono', (l) => l.telefono],
+      ['Producto', (l) => l.producto], ['Necesidad', (l) => l.necesidad],
+      ['Plazo', (l) => l.plazo], ['Estado', (l) => l.estado],
+      ['Consentimiento', (l) => (l.consentimiento_comercial ? 'sí' : 'no')],
+      ['Recibido', (l) => l.creado],
+    ],
+    'leads',
+  );
+
+  const loteCorreos = async () => {
+    const r = await copiarCorreos(lote.seleccionados);
+    setMsg(r.ok ? { ok: true, text: `${r.n} correo(s) copiados.` }
+      : { ok: false, text: r.error || 'Ninguno de los marcados tiene email válido.' });
+  };
+
   const cambiar = async (lead, campos) => {
     setLeads(ls => ls.map(x => x.id === lead.id ? { ...x, ...campos } : x));
     if (demo) return;
@@ -70,14 +105,29 @@ export default function Leads() {
         </div>
       </div>
       {msg && <p className={`mb-3 text-sm font-bold ${msg.ok ? 'text-brand-verdeTexto' : 'text-red-300'}`}>{msg.text}</p>}
+      <BarraLote n={lote.nMarcados} onLimpiar={lote.limpiar}>
+        <BotonLote onClick={loteCorreos}>Copiar correos</BotonLote>
+        <BotonLote onClick={loteCSV}>Exportar CSV</BotonLote>
+        {puedeEditar && ESTADOS.map((e) => (
+          <BotonLote key={e} onClick={() => loteEstado(e)}>→ {e}</BotonLote>
+        ))}
+        <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>
+      </BarraLote>
+
+      <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado}
+        nombreDe={(l) => l.nombre || l.email} />
+
       {cargando ? <p className="text-sm text-[#9FC0CB]">Cargando…</p> : !lista.length ? (
         <div className="card text-center text-sm text-[#9FC0CB]">Sin clientes potenciales {filtro !== 'todos' ? 'en este filtro' : 'todavía'}. Llegarán solos desde los formularios de la web.</div>
       ) : (
         <div className="flex flex-col gap-3">
           {lista.map(l => (
-            <div key={l.id} className="card !p-4">
+            <div key={l.id} className={`card !p-4 ${lote.marcados.has(String(l.id)) ? 'ring-1 ring-brand-orange/60' : ''}`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-[220px]">
+                <div className="flex min-w-[220px] gap-2.5">
+                  <input type="checkbox" className="mt-1 shrink-0" aria-label={`Marcar ${l.nombre || l.email}`}
+                    checked={lote.marcados.has(String(l.id))} onChange={() => lote.alternar(l.id)} />
+                  <div>
                   <p className="font-extrabold">{l.nombre || '—'} <span className="font-semibold text-[#9FC0CB]">· {l.empresa || 'sin empresa'}</span></p>
                   <p className="mt-0.5 text-sm text-[#9FC0CB]">
                     <a className="underline" href={`mailto:${l.email}`}>{l.email}</a>
@@ -88,6 +138,7 @@ export default function Leads() {
                     {' · '}{l.producto || 'contacto web'}{l.necesidad ? ` · ${l.necesidad}` : ''}{l.plazo ? ` · ${l.plazo}` : ''}
                     {' · '}{l.consentimiento_comercial ? 'acepta comercial ✓' : 'sin consentimiento comercial'}
                   </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`chip ${CHIP[l.estado] || ''}`}>{l.estado}</span>

@@ -5,6 +5,8 @@ import { NORMAS, NORMA_BY_ID } from '../../lib/calcEngine.js';
 import { useAuth } from '../../lib/auth.jsx';
 import SemaforoCobros from './SemaforoCobros.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
+import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 
 const VACIO = { codigo: '', cif_matriz: '', empresa: '', contacto: '', contacto_apellidos: '', email: '', telefono: '', director_proyecto_id: '', jefe_cuenta_id: '' };
 
@@ -40,6 +42,38 @@ export default function Clientes() {
     const n = Number(porPagina);
     return clientesFiltrados.slice(pag * n, pag * n + n);
   }, [clientesFiltrados, porPagina, pag]);
+
+  // ── Acciones en lote ──
+  // Se marca sobre la PÁGINA visible, no sobre todo el resultado filtrado: es
+  // lo que se está viendo, y con 500 clientes marcar «todos» sin verlos es
+  // exactamente lo que no debe pasar con un botón de eliminar al lado.
+  const lote = useLote(clientesPagina, () => cargar());
+
+  const loteComercial = (id) => lote.ejecutar('reasignados',
+    (c) => updateRow('clientes', c.id, { comercial_id: id || null }));
+
+  const loteBorrar = () => lote.ejecutarConAviso(
+    'eliminados',
+    `Se van a eliminar ${lote.nMarcados} cliente(s). No se puede deshacer.`,
+    (c) => deleteRow('clientes', c.id),
+  );
+
+  const loteCSV = () => exportarCSV(
+    lote.seleccionados.length ? lote.seleccionados : clientesFiltrados,
+    [
+      ['CIF', (c) => c.cif_matriz || c.codigo], ['Cliente', (c) => c.empresa],
+      ['Contacto', (c) => c.contacto], ['Email', (c) => c.email],
+      ['Teléfono', (c) => c.telefono], ['Holded', (c) => (c.holded_id ? 'sí' : 'no')],
+      ['Estado cobros', (c) => c.estado_cobros],
+    ],
+    'clientes',
+  );
+
+  const loteCorreos = async () => {
+    const r = await copiarCorreos(lote.seleccionados);
+    setMsg(r.ok ? `${r.n} correo(s) copiados al portapapeles.`
+      : (r.error || 'Ninguno de los marcados tiene email válido.'));
+  };
 
   const cargar = () => {
     listTable('clientes').then(setClientes).catch(e => { setClientes([]); setMsg('No se pudieron cargar los clientes: ' + (e?.message || e)); });
@@ -310,22 +344,38 @@ export default function Clientes() {
             </select>
           </div>
         </div>
+        <BarraLote n={lote.nMarcados} onLimpiar={lote.limpiar}>
+          <BotonLote onClick={loteCorreos}>Copiar correos</BotonLote>
+          <BotonLote onClick={loteCSV}>Exportar CSV</BotonLote>
+          <BotonLote onClick={() => loteComercial('')}>Quitar comercial</BotonLote>
+          <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>
+        </BarraLote>
+
+        <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado} nombreDe={(c) => c.empresa} />
+
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
+                <th className="w-8 py-2"><CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} /></th>
                 <th className="py-2">CIF</th><th className="py-2">Cliente</th><th className="py-2">Contacto</th><th className="py-2">Email</th><th className="py-2">Holded</th><th className="py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-50">
               {clientesPagina.map(c => (
-                <tr key={c.id} className={`cursor-pointer hover:bg-navy-50/50 ${String(c.id) === String(sel) ? 'bg-brand-orange/5' : ''}`} onClick={() => { setSel(String(c.id)); setForm(null); }}>
-                  <td className="py-2 font-bold text-[#9FC0CB]">{c.cif_matriz || c.codigo || '—'}</td>
-                  <td className="py-2 font-medium"><span className="inline-flex items-center gap-2"><SemaforoCobros estado={c.estado_cobros} detalle={c.cobros_detalle} actualizado={c.cobros_actualizado_en} />{c.empresa}</span></td>
-                  <td className="py-2 text-[#9FC0CB]">{c.contacto || '—'}</td>
-                  <td className="py-2 text-[#9FC0CB]">{c.email || '—'}</td>
-                  <td className="py-2">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-[#7FA7B4]">—</span>}</td>
-                  <td className="py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
+                <tr key={c.id} className={`hover:bg-navy-50/50 ${lote.marcados.has(String(c.id)) ? 'bg-brand-orange/[0.07]' : String(c.id) === String(sel) ? 'bg-brand-orange/5' : ''}`}>
+                  {/* Marcar y abrir son gestos distintos: la casilla no debe
+                      abrir la ficha ni al revés. */}
+                  <td className="py-2" onClick={(ev) => ev.stopPropagation()}>
+                    <input type="checkbox" aria-label={`Marcar ${c.empresa}`}
+                      checked={lote.marcados.has(String(c.id))} onChange={() => lote.alternar(c.id)} />
+                  </td>
+                  <td className="cursor-pointer py-2 font-bold text-[#9FC0CB]" onClick={() => { setSel(String(c.id)); setForm(null); }}>{c.cif_matriz || c.codigo || '—'}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 font-medium"><span className="inline-flex items-center gap-2"><SemaforoCobros estado={c.estado_cobros} detalle={c.cobros_detalle} actualizado={c.cobros_actualizado_en} />{c.empresa}</span></td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-[#9FC0CB]">{c.contacto || '—'}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-[#9FC0CB]">{c.email || '—'}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-[#7FA7B4]">—</span>}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
                 </tr>
               ))}
             </tbody>

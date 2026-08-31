@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
+import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../lib/crm.js';
@@ -43,11 +45,8 @@ export default function Contactos() {
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
   const [sync, setSync] = useState(false);
-  // Selección múltiple para las acciones en lote, y fila desplegada para editar
-  // sin salir de la tabla. Antes había que abrir una ficha lateral por contacto.
-  const [marcados, setMarcados] = useState(() => new Set());
-  const [abierta, setAbierta] = useState(null);   // id del contacto desplegado
-  const [lote, setLote] = useState(null);         // resultado de la última acción masiva
+  // Fila desplegada para ver la ficha sin salir de la tabla.
+  const [abierta, setAbierta] = useState(null);
 
   const sel = params.get('c');
   const seleccionar = (id) => { setForm(null); if (id) setParams({ c: String(id) }); else setParams({}); };
@@ -105,45 +104,11 @@ export default function Contactos() {
     [contactos, vinculos]);
 
   // ── Acciones en lote ──────────────────────────────────────────────────────
-  // Van de una en una contra la base, no en bloque, y a propósito: si falla el
-  // contacto 7 de 40, los 6 primeros quedan hechos y el informe dice cuáles
-  // fallaron. Un `update ... in (...)` que revienta a medias deja el lote en un
-  // estado que nadie sabe leer.
-  const seleccionados = useMemo(
-    () => lista.filter((c) => marcados.has(String(c.id))),
-    [lista, marcados],
-  );
+  // La mecánica vive en `lib/lote.js`, compartida con las demás listas.
+  const lote = useLote(lista, cargar);
 
-  const alternar = (id) => setMarcados((s) => {
-    const n = new Set(s); const k = String(id);
-    if (n.has(k)) n.delete(k); else n.add(k);
-    return n;
-  });
-  // Marca o desmarca solo lo que se está viendo: con un filtro puesto, marcar
-  // «todos» y que se llevara por delante contactos que no están en pantalla
-  // sería una sorpresa desagradable.
-  const alternarTodos = () => setMarcados((s) =>
-    seleccionados.length === lista.length && lista.length
-      ? new Set()
-      : new Set(lista.map((c) => String(c.id))));
-
-  async function enLote(nombreAccion, fn) {
-    if (!seleccionados.length) return;
-    setLote({ trabajando: true, hechos: 0, total: seleccionados.length, fallos: [] });
-    const fallos = [];
-    let hechos = 0;
-    for (const c of seleccionados) {
-      try { await fn(c); hechos += 1; }
-      catch (e) { fallos.push({ c, error: e?.message || String(e) }); }
-      setLote({ trabajando: true, hechos, total: seleccionados.length, fallos });
-    }
-    setLote({ trabajando: false, hechos, total: seleccionados.length, fallos, accion: nombreAccion });
-    setMarcados(new Set());
-    await cargar();
-  }
-
-  const loteConsentimiento = (valor) => enLote(
-    valor ? 'consentimiento concedido' : 'consentimiento retirado',
+  const loteConsentimiento = (valor) => lote.ejecutar(
+    valor ? 'con consentimiento concedido' : 'con consentimiento retirado',
     (c) => updateRow('contactos', c.id, {
       consentimiento_marketing: valor,
       // La fecha solo se pone al conceder: al retirar se conserva, porque es la
@@ -152,7 +117,7 @@ export default function Contactos() {
     }),
   );
 
-  const loteBrevo = () => enLote('enviados a Brevo', async (c) => {
+  const loteBrevo = () => lote.ejecutar('enviados a Brevo', async (c) => {
     if (!emailValido(c.email)) throw new Error('sin email válido');
     if (!c.consentimiento_marketing) throw new Error('sin consentimiento RGPD');
     // Mismo payload que el envío individual: si aquí se manda otra cosa, unos
@@ -172,40 +137,29 @@ export default function Contactos() {
     });
   });
 
-  const loteBorrar = () => {
-    if (!confirm(`Se van a eliminar ${seleccionados.length} contacto(s). Esta acción no se puede deshacer.`)) return;
-    return enLote('eliminados', (c) => deleteRow('contactos', c.id));
-  };
+  const loteBorrar = () => lote.ejecutarConAviso(
+    'eliminados',
+    `Se van a eliminar ${lote.nMarcados} contacto(s). Esta acción no se puede deshacer.`,
+    (c) => deleteRow('contactos', c.id),
+  );
 
-  /** Copia al portapapeles los correos de los seleccionados, listos para pegar. */
   async function loteCopiarCorreos() {
-    const correos = seleccionados.map((c) => c.email).filter(emailValido);
-    if (!correos.length) { setMsg({ err: true, t: 'Ninguno de los marcados tiene email válido.' }); return; }
-    try {
-      await navigator.clipboard.writeText(correos.join('; '));
-      setMsg({ t: `${correos.length} correo(s) copiados al portapapeles.` });
-    } catch {
-      setMsg({ err: true, t: 'El navegador no dejó copiar. Selecciónalos a mano.' });
-    }
+    const r = await copiarCorreos(lote.seleccionados);
+    setMsg(r.ok
+      ? { t: `${r.n} correo(s) copiados al portapapeles.` }
+      : { err: true, t: r.error || 'Ninguno de los marcados tiene email válido.' });
   }
 
-  /** Exporta los seleccionados (o toda la lista filtrada) a CSV. */
-  function exportarCSV() {
-    const filas = seleccionados.length ? seleccionados : lista;
-    const cab = ['Nombre', 'Apellidos', 'Cargo', 'Email', 'Móvil', 'Teléfono', 'Empresa', 'Consentimiento'];
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const cuerpo = filas.map((c) => [
-      c.nombre, c.apellidos, c.cargo, c.email, c.movil, c.telefono,
-      empresasDe(c.id).map((x) => x.e.nombre).join(' · '),
-      c.consentimiento_marketing ? 'sí' : 'no',
-    ].map(esc).join(';'));
-    // BOM: sin él, Excel abre el CSV en ASCII y destroza los acentos.
-    const csv = '\uFEFF' + [cab.map(esc).join(';'), ...cuerpo].join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `contactos-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click(); URL.revokeObjectURL(url);
-  }
+  const loteCSV = () => exportarCSV(
+    lote.seleccionados.length ? lote.seleccionados : lista,
+    [
+      ['Nombre', (c) => c.nombre], ['Apellidos', (c) => c.apellidos], ['Cargo', (c) => c.cargo],
+      ['Email', (c) => c.email], ['Móvil', (c) => c.movil], ['Teléfono', (c) => c.telefono],
+      ['Empresa', (c) => empresasDe(c.id).map((x) => x.e.nombre).join(' · ')],
+      ['Consentimiento', (c) => (c.consentimiento_marketing ? 'sí' : 'no')],
+    ],
+    'contactos',
+  );
 
   // ── Guardar ───────────────────────────────────────────────────────────────
   async function guardar() {
@@ -369,48 +323,19 @@ export default function Contactos() {
       {/* ── Barra de acciones en lote ──
           Aparece solo con algo marcado: una barra permanente con los botones
           apagados es ruido en cada visita. */}
-      {marcados.size > 0 && (
-        <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-brand-orange/50 bg-[#10394A] px-3 py-2 shadow-lg">
-          <span className="text-[12.5px] font-extrabold text-brand-orange">
-            {marcados.size} marcado{marcados.size === 1 ? '' : 's'}
-          </span>
-          <button onClick={loteCopiarCorreos} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Copiar correos</button>
-          <button onClick={exportarCSV} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Exportar CSV</button>
-          {puedeEditar && <>
-            <button onClick={() => loteConsentimiento(true)} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Dar consentimiento</button>
-            <button onClick={() => loteConsentimiento(false)} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Retirar</button>
-            <button onClick={loteBrevo} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">Enviar a Brevo</button>
-          </>}
-          {puedeBorrar && (
-            <button onClick={loteBorrar}
-              className="rounded-full border border-red-500/40 px-2.5 py-1 text-[11.5px] font-bold text-red-300 hover:bg-red-500/10">
-              Eliminar
-            </button>
-          )}
-          <button onClick={() => setMarcados(new Set())} className="ml-auto text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">
-            Quitar selección
-          </button>
-        </div>
-      )}
+      <BarraLote n={lote.nMarcados} onLimpiar={lote.limpiar}>
+        <BotonLote onClick={loteCopiarCorreos}>Copiar correos</BotonLote>
+        <BotonLote onClick={loteCSV}>Exportar CSV</BotonLote>
+        {puedeEditar && <>
+          <BotonLote onClick={() => loteConsentimiento(true)}>Dar consentimiento</BotonLote>
+          <BotonLote onClick={() => loteConsentimiento(false)}>Retirar</BotonLote>
+          <BotonLote onClick={loteBrevo}>Enviar a Brevo</BotonLote>
+        </>}
+        {puedeBorrar && <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>}
+      </BarraLote>
 
-      {lote && (
-        <div className={`rounded-xl px-3 py-2 text-[12.5px] font-bold ${lote.fallos.length ? 'bg-amber-400/10 text-amber-200' : 'bg-emerald-500/10 text-emerald-300'}`}>
-          {lote.trabajando
-            ? `Procesando ${lote.hechos} de ${lote.total}…`
-            : <>
-                {lote.hechos} de {lote.total} {lote.accion}.
-                {lote.fallos.length > 0 && (
-                  <ul className="mt-1 space-y-0.5 font-medium">
-                    {lote.fallos.slice(0, 5).map(({ c, error }) => (
-                      <li key={c.id}>· {c.nombre} {c.apellidos || ''}: {error}</li>
-                    ))}
-                    {lote.fallos.length > 5 && <li>· y {lote.fallos.length - 5} más</li>}
-                  </ul>
-                )}
-                <button onClick={() => setLote(null)} className="ml-2 underline">cerrar</button>
-              </>}
-        </div>
-      )}
+      <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado}
+        nombreDe={(c) => `${c.nombre} ${c.apellidos || ''}`.trim()} />
 
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
         <div className="overflow-x-auto rounded-2xl border border-[#1E5468]">
@@ -418,9 +343,7 @@ export default function Contactos() {
             <thead>
               <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
                 <th className="w-9 px-2 py-1.5">
-                  <input type="checkbox" aria-label="Marcar todos los visibles"
-                    checked={lista.length > 0 && seleccionados.length === lista.length}
-                    onChange={alternarTodos} />
+                  <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
                 </th>
                 <th className="px-2 py-1.5">Nombre</th>
                 <th className="px-2 py-1.5">Correo</th>
@@ -433,13 +356,13 @@ export default function Contactos() {
               {lista.map((c) => {
                 const emps = empresasDe(c.id);
                 const st = semaforoContacto(c, emps.length);
-                const marcado = marcados.has(String(c.id));
+                const marcado = lote.marcados.has(String(c.id));
                 const desplegada = String(abierta) === String(c.id);
                 return (
                   <Fragment key={c.id}>
                     <tr className={marcado ? 'bg-brand-orange/[0.07]' : desplegada ? 'bg-white/[0.04]' : undefined}>
                       <td className="px-2 py-1">
-                        <input type="checkbox" checked={marcado} onChange={() => alternar(c.id)}
+                        <input type="checkbox" checked={marcado} onChange={() => lote.alternar(c.id)}
                           aria-label={`Marcar ${c.nombre}`} />
                       </td>
                       <td className="px-2 py-1">

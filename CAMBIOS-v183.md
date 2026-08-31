@@ -1703,3 +1703,63 @@ rellenarla a ojo.
 `scripts/test-vies.mjs`: los cinco formatos de dirección de la UE, direcciones
 de tres líneas, y los casos límite —vacío, nulo, sin patrón reconocible, país
 fuera de la lista— comprobando que en ninguno se inventa un dato.
+
+---
+
+# v213 · Acciones en lote en todas las listas
+
+## Extraído a piezas reutilizables
+
+La mecánica estaba dentro de Contactos. Se ha sacado a:
+
+- **`lib/lote.js`** — hook `useLote` con la selección, el recuento y la
+  ejecución, más `exportarCSV` y `copiarCorreos`.
+- **`components/BarraLote.jsx`** — la barra, los botones y el informe de
+  resultado.
+
+Con las decisiones que costó tomar escritas una sola vez, en lugar de repetidas
+—o peor, tomadas distinto— en cada pantalla:
+
+- **Una a una contra la base, no en bloque.** Si falla el registro 7 de 40, los
+  seis primeros quedan hechos y el informe dice cuáles fallaron y por qué. Un
+  `update … in (…)` que revienta a medias deja el lote ilegible.
+- **«Marcar todos» solo marca lo visible.** Con un filtro puesto, llevarse por
+  delante registros fuera de pantalla sería una sorpresa muy fea con un botón de
+  eliminar al lado.
+- **La selección se limpia al terminar**, para no repetir la acción sin querer.
+- **Los fallos se listan uno a uno con su motivo.** Un «3 de 40 fallaron» sin
+  decir cuáles obliga a revisar los cuarenta a mano.
+
+## Pantallas
+
+| Pantalla | Acciones |
+|---|---|
+| **Contactos** | copiar correos · CSV · dar y retirar consentimiento · Brevo · eliminar |
+| **Empresas** | copiar correos · CSV · marcar cliente o proveedor · cambiar estado comercial · eliminar |
+| **Clientes** | copiar correos · CSV · quitar comercial · eliminar |
+| **Leads** | copiar correos · CSV · pasar a cualquier estado · eliminar |
+
+En Leads los botones de estado se generan desde la lista `ESTADOS`, así que si
+mañana se añade uno aparece solo. Los leads llegan de golpe desde la web y poder
+marcar veinte y pasarlos a «contactado» de una vez es lo que vacía la bandeja.
+
+## Un detalle de interacción
+
+En las tablas, **la casilla no abre la ficha y la fila no marca**. Marcar para un
+lote y abrir para editar son gestos distintos: mezclarlos hace que al intentar
+marcar se abra la ficha, y con la barra de eliminar visible eso es peor que
+molesto.
+
+## Sobre la edición emergente
+
+Ya está hecha en v211: las nueve pantallas donde se edita algo abren diálogo
+modal (Contactos, Empresas, Clientes, Ofertas, Reglas, Accesos, Agenda, Control
+del sistema y Planificador), con Escape, foco atrapado, aviso de cambios sin
+guardar y cierre por clic fuera solo si el gesto empezó fuera.
+
+## Verificación
+
+`scripts/test-lote.mjs`: que un fallo no detiene el lote y se sigue con los
+siguientes, que el motivo del fallo se conserva, que «marcar todos» no alcanza a
+lo que está fuera del filtro, el escapado del CSV (comillas, punto y coma,
+nulos) con su BOM, y que los correos salen sin repetir y solo los válidos.
