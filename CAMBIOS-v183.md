@@ -1902,3 +1902,44 @@ conserva entre pulsaciones; al abrir una empresa existente el formulario no se
 abre. Y los helpers que corren antes del `if (form)` —`semaforoEmpresa`,
 `candidatasMatriz`, `validarCif`— se han probado con `{}`, `null` y `undefined`:
 ninguno lanza, así que la ficha no se rompe al montarse vacía.
+
+---
+
+# v217 · Nunca más una pantalla en blanco sin explicación
+
+## El diagnóstico
+
+La pantalla completamente vacía —ni siquiera el menú lateral— es la firma de un
+error de render no capturado: React desmonta el árbol entero y no queda nada.
+
+Encaja con el bucle de `DialogoFicha` corregido en **v215** y **aún sin
+desplegar**. Un efecto que se remonta en cada render acaba en «Maximum update
+depth exceeded», que React lanza como error, y sin nada que lo recoja la página
+se queda en blanco. Antes se manifestó como «congelada» y ahora como «vacía»:
+mismo bucle, distinto desenlace según cuántos ciclos aguante el navegador.
+
+Comprobado, para descartar otras causas: todos los exports que usa la pantalla
+existen y devuelven lo esperado (`nombreVisible`, `tieneComercialDistinto`,
+`semaforoEmpresa`, `exportarCSV`, `copiarCorreos`…), el orden de declaración de
+`cargar` y `useLote` es correcto, y los helpers que corren al montar no lanzan
+con datos vacíos.
+
+## La red de seguridad
+
+**No había ninguna barrera de errores en toda la aplicación.** Cualquier fallo
+de render, en cualquier pantalla, dejaba la página en blanco sin una sola pista.
+Eso convierte cada incidencia en una adivinanza.
+
+Nuevo `components/BarreraErrores.jsx`, en dos alturas:
+
+- **Dentro del `Shell`**, alrededor de las rutas: un fallo en una pantalla deja
+  el menú en pie y permite irse a otra sin recargar.
+- **Alrededor de toda la app**, por si el fallo está en el propio Shell o en el
+  router: ese caso es el que dejaba la página literalmente vacía.
+
+Muestra el mensaje del error, el árbol de componentes donde ocurrió, y tiene
+botones para **copiar el informe** (mensaje, ruta, navegador, fecha y pila),
+reintentar sin recargar, y recargar.
+
+A partir de ahora, cuando algo falle habrá un texto que pegar en lugar de una
+pantalla negra que describir.

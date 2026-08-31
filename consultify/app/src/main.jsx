@@ -10,6 +10,7 @@ import EstablecerPassword from './pages/EstablecerPassword.jsx';
 import ClientePortal from './portal/ClientePortal.jsx';
 import ConsultorPortal from './portal/ConsultorPortal.jsx';
 import './index.css';
+import BarreraErrores from './components/BarreraErrores.jsx';
 
 function Protected({ allow, children }) {
   const { user, role, loading } = useAuth();
@@ -34,6 +35,9 @@ function App() {
     <BrowserRouter basename="/app">
       <AuthProvider>
         <Shell>
+          {/* Un fallo dentro de una pantalla no puede llevarse por delante el
+              menú: con la barrera aquí, se puede navegar a otra sin recargar. */}
+          <BarreraErrores>
           <Routes>
             <Route path="/" element={<Navigate to="/calculadora" replace />} />
             <Route path="/calculadora" element={<GeneradorOfertas publico />} />
@@ -44,10 +48,15 @@ function App() {
             <Route path="/consultores/*" element={<Protected allow={['director','consultor','admin','superadmin','gestion']}><ConsultorPortal /></Protected>} />
             <Route path="*" element={<Navigate to="/calculadora" replace />} />
           </Routes>
+          </BarreraErrores>
         </Shell>
       </AuthProvider>
     </BrowserRouter>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// La barrera de fuera cubre incluso un fallo del Shell o del router: sin ella,
+// ese caso deja la página literalmente en blanco.
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <BarreraErrores><App /></BarreraErrores>,
+);
