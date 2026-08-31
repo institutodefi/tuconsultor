@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listAll, updateRow, deleteRow , explicarErrorBd } from '../../lib/data.js';
 import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
+import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR , pagoAdelantado } from '../../lib/calcEngine.js';
 import { COMPLEJIDADES } from '../../lib/proyecto.js';
 import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
 import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.jsx';
@@ -490,6 +490,24 @@ export default function Ofertas() {
             </h2>
             <button onClick={() => setEdicion(null)} className="text-xs font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Cancelar</button>
           </div>
+          {/* Va justo encima de los datos de la persona: puesto al final del
+              formulario, tras las fechas, nadie lo encontraba.
+              El mapeo importa: este formulario guarda `contacto_nombre` y
+              `contacto_apellidos`, no `nombre`/`apellidos`. Con los nombres del
+              CRM tal cual, elegir un contacto no rellenaba nada visible. */}
+          <ImportarContacto
+            cif={edicion.cif} empresa={edicion.empresa} actual={edicion.contacto_id}
+            onElegir={(p) => setEdicion({
+              ...edicion,
+              contacto_nombre: p.nombre,
+              contacto_apellidos: p.apellidos,
+              cargo: p.cargo || edicion.cargo,
+              email: p.email,
+              telefono: p.telefono || edicion.telefono,
+              contacto_id: p.contacto_id,
+            })}
+          />
+
           <div className="form-grid">
             <div><label className="label" htmlFor="of-empresa">Empresa <span className="text-brand-orange">*</span></label>
               <input id="of-empresa" className="input !py-1.5 !text-[13px]" value={edicion.empresa || ''} onChange={(e) => setEdicion({ ...edicion, empresa: e.target.value })} /></div>
@@ -621,11 +639,6 @@ export default function Ofertas() {
               {avisoFechas.fin && <p className="text-[11px] font-bold text-red-300">{avisoFechas.fin}</p>}
             </div>
           </div>
-
-          <ImportarContacto
-            cif={edicion.cif} empresa={edicion.empresa} actual={edicion.contacto_id}
-            onElegir={(p) => setEdicion({ ...edicion, ...p })}
-          />
 
           {/* ── Tarifa pactada y reglas ──
               Lo mismo que ofrece el generador, disponible también al editar:
@@ -809,7 +822,25 @@ export default function Ofertas() {
                       </>
                     ) : <span className="text-[#7FA7B4]">—</span>}
                   </td>
-                  <td className="py-2 text-right font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</td>
+                  {/* Con pago adelantado, lo que se cobra es el importe único.
+                      Enseñar solo la cuota mensual obliga a abrir la oferta para
+                      saber cuánto se factura de verdad. */}
+                  <td className="py-2 text-right">
+                    {r.pago_adelantado && r.tipo === 'mes' ? (() => {
+                      const a = pagoAdelantado(r.precio);
+                      return (
+                        <>
+                          <span className="block font-extrabold text-[#EAF4F7]">{fmtEUR(a.total)}</span>
+                          <span className="block text-[10.5px] font-bold text-brand-orange">
+                            pago único · {a.mesesCobrados}×{a.mesesServicio}
+                          </span>
+                          <span className="block text-[10.5px] text-[#7FA7B4]">{fmtEUR(r.precio)}/mes</span>
+                        </>
+                      );
+                    })() : (
+                      <span className="font-extrabold">{fmtEUR(r.precio)}{r.tipo === 'mes' ? '/mes' : ''}</span>
+                    )}
+                  </td>
                   <td className="py-2 text-right whitespace-nowrap">
                     {(r.url_pdf || r.url_pptx) ? (
                       <span className="inline-flex gap-2 items-center">

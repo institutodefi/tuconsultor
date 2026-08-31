@@ -2413,3 +2413,56 @@ Tres helpers de fecha distintos hacían lo mismo. Unificados en `fechaLarga()`.
 Generados PDF y PPTX en las dos variantes: con adelanto no aparece ninguna
 «Cuota mensual N de 12» y sí el bloque de pago único con su vencimiento; sin él,
 el calendario de doce cuotas sigue igual que antes.
+
+---
+
+# v228 · Importe de pago único visible y contacto en desplegable
+
+## El selector de contacto no funcionaba
+
+Dos fallos, y el segundo hacía inútil al primero:
+
+**1 · Estaba al final del formulario**, después de las fechas y del bloque de
+tarifa. Nadie lo encontraba. Ahora va **justo encima de los datos de la
+persona**, que es donde se busca.
+
+**2 · Los nombres de campo no coincidían.** El formulario de la oferta guarda
+`contacto_nombre` y `contacto_apellidos`; el componente devolvía `nombre` y
+`apellidos`, como los llama el CRM. Al elegir a alguien **no se rellenaba nada
+visible**: el dato entraba en un campo que ningún input leía. Corregido con un
+mapeo explícito.
+
+## Ahora es un desplegable de verdad
+
+Antes había que pulsar un enlace para que se cargaran los contactos y aparecía
+un listado de tarjetas. Ahora es un `<select>` que se rellena solo en cuanto hay
+CIF o nombre de empresa: un desplegable que hay que abrir para que tenga
+opciones no es un desplegable.
+
+Cada opción dice quién es, su papel y su correo:
+
+```
+Consoli Sánchez — ★ Contacto directivo principal · c.sanchez@adf-formacion.es
+Pedro Gil — Contacto de facturación · SIN CORREO
+```
+
+«SIN CORREO» en mayúsculas a propósito: es lo que impide enviar la oferta, y
+conviene verlo **antes** de elegir a esa persona.
+
+El propio desplegable explica por qué está vacío cuando lo está: falta el CIF,
+no se pudo consultar, o la empresa no tiene contactos asignados.
+
+## El importe de pago único, a la vista
+
+En la tabla de ofertas y en la cartera de la ficha de empresa, una oferta con
+pago adelantado muestra **lo que se cobra**:
+
+```
+5.910,30 €
+pago único · 11×12
+537,30 €/mes
+```
+
+Enseñar solo la cuota mensual obligaba a abrir la oferta para saber cuánto se
+factura de verdad. La cuota se conserva debajo, en pequeño, porque sigue siendo
+la referencia para comparar.

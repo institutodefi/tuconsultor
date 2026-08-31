@@ -32,12 +32,14 @@ function partirNombre(c) {
 }
 
 export default function ImportarContacto({ cif, empresa, onElegir, actual }) {
-  const [abierto, setAbierto] = useState(false);
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
 
+  // Se carga en cuanto hay algo con lo que buscar. Antes había que pulsar para
+  // desplegar y solo entonces se pedían los datos: un desplegable que hay que
+  // abrir para que tenga opciones no es un desplegable.
   useEffect(() => {
-    if (!abierto || datos) return;
+    if (datos || (!cif && !empresa)) return;
     let vivo = true;
     Promise.all([
       listTable('empresas').catch(() => []),
@@ -47,7 +49,7 @@ export default function ImportarContacto({ cif, empresa, onElegir, actual }) {
       if (vivo) setDatos({ empresas: e || [], contactos: c || [], vinculos: v || [] });
     }).catch((x) => vivo && setError(x?.message || String(x)));
     return () => { vivo = false; };
-  }, [abierto, datos]);
+  }, [datos, cif, empresa]);
 
   const personas = useMemo(() => {
     if (!datos) return [];
@@ -65,74 +67,56 @@ export default function ImportarContacto({ cif, empresa, onElegir, actual }) {
         || (b.vinc.rol === 'directivo' ? 1 : 0) - (a.vinc.rol === 'directivo' ? 1 : 0));
   }, [datos, cif, empresa]);
 
-  if (!abierto) {
-    return (
-      <button type="button" onClick={() => setAbierto(true)}
-        className="text-[11.5px] font-bold text-brand-verdeTexto hover:underline">
-        ↓ Traer persona de contacto de la empresa
-      </button>
-    );
-  }
+  const hayDonde = !!(cif || empresa);
+  const elegido = personas.find((x) => String(x.c.id) === String(actual));
+
+  const etiqueta = ({ vinc, c }) => {
+    const rol = ROL_LABEL[vinc.rol] || vinc.rol;
+    return `${c.nombre} ${c.apellidos || ''}`.trim()
+      + ` — ${vinc.principal ? '★ ' : ''}${rol}`
+      + (c.email ? ` · ${c.email}` : ' · SIN CORREO');
+  };
 
   return (
-    <div className="rounded-xl border border-brand-verde/40 bg-[#0B2E3D] p-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[11.5px] font-extrabold text-brand-verdeTexto">
-          Contactos de {empresa || 'la empresa'}
-        </p>
-        <button type="button" onClick={() => setAbierto(false)}
-          className="text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">cerrar</button>
-      </div>
+    <div className="campo">
+      <label className="label" htmlFor="imp-contacto">
+        Persona de contacto <span className="font-normal normal-case tracking-normal text-[#7FA7B4]">
+          — traer del CRM</span>
+      </label>
+      <select id="imp-contacto" className="input" disabled={!personas.length}
+        value={elegido ? String(elegido.c.id) : ''}
+        onChange={(e) => {
+          const x = personas.find((y) => String(y.c.id) === e.target.value);
+          if (!x) return;
+          const n = partirNombre(x.c);
+          onElegir({
+            nombre: n.nombre, apellidos: n.apellidos,
+            cargo: x.vinc.cargo || x.c.cargo || '',
+            email: x.c.email || '',
+            // El móvil manda sobre el fijo: es el que sirve para avisar.
+            telefono: x.c.movil || x.c.telefono || '',
+            contacto_id: x.c.id,
+          });
+        }}>
+        <option value="">
+          {!hayDonde ? '— escribe antes el CIF o la empresa —'
+            : error ? '— no se pudo consultar el CRM —'
+            : !datos ? '— buscando… —'
+            : personas.length ? '— elige a quién va la oferta —'
+            : '— esta empresa no tiene contactos en el CRM —'}
+        </option>
+        {personas.map((x) => (
+          <option key={x.vinc.id} value={String(x.c.id)}>{etiqueta(x)}</option>
+        ))}
+      </select>
 
-      {error && <p className="mt-1.5 text-[11.5px] font-bold text-red-300">{error}</p>}
-      {!datos && !error && <p className="mt-1.5 text-[11.5px] text-[#7FA7B4]">Buscando…</p>}
-
-      {datos && personas.length === 0 && (
-        <p className="mt-1.5 text-[11.5px] text-[#7FA7B4]">
-          {cif || empresa
-            ? 'No se encontró esta empresa en el CRM, o no tiene contactos asignados.'
-            : 'Escribe antes el CIF o el nombre de la empresa.'}
-        </p>
-      )}
-
-      {datos && personas.length > 0 && (
-        <ul className="mt-1.5 space-y-1">
-          {personas.map(({ vinc, c }) => {
-            const puesto = String(c.id) === String(actual);
-            return (
-              <li key={vinc.id}>
-                <button type="button" onClick={() => {
-                    const n = partirNombre(c);
-                    onElegir({
-                      nombre: n.nombre, apellidos: n.apellidos,
-                      cargo: vinc.cargo || c.cargo || '',
-                      email: c.email || '',
-                      // El móvil manda sobre el fijo: es el que sirve para avisar.
-                      telefono: c.movil || c.telefono || '',
-                      contacto_id: c.id,
-                    });
-                    setAbierto(false);
-                  }}
-                  className={`flex w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border px-2.5 py-1.5 text-left transition ${
-                    puesto ? 'border-brand-orange/60 bg-brand-orange/[0.07]' : 'border-[#1E5468] hover:border-brand-verde'}`}>
-                  <span className="text-[12.5px] font-bold text-[#EAF4F7]">
-                    {c.nombre} {c.apellidos || ''}
-                  </span>
-                  {vinc.principal && (
-                    <span className="chip bg-brand-orange/20 !px-1.5 !py-0 text-[9px] font-extrabold text-brand-orange">★</span>
-                  )}
-                  <span className="text-[11px] text-[#7FA7B4]">{ROL_LABEL[vinc.rol] || vinc.rol}</span>
-                  <span className="w-full truncate text-[11px] text-[#9FC0CB]">
-                    {c.email || <span className="font-bold text-red-300">sin correo</span>}
-                    {c.movil || c.telefono ? ` · ${c.movil || c.telefono}` : ''}
-                  </span>
-                  {puesto && <span className="text-[10.5px] font-bold text-brand-orange">es el que está puesto</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <p className="campo-nota">
+        {personas.length > 0
+          ? `${personas.length} contacto${personas.length === 1 ? '' : 's'} en el CRM. Rellena nombre, cargo, correo y teléfono.`
+          : datos && hayDonde
+            ? 'Asígnale contactos desde la ficha de la empresa.'
+            : 'Se buscan por CIF y, si no, por razón social.'}
+      </p>
     </div>
   );
 }

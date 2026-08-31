@@ -5,6 +5,7 @@ import { carteraDe, fmtEur, fmtFecha } from '../../lib/cartera.js';
 import AltaProyecto from './AltaProyecto.jsx';
 import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js';
 import { nombreVisible } from '../../lib/crm.js';
+import { pagoAdelantado } from '../../lib/calcEngine.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Cartera de la empresa · ofertas, contratos y proyectos
@@ -343,7 +344,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                   </span>
                   {o.estado && <span className={`chip !px-2 !py-0 text-[10px] ${COLOR_ESTADO_OFERTA[o.estado] || 'bg-white/5 text-[#9FC0CB]'}`}>{o.estado}</span>}
                   <span className="text-[11.5px] font-bold text-[#9FC0CB]">
-                    {fmtEur(o.precio)}{o.tipo === 'mes' ? '/mes' : ''}
+                    {o.pago_adelantado && o.tipo === 'mes'
+                      ? <>{fmtEur(pagoAdelantado(o.precio).total)}<span className="ml-1 text-[10px] text-brand-orange">único</span></>
+                      : <>{fmtEur(o.precio)}{o.tipo === 'mes' ? '/mes' : ''}</>}
                   </span>
                   {/* Acceso directo al documento emitido, sin pasar por el
                       listado de ofertas. */}
