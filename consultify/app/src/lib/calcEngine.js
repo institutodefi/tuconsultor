@@ -139,6 +139,35 @@ export const SUELO_POR_SISTEMA = 350;
 export const TOPE_DESCUENTO_VOLUMEN = 15;
 
 /**
+ * Pago anual por adelantado: se cobran 11 mensualidades y se prestan 12.
+ *
+ * No es un descuento sobre la cuota —la cuota mensual sigue siendo la misma— es
+ * un mes de servicio regalado a cambio de cobrar el año entero por anticipado.
+ * Se guarda así, y no como un «8,33 % de descuento», porque en la oferta hay que
+ * poder decir «once pagos, doce meses de servicio»: es lo que se entiende y lo
+ * que justifica el adelanto.
+ */
+export const MESES_COBRADOS_ADELANTADO = 11;
+export const MESES_SERVICIO_ADELANTADO = 12;
+
+/** Importe del año pagando por adelantado, y lo que se ahorra frente a pagar mes a mes. */
+export function pagoAdelantado(cuotaMensual) {
+  const cuota = Number(cuotaMensual) || 0;
+  const anual = Math.round(cuota * MESES_SERVICIO_ADELANTADO * 100) / 100;
+  const adelantado = Math.round(cuota * MESES_COBRADOS_ADELANTADO * 100) / 100;
+  return {
+    cuota,
+    mesesCobrados: MESES_COBRADOS_ADELANTADO,
+    mesesServicio: MESES_SERVICIO_ADELANTADO,
+    anual,                                   // lo que costaría mes a mes
+    total: adelantado,                       // lo que se paga de una vez
+    ahorro: Math.round((anual - adelantado) * 100) / 100,
+    // Equivalente porcentual, solo informativo: para comparar con otras ofertas.
+    pct: anual ? Math.round(((anual - adelantado) / anual) * 1000) / 10 : 0,
+  };
+}
+
+/**
  * Descuento por número de sistemas: 5 % con 2, 10 % con 3, 15 % con 4 o más.
  * El tope existe para que añadir sistemas no acabe regalando el servicio.
  */
@@ -560,6 +589,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
     desgloseSistemas,   // qué aporta cada sistema a la cuota
     volumen,            // subtotal, % de descuento por volumen e importe
     reglasActivas: usarReglas,   // si estaban aplicándose las reglas comerciales
+    // Pago anual por adelantado (11 × 12). Solo tiene sentido en cuotas: en una
+    // implantación no hay mensualidades que adelantar.
+    adelantado: m.tipo === 'mes' ? pagoAdelantado(precioCatalogo) : null,
+    pagoAdelantado: opts.pagoAdelantado === true && m.tipo === 'mes',
     plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
     tiene9001,
     horas: h,

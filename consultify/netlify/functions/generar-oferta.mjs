@@ -192,6 +192,9 @@ async function generarPPTX(r, cli, anexo) {
   if (r.fecha_inicio || r.fecha_certificacion) {
     datos.push(['Certificación prevista', fFecha(r.fecha_certificacion) || 'Por determinar']);
   }
+  if (r.pagoAdelantado && r.adelantado) {
+    datos.push(['Forma de pago', `Anual por adelantado · ${r.adelantado.mesesCobrados} × ${r.adelantado.mesesServicio}`]);
+  }
   datos.forEach(function (par, i) {
     const x = 0.6 + (i % 3) * 3.0, y = 2.6 + Math.floor(i / 3) * 0.95;
     s.addText(par[0].toUpperCase(), { x: x, y: y, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
@@ -211,7 +214,11 @@ async function generarPPTX(r, cli, anexo) {
   s.addText(esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO', { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
   s.addText(fmtEur(esImpl ? ((r.formasPago && r.formasPago.dos.sinIva) || r.precioCatalogo) : r.precioCatalogo),
     { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
-  s.addText('Impuestos indirectos no incluidos.',
+  // El pago adelantado, junto a la cuota: es la cifra que se factura de verdad.
+  s.addText(r.pagoAdelantado && r.adelantado
+    ? `Pago anual por adelantado: ${fmtEur(r.adelantado.total)} · ${r.adelantado.mesesCobrados} mensualidades, `
+      + `${r.adelantado.mesesServicio} meses de servicio · ahorro de ${fmtEur(r.adelantado.ahorro)}\nImpuestos indirectos no incluidos.`
+    : 'Impuestos indirectos no incluidos.',
     { x: 6.55, y: 2.0, w: 2.8, h: 0.5, fontFace: F, fontSize: 10, color: C.apagado });
 
   const ajustes = (r.ajustes || []).filter(function (a) { return a.efecto; });
@@ -500,6 +507,7 @@ export default async (req) => {
     ajustes: body.ajustes || [],
     preciosSistema: body.preciosSistema || body.precios_sistema || null,
     aplicarReglas: body.aplicar_reglas !== false,
+    pagoAdelantado: body.pago_adelantado === true,
   });
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
 

@@ -2191,3 +2191,64 @@ ninguno marcado, asciende al más antiguo.
 
 Aplicado en las cuatro vías por las que se puede llegar: vincular existente,
 crear nuevo, cambiar de rol y copiar a otro rol.
+
+---
+
+# v224 · Persona de contacto al reeditar y pago anual por adelantado
+
+## 1 · Traer la persona de contacto desde el CRM
+
+Nuevo `components/ImportarContacto.jsx` en la edición de ofertas del histórico.
+
+Los datos de la persona en una oferta antigua son los que se escribieron el día
+que se emitió. Si esa persona ya no está, o la oferta se redirige a otro
+interlocutor, había que teclear nombre, cargo, correo y teléfono a mano
+teniéndolos ya en el CRM.
+
+- La empresa se localiza por **CIF normalizado** y, si no lo hay, por razón
+  social: una oferta antigua puede tener el CIF con guiones o en minúsculas.
+- Los contactos salen ordenados con el **principal y los directivos primero**:
+  son los que reciben la oferta.
+- Se marca cuál es **el que ya está puesto**, para no cambiarlo sin querer.
+- Carga los datos **solo al desplegarlo**: son tres tablas y la edición se abre
+  muchas veces sin tocar el contacto.
+- Al elegir, el **móvil manda sobre el fijo**: es el que sirve para avisar.
+
+Se guarda `contacto_id`, así que a partir de ahora consta a quién se dirigió
+cada oferta.
+
+## 2 · Pago anual por adelantado · 11 × 12
+
+Casilla en la edición, solo visible en modelos de cuota: en una implantación no
+hay mensualidades que adelantar, y una restricción en la base lo impide también
+ahí.
+
+**No se modela como un descuento.** La cuota mensual no cambia: son once
+mensualidades cobradas por doce meses de servicio. Se guarda así porque en la
+oferta hay que poder decir «once pagos, doce meses», que es lo que se entiende y
+lo que justifica el adelanto. El equivalente porcentual (8,3 %) se calcula
+aparte, solo para comparar.
+
+### Qué cambia en los documentos
+
+**PDF** — el cuadro «Cuándo se factura» pasa de doce cuotas mensuales a **un
+solo cargo**: el calendario es lo que el cliente compara con su extracto
+bancario, y enseñar doce apuntes cuando hay uno es engañoso. Además, caja nueva
+bajo la cuota con el importe anual, las mensualidades y el ahorro.
+
+**PPTX** — la forma de pago en la ficha de datos y el importe anual junto a la
+cuota.
+
+La casilla enseña el cálculo en vivo mientras se marca: *«Un pago de 15.152,50 €
+en vez de 16.530,00 €: el cliente se ahorra 1.377,50 €»*.
+
+## Migración `v99`
+
+`pago_adelantado` y `contacto_id` en `presupuestos`, con constraint que impide
+marcar el adelanto en ofertas que no son de cuota.
+
+## Un solapamiento corregido sobre la marcha
+
+La caja del pago adelantado se dibujaba encima de la de la cuota: partía del
+cursor de texto en vez de del final de la caja anterior, y la sección no
+reservaba altura para ella. Corregido y verificado en el render.

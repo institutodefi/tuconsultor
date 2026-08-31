@@ -9,6 +9,7 @@ import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.j
 import ContratoDeOferta from './ContratoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import ImportarContacto from '../../components/ImportarContacto.jsx';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
 function fFecha(f) {
@@ -143,6 +144,7 @@ export default function Ofertas() {
           ajustes: r.ajustes || [],
           precios_sistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
           aplicar_reglas: r.aplicar_reglas !== false,
+          pago_adelantado: !!r.pago_adelantado,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),
@@ -252,6 +254,8 @@ export default function Ofertas() {
         fecha_primer_pago: e.fecha_primer_pago || e.fecha_inicio || null,
         fecha_fin: e.fecha_fin || (e.fecha_inicio ? finSugerido(e.fecha_inicio, finManual) : null),
         fecha_certificacion: e.fecha_certificacion || null,
+        contacto_id: e.contacto_id || null,
+        pago_adelantado: !!e.pago_adelantado,
         cliente_antiguo: !!e.cliente_antiguo,
         precios_sistema: e.cliente_antiguo && Object.keys(e.precios_sistema || {}).length
           ? e.precios_sistema : null,
@@ -280,6 +284,7 @@ export default function Ofertas() {
             fases_plan: e.fases_plan || null,
             ajustes: e.ajustes || [],
             precios_sistema: patch.precios_sistema,
+            pago_adelantado: patch.pago_adelantado,
             // Y el override cierra el asunto: manda el precio que se guardó.
             override: {
               precioCatalogo: precioFinal,
@@ -316,6 +321,7 @@ export default function Ofertas() {
           fecha_primer_pago: oferta.fecha_primer_pago || oferta.fecha_inicio || null,
           fecha_fin: oferta.fecha_fin || null,
           fecha_certificacion: oferta.fecha_certificacion || null,
+          pago_adelantado: !!oferta.pago_adelantado,
         }),
       });
       let j = null; try { j = await resp.json(); } catch { j = null; }
@@ -344,6 +350,7 @@ export default function Ofertas() {
         fasesPlan: edicion.fases_plan || undefined, ajustes: edicion.ajustes || [],
         preciosSistema: edicion.cliente_antiguo ? (edicion.precios_sistema || null) : null,
         aplicarReglas: edicion.aplicar_reglas !== false,
+        pagoAdelantado: !!edicion.pago_adelantado,
       });
     } catch { return null; }
   }, [edicion?.normas, edicion?.modelo, edicion?.meses, edicion?.complejidad, edicion?.sedes,
@@ -609,6 +616,11 @@ export default function Ofertas() {
             </div>
           </div>
 
+          <ImportarContacto
+            cif={edicion.cif} empresa={edicion.empresa} actual={edicion.contacto_id}
+            onElegir={(p) => setEdicion({ ...edicion, ...p })}
+          />
+
           {/* ── Tarifa pactada y reglas ──
               Lo mismo que ofrece el generador, disponible también al editar:
               una oferta de cliente antiguo se corrige aquí, y sin esto había
@@ -623,6 +635,24 @@ export default function Ofertas() {
                   <span className="block text-[11px] text-[#9FC0CB]">Desmárcalo para el precio de catálogo limpio.</span>
                 </span>
               </label>
+
+              {calcEdicion.tipo === 'mes' && (
+                <label className="mt-2.5 flex cursor-pointer items-start gap-2.5">
+                  <input type="checkbox" className="mt-0.5" checked={!!edicion.pago_adelantado}
+                    onChange={(ev) => setEdicion({ ...edicion, pago_adelantado: ev.target.checked })} />
+                  <span className="text-[12.5px] leading-snug">
+                    <span className="font-bold text-[#EAF4F7]">Pago anual por adelantado · 11 × 12</span>
+                    <span className="block text-[11px] text-[#9FC0CB]">
+                      Se cobran once mensualidades y se prestan doce.
+                      {calcEdicion.adelantado && (
+                        <> Un pago de <b className="text-[#EAF4F7]">{fmtEUR(calcEdicion.adelantado.total)}</b>{' '}
+                          en vez de {fmtEUR(calcEdicion.adelantado.anual)}: el cliente se ahorra{' '}
+                          <b className="text-brand-verdeTexto">{fmtEUR(calcEdicion.adelantado.ahorro)}</b>.</>
+                      )}
+                    </span>
+                  </span>
+                </label>
+              )}
 
               <label className="mt-2.5 flex cursor-pointer items-start gap-2.5">
                 <input type="checkbox" className="mt-0.5" checked={!!edicion.cliente_antiguo}

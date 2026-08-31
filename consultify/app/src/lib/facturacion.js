@@ -58,6 +58,8 @@ export const mesLargo = (k) => {
  */
 export function cuadroFacturacion({
   tipo = 'mes', importe = 0, firma, meses, formaPago, certificacion, iva = IVA_POR_DEFECTO,
+  // Pago anual por adelantado: se cobran once mensualidades y se prestan doce.
+  adelantado = false,
 } = {}) {
   const base = Number(importe) || 0;
   const inicio = aFecha(firma) || new Date();
@@ -74,7 +76,14 @@ export function cuadroFacturacion({
     total: r2(baseImp * factor),
   });
 
-  if (tipo === 'mes') {
+  if (tipo === 'mes' && adelantado) {
+    // Un solo cargo al inicio. El calendario no puede seguir enseñando doce
+    // cuotas mensuales cuando lo que se firma es un pago único: el cuadro de la
+    // oferta es lo que el cliente compara con su extracto bancario.
+    const n = Math.max(1, Number(meses) || 12);
+    const cobrados = Math.max(1, n - 1);   // once de doce, diez de once…
+    anotar(inicio, `Pago anual por adelantado · ${cobrados} mensualidades`, base * cobrados);
+  } else if (tipo === 'mes') {
     // Cuota recurrente. Doce meses si no se dice otra cosa: es la permanencia
     // mínima del modelo, así que es lo que se puede prever con fundamento.
     const n = Math.max(1, Number(meses) || 12);

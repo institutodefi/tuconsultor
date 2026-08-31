@@ -324,7 +324,9 @@ export async function generarPDFOferta(r, cli, anexo) {
   }
 
   // ── 4 · Inversión ──
-  seccion('Inversión', esImpl ? 22 : 17);   // rótulo + caja de importe
+  // El pago adelantado añade una caja debajo: hay que reservarle sitio o se
+  // dibuja encima de la de la cuota.
+  seccion('Inversión', (esImpl ? 22 : 17) + (r.pagoAdelantado && r.adelantado ? 9 : 0));
   asegurar(14);
   const alturaCaja = esImpl ? U * 16 : U * 11;
   p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: ANCHO, height: alturaCaja, color: SUAVE });
@@ -339,6 +341,27 @@ export async function generarPDFOferta(r, cli, anexo) {
   yc -= U * 2.6;
   p.drawText('Impuestos indirectos no incluidos.',
     { x: MG + U * 3, y: yc, size: 9.5, font: reg, color: APAGADO });
+
+  // Pago anual por adelantado: la cifra que de verdad se factura, junto a la
+  // cuota. Enseñar solo la mensual cuando se cobra el año entero de una vez
+  // deja al cliente sin el número que va a ver en su banco.
+  if (r.pagoAdelantado && r.adelantado) {
+    // Se arranca por debajo de la caja de la cuota, con un margen: la línea de
+    // «impuestos indirectos» todavía ocupa espacio bajo el cursor.
+    const alto = U * 4;
+    const top = (cursor - alturaCaja + U * 2) - U * 1.2;
+    p.drawRectangle({ x: MG, y: top - alto, width: ANCHO, height: alto, color: rgb(0.965, 0.976, 0.984) });
+    p.drawRectangle({ x: MG, y: top - alto, width: U * 0.35, height: alto, color: NARANJA });
+    p.drawText('PAGO ANUAL POR ADELANTADO', { x: MG + U * 1.4, y: top - U * 1.3, size: 7.5,
+      font: med, color: APAGADO, characterSpacing: 1.1 });
+    const cifra = eur(r.adelantado.total);
+    p.drawText(cifra, { x: MG + U * 1.4, y: top - U * 3, size: 15, font: bold, color: TINTA });
+    p.drawText(`${r.adelantado.mesesCobrados} mensualidades · ${r.adelantado.mesesServicio} meses de servicio`
+      + `  ·  ahorro de ${eur(r.adelantado.ahorro)}`,
+      { x: MG + U * 1.4 + bold.widthOfTextAtSize(cifra, 15) + U, y: top - U * 2.65,
+        size: 8.5, font: reg, color: APAGADO });
+    cursor = top - alto - U * 0.8;
+  }
   cursor = cursor - alturaCaja - U;
 
   // ── Ajustes de esta oferta ──
@@ -422,6 +445,9 @@ export async function generarPDFOferta(r, cli, anexo) {
 
     const cuadro = cuadroFacturacion({
       tipo: r.tipo, importe: r.precioCatalogo,
+      // Con pago adelantado el calendario es UN cargo, no doce cuotas: el
+      // cuadro es lo que el cliente compara con su extracto bancario.
+      adelantado: !!r.pagoAdelantado,
       // Arranca en la fecha del primer pago, que por defecto es el mes de
       // inicio del proyecto pero puede diferir (anticipo, o arranque a mitad
       // de mes que se factura al siguiente).
@@ -434,9 +460,12 @@ export async function generarPDFOferta(r, cli, anexo) {
       // solo con `asegurar`. Pedir las doce de golpe forzaría un salto de página
       // aunque cupieran ocho.
       seccion('Cuándo se factura', Math.min(cuadro.filas.length, 8) * 2 + 12);
-      parrafo(r.tipo === 'mes'
-        ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} ${cuadro.filas.length === 1 ? 'cargo' : 'cargos'} durante la vigencia del contrato.`
-        : 'Calendario de facturación previsto desde la firma.');
+      parrafo(r.pagoAdelantado && r.adelantado
+        ? `Pago anual por adelantado: se abonan ${r.adelantado.mesesCobrados} mensualidades y se prestan `
+          + `${r.adelantado.mesesServicio} meses de servicio.`
+        : r.tipo === 'mes'
+          ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} ${cuadro.filas.length === 1 ? 'cargo' : 'cargos'} durante la vigencia del contrato.`
+          : 'Calendario de facturación previsto desde la firma.');
 
       // Cabecera
       asegurar(4);
