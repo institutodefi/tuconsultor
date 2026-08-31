@@ -2562,3 +2562,59 @@ formato que el PDF.
 
 Generado el PDF con los datos reales de la oferta OFE-2026-S8LXA: nombre, cargo
 y correo aparecen los tres.
+
+---
+
+# v231 · Ver como otro perfil, y aceptar una oferta por indicación del cliente
+
+## 1 · «Ver como» disponible para Administración
+
+Antes solo lo tenía Superadministración. Administración es quien resuelve las
+dudas del equipo, y para responder a «a mí no me sale ese botón» hay que poder
+mirar lo que ve esa persona.
+
+**Con un límite: nadie puede verse como un rol superior al suyo.** La lista de
+vistas se calcula desde la jerarquía, así que Administración ve como director,
+consultor, gestión o cliente, pero **nunca como superadministrador**.
+
+No es cosmético: hay muchas comprobaciones que usan el rol efectivo, y si
+Administración pudiera ponerse en vista de superadministrador, esas
+comprobaciones la tratarían como tal. La suplantación sirve para bajar de nivel
+y comprobar qué se ve, nunca para subir.
+
+`realRole` sigue mandando en la seguridad: la suplantación es visual.
+
+La barra ya no ofrece botones que no funcionan —antes listaba `superadmin` para
+todos— y muestra «Tu vista · Administración» en lugar de dar por hecho que quien
+mira es superadministrador.
+
+## 2 · Aceptar la oferta desde el histórico
+
+El cliente casi nunca acepta pulsando un botón: lo dice por teléfono, por correo
+o en una reunión. Sin una acción para registrarlo, **una oferta aceptada de
+verdad se quedaba en «emitida» para siempre**, y sin ese estado no se podía
+generar el contrato ni, por tanto, abrir el proyecto. El flujo estaba cortado en
+el primer paso.
+
+Botón **«✓ El cliente la acepta»** en cada oferta del histórico. Pide
+confirmación explícita —*«queda registrado que la das por aceptada tú, con la
+fecha de hoy»*— porque es una afirmación sobre la voluntad de un tercero.
+
+Una vez aceptada aparece el distintivo con la fecha, el botón de generar
+contrato, y un **«deshacer»** discreto para el caso de haberla marcado por error.
+
+Las ofertas rechazadas, anuladas o caducadas no ofrecen aceptar: si el cliente
+cambió de opinión, lo limpio es emitir una nueva.
+
+Con el contrato generado, el alta del proyecto ya funcionaba: cuelga de él, como
+debe ser.
+
+## Migración `v101`
+
+`aceptada_en` y `aceptada_por` en `presupuestos`. Si mañana hay discrepancia
+sobre si el cliente aceptó, «lo pone en el sistema» no es respuesta si no se sabe
+quién lo puso.
+
+En el relleno de lo ya aceptado se usa la fecha de última modificación —no se
+sabe la real— y `aceptada_por` se deja **vacío**: atribuir a alguien una acción
+que quizá no hizo es peor que no saberlo.

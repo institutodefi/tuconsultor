@@ -1,12 +1,15 @@
 import { useAuth } from '../lib/auth.jsx';
 import { ROL_LABEL } from '../lib/permisos.js';
 
-// Roles que el superadmin puede previsualizar
-const VISTAS = ['superadmin', 'admin', 'consultor', 'gestion', 'cliente'];
-
 export default function BarraVerComo() {
-  const { esSuper, viewAs, role, verComo, resetVista } = useAuth();
-  if (!esSuper) return null;
+  const { realRole, viewAs, role, verComo, resetVista, puedeVerComo, vistasPermitidas } = useAuth();
+  if (!puedeVerComo) return null;
+
+  // El propio rol primero —para volver— y debajo los que puede previsualizar.
+  // La lista sale de `auth`, que solo deja bajar de nivel: ofrecer aquí un
+  // botón de «superadministrador» a Administración sería enseñar una puerta
+  // que no abre.
+  const VISTAS = [realRole, ...vistasPermitidas.slice().reverse()];
 
   const simulando = Boolean(viewAs);
 
@@ -15,7 +18,7 @@ export default function BarraVerComo() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
         <span className="flex items-center gap-2 font-bold">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          {simulando ? `Viendo como: ${ROL_LABEL[viewAs]}` : 'Vista de superadministrador'}
+          {simulando ? `Viendo como: ${ROL_LABEL[viewAs]}` : `Tu vista · ${ROL_LABEL[realRole]}`}
         </span>
 
         <div className="flex flex-wrap items-center gap-1.5">

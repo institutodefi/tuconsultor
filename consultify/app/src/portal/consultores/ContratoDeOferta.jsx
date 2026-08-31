@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { codigoProyecto } from '../../lib/codigos.js';
+import { updateRow } from '../../lib/data.js';
+import { useAuth } from '../../lib/auth.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEL CONTRATO AL PROYECTO
@@ -18,6 +20,8 @@ const PRODUCTOS = [
 ];
 
 export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
+  // `user` para dejar constancia de quién da la oferta por aceptada.
+  const { user } = useAuth();
   const [abierto, setAbierto] = useState(false);
   const [previa, setPrevia] = useState(false);
   const [productos, setProductos] = useState(['mstool']);
@@ -118,15 +122,74 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
     } finally { setOcupado(false); }
   }
 
-  // Oferta aceptada sin contrato todavía
+  // ── Aceptar la oferta por indicación del cliente ──
+  // El cliente casi nunca acepta pulsando un botón: lo dice por teléfono, por
+  // correo o en una reunión. Sin esta acción, una oferta aceptada de verdad se
+  // quedaba en «emitida» para siempre y no había forma de generar su contrato
+  // ni de abrir el proyecto. Se registra QUIÉN y CUÁNDO la dio por aceptada,
+  // porque es una afirmación sobre la voluntad de un tercero.
+  async function aceptar() {
+    if (!window.confirm(
+      `¿Confirmas que ${oferta.empresa} ha aceptado la oferta ${oferta.numero_oferta || ''}?\n\n`
+      + 'Queda registrado que la das por aceptada tú, con la fecha de hoy.')) return;
+    setOcupado(true); setMsg(null);
+    try {
+      await updateRow('presupuestos', oferta.id, {
+        estado: 'aceptada',
+        aceptada_en: new Date().toISOString(),
+        aceptada_por: user?.id || null,
+      });
+      setMsg({ err: false, t: 'Oferta marcada como aceptada. Ya puedes generar el contrato.' });
+      onCambio && onCambio();
+    } catch (e) {
+      setMsg({ err: true, t: `No se pudo marcar como aceptada: ${e?.message || e}` });
+    } finally { setOcupado(false); }
+  }
+
+  async function revertirAceptacion() {
+    if (!window.confirm('¿Devolver la oferta a «emitida»? Solo si se marcó por error.')) return;
+    setOcupado(true);
+    try {
+      await updateRow('presupuestos', oferta.id,
+        { estado: 'emitida', aceptada_en: null, aceptada_por: null });
+      onCambio && onCambio();
+    } catch (e) {
+      setMsg({ err: true, t: `${e?.message || e}` });
+    } finally { setOcupado(false); }
+  }
+
   if (!contrato) {
-    if ((oferta.estado || 'emitida') !== 'aceptada') return null;
+    const estado = oferta.estado || 'emitida';
+
+    // Una oferta rechazada o anulada no se acepta desde aquí: si el cliente
+    // cambió de opinión, lo limpio es emitir una nueva.
+    if (['rechazada', 'anulada', 'caducada'].includes(estado)) return null;
+
+    if (estado !== 'aceptada') {
+      return (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button onClick={aceptar} disabled={ocupado}
+            className="rounded-full border border-emerald-400/50 px-3 py-1 text-[11.5px] font-bold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-50"
+            title="El cliente la ha aceptado (por teléfono, correo o reunión)">
+            {ocupado ? 'Guardando…' : '✓ El cliente la acepta'}
+          </button>
+          {msg && <span className={`text-[11.5px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</span>}
+        </div>
+      );
+    }
+
     return (
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span className="chip !px-2 !py-0.5 bg-emerald-500/15 text-[10.5px] font-extrabold text-emerald-300">
+          Aceptada{oferta.aceptada_en ? ` · ${new Date(oferta.aceptada_en).toLocaleDateString('es-ES')}` : ''}
+        </span>
         <button onClick={generarContrato} disabled={ocupado}
           className="btn-orange !px-3 !py-1 text-[11.5px] disabled:opacity-50">
           {ocupado ? 'Generando…' : 'Generar contrato'}
         </button>
+        <button onClick={revertirAceptacion} disabled={ocupado}
+          className="text-[11px] font-bold text-[#7FA7B4] hover:text-red-300"
+          title="Deshacer: la oferta vuelve a «emitida»">deshacer</button>
         {msg && <span className={`text-[11.5px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</span>}
       </div>
     );

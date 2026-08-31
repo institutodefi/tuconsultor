@@ -135,9 +135,29 @@ export function AuthProvider({ children }) {
     setUser(null); setRealRole(null); setViewAs(null);
   }
 
-  // Solo el superadmin puede "ver como" otro rol
   const esSuper = realRole === 'superadmin';
-  function verComo(rol) { if (esSuper) setViewAs(rol === 'superadmin' ? null : rol); }
+
+  // ── «Ver como» otro perfil ──
+  // Administración también puede, desde la v231: es quien resuelve las dudas
+  // del equipo, y para responder «a mí no me sale ese botón» hay que poder
+  // mirar lo que ve esa persona.
+  //
+  // Con un límite: nadie puede verse como un rol SUPERIOR al suyo. Si
+  // Administración pudiera ponerse en vista de superadministrador, las
+  // comprobaciones que usan `role` —y hay muchas— la tratarían como tal. La
+  // suplantación es para bajar de nivel y comprobar, nunca para subir.
+  const JERARQUIA = ['cliente', 'gestion', 'consultor', 'director', 'admin', 'superadmin'];
+  const puedeVerComo = ['superadmin', 'admin'].includes(realRole);
+  const vistasPermitidas = puedeVerComo
+    ? JERARQUIA.slice(0, JERARQUIA.indexOf(realRole))   // solo por debajo
+    : [];
+
+  function verComo(rol) {
+    if (!puedeVerComo) return;
+    if (rol === realRole) { setViewAs(null); return; }   // volver a lo mío
+    if (!vistasPermitidas.includes(rol)) return;         // nunca hacia arriba
+    setViewAs(rol);
+  }
   function resetVista() { setViewAs(null); }
 
   // Llama a la Netlify Function de administración de accesos con el token del usuario.
@@ -165,11 +185,13 @@ export function AuthProvider({ children }) {
   }
 
   // Rol EFECTIVO que usa toda la UI
-  const role = (esSuper && viewAs) ? viewAs : realRole;
+  // Rol EFECTIVO que usa toda la UI. `realRole` sigue mandando en las
+  // comprobaciones de seguridad: la suplantación es visual.
+  const role = (puedeVerComo && viewAs) ? viewAs : realRole;
 
   return (
     <AuthCtx.Provider value={{
-      user, role, realRole, viewAs, esSuper,
+      user, role, realRole, viewAs, esSuper, puedeVerComo, vistasPermitidas,
       login, register, logout, verComo, resetVista,
       establecerPassword,
       perfil, actualizarMiPerfil, enviarResetPropio,

@@ -34,3 +34,16 @@ console.log('\n── El menú de admin no queda vacío ni duplicado ──');
 const g = gruposParaRol('admin');
 console.log(' grupos:', g.length, '· items:', g.reduce((n, x) => n + x.items.length, 0),
   ok(g.length > 0 && g.every(x => x.items.length > 0)));
+
+console.log('\n── «Ver como»: nunca hacia arriba ──');
+{
+  const JER = ['cliente', 'gestion', 'consultor', 'director', 'admin', 'superadmin'];
+  const vistasDe = (r) => ['superadmin', 'admin'].includes(r) ? JER.slice(0, JER.indexOf(r)) : [];
+  const s = vistasDe('superadmin'), a = vistasDe('admin');
+  console.log(' superadmin ve como:', s.join(', '));
+  console.log(' admin ve como     :', a.join(', '));
+  console.log(' admin NO puede verse como superadmin', ok(!a.includes('superadmin')));
+  console.log(' admin NO puede verse como admin (es el suyo)', ok(!a.includes('admin')));
+  console.log(' director no puede suplantar', ok(vistasDe('director').length === 0));
+  console.log(' consultor no puede suplantar', ok(vistasDe('consultor').length === 0));
+}
