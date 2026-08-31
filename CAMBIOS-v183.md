@@ -2466,3 +2466,99 @@ pago único · 11×12
 Enseñar solo la cuota mensual obligaba a abrir la oferta para saber cuánto se
 factura de verdad. La cuota se conserva debajo, en pequeño, porque sigue siendo
 la referencia para comparar.
+
+---
+
+# v229 · Administración con todos los permisos salvo los de Superadministración
+
+## Qué le faltaba
+
+Tres cosas, y las dos primeras eran un estorbo diario:
+
+- **No veía los importes.** `verEconomico` era solo de `superadmin`: gestionaba
+  ofertas y proyectos sin poder leer su precio.
+- **No entraba en Accesos ni en Control de accesos**, así que cualquier alta de
+  usuario dependía de una sola persona.
+
+Ahora Administración ve **las 25 pestañas**, las mismas que Superadministración,
+y tiene importes, equipo, accesos y auditoría.
+
+## Qué se reserva a Superadministración, y por qué
+
+Solo lo que permitiría **saltarse la propia jerarquía**:
+
+- Otorgar el rol `superadmin`
+- Modificar, desactivar o eliminar a quien ya lo tiene
+- «Ver como» otro rol
+
+Si Administración pudiera nombrar superadministradores, el nivel dejaría de
+existir: bastaría con ascenderse. Y si pudiera desactivar al superadmin
+existente, se quedaría sola al mando. La separación tiene que estar en esas
+acciones concretas, no en esconder pantallas de trabajo.
+
+## La barrera está en el servidor, no en el navegador
+
+`admin-usuarios.mjs` aceptaba **solo** `superadmin`. Abrir la pantalla sin tocar
+esto habría dado un formulario que falla al guardar.
+
+Ahora acepta a los dos, con un guardián `puedeTocarA()` que se aplica a las
+cuatro acciones que actúan sobre un usuario: **editar perfil, restablecer
+contraseña, desactivar y eliminar**. Comprobar solo `set_role` habría dejado tres
+puertas abiertas —bastaba con eliminar al superadmin para quedarse al mando— y
+hacerlo únicamente en la interfaz sería decorativo: esta función se puede llamar
+con `curl`.
+
+En la pantalla, un superadministrador aparece con su rol como etiqueta fija en
+lugar de desplegable cuando quien mira no puede cambiarlo, y el selector de rol
+solo ofrece lo que esa persona puede asignar.
+
+## Verificación
+
+`scripts/test-permisos.mjs`: que admin tenga exactamente las mismas pestañas que
+superadmin, las cuatro capacidades compartidas, las dos reservadas, que admin no
+pueda asignar `superadmin`, que ningún otro rol gane nada, y que el menú
+resultante no quede vacío.
+
+---
+
+# v230 · Los datos del contacto llegan al documento regenerado
+
+## Tres eslabones rotos
+
+Elegir la persona en el desplegable guardaba bien en el CRM, pero el documento
+seguía saliendo incompleto. Faltaban tres cosas encadenadas:
+
+**1 · El POST no enviaba el cargo.** «Guardar y regenerar» mandaba empresa,
+contacto, CIF, correo y teléfono, pero no `cargo`. Los otros dos caminos —«↻
+Regenerar» y la edición rápida de normas— sí lo hacían: se quedó fuera solo en
+el que más se usa.
+
+**2 · El backend no pasaba el teléfono.** Lo guardaba en el CRM y lo usaba para
+el correo de aviso, pero no lo metía en el objeto `cli` que reciben los
+documentos.
+
+**3 · El PDF recibía el cargo y no lo imprimía.** La ficha ponía solo
+`cli.contacto`. La oferta iba dirigida a un nombre sin decir qué papel ocupa esa
+persona en la empresa.
+
+Ahora la ficha del PDF muestra:
+
+```
+PERSONA DE CONTACTO    Consoli Sánchez · Directora
+CORREO DE CONTACTO     c.sanchez@adf-formacion.es
+```
+
+El correo como línea propia, porque es el dato que se comprueba antes de enviar
+la oferta.
+
+## El PowerPoint no mostraba la persona de contacto
+
+Ni con cargo ni sin él: la ficha de datos de la slide llevaba cliente, CIF,
+modelo y dedicación, pero no a quién va dirigida. Es lo primero que mira quien
+recibe la presentación —si va a su nombre o al de otro—. Añadida con el mismo
+formato que el PDF.
+
+## Verificado
+
+Generado el PDF con los datos reales de la oferta OFE-2026-S8LXA: nombre, cargo
+y correo aparecen los tres.

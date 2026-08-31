@@ -174,6 +174,11 @@ async function generarPPTX(r, cli, anexo) {
   s.addText(prop.texto, { x: 0.6, y: 1.6, w: 8.8, h: 0.8, fontFace: F, fontSize: 12, color: C.tinta, lineSpacingMultiple: 1.3 });
   const datos = [
     ['Cliente', cli?.empresa || '—'], ['CIF', cli?.cif || '—'],
+    // La persona a la que va dirigida faltaba en el PPT, aunque sí estaba en el
+    // PDF. Es lo primero que mira quien recibe la presentación: si va a su
+    // nombre o al de otro.
+    ['Persona de contacto',
+     [cli?.contacto || cli?.email || '—', cli?.cargo].filter(Boolean).join(' · ')],
     ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ' · ' + r.meses + ' meses' : '')],
     ['Dedicación estimada', r.hTotal + ' h'],
   ];
@@ -613,7 +618,8 @@ export default async (req) => {
   }
   if (!numeroOferta) numeroOferta = `OFE-${new Date().getFullYear()}-${Date.now().toString(36).slice(-5).toUpperCase()}`;
 
-  const cli = { empresa, cif, contacto, cargo, ref: numeroOferta, comercial, direccion, email };
+  const cli = { empresa, cif, contacto, cargo, ref: numeroOferta, comercial, direccion, email,
+    telefono: body.telefono || null };
 
   // ── Alta automática de empresa y contacto ──────────────────────────────────
   // Si quien pide la oferta no está en el CRM, se da de alta con el CIF como

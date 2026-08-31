@@ -1,5 +1,11 @@
 // netlify/functions/admin-usuarios.mjs
-// Panel de administración de accesos (SOLO superadmin).
+// Panel de administración de accesos.
+//
+// Entran superadmin Y admin. Lo que separa a uno de otro NO es el acceso a esta
+// función, sino qué puede hacer dentro: Administración no puede otorgar el rol
+// `superadmin` ni tocar la ficha de quien ya lo tiene. Si pudiera, el nivel
+// dejaría de existir —bastaría con ascenderse— y la comprobación del navegador
+// no sirve de nada: cualquiera puede llamar a esta función directamente.
 // Toda operación privilegiada se hace aquí con la service_role key, nunca en el navegador.
 //
 // Seguridad: el front envía el access_token del usuario logueado en Authorization.
@@ -43,7 +49,8 @@ async function sb(path, { method = 'GET', key, token, body, prefer } = {}) {
   return r;
 }
 
-// Verifica el token del llamante y devuelve su perfil, o null si no es superadmin activo.
+// Verifica el token del llamante y devuelve su perfil, o null si no está
+// autorizado. Autorizados: superadmin y admin, ambos activos.
 async function autorizarSuperadmin(token) {
   if (!token) return null;
   const SUPA_URL = process.env.SUPABASE_URL;
@@ -61,8 +68,26 @@ async function autorizarSuperadmin(token) {
   });
   const arr = await rp.json();
   const perfil = Array.isArray(arr) ? arr[0] : null;
-  if (!perfil || perfil.rol !== 'superadmin' || perfil.activo !== true) return null;
+  if (!perfil || !['superadmin', 'admin'].includes(perfil.rol) || perfil.activo !== true) return null;
   return { id: u.id, ...perfil };
+}
+
+/**
+ * ¿Puede `caller` tocar al usuario `id`?
+ *
+ * Administración puede con todo el mundo MENOS con un superadministrador. Sin
+ * esto, bastaría con desactivar o eliminar al superadmin para quedarse al mando:
+ * comprobar solo el `set_role` dejaba tres puertas abiertas —desactivar,
+ * eliminar y editar perfil—.
+ */
+async function puedeTocarA(caller, id) {
+  if (caller.rol === 'superadmin') return { ok: true };
+  const rv = await sb(`/rest/v1/perfiles?id=eq.${id}&select=rol`);
+  const destino = rv.ok ? (await rv.json())?.[0] : null;
+  if (destino?.rol === 'superadmin') {
+    return { ok: false, error: 'Solo Superadministración puede actuar sobre un superadministrador.' };
+  }
+  return { ok: true };
 }
 
 export default async (req) => {
@@ -98,6 +123,9 @@ export default async (req) => {
       const { email, nombre = '', apellidos = '', rol = 'consultor', nivel = null, normas = [], capacidad_clientes = 12 } = body;
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'Email no válido' }, 400);
       if (!ROLES_VALIDOS.includes(rol)) return json({ ok: false, error: 'Rol no válido' }, 400);
+      if (rol === 'superadmin' && caller.rol !== 'superadmin') {
+        return json({ ok: false, error: 'Solo Superadministración puede invitar con ese rol.' }, 403);
+      }
       if (nivel && !NIVELES.includes(nivel)) return json({ ok: false, error: 'Nivel no válido' }, 400);
       if (!dominioOk(email, rol)) return json({ ok: false, error: `Para el perfil «${rol === 'director' ? 'Director de Proyecto' : 'Consultor'}» el email debe ser @tuconsultor.com o @consultify.pro.` }, 400);
 
@@ -127,6 +155,7 @@ export default async (req) => {
     if (action === 'update_perfil') {
       const { id, nombre, apellidos, nivel, normas, capacidad_clientes } = body;
       if (!id) return json({ ok: false, error: 'Falta id' }, 400);
+      { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
       if (nivel && !NIVELES.includes(nivel)) return json({ ok: false, error: 'Nivel no válido' }, 400);
       const campos = {};
       if (nombre !== undefined) campos.nombre = nombre;
@@ -143,6 +172,21 @@ export default async (req) => {
       const { id, rol } = body;
       if (!id || !ROLES_VALIDOS.includes(rol)) return json({ ok: false, error: 'Datos no válidos' }, 400);
       if (id === caller.id && rol !== 'superadmin') return json({ ok: false, error: 'No puedes quitarte a ti mismo el superadmin.' }, 400);
+
+      // ── La barrera de verdad, aquí y no en el navegador ──
+      // Administración no puede otorgar `superadmin` ni degradar a quien lo
+      // tiene. Comprobarlo solo en la interfaz sería decorativo: esta función
+      // se puede llamar con curl.
+      if (caller.rol !== 'superadmin') {
+        if (rol === 'superadmin') {
+          return json({ ok: false, error: 'Solo Superadministración puede otorgar ese rol.' }, 403);
+        }
+        const rv = await sb(`/rest/v1/perfiles?id=eq.${id}&select=rol`);
+        const destino = rv.ok ? (await rv.json())?.[0] : null;
+        if (destino?.rol === 'superadmin') {
+          return json({ ok: false, error: 'Solo Superadministración puede modificar a un superadministrador.' }, 403);
+        }
+      }
       const r = await sb(`/rest/v1/perfiles?id=eq.${id}`, { method: 'PATCH', prefer: 'return=minimal', body: { rol } });
       if (!r.ok) return json({ ok: false, error: 'No se pudo actualizar el rol' }, 502);
       return json({ ok: true });
@@ -173,6 +217,8 @@ export default async (req) => {
     if (action === 'set_active') {
       const { id, activo } = body;
       if (!id || typeof activo !== 'boolean') return json({ ok: false, error: 'Datos no válidos' }, 400);
+      { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
+      { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
       if (id === caller.id && !activo) return json({ ok: false, error: 'No puedes desactivarte a ti mismo.' }, 400);
       // 1) ban/unban en auth para impedir/permitir el login
       const rb = await sb(`/auth/v1/admin/users/${id}`, {
@@ -189,6 +235,7 @@ export default async (req) => {
     if (action === 'delete') {
       const { id } = body;
       if (!id) return json({ ok: false, error: 'Falta id' }, 400);
+      { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
       if (id === caller.id) return json({ ok: false, error: 'No puedes eliminarte a ti mismo.' }, 400);
       const r = await sb(`/auth/v1/admin/users/${id}`, { method: 'DELETE' });
       if (!r.ok) return json({ ok: false, error: 'No se pudo eliminar' }, 502);

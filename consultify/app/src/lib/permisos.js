@@ -76,9 +76,9 @@ export const GRUPOS_PORTAL = [
       { to: 'equipo', label: 'Equipo', icon: 'user-cog', roles: ['superadmin', 'admin'] },
       { to: 'procesos-internos', label: 'Procesos internos', icon: 'repeat', roles: ['superadmin', 'admin', 'director', 'consultor'] },
       { to: 'versiones', label: 'Backlog de versiones', icon: 'git-branch', roles: ['superadmin', 'admin', 'director'] },
-      { to: 'registro', label: 'Control de accesos', icon: 'shield-alert', roles: ['superadmin'] },
+      { to: 'registro', label: 'Control de accesos', icon: 'shield-alert', roles: ['superadmin', 'admin'] },
       { to: 'accesibilidad', label: 'Accesibilidad AAA', icon: 'accessibility', roles: ['superadmin', 'admin', 'director'] },
-      { to: 'accesos', label: 'Accesos', icon: 'key', roles: ['superadmin'] },
+      { to: 'accesos', label: 'Accesos', icon: 'key', roles: ['superadmin', 'admin'] },
     ],
   },
 ];
@@ -96,14 +96,50 @@ export const ROL_CLIENTE_LABEL = {
   usuario_cliente: 'Persona usuaria del cliente',
 };
 
+// ════════════════════════════════════════════════════════════════
+// QUÉ SEPARA A «ADMINISTRACIÓN» DE «SUPERADMINISTRACIÓN»
+//
+// Administración tiene TODO: importes, equipo, accesos y control de accesos.
+// Antes no veía los importes —gestionaba ofertas sin poder leer su precio— ni
+// entraba en Accesos, así que cualquier alta de usuario dependía de una sola
+// persona.
+//
+// Lo único reservado al superadministrador es lo que permitiría **saltarse la
+// propia jerarquía**:
+//   · asignar o retirar el rol `superadmin`
+//   · modificar la ficha de un superadministrador
+//   · «ver como» otro rol
+//
+// Si Administración pudiera nombrar superadministradores, el nivel dejaría de
+// existir: bastaría con ascenderse. La separación tiene que estar en esas tres
+// acciones, no en esconder pantallas de trabajo.
+// ════════════════════════════════════════════════════════════════
+
 export const can = {
-  // Ver importes, márgenes, MRR, calculadora → SOLO superadmin
-  verEconomico: (rol) => rol === 'superadmin',
-  // Gestionar el equipo (alta/baja consultores y gestión)
+  // Importes, márgenes, MRR y calculadora. Administración los necesita: es
+  // quien factura y quien revisa las ofertas.
+  verEconomico: (rol) => rol === 'superadmin' || rol === 'admin',
+  // Alta y baja de consultores y equipo de gestión
   gestionarEquipo: (rol) => rol === 'superadmin' || rol === 'admin',
+  // Gestionar accesos: quién entra y con qué rol
+  gestionarAccesos: (rol) => rol === 'superadmin' || rol === 'admin',
+  // Auditoría de accesos
+  verRegistroAccesos: (rol) => rol === 'superadmin' || rol === 'admin',
+  // ── Exclusivo de superadministración ──
+  // Otorgar el rol superadmin, o tocar a quien ya lo tiene.
+  gestionarSuperadmins: (rol) => rol === 'superadmin',
+  // Suplantar otro rol para comprobar qué ve
+  verComoOtroRol: (rol) => rol === 'superadmin',
   // Entrar a la zona interna
   esEquipo: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
 };
+
+/** Roles que un usuario puede ASIGNAR a otros. */
+export const rolesAsignablesPor = (rol) => rol === 'superadmin'
+  ? ['superadmin', 'admin', 'director', 'consultor', 'gestion']
+  : rol === 'admin'
+    ? ['admin', 'director', 'consultor', 'gestion']   // sin superadmin
+    : [];
 
 export const tabsParaRol = (rol) => TABS_PORTAL.filter((t) => t.roles.includes(rol));
 

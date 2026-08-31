@@ -273,6 +273,10 @@ export default function Ofertas() {
           body: JSON.stringify({
             normas: e.normas, modelo: e.modelo, meses: e.meses,
             empresa: patch.empresa, contacto: patch.nombre || '', cif: e.cif || '',
+            // El CARGO faltaba: el PDF lo imprime junto al nombre («Consoli
+            // Sánchez · Directora») y al regenerar salía solo el nombre, aunque
+            // el cargo estuviera guardado en el CRM.
+            cargo: patch.cargo || '',
             ref: e.numero_oferta || '', email: patch.email || '', telefono: patch.telefono || '',
             complejidad: e.complejidad, sedes: e.sedes, presupuesto_id: e.id,
             fecha_emision: patch.fecha_emision, fecha_inicio: patch.fecha_inicio,

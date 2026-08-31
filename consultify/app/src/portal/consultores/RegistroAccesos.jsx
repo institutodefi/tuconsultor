@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { ACCION_LABEL, ACCION_TONO } from '../../lib/registro.js';
+import { can } from '../../lib/permisos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
-// CONTROL DE ACCESOS · solo superadministración
+// CONTROL DE ACCESOS · Superadministración y Administración
 // Quién entra, cuándo y qué toca. La política de la base de datos ya impide que
 // nadie más lo lea, y nadie —tampoco aquí— puede editarlo ni borrarlo: un
 // registro que se puede alterar no prueba nada.
@@ -63,8 +64,8 @@ export default function RegistroAccesos() {
     a.click(); URL.revokeObjectURL(url);
   }
 
-  if (role !== 'superadmin') {
-    return <div className="card text-sm font-medium text-[#9FC0CB]">Esta sección es solo para superadministración.</div>;
+  if (!can.verRegistroAccesos(role)) {
+    return <div className="card text-sm font-medium text-[#9FC0CB]">Esta sección es solo para Administración y Superadministración.</div>;
   }
 
   const fmt = (t) => new Date(t).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -76,7 +77,7 @@ export default function RegistroAccesos() {
           <p className="eyebrow">Organización</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">Control de accesos</h1>
           <p className="mt-1 max-w-2xl text-sm font-medium text-[#9FC0CB]">
-            Quién entra, cuándo y qué toca. Solo lo ve la superadministración, y no se puede editar
+            Quién entra, cuándo y qué toca. Solo lo ven Administración y Superadministración, y no se puede editar
             ni borrar desde aquí: un registro alterable no prueba nada.
           </p>
         </div>

@@ -242,7 +242,12 @@ export async function generarPDFOferta(r, cli, anexo) {
   rejillaDatos([
     ['Cliente', cli?.empresa || '—'],
     ['CIF', cli?.cif || '—'],
-    ['Persona de contacto', cli?.contacto || cli?.email || '—'],
+    // Nombre y cargo juntos: «Consoli Sánchez · Directora». El cargo llegaba
+    // en `cli` pero no se imprimía, así que la oferta iba dirigida a un nombre
+    // sin decir qué papel ocupa esa persona en la empresa.
+    ['Persona de contacto',
+     [cli?.contacto || cli?.email || '—', cli?.cargo].filter(Boolean).join(' · ')],
+    ...(cli?.email && cli?.contacto ? [['Correo de contacto', cli.email]] : []),
     ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ` · ${r.meses} meses` : '')],
     ['Sistemas incluidos', String(nombresDeNormas(r).length)],
     ['Dedicación estimada', `${r.hTotal} h`],

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth.jsx';
-import { ROL_LABEL } from '../../lib/permisos.js';
+import { ROL_LABEL , can, rolesAsignablesPor } from '../../lib/permisos.js';
 import { NORMAS } from '../../lib/calcEngine.js';
 import { ROLES_CLIENTE, ROL_CLIENTE_LABEL } from '../../lib/permisos.js';
 import { listTable, insertRow, deleteRow, updateRow } from '../../lib/data.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 
+// Lista completa; quién puede asignar cada uno lo decide `rolesAsignablesPor`.
 const ROLES_ASIGNABLES = ['superadmin', 'admin', 'director', 'consultor', 'gestion'];
 const ROLES_DOMINIO = ['director', 'consultor'];
 const DOMINIOS_PERMITIDOS = ['tuconsultor.com', 'consultify.pro'];
@@ -27,7 +28,12 @@ function Badge({ children, tone = 'navy' }) {
 }
 
 export default function Accesos() {
-  const { adminUsuarios, esSuper, user, demo } = useAuth();
+  const { adminUsuarios, esSuper, realRole, user, demo } = useAuth();
+  // Administración entra aquí desde la v229. Lo que sigue reservado al
+  // superadministrador es tocar el rol `superadmin`: si Administración pudiera
+  // otorgarlo, el nivel dejaría de existir.
+  const puedeEntrar = can.gestionarAccesos(realRole);
+  const asignables = rolesAsignablesPor(realRole);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +56,7 @@ export default function Accesos() {
       setClientes(c || []); setMiembros(m || []);
     } catch { /* sin datos */ }
   }
-  useEffect(() => { if (esSuper) cargarClientes(); }, [esSuper]);
+  useEffect(() => { if (puedeEntrar) cargarClientes(); }, [puedeEntrar]);
 
   async function asignar(usuarioId) {
     if (!nuevo.cliente_id) return;
@@ -79,10 +85,10 @@ export default function Accesos() {
     } catch (e) { setError('Error de conexión.'); }
     finally { setCargando(false); }
   }
-  useEffect(() => { if (esSuper) cargar(); }, [esSuper]);
+  useEffect(() => { if (puedeEntrar) cargar(); }, [puedeEntrar]);
 
-  if (!esSuper) {
-    return <div className="card"><p className="font-bold text-[#CFE3E9]">Acceso restringido</p><p className="text-sm text-[#9FC0CB]">Solo el superadministrador puede gestionar los accesos.</p></div>;
+  if (!puedeEntrar) {
+    return <div className="card"><p className="font-bold text-[#CFE3E9]">Acceso restringido</p><p className="text-sm text-[#9FC0CB]">Solo Administración y Superadministración pueden gestionar los accesos.</p></div>;
   }
 
   async function invitar(e) {
@@ -164,7 +170,7 @@ export default function Accesos() {
           <div className="lg:col-span-1"><label className="label">Email corporativo</label><input type="email" className="input" value={inv.email} onChange={e => setInv({ ...inv, email: e.target.value })} required /></div>
           <div><label className="label">Rol</label>
             <select className="input" value={inv.rol} onChange={e => setInv({ ...inv, rol: e.target.value })}>
-              {ROLES_ASIGNABLES.map(r => <option key={r} value={r}>{ROL_LABEL[r]}</option>)}
+              {asignables.map(r => <option key={r} value={r}>{ROL_LABEL[r]}</option>)}
             </select>
           </div>
           <div><label className="label">Nivel (consultor)</label>
@@ -239,10 +245,20 @@ export default function Accesos() {
                         <div className="text-xs text-[#9FC0CB]">{u.email}</div>
                       </td>
                       <td className="px-3 py-3">
-                        <select value={u.rol} disabled={yo} onChange={e => cambiarRol(u.id, e.target.value)}
-                          className="rounded-lg border border-[#1E5468] bg-[#10394A] px-2 py-1 text-xs font-bold text-[#CFE3E9] disabled:opacity-50">
-                          {ROLES_ASIGNABLES.map(r => <option key={r} value={r}>{ROL_LABEL[r]}</option>)}
-                        </select>
+                        {/* Un superadministrador solo puede ser modificado por
+                            otro superadministrador: si no, Administración podría
+                            degradarlo y quedarse con el mando. */}
+                        {u.rol === 'superadmin' && !can.gestionarSuperadmins(realRole) ? (
+                          <span className="chip bg-brand-orange/15 !px-2 !py-0.5 text-[10.5px] text-brand-orange"
+                            title="Solo otro superadministrador puede cambiar este rol">
+                            {ROL_LABEL.superadmin}
+                          </span>
+                        ) : (
+                          <select value={u.rol} disabled={yo} onChange={e => cambiarRol(u.id, e.target.value)}
+                            className="rounded-lg border border-[#1E5468] bg-[#10394A] px-2 py-1 text-xs font-bold text-[#CFE3E9] disabled:opacity-50">
+                            {[...new Set([u.rol, ...asignables])].map(r => <option key={r} value={r}>{ROL_LABEL[r]}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-col gap-1">
