@@ -44,12 +44,36 @@ export default function PlanificadorContextos() {
   const [ayudaTxt, setAyudaTxt] = useState('');
   const [simulacion, setSimulacion] = useState(null); // propuesta SIN guardar
 
+  const [sinOferta, setSinOferta] = useState([]);
+
   const cargar = useCallback(() => Promise.all([
     listTable('proyectos_cliente').catch(() => []),
     listTable('proyecto_contextos').catch(() => []),
     listTable('tareas_programadas').catch(() => []),
-  ]).then(([p, c, t]) => {
-    setProyectos((p || []).filter((x) => x.fecha_limite || c?.some((k) => String(k.proyecto_id) === String(x.id))));
+    // Para saber qué proyectos tienen detrás una oferta aceptada.
+    listTable('presupuestos').catch(() => []),
+    listTable('contratos').catch(() => []),
+  ]).then(([p, c, t, pres, ctr]) => {
+    const base = (p || []).filter((x) => x.fecha_limite || c?.some((k) => String(k.proyecto_id) === String(x.id)));
+
+    // ── Solo se planifica lo que tiene oferta aceptada detrás ──
+    // Planificar es repartir horas y comprometer al equipo. Hacerlo sobre un
+    // proyecto sin oferta aceptada es trabajar sin alcance ni precio pactados:
+    // si el cliente discute qué se había contratado, no hay nada que enseñar.
+    const conOferta = (x) => {
+      const of = (pres || []).find((o) => String(o.id) === String(x.oferta_id));
+      if (of) return of.estado === 'aceptada'
+        || (ctr || []).some((k) => String(k.presupuesto_id) === String(of.id) && k.estado === 'firmado');
+      // Puede venir por contrato en vez de por oferta: también vale.
+      return !!x.contrato_id && (ctr || []).some((k) => String(k.id) === String(x.contrato_id) && k.estado === 'firmado');
+    };
+
+    const listos = base.filter(conOferta);
+    // Los que quedan fuera NO se ocultan sin más: se dicen, con su motivo.
+    // Un proyecto que desaparece del desplegable sin explicación se interpreta
+    // como un fallo del sistema, y alguien acaba creándolo otra vez.
+    setSinOferta(base.filter((x) => !conOferta(x)));
+    setProyectos(listos);
     setContextos(c || []); setTareas(t || []);
   }).finally(() => setCargando(false)), []);
 
@@ -173,6 +197,29 @@ export default function PlanificadorContextos() {
           <option key={p.id} value={p.id}>{p.codigo || p.nombre || p.id.slice(0, 8)} · límite {fmt(p.fecha_limite)}</option>
         ))}
       </select>
+
+      {/* Los excluidos, dichos con su motivo. Ocultarlos sin más se interpreta
+          como un fallo y alguien acaba creando el proyecto otra vez. */}
+      {sinOferta.length > 0 && (
+        <details className="rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2">
+          <summary className="cursor-pointer text-[12.5px] font-bold text-amber-200">
+            {sinOferta.length} proyecto{sinOferta.length === 1 ? '' : 's'} sin oferta aceptada · no se puede{sinOferta.length === 1 ? '' : 'n'} planificar
+          </summary>
+          <p className="mt-1.5 text-[11.5px] leading-snug text-[#DFF1F5]">
+            Planificar reparte horas y compromete al equipo. Sin una oferta aceptada detrás no hay alcance
+            ni precio pactados, así que estos proyectos quedan fuera hasta que su oferta se acepte
+            en el histórico.
+          </p>
+          <ul className="mt-1.5 space-y-0.5">
+            {sinOferta.map((x) => (
+              <li key={x.id} className="text-[11.5px] text-[#9FC0CB]">
+                · {x.codigo || x.nombre || String(x.id).slice(0, 8)}
+                {!x.oferta_id && !x.contrato_id ? ' — creado sin oferta' : ' — su oferta aún no está aceptada'}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {msg && <p className={`rounded-lg px-3 py-2 text-[12.5px] font-bold ${msg.err ? 'bg-red-500/12 text-red-200' : 'bg-emerald-500/12 text-emerald-200'}`}>{msg.t}</p>}
 

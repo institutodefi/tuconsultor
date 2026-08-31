@@ -6,6 +6,7 @@ import AltaProyecto from './AltaProyecto.jsx';
 import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js';
 import { nombreVisible } from '../../lib/crm.js';
 import { pagoAdelantado } from '../../lib/calcEngine.js';
+import { estaAceptada } from '../../lib/ofertasAceptadas.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Cartera de la empresa · ofertas, contratos y proyectos
@@ -200,11 +201,11 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11.5px] text-[#7FA7B4]">
             {clienteId
-              ? 'Puedes abrir un proyecto desde una oferta, desde un contrato o desde cero.'
+              ? 'Los proyectos nacen de una oferta aceptada.'
               : 'Esta empresa aún no tiene ficha de cliente: créala para poder abrir proyectos.'}
           </p>
           <button type="button" disabled={!clienteId}
-            onClick={() => setAlta({ origen: null, tipo: null })}
+            onClick={() => setAlta({ origen: null })}
             className="rounded-full bg-brand-orange px-3.5 py-1.5 text-[12px] font-extrabold text-[#0A2B3A] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
             + Nuevo proyecto
           </button>
@@ -212,7 +213,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
       )}
 
       {alta && (
-        <AltaProyecto origen={alta.origen} tipo={alta.tipo} clienteId={clienteId}
+        <AltaProyecto origen={alta.origen} clienteId={clienteId} cif={empresa?.cif}
           onCerrar={() => setAlta(null)} onCreado={trasCrear} />
       )}
 
@@ -230,7 +231,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
               <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
                 <span className="font-bold text-[#EAF4F7]">{c.numero}</span>
                 <span className="text-[#7FA7B4]">{c.modelo} · {(c.normas || []).join(' + ')}</span>
-                <button type="button" onClick={() => setAlta({ origen: c, tipo: 'contrato' })}
+                <button type="button" onClick={() => setAlta({ origen: ofertas.find((o) => String(o.id) === String(c.presupuesto_id)) || null })}
                   className="font-bold text-brand-orange hover:underline">Abrir proyecto →</button>
               </li>
             ))}
@@ -307,7 +308,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                       className="shrink-0 text-[11px] font-bold text-brand-verdeTexto hover:underline"
                       title="Abrir el contrato en PDF">PDF</a>
                   )}
-                  <button type="button" onClick={() => setAlta({ origen: c, tipo: 'contrato' })}
+                  <button type="button" onClick={() => setAlta({ origen: ofertas.find((o) => String(o.id) === String(c.presupuesto_id)) || null })}
                     className="shrink-0 text-[11px] font-bold text-brand-orange hover:underline"
                     title="Abrir un proyecto con los datos de este contrato">+ proyecto</button>
                 </li>
@@ -361,9 +362,13 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                         className="text-[11px] font-bold text-[#9FC0CB] hover:underline"
                         title="Abrir la presentación">PPT</a>
                     )}
-                    <button type="button" onClick={() => setAlta({ origen: o, tipo: 'oferta' })}
-                      className="text-[11px] font-bold text-brand-orange hover:underline"
-                      title="Abrir un proyecto con los datos de esta oferta">+ proyecto</button>
+                    {/* Solo desde ofertas aceptadas: un proyecto sin oferta
+                        aceptada detrás no tiene alcance ni precio pactados. */}
+                    {estaAceptada(o, contratos) && (
+                      <button type="button" onClick={() => setAlta({ origen: o })}
+                        className="text-[11px] font-bold text-brand-orange hover:underline"
+                        title="Abrir un proyecto con los datos de esta oferta">+ proyecto</button>
+                    )}
                   </span>
                 </li>
               ))}

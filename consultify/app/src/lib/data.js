@@ -333,6 +333,29 @@ export async function updateRow(table, id, patch, clave = 'id') {
     if (/permission denied/i.test(m)) {
       throw new Error(`Sin permiso para escribir en «${table}». Falta el GRANT de la tabla.`);
     }
+
+    // Columna ausente en el schema cache: migración pendiente o cache sin
+    // recargar. `insertRow` ya reintentaba sin ella; `updateRow` no, y por eso
+    // una migración sin aplicar tumbaba la operación entera. Marcar una oferta
+    // como aceptada fallaba por no poder guardar `aceptada_por`, aunque el
+    // `estado` —lo que de verdad importa— sí se podía escribir.
+    //
+    // Se reintenta sin ese campo. La migración sigue haciendo falta, pero el
+    // trabajo no se detiene por un dato accesorio.
+    const colMatch = m.match(/could not find the '([^']+)' column/i)
+                  || m.match(/'([^']+)' column of '[^']+' in the schema cache/i);
+    if ((error.code === 'PGRST204' || /schema cache/i.test(m)) && colMatch && colMatch[1] in patch) {
+      const col = colMatch[1];
+      const { [col]: _omit, ...resto } = patch;
+      if (!Object.keys(resto).length) throw error;   // no quedaba nada que guardar
+      if (import.meta.env.DEV) {
+        console.warn(`[updateRow] Columna '${col}' ausente en '${table}'. Reintento sin ella. Aplica la migración y recarga el schema.`);
+      }
+      const r = await updateRow(table, id, resto, clave);
+      // Se avisa de que faltó ese campo, para que la interfaz pueda decirlo.
+      return { ...r, _camposOmitidos: [...(r?._camposOmitidos || []), col] };
+    }
+
     throw error;
   }
   return data;

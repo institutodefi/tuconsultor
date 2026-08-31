@@ -405,7 +405,7 @@ export default function Proyectos() {
         <div className="card">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-[#9FC0CB]">
-              Abre un proyecto para cualquier empresa marcada como cliente, o entra en uno existente desde la tabla.
+              Los proyectos nacen de una oferta aceptada. Ábrelo desde ahí, o entra en uno existente desde la tabla.
             </p>
             <button onClick={() => setAlta(true)} className="btn-orange !px-4 !py-2">+ Nuevo proyecto</button>
           </div>

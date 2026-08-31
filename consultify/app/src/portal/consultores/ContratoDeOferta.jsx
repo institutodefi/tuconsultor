@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { codigoProyecto } from '../../lib/codigos.js';
-import { updateRow } from '../../lib/data.js';
+import { updateRow, explicarErrorBd } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -134,15 +134,20 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
       + 'Queda registrado que la das por aceptada tú, con la fecha de hoy.')) return;
     setOcupado(true); setMsg(null);
     try {
-      await updateRow('presupuestos', oferta.id, {
+      const r = await updateRow('presupuestos', oferta.id, {
         estado: 'aceptada',
         aceptada_en: new Date().toISOString(),
         aceptada_por: user?.id || null,
       });
-      setMsg({ err: false, t: 'Oferta marcada como aceptada. Ya puedes generar el contrato.' });
+      // Si faltó algún campo por una migración pendiente, se dice: la oferta
+      // queda aceptada, pero sin dejar constancia de quién lo hizo.
+      const falta = r?._camposOmitidos?.length
+        ? ` (sin registrar ${r._camposOmitidos.join(' ni ')}: falta aplicar la migración v101)`
+        : '';
+      setMsg({ err: false, t: `Oferta marcada como aceptada${falta}. Ya puedes generar el contrato.` });
       onCambio && onCambio();
     } catch (e) {
-      setMsg({ err: true, t: `No se pudo marcar como aceptada: ${e?.message || e}` });
+      setMsg({ err: true, t: `No se pudo marcar como aceptada: ${explicarErrorBd(e, 'presupuestos')}` });
     } finally { setOcupado(false); }
   }
 
@@ -154,7 +159,7 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
         { estado: 'emitida', aceptada_en: null, aceptada_por: null });
       onCambio && onCambio();
     } catch (e) {
-      setMsg({ err: true, t: `${e?.message || e}` });
+      setMsg({ err: true, t: explicarErrorBd(e, 'presupuestos') });
     } finally { setOcupado(false); }
   }
 

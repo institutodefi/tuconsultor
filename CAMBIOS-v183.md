@@ -2618,3 +2618,189 @@ quién lo puso.
 En el relleno de lo ya aceptado se usa la fecha de última modificación —no se
 sabe la real— y `aceptada_por` se deja **vacío**: atribuir a alguien una acción
 que quizá no hizo es peor que no saberlo.
+
+---
+
+# v232 · Un proyecto nace siempre de una oferta aceptada
+
+## La regla
+
+Tres cambios que son el mismo principio: **si no hay oferta aceptada, no hay
+proyecto y no hay planificación**. No es burocracia: es lo que permite responder
+a «¿por qué hacemos este trabajo y a qué precio?» sin depender de que alguien se
+acuerde.
+
+## 1 · El alta solo parte de ofertas aceptadas
+
+`AltaProyecto` se ha reescrito. Antes se podía abrir un proyecto eligiendo
+empresa y tecleando las normas a mano; salían proyectos **sin precio, sin
+alcance pactado y sin nada que enseñar** si el cliente discutía qué se había
+contratado. Fue así como apareció el proyecto de la Fundación con «—» en Normas
+y Modelo.
+
+Ahora hay un desplegable de ofertas aceptadas:
+
+```
+OF-A · Metalúrgica Norte · 9001 + 14001 · Compromiso · 1.378 €/mes · contrato CT-2
+```
+
+Y cuando no hay ninguna, lo dice y explica qué hacer: ir al histórico y marcar
+«El cliente la acepta».
+
+## 2 · Los sistemas y el modelo se vuelcan solos
+
+Al elegir la oferta se traen **normas, modelo, fechas, meses y precio**, y se
+enseñan en solo lectura: se ven para saber qué se está abriendo, no para
+cambiarlos ahí. Volver a elegirlos a mano es la forma de que acaben sin coincidir
+con lo que se firmó.
+
+El precio va al campo correcto según el modelo: en Apoyo o Implantación a
+`precio_total`, en los recurrentes a `precio_mes`.
+
+Solo quedan editables el **nombre** y las **fechas**, que sí pueden ajustarse al
+arrancar.
+
+## 3 · «Aceptada» incluye el contrato firmado
+
+Una oferta con contrato firmado cuenta como aceptada **aunque su estado siga en
+«emitida»**: si se firmó, se aceptó. Si no, un despiste al marcar el estado
+bloquearía un proyecto que ya está contratado.
+
+Tampoco se ofrecen las que ya tienen proyecto: duplicarlo generaría dos
+proyectos cobrando lo mismo y nadie sabría cuál es el bueno.
+
+## 4 · El planificador filtra
+
+Solo aparecen los proyectos con oferta aceptada detrás. Planificar reparte horas
+y compromete al equipo: hacerlo sin alcance ni precio pactados es trabajar a
+ciegas.
+
+**Los excluidos no se ocultan sin más**: aparecen en un desplegable con su
+motivo —«creado sin oferta» o «su oferta aún no está aceptada»—. Un proyecto que
+desaparece sin explicación se interpreta como un fallo, y alguien acaba
+creándolo otra vez.
+
+## Verificación
+
+`scripts/test-proyecto-desde-oferta.mjs`: qué cuenta como aceptada (estado y
+contrato firmado), exclusión de emitidas, rechazadas y las que ya tienen
+proyecto, acotado por CIF en formatos distintos, volcado de normas y modelo, y
+que el precio caiga en `precio_mes` o `precio_total` según el modelo.
+
+---
+
+# v233 · Una migración pendiente ya no tumba la operación entera
+
+## Lo que pasó
+
+```
+No se pudo marcar como aceptada:
+Could not find the 'aceptada_por' column of 'presupuestos' in the schema cache
+```
+
+Falta la migración **v101**. Pero el fallo real es otro: **no debería haber
+impedido aceptar la oferta**. El campo que importa es `estado`, y ese sí se
+podía escribir; `aceptada_por` es trazabilidad, un dato accesorio.
+
+## `updateRow` ahora reintenta
+
+`insertRow` ya retiraba la columna ausente y volvía a intentarlo. `updateRow`
+no, así que cualquier migración sin aplicar tumbaba la operación completa.
+
+Ahora quita el campo que falta y reintenta con el resto, recursivamente por si
+falta más de uno. Si no queda nada que guardar, propaga el error: reintentar en
+vacío sería fingir que se guardó.
+
+Devuelve `_camposOmitidos`, y la interfaz lo dice sin ambigüedad:
+
+> Oferta marcada como aceptada (sin registrar aceptada_por: falta aplicar la
+> migración v101). Ya puedes generar el contrato.
+
+Queda claro que el trabajo siguió **y** que hay algo pendiente. Ocultarlo sería
+peor: nadie aplicaría la migración y la trazabilidad se perdería en silencio.
+
+## Y el mensaje pasa por el traductor
+
+`ContratoDeOferta` mostraba `e.message` en crudo. Ahora usa `explicarErrorBd()`,
+que ya traduce este caso a «falta aplicar una migración, o recargar el esquema».
+
+## Verificado
+
+Reintento con una columna ausente, con dos, con ninguna, y el caso en que no
+queda nada que guardar.
+
+---
+
+# v234 · Corregida la migración v101
+
+```
+ERROR: 42703: column "updated_at" does not exist
+LINE 26:   set aceptada_en = coalesce(updated_at, creado)
+```
+
+Escribí el relleno suponiendo que `presupuestos` tenía `updated_at`. **No lo
+tiene**: solo `creado`. La tabla se creó sin columna de modificación y ninguna
+migración se la ha añadido.
+
+## Corregido, y con la consecuencia dicha
+
+El relleno usa `creado`, que es lo único verificable. Y queda escrito en la
+propia migración lo que eso significa:
+
+> Para las ofertas ya aceptadas antes de esta migración, `aceptada_en` es la
+> fecha de emisión, no la de aceptación. De las nuevas en adelante sí será la
+> real.
+
+`aceptada_por` se deja vacío en el relleno: atribuir a alguien una acción que
+quizá no hizo es peor que reconocer que no se sabe.
+
+## Revisadas las demás
+
+Verificadas contra el esquema real todas las columnas que usan los rellenos de
+v92 a v101: `empresa_contactos.creado`, `proyectos_cliente.meses_estimados`,
+`proyectos.fecha_auditoria`, `contratos.cliente_cif`, `clientes.cif`,
+`presupuestos.fecha_inicio`… **Existen todas.** El de `updated_at` era el único
+caso.
+
+---
+
+# v235 · El histórico de estados no se podía escribir
+
+```
+new row violates row-level security policy for table "presupuesto_estados"
+```
+
+## La causa, y su alcance real
+
+La v82 creó `presupuesto_estados` con RLS activado y **solo una política de
+SELECT**. El trigger que escribe el histórico —`registrar_estado_presupuesto()`—
+no es `security definer`, así que el INSERT se ejecuta con los permisos de quien
+guarda, y la política lo rechaza.
+
+**No fallaba solo «aceptar»: fallaba cualquier cambio de estado.** Rechazar,
+anular y caducar estaban rotos exactamente igual; simplemente no se habían
+usado. La función `caducar_ofertas()` tampoco podía funcionar.
+
+## La corrección
+
+La función pasa a `security definer`, con `search_path` fijado —conviene en toda
+función con permisos elevados, para que no dependa del esquema de quien la
+llame—.
+
+**No se añade una política de INSERT**, que era la otra salida. Si la hubiera,
+cualquiera con sesión podría meter filas falsas en el histórico directamente. Un
+registro de auditoría que el propio auditado puede escribir a mano no sirve de
+nada. Así solo escribe el trigger.
+
+## Y de paso, la v101 duplicaba trabajo
+
+Al mirar la v82 apareció que ya creaba `estado`, `estado_en`, `estado_por`,
+`aceptada_en`, `rechazada_en` y `valida_hasta`, y que el trigger **ya rellenaba
+`aceptada_en` solo**. Mi v101 las volvía a añadir.
+
+Reescrita: solo aporta `aceptada_por`, que es lo único que faltaba de verdad.
+
+## Revisados los demás triggers
+
+Barrido de todas las funciones de trigger que insertan en tablas con RLS sin ser
+`security definer`: 35 tablas con RLS, **un solo caso**, el corregido.
