@@ -1763,3 +1763,101 @@ guardar y cierre por clic fuera solo si el gesto empezó fuera.
 siguientes, que el motivo del fallo se conserva, que «marcar todos» no alcanza a
 lo que está fuera del filtro, el escapado del CSV (comillas, punto y coma,
 nulos) con su BOM, y que los correos salen sin repetir y solo los válidos.
+
+---
+
+# v214 · Nombre comercial, diálogos en portal y tablas más estrechas
+
+## 1 · En los listados manda el nombre comercial
+
+Nuevo `nombreVisible()` en `lib/crm.js`: en pantalla se enseña el nombre
+comercial y, si no lo hay, la razón social.
+
+La razón social —«GRUPO ANDES HOLDING, S.L.»— solo hace falta en documentos y
+datos fiscales. En una lista estorba: varias empresas de un mismo grupo empiezan
+igual y no se distinguen hasta el final del nombre.
+
+En la fila de Empresas, la razón social aparece debajo **solo si difiere** del
+comercial: repetirla siempre es ruido. En el CSV salen las dos columnas.
+
+Aplicado en Empresas, Contactos, la cartera de la ficha y el selector de empresa
+del alta de proyecto.
+
+## 2 · Los diálogos ya no dependen de dónde estén montados
+
+`DialogoFicha` se dibuja con **`createPortal` sobre `document.body`**.
+
+Un `position: fixed` deja de referirse a la pantalla y pasa a referirse a su
+ancestro en cuanto ese ancestro tiene `transform`, `filter` o `contain`; y una
+tarjeta con `overflow-hidden` puede recortarlo. Con el portal el diálogo no
+depende del árbol donde se escriba, hoy ni cuando alguien añada una animación a
+una tarjeta dentro de un año.
+
+**Aclaración importante: no son ventanas emergentes del navegador.** Son HTML de
+la propia página. El bloqueador de pop-ups no las afecta y no hay nada que
+autorizar. No existe ni un solo `window.open` en la aplicación.
+
+Si un diálogo no aparecía, era código sin desplegar, no un bloqueo.
+
+## 3 · Tablas más estrechas y responsivas
+
+Se baja el ancho mínimo y se ocultan columnas por breakpoint:
+
+| Tabla | Antes | Ahora | Se ocultan |
+|---|---|---|---|
+| Contactos | 720 px | 420 px | Correo (<640), Empresa (<768) |
+| Ofertas | 860 px | 520 px | Fecha (<640), Normas (<768), Comercial (<1024), Calendario (<1280) |
+| Clientes | — | — | Email (<640), Contacto (<768), Holded (<1024) |
+
+**Lo que se oculta como columna aparece bajo el nombre** en esas resoluciones.
+Ocultar un dato sin dejarlo a mano es peor que la tabla ancha: el correo de un
+contacto tiene que poder leerse en el móvil aunque no quepa como columna.
+
+---
+
+# v215 · Corrección: la ficha de empresa se quedaba congelada
+
+## Qué pasaba
+
+Abrir `…/empresas?e=<id>` colgaba la pantalla. El fallo estaba en
+`DialogoFicha`, así que afectaba **a todos los diálogos**, no solo a este.
+
+El efecto que instala Escape, el foco y el bloqueo de scroll dependía de
+`cerrar`:
+
+```js
+const cerrar = useCallback(…, [haycambios, onCerrar]);
+useEffect(() => { … }, [cerrar]);
+```
+
+Y `onCerrar` llega casi siempre como función inline —`onCerrar={() => setForm(null)}`—,
+así que **cambia de identidad en cada render**. Consecuencia: el efecto se
+limpiaba y se volvía a montar en cada render. En cada ciclo devolvía el foco al
+elemento de origen y programaba otro `setTimeout` para enfocar el primer campo
+del formulario.
+
+Esa pelea de foco, con la ficha de empresa —que es grande y provoca varios
+renders al cargar—, dejaba la pantalla congelada.
+
+## La corrección
+
+`onCerrar` y `haycambios` pasan a refs, que se actualizan en cada render sin
+formar parte de las dependencias. El efecto queda con `[]`: se monta al abrir y
+se limpia al cerrar, que es lo único que debía hacer. `cerrar` sigue llamando
+siempre a la versión actual.
+
+## Un daño colateral que también desaparece
+
+En cada remontaje se restauraba `document.body.style.overflow` y se volvía a
+poner en `hidden`. Con mala suerte de orden, el `overflow: hidden` podía quedarse
+pegado al body después de cerrar el diálogo: la página seguía sin poder
+desplazarse aunque no hubiera nada abierto. Otro síntoma de «congelada».
+
+Comprobado que ahora hay **un montaje y una limpieza**, y que el scroll se
+restaura.
+
+## Y de paso
+
+Un enlace a una empresa que ya no existe dejaba el listado tal cual, sin
+explicar por qué no se abría nada. Ahora lo dice, con un enlace para volver a
+ver todas.

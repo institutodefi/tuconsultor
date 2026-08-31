@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { insertRow } from '../../lib/data.js';
 import { NORMAS, MODELO_IDS } from '../../lib/calcEngine.js';
 import { empresasCliente, asegurarCliente } from '../../lib/clienteDeEmpresa.js';
+import { nombreVisible } from '../../lib/crm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Alta rápida de proyecto desde una oferta o un contrato
@@ -132,7 +133,7 @@ export default function AltaProyecto({ origen = null, tipo, clienteId, empresas,
             value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
             <option value="">— Elige la empresa —</option>
             {opciones.map((e) => (
-              <option key={e.id} value={e.id}>{e.nombre}{e.cif ? ` · ${e.cif}` : ''}</option>
+              <option key={e.id} value={e.id}>{nombreVisible(e)}{e.cif ? ` · ${e.cif}` : ''}</option>
             ))}
           </select>
           <p className="mt-1 text-[11px] text-[#7FA7B4]">

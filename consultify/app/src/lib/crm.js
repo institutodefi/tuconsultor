@@ -242,3 +242,24 @@ export function candidatasMatriz(empresas, id) {
     .filter((e) => !prohibidos.has(String(e.id)))
     .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 }
+
+/**
+ * Cómo se llama una empresa EN PANTALLA.
+ *
+ * En los listados y previsualizaciones manda el nombre comercial: es el que el
+ * equipo reconoce y por el que pregunta el cliente. La razón social —«GRUPO
+ * ANDES HOLDING, S.L.»— solo hace falta en documentos y datos fiscales, y en
+ * una lista larga estorba, porque varias empresas del mismo grupo empiezan
+ * igual y no se distinguen hasta el final del nombre.
+ *
+ * Si no hay nombre comercial, se cae a la razón social: siempre hay algo que
+ * mostrar.
+ */
+export const nombreVisible = (e) => e?.nombre_comercial?.trim() || e?.nombre || '';
+
+/** Razón social, cuando de verdad hace falta (documentos, fiscal). */
+export const razonSocial = (e) => e?.nombre || '';
+
+/** ¿Merece la pena enseñar las dos? Solo si difieren. */
+export const tieneComercialDistinto = (e) =>
+  !!e?.nombre_comercial?.trim() && e.nombre_comercial.trim() !== e?.nombre;

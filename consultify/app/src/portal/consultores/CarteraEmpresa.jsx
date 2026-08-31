@@ -4,6 +4,7 @@ import { listTable } from '../../lib/data.js';
 import { carteraDe, fmtEur, fmtFecha } from '../../lib/cartera.js';
 import AltaProyecto from './AltaProyecto.jsx';
 import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js';
+import { nombreVisible } from '../../lib/crm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Cartera de la empresa · ofertas, contratos y proyectos
@@ -106,7 +107,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
 
   // Destinos de los enlaces. Las ofertas se filtran por nombre de empresa
   // porque el listado busca por texto; los proyectos, por id de cliente.
-  const aOfertas = `/consultores/ofertas?empresa=${encodeURIComponent(empresa?.nombre || '')}`;
+  const aOfertas = `/consultores/ofertas?empresa=${encodeURIComponent(nombreVisible(empresa))}`;
 
   const cartera = useMemo(() => carteraDe(empresa, datos || {}), [empresa, datos]);
   const { ofertas, contratos, proyectos, resumen: R } = cartera;

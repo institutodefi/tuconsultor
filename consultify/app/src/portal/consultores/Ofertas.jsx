@@ -720,11 +720,11 @@ export default function Ofertas() {
         <div className="card text-center"><p className="font-extrabold">Sin ofertas{filtro ? ' para esa búsqueda' : ' todavía'}</p></div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[520px] text-[13px]">
             <thead><tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-              <th className="py-1.5">Nº oferta</th><th className="py-1.5">Fecha</th><th className="py-1.5">Cliente</th>
-              <th className="py-1.5">Comercial</th><th className="py-1.5">Normas</th><th className="py-1.5">Modelo</th>
-              <th className="py-1.5">Calendario</th>
+              <th className="py-1.5">Nº oferta</th><th className="hidden py-1.5 sm:table-cell">Fecha</th><th className="py-1.5">Cliente</th>
+              <th className="hidden py-1.5 lg:table-cell">Comercial</th><th className="hidden py-1.5 md:table-cell">Normas</th><th className="py-1.5">Modelo</th>
+              <th className="hidden py-1.5 xl:table-cell">Calendario</th>
               <th className="py-1.5 text-right">Importe<br /><span className="text-[9.5px] font-semibold normal-case tracking-normal text-[#5E8494]">sin impuestos</span></th><th className="py-1.5 text-right">Documentos</th>
             </tr></thead>
             <tbody className="divide-y divide-navy-50">
@@ -739,10 +739,19 @@ export default function Ofertas() {
                       (c) => String(c.presupuesto_id) === String(r.id) && c.estado !== 'anulado')}
                       onCambio={cargar} />
                   </td>
-                  <td className="py-2 font-medium text-[#9FC0CB]">{(r.creado || '').slice(0, 10)}</td>
-                  <td className="py-2 font-bold">{r.empresa || '—'}<br /><span className="text-xs font-medium text-[#9FC0CB]">{r.nombre || ''}</span></td>
-                  <td className="py-2 font-semibold">{r.comercial || 'Alejandro'}</td>
-                  <td className="py-2 font-semibold">
+                  <td className="hidden py-2 font-medium text-[#9FC0CB] sm:table-cell">{(r.creado || '').slice(0, 10)}</td>
+                  <td className="py-2 font-bold">
+                    {r.empresa || '—'}
+                    <span className="block text-xs font-medium text-[#9FC0CB]">{r.nombre || ''}</span>
+                    {/* Lo que se oculta como columna aparece aquí: ocultar un
+                        dato sin dejarlo a mano es peor que la tabla ancha. */}
+                    <span className="block text-[11px] text-[#7FA7B4] md:hidden">
+                      {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
+                    </span>
+                    <span className="block text-[11px] text-[#7FA7B4] sm:hidden">{(r.creado || '').slice(0, 10)}</span>
+                  </td>
+                  <td className="hidden py-2 font-semibold lg:table-cell">{r.comercial || 'Alejandro'}</td>
+                  <td className="hidden py-2 font-semibold md:table-cell">
                     <span className="inline-flex items-center gap-1.5">
                       {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
                       <button onClick={() => abrirEdicion(r)}
@@ -752,7 +761,7 @@ export default function Ofertas() {
                   <td className="py-2 font-semibold">{r.modelo}</td>
                   {/* Las tres fechas del encargo: antes había que abrir la
                       edición para saber cuándo empezaba y cuándo terminaba. */}
-                  <td className="py-2 whitespace-nowrap text-[11.5px] leading-tight">
+                  <td className="hidden py-2 whitespace-nowrap text-[11.5px] leading-tight xl:table-cell">
                     {r.fecha_inicio || r.fecha_fin ? (
                       <>
                         <span className="block font-semibold text-[#CFE3E9]">

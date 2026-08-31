@@ -358,7 +358,7 @@ export default function Clientes() {
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="w-8 py-2"><CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} /></th>
-                <th className="py-2">CIF</th><th className="py-2">Cliente</th><th className="py-2">Contacto</th><th className="py-2">Email</th><th className="py-2">Holded</th><th className="py-2"></th>
+                <th className="py-2">CIF</th><th className="py-2">Cliente</th><th className="hidden py-2 md:table-cell">Contacto</th><th className="hidden py-2 sm:table-cell">Email</th><th className="hidden py-2 lg:table-cell">Holded</th><th className="py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-50">
@@ -372,9 +372,9 @@ export default function Clientes() {
                   </td>
                   <td className="cursor-pointer py-2 font-bold text-[#9FC0CB]" onClick={() => { setSel(String(c.id)); setForm(null); }}>{c.cif_matriz || c.codigo || '—'}</td>
                   <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 font-medium"><span className="inline-flex items-center gap-2"><SemaforoCobros estado={c.estado_cobros} detalle={c.cobros_detalle} actualizado={c.cobros_actualizado_en} />{c.empresa}</span></td>
-                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-[#9FC0CB]">{c.contacto || '—'}</td>
-                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-[#9FC0CB]">{c.email || '—'}</td>
-                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-[#7FA7B4]">—</span>}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="hidden cursor-pointer py-2 text-[#9FC0CB] md:table-cell">{c.contacto || '—'}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="hidden cursor-pointer py-2 text-[#9FC0CB] sm:table-cell">{c.email || '—'}</td>
+                  <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="hidden cursor-pointer py-2 lg:table-cell">{c.holded_id ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">Vinculado</span> : <span className="text-[10px] font-semibold text-[#7FA7B4]">—</span>}</td>
                   <td onClick={() => { setSel(String(c.id)); setForm(null); }} className="cursor-pointer py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
                 </tr>
               ))}

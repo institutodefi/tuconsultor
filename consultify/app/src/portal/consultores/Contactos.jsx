@@ -5,7 +5,7 @@ import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../component
 import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL } from '../../lib/crm.js';
+import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL , nombreVisible } from '../../lib/crm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONTACTOS · las personas del CRM.
@@ -155,7 +155,7 @@ export default function Contactos() {
     [
       ['Nombre', (c) => c.nombre], ['Apellidos', (c) => c.apellidos], ['Cargo', (c) => c.cargo],
       ['Email', (c) => c.email], ['Móvil', (c) => c.movil], ['Teléfono', (c) => c.telefono],
-      ['Empresa', (c) => empresasDe(c.id).map((x) => x.e.nombre).join(' · ')],
+      ['Empresa', (c) => empresasDe(c.id).map((x) => nombreVisible(x.e)).join(' · ')],
       ['Consentimiento', (c) => (c.consentimiento_marketing ? 'sí' : 'no')],
     ],
     'contactos',
@@ -339,16 +339,16 @@ export default function Contactos() {
 
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
         <div className="overflow-x-auto rounded-2xl border border-[#1E5468]">
-          <table className="w-full min-w-[720px] text-[13px]">
+          <table className="w-full min-w-[420px] text-[13px]">
             <thead>
               <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
                 <th className="w-9 px-2 py-1.5">
                   <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
                 </th>
                 <th className="px-2 py-1.5">Nombre</th>
-                <th className="px-2 py-1.5">Correo</th>
+                <th className="hidden px-2 py-1.5 sm:table-cell">Correo</th>
                 <th className="px-2 py-1.5">Móvil</th>
-                <th className="px-2 py-1.5">Empresa</th>
+                <th className="hidden px-2 py-1.5 md:table-cell">Empresa</th>
                 <th className="w-16 px-2 py-1.5 text-right">Ficha</th>
               </tr>
             </thead>
@@ -370,13 +370,24 @@ export default function Contactos() {
                           className="flex w-full items-center gap-1.5 text-left">
                           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
                             title={st.motivos.join(' · ') || 'Ficha completa'} />
-                          <span className="truncate font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
+                            {/* En móvil, correo y empresa se ocultan como
+                                columna pero aparecen aquí: ocultar un dato sin
+                                dejarlo a mano es peor que la tabla ancha. */}
+                            <span className="block truncate text-[11px] text-[#7FA7B4] sm:hidden">
+                              {emailValido(c.email) ? c.email : 'sin correo'}
+                            </span>
+                            <span className="block truncate text-[11px] text-[#7FA7B4] md:hidden">
+                              {emps.length ? emps.map((x) => nombreVisible(x.e)).join(' · ') : 'sin empresa'}
+                            </span>
+                          </span>
                           {c.consentimiento_marketing && (
                             <span className="chip !px-1 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300">RGPD</span>
                           )}
                         </button>
                       </td>
-                      <td className="px-2 py-1 text-[#9FC0CB]">
+                      <td className="hidden px-2 py-1 text-[#9FC0CB] sm:table-cell">
                         {emailValido(c.email)
                           ? <a href={`mailto:${c.email}`} className="block truncate hover:text-brand-orange">{c.email}</a>
                           : <span className="font-bold text-red-300">sin correo</span>}
@@ -386,10 +397,10 @@ export default function Contactos() {
                           ? <a href={`tel:${(c.movil || c.telefono).replace(/\s/g, '')}`} className="hover:text-brand-orange">{c.movil || c.telefono}</a>
                           : <span className="text-[#5E8494]">—</span>}
                       </td>
-                      <td className="px-2 py-1 text-[#B9D2DA]">
+                      <td className="hidden px-2 py-1 text-[#B9D2DA] md:table-cell">
                         {emps.length
-                          ? <span className="block truncate" title={emps.map((x) => x.e.nombre).join(' · ')}>
-                              {emps.map((x) => x.e.nombre).join(' · ')}</span>
+                          ? <span className="block truncate" title={emps.map((x) => nombreVisible(x.e)).join(' · ')}>
+                              {emps.map((x) => nombreVisible(x.e)).join(' · ')}</span>
                           : <span className="font-bold text-red-300">sin empresa</span>}
                       </td>
                       <td className="px-2 py-1 text-right">
@@ -514,7 +525,7 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
             {empresas.map(({ e, vincs }) => (
               <button key={e.id} onClick={() => onEmpresa(e)}
                 className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2.5 py-1.5 text-left hover:border-brand-verde">
-                <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[#EAF4F7]">{e.nombre}</span>
+                <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[#EAF4F7]">{nombreVisible(e)}</span>
                 <span className="text-[11px] text-[#7FA7B4]">{e.cif || 'sin CIF'}</span>
                 <span className="flex flex-wrap gap-1">
                   {vincs.map((v) => (

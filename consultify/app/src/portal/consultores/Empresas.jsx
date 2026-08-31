@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import SincronizarCrm from '../../components/SincronizarCrm.jsx';
 import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { semaforoEmpresa, ESTADOS_COMERCIALES } from '../../lib/crm.js';
+import { semaforoEmpresa, ESTADOS_COMERCIALES , nombreVisible, tieneComercialDistinto } from '../../lib/crm.js';
 import FichaEmpresa from './FichaEmpresa.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
@@ -112,7 +112,7 @@ export default function Empresas() {
   const loteCSV = () => exportarCSV(
     lote.seleccionados.length ? lote.seleccionados : lista,
     [
-      ['Nombre', (e) => e.nombre], ['CIF', (e) => e.cif],
+      ['Nombre comercial', (e) => nombreVisible(e)], ['Razón social', (e) => e.nombre], ['CIF', (e) => e.cif],
       ['Dirección', (e) => e.direccion], ['CP', (e) => e.cp],
       ['Población', (e) => e.poblacion], ['Provincia', (e) => e.provincia],
       ['País', (e) => e.pais], ['Email', (e) => e.email], ['Teléfono', (e) => e.telefono],
@@ -148,6 +148,9 @@ export default function Empresas() {
   // arriba, con el filtro y el desplazamiento perdidos, y no había forma de
   // consultar un dato de otra empresa sin salir de la que se estaba editando.
   const fichaAbierta = nueva || !!empresa;
+  // Llegar por enlace a una empresa que ya no está —borrada, o de otra cuenta—
+  // dejaba el listado tal cual, sin explicar por qué no se abría nada.
+  const enlaceRoto = !!sel && !cargando && !empresa;
   const cerrarFicha = () => { setNueva(false); setParams({}); cargar(); };
 
   // ── Listado ──
@@ -155,8 +158,11 @@ export default function Empresas() {
     <div className="space-y-5">
       {fichaAbierta && (
         <DialogoFicha
-          titulo={nueva ? 'Nueva empresa' : (empresa?.nombre || 'Empresa')}
-          subtitulo={nueva ? 'Alta en el CRM' : [empresa?.cif, empresa?.es_cliente ? 'Cliente' : null, empresa?.es_proveedor ? 'Proveedor' : null].filter(Boolean).join(' · ')}
+          titulo={nueva ? 'Nueva empresa' : (nombreVisible(empresa) || 'Empresa')}
+          subtitulo={nueva ? 'Alta en el CRM'
+            : [tieneComercialDistinto(empresa) ? empresa.nombre : null, empresa?.cif,
+               empresa?.es_cliente ? 'Cliente' : null, empresa?.es_proveedor ? 'Proveedor' : null]
+              .filter(Boolean).join(' · ')}
           onCerrar={cerrarFicha}
           ancho="1100px"
         >
@@ -194,6 +200,13 @@ export default function Empresas() {
 
       {demo && <div className="rounded-xl bg-brand-orange/10 p-3 text-xs font-semibold text-brand-orange">Modo demo: los cambios no se guardan.</div>}
 
+      {enlaceRoto && (
+        <p className="rounded-xl bg-amber-400/10 px-3 py-2 text-[12.5px] font-bold text-amber-200">
+          No se encuentra la empresa del enlace. Puede que se haya eliminado.
+          <button onClick={() => setParams({})} className="ml-2 underline">ver todas</button>
+        </p>
+      )}
+
       <BarraLote n={lote.nMarcados} onLimpiar={lote.limpiar}>
         <BotonLote onClick={loteCorreos}>Copiar correos</BotonLote>
         <BotonLote onClick={loteCSV}>Exportar CSV</BotonLote>
@@ -206,7 +219,7 @@ export default function Empresas() {
         {puedeBorrar && <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>}
       </BarraLote>
 
-      <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado} nombreDe={(e) => e.nombre} />
+      <InformeLote estado={lote.estado} onCerrar={lote.cerrarEstado} nombreDe={(e) => nombreVisible(e)} />
       {avisoCopia && (
         <p className="rounded-xl bg-emerald-500/10 px-3 py-2 text-[12.5px] font-bold text-emerald-300">{avisoCopia}</p>
       )}
@@ -334,7 +347,7 @@ export default function Empresas() {
                           para un lote y abrir para editar son gestos distintos
                           y no deben confundirse. */}
                       <td className="px-2 py-3" onClick={(ev) => ev.stopPropagation()}>
-                        <input type="checkbox" aria-label={`Marcar ${e.nombre}`}
+                        <input type="checkbox" aria-label={`Marcar ${nombreVisible(e)}`}
                           checked={lote.marcados.has(String(e.id))}
                           onChange={() => lote.alternar(e.id)} />
                       </td>
@@ -342,9 +355,12 @@ export default function Empresas() {
                         <div className="flex items-center gap-2">
                           <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO[s.color]}`}
                             title={s.motivos.join(' · ') || 'Ficha completa'} />
-                          <span className="font-bold text-[#EAF4F7]">{e.nombre}</span>
+                          <span className="font-bold text-[#EAF4F7]">{nombreVisible(e)}</span>
                         </div>
                         <div className="ml-4 text-xs text-[#7FA7B4]">
+                          {/* La razón social solo aparece cuando difiere del
+                              nombre comercial: repetirla en cada fila es ruido. */}
+                          {tieneComercialDistinto(e) && <span className="block truncate">{e.nombre}</span>}
                           {e.cif || 'sin CIF'}{e.poblacion ? ` · ${e.poblacion}` : ''}
                           {e.empresa_matriz_id ? ' · filial' : ''}
                         </div>

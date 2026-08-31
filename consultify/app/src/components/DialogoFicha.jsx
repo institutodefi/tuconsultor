@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 // ════════════════════════════════════════════════════════════════════════════
 // DIÁLOGO DE EDICIÓN
@@ -18,6 +19,16 @@ import { useCallback, useEffect, useRef } from 'react';
 //   · Si hay cambios sin guardar, se pregunta antes de cerrar.
 //   · El fondo no se desplaza, pero el diálogo sí cuando no cabe.
 //   · En móvil se ancla abajo, que es donde llega el pulgar.
+//
+// Se dibuja con `createPortal` directamente sobre `document.body`, no donde se
+// escribe en el JSX. Un `position: fixed` deja de referirse a la pantalla y
+// pasa a referirse a su ancestro en cuanto ese ancestro tiene `transform`,
+// `filter` o `contain`; y una tarjeta con `overflow-hidden` puede recortarlo.
+// Con el portal el diálogo no depende de dónde esté montado, hoy ni cuando
+// alguien añada una animación a una tarjeta dentro de un año.
+//
+// Ojo: NO son ventanas emergentes del navegador. Son HTML de la propia página,
+// así que el bloqueador de pop-ups no las afecta ni hay nada que autorizar.
 // ════════════════════════════════════════════════════════════════════════════
 
 const FOCALIZABLES =
@@ -38,10 +49,24 @@ export default function DialogoFicha({
   const origen = useRef(null);
   const gestoDentro = useRef(false);
 
+  // ── Por qué esto va en refs y no en dependencias ──
+  // `onCerrar` casi siempre llega como función inline —`onCerrar={() => setForm(null)}`—,
+  // así que cambia de identidad en CADA render. Si el efecto de abajo dependiera
+  // de ella, se limpiaría y volvería a montarse en cada render: quitaría el foco
+  // para devolverlo al origen, programaría otro `setTimeout` para enfocar el
+  // primer campo, y esa pelea de foco dejaba la pantalla congelada.
+  //
+  // Con refs, el efecto corre UNA vez al abrir y otra al cerrar, que es lo que
+  // debe hacer, y aun así `cerrar` siempre llama a la versión actual.
+  const fnCerrar = useRef(onCerrar);
+  const hayCambiosRef = useRef(haycambios);
+  fnCerrar.current = onCerrar;
+  hayCambiosRef.current = haycambios;
+
   const cerrar = useCallback(() => {
-    if (haycambios && !window.confirm('Hay cambios sin guardar. ¿Cerrar y perderlos?')) return;
-    onCerrar?.();
-  }, [haycambios, onCerrar]);
+    if (hayCambiosRef.current && !window.confirm('Hay cambios sin guardar. ¿Cerrar y perderlos?')) return;
+    fnCerrar.current?.();
+  }, []);
 
   useEffect(() => {
     origen.current = document.activeElement;
@@ -75,9 +100,10 @@ export default function DialogoFicha({
       // Volver al botón que abrió el diálogo, no al principio de la página.
       if (origen.current?.focus) origen.current.focus();
     };
-  }, [cerrar]);
+    // Sin dependencias a propósito: ver la nota de arriba.
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9500] flex items-end justify-center bg-black/60 backdrop-blur-[2px] sm:items-start sm:p-6 md:p-8"
       onMouseDown={(e) => { gestoDentro.current = e.target !== e.currentTarget; }}
@@ -116,6 +142,7 @@ export default function DialogoFicha({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
