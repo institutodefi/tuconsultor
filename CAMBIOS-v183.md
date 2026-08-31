@@ -2981,3 +2981,110 @@ que reeditar la función cada vez.
 Por qué Sonnet y no otro: Opus sería más caro sin ganar nada en una extracción de
 datos tan acotada, y Haiku falla más con escaneos torcidos, que es justo el caso
 difícil de un certificado antiguo.
+
+---
+
+# v239 · La cartera de proyectos, con datos unificados
+
+## Lo que pasaba
+
+Los datos de un proyecto viven repartidos en cuatro tablas:
+
+| | |
+|---|---|
+| `proyectos_cliente` | nombre, estado, fechas y una **copia** de normas y modelo |
+| `clientes` | la ficha operativa: razón social |
+| `empresas` | el CRM: **nombre comercial** |
+| `presupuestos` | la oferta: el alcance y el modelo **pactados** |
+
+De ahí los dos síntomas: se enseñaba la razón social de `clientes` en vez del
+nombre comercial, y normas y modelo salían vacíos porque esa copia nunca se
+rellenó en los proyectos creados antes de que el alta partiera de una oferta.
+
+## Nuevo `lib/proyectoResuelto.js`
+
+Cruza las cuatro en un solo sitio, con una regla clara: **la oferta manda**.
+
+- **Nombre comercial** de la empresa del CRM; si no lo tiene, la razón social.
+  La empresa se localiza por CIF normalizado —`b-84.867.670` cruza con
+  `B84867670`— y, si no hay CIF, por razón social.
+- **Normas y modelo** de la oferta, llegando por `oferta_id` o a través del
+  contrato.
+- El **número de oferta** bajo el nombre del proyecto, para poder rastrearlo.
+
+En la tabla, la razón social aparece bajo el nombre comercial **solo si
+difiere**: repetirla en cada fila es ruido, pero cuando no coincide hace falta
+verla.
+
+## Un ajuste a mano no se pisa: se avisa
+
+Si el proyecto tiene su propia copia y **no coincide** con la oferta, se marca
+con `≠ oferta` en vez de corregirlo. Puede ser deliberado —se amplió el alcance
+sin reemitir— y sobreescribirlo borraría esa decisión sin dejar rastro.
+
+## Migración `v103`
+
+Rellena el alcance de los proyectos existentes desde su oferta, **solo los que
+están vacíos**, por el mismo motivo.
+
+Y reconstruye el vínculo `oferta_id` de los proyectos huérfanos, pero solo en
+los casos **inequívocos**: un cliente con exactamente una oferta aceptada y
+exactamente un proyecto. Con dos de cualquiera de los dos no hay forma de saber
+cuál va con cuál, y adivinar dejaría trazabilidad falsa, que es peor que no
+tener ninguna.
+
+Incluye la vista `v_proyectos_cartera` con el cruce ya hecho, para informes.
+
+## De paso
+
+La búsqueda de la tabla ahora encuentra también por **razón social, CIF y número
+de oferta**: quien teclea «B848…» o «OFE-2026-…» espera dar con su proyecto.
+
+## Verificación
+
+`scripts/test-cartera-proyectos.mjs`: nombre comercial con CIF en formatos
+distintos, caída a razón social cuando no hay comercial, cliente sin ficha en el
+CRM, normas desde la oferta y desde el contrato, detección de desfase sin
+sobreescribir, proyecto sin oferta, y los casos nulos.
+
+---
+
+# v240 · Corregida la v103, y Daniela Jiménez en el equipo
+
+## El error de SQL
+
+```
+ERROR: 0A000: DISTINCT is not implemented for window functions
+LINE 26:  count(distinct p.id) over (partition by p.cliente_id)
+```
+
+PostgreSQL no admite `DISTINCT` dentro de una función de ventana. Escribí las
+dos condiciones —un solo proyecto por cliente, una sola oferta aceptada— en la
+misma consulta, y una de ellas necesitaba una ventana.
+
+Reescrito con **dos CTEs separadas** que cuentan cada cosa por su lado y se
+cruzan al final. El resultado es idéntico y además se lee mejor.
+
+## Daniela Jiménez, en el Team
+
+Se recrea la sección «Team», retirada en v220 al quedarse sin nadie.
+
+- **Técnico de Calidad**
+- Ingeniera Industrial y Máster en Gestión Integral de la Calidad
+- ISO 9001, control documental, auditorías internas y mejora continua
+- Enlace a su LinkedIn
+
+Foto recortada del original en las dos medidas habituales: 330×360 para la ficha
+y 400×400 cuadrada para avatares.
+
+Versión inglesa incluida, con la descripción traducida y no copiada.
+
+### Lo que NO se publica
+
+El CV traía **teléfono y correo personales**. No van a una página pública
+indexada: ni el teléfono, ni el correo, ni la dirección. Comprobado en el
+archivo generado.
+
+Tampoco el detalle de su historial laboral. La ficha resume su perfil
+profesional, que es lo que corresponde a una página de equipo; el CV completo es
+documentación interna.

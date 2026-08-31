@@ -5,6 +5,7 @@ import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, ho
 import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
 import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo } from '../../lib/calcEngine.js';
+import { resolverProyectos } from '../../lib/proyectoResuelto.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -61,6 +62,8 @@ function EditorBloques({ tarea, bloquesIniciales, onPersistir, onAdd, onQuitar }
 export default function Proyectos() {
   const [clientes, setClientes] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [presupuestos, setPresupuestos] = useState([]);
+  const [contratos, setContratos] = useState([]);
   const [alta, setAlta] = useState(false);
   const [proyectos, setProyectos] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
@@ -86,11 +89,23 @@ export default function Proyectos() {
   const nombreCli = (id) => clientes.find(c => String(c.id) === String(id))?.empresa || '—';
   const codigoCli = (id) => clientes.find(c => String(c.id) === String(id))?.codigo || 'CLI';
 
+  // Cada proyecto, con sus datos EFECTIVOS: nombre comercial de la empresa y
+  // normas y modelo tomados de su oferta. Sin esto la tabla enseñaba la razón
+  // social de la ficha operativa y «—» en alcance y modelo.
+  const resueltos = useMemo(
+    () => resolverProyectos(proyectos, { clientes, empresas, presupuestos, contratos }),
+    [proyectos, clientes, empresas, presupuestos, contratos],
+  );
+
   const proyectosFiltrados = useMemo(() => {
     const q = buscaP.trim().toLowerCase();
-    if (!q) return proyectos;
-    return proyectos.filter(p => `${p.nombre} ${nombreCli(p.cliente_id)} ${(p.normas || []).join(' ')} ${p.modelo || ''}`.toLowerCase().includes(q));
-  }, [proyectos, buscaP, clientes]);
+    if (!q) return resueltos;
+    // Se busca también por razón social y número de oferta: quien busca «B848…»
+    // o «OFE-2026-…» espera encontrar su proyecto.
+    return resueltos.filter(p => `${p.nombre} ${p.nombreCliente} ${p.razonSocial || ''} ${p.cif || ''} `
+      + `${p.numeroOferta || ''} ${(p.normas || []).join(' ')} ${p.modelo || ''}`
+      .toLowerCase().includes(q));
+  }, [resueltos, buscaP]);
   const totalPagsP = porPagP === 'todos' ? 1 : Math.max(1, Math.ceil(proyectosFiltrados.length / Number(porPagP)));
   const proyectosPagina = useMemo(() => {
     if (porPagP === 'todos') return proyectosFiltrados;
@@ -105,6 +120,9 @@ export default function Proyectos() {
     // Las empresas del CRM son la lista buena para elegir cliente al abrir un
     // proyecto: `clientes` es la tabla operativa y va por detrás.
     listTable('empresas').then(setEmpresas).catch(() => setEmpresas([]));
+    // Ofertas y contratos: de ahí salen las normas y el modelo de verdad.
+    listTable('presupuestos').then(setPresupuestos).catch(() => setPresupuestos([]));
+    listTable('contratos').then(setContratos).catch(() => setContratos([]));
     listTable('proyectos_cliente').then(setProyectos).catch(() => setProyectos([]));
     listTable('tareas_catalogo').then(setCatalogo).catch(() => setCatalogo([]));
     listTable('festivos').then(setFestivos).catch(() => setFestivos([]));
@@ -436,10 +454,33 @@ export default function Proyectos() {
             <tbody className="divide-y divide-navy-50">
               {proyectosPagina.map(p => (
                 <tr key={p.id} className={`cursor-pointer hover:bg-navy-50/50 ${String(p.id) === String(sel) ? 'bg-brand-orange/5' : ''}`} onClick={() => setSel(String(p.id))}>
-                  <td className="py-2 font-medium">{nombreCli(p.cliente_id)}</td>
-                  <td className="py-2">{p.nombre}</td>
-                  <td className="py-2 text-xs text-[#9FC0CB]">{(p.normas || []).join(', ') || '—'}</td>
-                  <td className="py-2 text-xs">{p.modelo || '—'}</td>
+                  <td className="py-2 font-medium">
+                    {p.nombreCliente}
+                    {/* La razón social solo si difiere: repetirla en cada fila
+                        es ruido, pero cuando no coincide hace falta verla. */}
+                    {p.razonSocial && p.razonSocial !== p.nombreCliente && (
+                      <span className="block text-[11px] font-normal text-[#7FA7B4]">{p.razonSocial}</span>
+                    )}
+                  </td>
+                  <td className="py-2">
+                    {p.nombre}
+                    {p.numeroOferta && (
+                      <span className="block text-[11px] text-[#7FA7B4]">{p.numeroOferta}</span>
+                    )}
+                  </td>
+                  <td className="py-2 text-xs text-[#9FC0CB]">
+                    {p.normas.length ? p.normas.join(', ') : <span className="text-[#5E8494]">—</span>}
+                    {p.desfases.some((d) => d.campo === 'normas') && (
+                      <span className="ml-1 text-[10px] font-bold text-amber-200"
+                        title="El proyecto tiene un alcance distinto del ofertado">≠ oferta</span>
+                    )}
+                  </td>
+                  <td className="py-2 text-xs">
+                    {p.modelo || <span className="text-[#5E8494]">—</span>}
+                    {p.desfases.some((d) => d.campo === 'modelo') && (
+                      <span className="ml-1 text-[10px] font-bold text-amber-200" title="Distinto del modelo ofertado">≠</span>
+                    )}
+                  </td>
                   <td className="py-2"><span className={`chip text-[11px] font-bold ${p.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{p.estado}</span></td>
                   <td className="py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
                 </tr>
