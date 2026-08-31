@@ -55,13 +55,15 @@ const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month
  * agosto y, con los 30 días de validez que constan en las condiciones, le
  * reabriría el plazo sin que nadie lo decidiera.
  */
-const fechaDoc = (r) => {
-  const f = r?.fecha_emision;
-  if (!f) return HOY();
+/** «01 de octubre de 2026», o null si la fecha no vale. */
+const fechaLarga = (f) => {
+  if (!f) return null;
   const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? HOY()
+  return Number.isNaN(d.getTime()) ? null
     : d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 };
+
+const fechaDoc = (r) => fechaLarga(r?.fecha_emision) || HOY();
 
 export async function generarPDFOferta(r, cli, anexo) {
   const pdf = await PDFDocument.create();
@@ -292,12 +294,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   // cuadro de facturación) y el cliente no tenía dónde leer cuándo empieza,
   // cuándo termina y cuándo está prevista la auditoría.
   {
-    const fmt = (f) => {
-      if (!f) return null;
-      const d = new Date(`${String(f).slice(0, 10)}T12:00:00`);
-      return Number.isNaN(d.getTime()) ? null
-        : d.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-    };
+    const fmt = fechaLarga;
     const hitos = [
       ['Inicio previsto', fmt(r.fecha_inicio)],
       [esImpl ? 'Fin del proyecto' : 'Fin de contrato', fmt(r.fecha_fin)],
@@ -455,17 +452,52 @@ export async function generarPDFOferta(r, cli, anexo) {
       formaPago: r.formaPagoElegida || r.forma_pago,
       certificacion: r.fecha_certificacion || null,
     });
-    if (cuadro.filas.length > 1 || r.tipo === 'mes') {
+    // ── Pago anual por adelantado: NO hay calendario ──
+    // Con un solo cargo, una tabla de cuatro columnas con una fila y una
+    // columna «acumulado» que repite el mismo número es papel gastado. Lo que
+    // el cliente necesita saber es cuánto y cuándo vence, y eso se dice mejor
+    // como un vencimiento único.
+    if (r.pagoAdelantado && r.adelantado) {
+      seccion('Cuándo se factura', 16);
+      parrafo(`Pago único por adelantado: se abonan ${r.adelantado.mesesCobrados} mensualidades `
+        + `y se prestan ${r.adelantado.mesesServicio} meses de servicio.`);
+
+      asegurar(9);
+      const altoCaja = U * 7;
+      const topCaja = cursor + U * 1.2;
+      p.drawRectangle({ x: MG, y: topCaja - altoCaja, width: ANCHO, height: altoCaja, color: SUAVE });
+      p.drawRectangle({ x: MG, y: topCaja - altoCaja, width: U * 0.5, height: altoCaja, color: NARANJA });
+
+      // El vencimiento es la fecha del contrato: es cuando nace la obligación
+      // de pago, no cuando empieza a prestarse el servicio.
+      const fv = r.fecha_primer_pago || r.fecha_inicio || null;
+      const venc = fv ? fechaLarga(fv) : 'a la firma del contrato';
+
+      p.drawText('PAGO ÚNICO', { x: MG + U * 2, y: topCaja - U * 1.8, size: 7.5,
+        font: med, color: APAGADO, characterSpacing: 1.4 });
+      p.drawText(eur(r.adelantado.total), { x: MG + U * 2, y: topCaja - U * 4.2, size: 22, font: bold, color: TINTA });
+      p.drawText('sin impuestos', { x: MG + U * 2 + bold.widthOfTextAtSize(eur(r.adelantado.total), 22) + U,
+        y: topCaja - U * 4, size: 9, font: reg, color: APAGADO });
+
+      const etqV = 'VENCIMIENTO';
+      p.drawText(etqV, { x: MG + ANCHO - U * 2 - med.widthOfTextAtSize(etqV, 7.5), y: topCaja - U * 1.8,
+        size: 7.5, font: med, color: APAGADO, characterSpacing: 1.4 });
+      p.drawText(venc, { x: MG + ANCHO - U * 2 - bold.widthOfTextAtSize(venc, 11), y: topCaja - U * 4,
+        size: 11, font: bold, color: TINTA });
+
+      p.drawText(`Equivale a ${eur(r.precioCatalogo)}/mes durante ${r.adelantado.mesesServicio} meses`
+        + `  ·  ahorro de ${eur(r.adelantado.ahorro)} frente al pago mensual`,
+        { x: MG + U * 2, y: topCaja - U * 6, size: 8.5, font: reg, color: APAGADO });
+
+      cursor = topCaja - altoCaja - U * 1.5;
+    } else if (cuadro.filas.length > 1 || r.tipo === 'mes') {
       // Se reserva sitio para la cabecera y unas cuantas filas; el resto pagina
       // solo con `asegurar`. Pedir las doce de golpe forzaría un salto de página
       // aunque cupieran ocho.
       seccion('Cuándo se factura', Math.min(cuadro.filas.length, 8) * 2 + 12);
-      parrafo(r.pagoAdelantado && r.adelantado
-        ? `Pago anual por adelantado: se abonan ${r.adelantado.mesesCobrados} mensualidades y se prestan `
-          + `${r.adelantado.mesesServicio} meses de servicio.`
-        : r.tipo === 'mes'
-          ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} ${cuadro.filas.length === 1 ? 'cargo' : 'cargos'} durante la vigencia del contrato.`
-          : 'Calendario de facturación previsto desde la firma.');
+      parrafo(r.tipo === 'mes'
+        ? `Cuota mensual desde el inicio del servicio. ${cuadro.filas.length} ${cuadro.filas.length === 1 ? 'cargo' : 'cargos'} durante la vigencia del contrato.`
+        : 'Calendario de facturación previsto desde la firma.');
 
       // Cabecera
       asegurar(4);

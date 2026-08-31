@@ -73,6 +73,11 @@ export const EMISOR = emisorDe(null);
 /** Condiciones generales. `r` es el resultado del cálculo. */
 export function condiciones(r) {
   return [
+    ...(r?.pagoAdelantado && r?.adelantado ? [
+      `Forma de pago: un único pago por adelantado de ${r.adelantado.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}, `
+      + `con vencimiento a la fecha del contrato. Cubre ${r.adelantado.mesesServicio} meses de servicio `
+      + `(${r.adelantado.mesesCobrados} mensualidades).`,
+    ] : []),
     'Impuestos indirectos no incluidos. Todos los importes se expresan sin impuestos. El impuesto aplicable '
       + '(IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura. En '
       + 'operaciones intracomunitarias con NIF-IVA válido en VIES se aplica la inversión del sujeto pasivo.',
@@ -129,18 +134,33 @@ export function clausulas(r) {
      // agotadas las tareas del mes decae la cuota de ese mes. No es así: lo
      // que se contrata es un acompañamiento anual, y la cuota retribuye la
      // disponibilidad del equipo, no un consumo de horas.
-     + (esImpl ? '' :
-       '\n\nEsto no afecta al compromiso de pago. La cuota mensual se mantiene durante los doce meses de duración '
+     + (esImpl ? '' : r?.pagoAdelantado
+       // Pagado por adelantado, hablar de «cuota mensual que se mantiene» no
+       // encaja: ya está todo abonado. Lo que hay que dejar claro es que el
+       // servicio se presta el año entero aunque el pago fuera único.
+       ? '\n\nEl importe se ha abonado íntegramente por adelantado y cubre los doce meses de servicio, con '
+         + 'independencia de las horas efectivamente empleadas en cada periodo. El pago retribuye la disponibilidad '
+         + 'del equipo y el resultado comprometido durante todo el año, no un consumo de horas: los meses de menor '
+         + 'carga compensan los de mayor carga.'
+       : '\n\nEsto no afecta al compromiso de pago. La cuota mensual se mantiene durante los doce meses de duración '
        + 'del contrato, con independencia de las horas efectivamente empleadas en cada periodo. La cuota retribuye la '
        + 'disponibilidad del equipo y el resultado comprometido, no un consumo de horas: los meses de menor carga '
        + 'compensan los de mayor carga a lo largo del año.')],
+    ...(!esImpl && r?.pagoAdelantado && r?.adelantado ? [
+      ['4 · Forma de pago: único por adelantado',
+       `El importe se abona en un solo pago por adelantado al inicio del contrato: `
+       + `${r.adelantado.mesesCobrados} mensualidades por ${r.adelantado.mesesServicio} meses de servicio. `
+       + 'No hay cuotas mensuales posteriores ni domiciliación periódica. '
+       + 'Si el contrato se interrumpiera antes de tiempo por causa imputable a la CONSULTORA, se devolvería la '
+       + 'parte proporcional de los meses no prestados.'],
+    ] : []),
     ...(esImpl ? [] : [
-      ['4 · Renovación al término del contrato',
+      [`${(!esImpl && r?.pagoAdelantado) ? '5' : '4'} · Renovación al término del contrato`,
        'Un mes antes de la fecha de finalización del contrato se emitirá una oferta de renovación para el siguiente '
        + 'periodo anual, con el alcance y la dedicación revisados según la situación del sistema en ese momento. '
        + 'La renovación no es automática: requiere aceptación expresa de la organización.'],
     ]),
-    [(esImpl ? '4' : '5') + ' · Todo trabajo ajeno al alcance se presupuesta y factura aparte',
+    [(esImpl ? '4' : (r?.pagoAdelantado ? '6' : '5')) + ' · Todo trabajo ajeno al alcance se presupuesta y factura aparte',
      'Cualquier encargo que no figure en el Anexo I —nuevos sistemas, sedes adicionales, auditorías no previstas, formación específica o adaptaciones fuera del alcance— se presupuesta por separado antes de ejecutarse y se factura aparte. Nunca se ejecuta trabajo fuera de alcance sin presupuesto aceptado.'],
   ];
 }

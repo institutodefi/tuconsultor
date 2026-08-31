@@ -2353,3 +2353,63 @@ Ofertas, Ficha de empresa y Contactos.
 `migraciones-v98-v100-TODAS.sql`: v98 (varios directivos), v99 (pago adelantado
 y contacto) y v100 (céntimos), dentro de una transacción y validadas con el
 parser de PostgreSQL.
+
+---
+
+# v227 · Con pago adelantado, vencimiento único en vez de calendario
+
+## El PDF
+
+Con `pago_adelantado` marcado, la sección **«Cuándo se factura» ya no lleva
+tabla**. Una tabla de cuatro columnas con una sola fila, y una columna
+«acumulado» que repite el mismo número, es papel gastado: lo que el cliente
+necesita saber es cuánto y cuándo vence.
+
+En su lugar, una caja de **pago único**:
+
+```
+PAGO ÚNICO                                        VENCIMIENTO
+15.152,50 €  sin impuestos              01 de octubre de 2026
+Equivale a 1.377,50 €/mes durante 12 meses · ahorro de 1.377,50 €
+```
+
+El vencimiento es la fecha del contrato —cuando nace la obligación de pago—, no
+el mes en que empieza a prestarse el servicio.
+
+El equivalente mensual se mantiene a la vista: es lo que permite comparar con
+otras ofertas y con la propia alternativa de pagar mes a mes.
+
+## Las condiciones cambian, no solo la tabla
+
+**Condición de forma de pago**, primera de la lista:
+
+> Forma de pago: un único pago por adelantado de 15.152,50 €, con vencimiento a
+> la fecha del contrato. Cubre 12 meses de servicio (11 mensualidades).
+
+**Cláusula 4 nueva** en el Anexo III, solo cuando hay adelanto: deja claro que no
+hay cuotas posteriores ni domiciliación, y que si el contrato se interrumpiera
+por causa imputable a la consultora se devolvería la parte proporcional. Sin esa
+última frase, un pago anticipado sin condición de devolución es una asimetría
+que un cliente con abogado señalaría.
+
+**Cláusula 3 reescrita.** Decía «la cuota mensual se mantiene durante los doce
+meses». Pagado por adelantado eso no encaja: ya está todo abonado. Ahora dice que
+el importe cubre los doce meses de servicio con independencia de las horas
+empleadas.
+
+La numeración se corre sola: con adelanto son seis cláusulas, sin él cinco.
+
+## PowerPoint
+
+La forma de pago aparece en la ficha de datos, y el Anexo III lleva las mismas
+cláusulas que el PDF, porque salen de la misma función.
+
+## De paso
+
+Tres helpers de fecha distintos hacían lo mismo. Unificados en `fechaLarga()`.
+
+## Verificado
+
+Generados PDF y PPTX en las dos variantes: con adelanto no aparece ninguna
+«Cuota mensual N de 12» y sí el bloque de pago único con su vencimiento; sin él,
+el calendario de doce cuotas sigue igual que antes.
