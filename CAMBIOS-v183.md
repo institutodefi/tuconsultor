@@ -2804,3 +2804,165 @@ Reescrita: solo aporta `aceptada_por`, que es lo único que faltaba de verdad.
 
 Barrido de todas las funciones de trigger que insertan en tablas con RLS sin ser
 `security definer`: 35 tablas con RLS, **un solo caso**, el corregido.
+
+---
+
+# v236 · Integridad del flujo oferta → contrato → proyecto
+
+## 1 · Los datos de empresa y persona dejan de ser editables fuera de su ficha
+
+Era el punto con más riesgo. En la edición de una oferta se podían cambiar
+empresa, CIF, nombre, cargo, correo y teléfono. Cada oferta acababa con su
+propia versión: se corregía el CIF ahí, seguía mal en el CRM, y el siguiente
+documento volvía a salir con el equivocado.
+
+Nuevo `components/DatoEspejo.jsx`. Esos campos se muestran en **solo lectura**,
+con enlace a donde sí se editan:
+
+- empresa, CIF, dirección → ficha de **Empresa**
+- nombre, cargo, correo, teléfono → ficha de **Contacto**
+
+Para cambiar a qué persona va dirigida sigue estando el desplegable; para
+corregir sus datos, su ficha. **Un solo origen, y todos los sitios lo leen**: es
+la única forma de que la bidireccionalidad sea real.
+
+### Lo que se emitió no cambia solo
+
+El valor guardado en la oferta **se conserva**: es lo que se imprimió y lo que
+tiene el cliente. Si difiere del CRM se avisa, agrupado:
+
+> 2 datos no coinciden con la ficha del CRM
+> · CIF: aquí «B8779568», en el CRM «B87795688»
+> El documento se emitió con los valores de la izquierda y no se cambian solos:
+> alterarlos ahora haría que el PDF que tiene el cliente dejara de coincidir.
+> Si el CRM es lo correcto, regenera el documento; si no, corrige la ficha.
+
+Cambiarlos automáticamente habría sido peor: el PDF en manos del cliente diría
+una cosa y el sistema otra, sin que nadie lo supiera.
+
+## 2 · El contrato incorpora las condiciones de la oferta
+
+Decía «el alcance es el del Anexo I de la propuesta aceptada», pero la propuesta
+es **otro documento**: quien firma solo tiene delante el contrato. Si mañana hay
+discusión sobre qué se pactó, remitir a un PDF que quizá no se guardó es una
+respuesta débil.
+
+Ahora el contrato reproduce las cláusulas y las condiciones económicas de la
+oferta, generadas por la **misma función** (`contenido-oferta.mjs`), así que no
+pueden divergir: si cambia una condición, cambia en los dos documentos.
+
+El contrato pasa de 4 a 5 páginas.
+
+## 3 · Vigencia desde el inicio del proyecto
+
+> El contrato entra en vigor el 01 de octubre de 2026, fecha de inicio del
+> servicio según la propuesta aceptada, y tiene una duración de doce meses,
+> hasta el 02 de octubre de 2027.
+
+Antes contaba desde la firma. Se firma antes de empezar —a veces con semanas de
+margen— y contar desde ahí **acortaba el servicio contratado**: doce meses desde
+la firma terminan antes que doce desde el arranque.
+
+## 4 · La fecha de certificación ya no bloquea el alta
+
+Exigirla obligaba a inventarse una fecha, y eso es peor que no tenerla: los
+avisos de 30 y 60 días saltarían contra un dato falso.
+
+El proyecto se abre igual, el campo queda marcado como opcional, y al guardar se
+dice qué falta: *«Sin fecha de certificación: añádela cuando la reserves para
+activar los avisos de vencimiento.»*
+
+## Pendiente para el siguiente turno
+
+Los dos últimos puntos son una funcionalidad nueva completa y prefiero hacerlos
+con cuidado que a medias:
+
+- **Que cada cliente suba certificados y documentos** — necesita almacenamiento,
+  políticas de acceso por cliente y una pantalla en el portal.
+- **Que una IA lea cada documento y escriba una nota de ayuda** — encima de lo
+  anterior, con la llamada al modelo y el coste asociado.
+
+---
+
+# v237 · Documentos del cliente y lectura por IA
+
+## Dos tablas, no una
+
+`cliente_documentos` y `documento_notas` van separadas **a propósito**, y no como
+una columna `nota` dentro de la primera.
+
+Si la nota viviera junto al documento, cualquier consulta del cliente que
+trajera la fila entera se la llevaría con ella. Separarlas hace que la política
+de acceso sea simple y difícil de romper por descuido.
+
+| | Quién lo ve |
+|---|---|
+| **Documentos** | El equipo, todos. El cliente, los suyos |
+| **Notas de IA** | **Solo el equipo**, ni siquiera el cliente dueño del documento |
+
+## El depósito es privado
+
+Al contrario que el bucket `ofertas`, que es público porque esos PDF se envían
+por correo igualmente. Aquí hay escrituras, pólizas y certificados con CIF y
+domicilio: se sirven con **enlaces firmados que caducan en una hora**, generados
+por el backend. No hay política de lectura directa, así que nadie descarga
+saltándose la firma.
+
+## Quién puede qué
+
+- **Subir**: el equipo y el propio cliente en su ficha. Queda marcado
+  `subido_por_cliente`, porque no es lo mismo un certificado que aporta el
+  cliente que uno que hemos verificado nosotros.
+- **Editar**: solo el equipo.
+- **Borrar**: solo dirección. Un cliente que pudiera borrar el certificado que
+  aportó dejaría el expediente incompleto sin rastro.
+
+## La nota de IA: extracción, no descripción
+
+Como dijiste que sirve para saber alcances, fechas, CIF real y sedes, no se le
+pide una descripción sino **datos estructurados**:
+
+```
+Razón social · CIF · Norma · Emisor · Nº de certificado
+Alcance (literal)
+Sedes
+Validez: desde → hasta
+Avisos: caducado, alcance distinto del esperado, CIF que no cuadra…
+Confianza: alta | media | baja
+```
+
+Tres decisiones:
+
+- **Se pide que deje en null lo que no aparezca.** Un hueco es mucho más útil
+  que una suposición, porque estos datos se usan para verificar el expediente.
+- **La confianza se guarda y se muestra.** Una lectura de un escaneo torcido no
+  vale lo mismo que la de un PDF limpio, y quien la use debe saberlo.
+- **Los datos extraídos NO se escriben solos en la ficha**: se proponen. Una
+  fecha de caducidad mal leída activaría avisos falsos.
+
+Y al pie de cada nota: *«Lectura automática. No se muestra al cliente y puede
+contener errores: contrasta los datos antes de usarlos en una oferta o un
+contrato.»*
+
+Word no se analiza: el modelo no lo lee directamente, y se dice en vez de fingir
+un análisis. PDF e imágenes sí.
+
+## Dónde está
+
+- **Equipo**: pestaña «Documentos» en la cartera de la ficha de empresa.
+- **Cliente**: pestaña «Mis documentos» en su portal.
+
+Con aviso arriba de los certificados caducados o a menos de 60 días de caducar:
+de eso depende que el cliente siga acreditado.
+
+## Hace falta configurar
+
+`ANTHROPIC_API_KEY` en las variables de entorno de Netlify. Sin ella todo
+funciona salvo el botón de analizar, que lo dice en vez de fallar en silencio.
+
+## Verificación
+
+`scripts/test-documentos.mjs`: los cinco roles del equipo ven documentos y notas,
+el cliente ve sus documentos pero **no** las notas, no ve los de otro cliente, no
+puede subir a fichas ajenas ni borrar lo que aportó, y el cálculo de caducidad en
+sus cuatro tramos.

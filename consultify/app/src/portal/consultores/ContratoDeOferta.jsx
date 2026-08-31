@@ -90,7 +90,14 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
     setOcupado(true); setMsg(null);
     try {
       if (DEMO) { setMsg({ err: false, t: 'En modo demostración no se da de alta.' }); return; }
-      if (!fechaLimite) throw new Error('Falta la fecha límite: es la que gobierna los avisos de 30/60/90 días.');
+      // La fecha de certificación NO bloquea el alta. Cuando se arranca un
+      // proyecto casi nunca hay auditoría reservada: depende de la agenda del
+      // certificador y se fija semanas o meses después. Exigirla aquí obligaba
+      // a inventarse una fecha, que es peor que no tenerla: los avisos de 30 y
+      // 60 días saltarían contra un dato falso.
+      //
+      // Sin ella no hay semáforo de vencimiento, y eso se dice al guardar; el
+      // proyecto se abre igual y la fecha se añade cuando se sepa.
       if (!normas.length) throw new Error('Elige al menos una norma: cada una será un contexto de trabajo.');
       const { data, error } = await supabase.rpc('activar_productos_contrato', {
         p_contrato_id: contrato.id,
@@ -105,7 +112,7 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
       const pid = data?.proyecto_id;
       if (pid) {
         await supabase.from('proyectos_cliente')
-          .update({ modelo, fecha_limite: fechaLimite }).eq('id', pid);
+          .update({ modelo, fecha_limite: fechaLimite || null }).eq('id', pid);
         // Un CONTEXTO por norma: tres sistemas son tres contextos, y las
         // tareas de cada uno se programan por separado. Nunca se integra.
         for (const n of normas) {
@@ -114,7 +121,11 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
             .then(() => {}, () => {});   // si ya existía, se sigue
         }
       }
-      setMsg({ err: false, t: `Proyecto dado de alta con ${productos.length === 2 ? 'las dos herramientas' : PRODUCTOS.find((x) => x.id === productos[0])?.etq}.` });
+      // Sin fecha de certificación el proyecto se abre igual, pero conviene
+      // decir qué queda pendiente: sin ella no hay semáforo de vencimiento.
+      const herr = productos.length === 2 ? 'las dos herramientas' : PRODUCTOS.find((x) => x.id === productos[0])?.etq;
+      setMsg({ err: false, t: `Proyecto dado de alta con ${herr}.`
+        + (fechaLimite ? '' : ' Sin fecha de certificación: añádela cuando la reserves para activar los avisos de vencimiento.') });
       setAbierto(false);
       onCambio && onCambio();
     } catch (e) {

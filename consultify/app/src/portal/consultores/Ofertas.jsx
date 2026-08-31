@@ -10,6 +10,8 @@ import ContratoDeOferta from './ContratoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImportarContacto from '../../components/ImportarContacto.jsx';
+import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
+import { normalizarCif } from '../../lib/crm.js';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
 function fFecha(f) {
@@ -350,6 +352,50 @@ export default function Ofertas() {
   // la permanencia de doce meses y va pegado al inicio.
   const finManual = MODELOS_PROYECTO.includes(edicion?.modelo);
 
+  // ── El CRM como fuente de verdad de empresa y persona ──
+  // La oferta guarda una COPIA de esos datos: es lo que se imprimió, y no debe
+  // cambiar retroactivamente porque alguien corrija una ficha. Pero si hay
+  // desfase hay que verlo, para decidir si se regenera el documento o se
+  // corrige la ficha.
+  const [crm, setCrm] = useState(null);
+  useEffect(() => {
+    if (!edicion || crm) return;
+    Promise.all([
+      listAll('empresas', 'nombre').catch(() => []),
+      listAll('contactos', 'nombre').catch(() => []),
+    ]).then(([e, c]) => setCrm({ empresas: e || [], contactos: c || [] }));
+  }, [edicion, crm]);
+
+  const crmEmpresa = useMemo(() => {
+    if (!crm || !edicion) return null;
+    const c = normalizarCif(edicion.cif);
+    return crm.empresas.find((e) => c && normalizarCif(e.cif) === c) || null;
+  }, [crm, edicion?.cif]);
+
+  const crmContacto = useMemo(() => {
+    if (!crm || !edicion?.contacto_id) return null;
+    return crm.contactos.find((x) => String(x.id) === String(edicion.contacto_id)) || null;
+  }, [crm, edicion?.contacto_id]);
+
+  const hrefEmpresa = crmEmpresa ? `/consultores/empresas?e=${crmEmpresa.id}` : '/consultores/empresas';
+  const hrefContacto = crmContacto ? `/consultores/contactos?c=${crmContacto.id}` : '/consultores/contactos';
+
+  const desfases = useMemo(() => {
+    if (!edicion) return [];
+    const pares = [
+      ['Empresa', edicion.empresa, crmEmpresa?.nombre],
+      ['CIF', edicion.cif, crmEmpresa?.cif],
+      ['Nombre', edicion.contacto_nombre, crmContacto?.nombre],
+      ['Cargo', edicion.cargo, crmContacto?.cargo],
+      ['Correo', edicion.email, crmContacto?.email],
+    ];
+    const igual = (a, b) => String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase();
+    return pares
+      .filter(([, , enCrm]) => enCrm)
+      .filter(([, valor, enCrm]) => !igual(valor, enCrm))
+      .map(([etiqueta, valor, enCrm]) => ({ etiqueta, valor, enCrm }));
+  }, [edicion, crmEmpresa, crmContacto]);
+
   // Cálculo en vivo de la oferta abierta, para poder enseñar el desglose por
   // sistema y los campos de tarifa pactada mientras se edita.
   const calcEdicion = useMemo(() => {
@@ -512,23 +558,29 @@ export default function Ofertas() {
             })}
           />
 
+          {/* ── Datos de empresa y persona: SOLO LECTURA ──
+              Se editan en su ficha, no aquí. Si se pudieran cambiar en cada
+              oferta, cada documento acabaría con su propia versión del CIF y no
+              habría forma de saber cuál es la buena. Para cambiar la persona a
+              la que va dirigida está el desplegable de arriba; para corregir sus
+              datos, su ficha. */}
+          <AvisoDesfase campos={desfases} href={hrefEmpresa} />
+
           <div className="form-grid">
-            <div><label className="label" htmlFor="of-empresa">Empresa <span className="text-brand-orange">*</span></label>
-              <input id="of-empresa" className="input !py-1.5 !text-[13px]" value={edicion.empresa || ''} onChange={(e) => setEdicion({ ...edicion, empresa: e.target.value })} /></div>
-            {/* Nombre y apellidos POR SEPARADO, como el resto de formularios: unidos
-                en un campo no cuadraban con el CRM y no se podían reimportar. */}
-            <div><label className="label" htmlFor="of-nombre">Nombre</label>
-              <input id="of-nombre" className="input !py-1.5 !text-[13px]" value={edicion.contacto_nombre || ''} onChange={(e) => setEdicion({ ...edicion, contacto_nombre: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-apellidos">Apellidos</label>
-              <input id="of-apellidos" className="input !py-1.5 !text-[13px]" value={edicion.contacto_apellidos || ''} onChange={(e) => setEdicion({ ...edicion, contacto_apellidos: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-cargo">Cargo</label>
-              <input id="of-cargo" className="input !py-1.5 !text-[13px]" value={edicion.cargo || ''} onChange={(e) => setEdicion({ ...edicion, cargo: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-cif">CIF</label>
-              <input id="of-cif" className="input !py-1.5 !text-[13px]" value={edicion.cif || ''} onChange={(e) => setEdicion({ ...edicion, cif: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-email">Correo</label>
-              <input id="of-email" type="email" className="input !py-1.5 !text-[13px]" value={edicion.email || ''} onChange={(e) => setEdicion({ ...edicion, email: e.target.value })} /></div>
-            <div><label className="label" htmlFor="of-tel">Teléfono</label>
-              <input id="of-tel" type="tel" className="input !py-1.5 !text-[13px]" value={edicion.telefono || ''} onChange={(e) => setEdicion({ ...edicion, telefono: e.target.value })} /></div>
+            <DatoEspejo etiqueta="Empresa" valor={edicion.empresa}
+              enCrm={crmEmpresa?.nombre} href={hrefEmpresa} comoEditar="Editar en Empresas →" />
+            <DatoEspejo etiqueta="CIF" valor={edicion.cif}
+              enCrm={crmEmpresa?.cif} href={hrefEmpresa} comoEditar="Editar en Empresas →" />
+            <DatoEspejo etiqueta="Nombre" valor={edicion.contacto_nombre}
+              enCrm={crmContacto?.nombre} href={hrefContacto} comoEditar="Editar en Contactos →" />
+            <DatoEspejo etiqueta="Apellidos" valor={edicion.contacto_apellidos}
+              enCrm={crmContacto?.apellidos} href={hrefContacto} comoEditar="Editar en Contactos →" />
+            <DatoEspejo etiqueta="Cargo" valor={edicion.cargo}
+              enCrm={crmContacto?.cargo} href={hrefContacto} comoEditar="Editar en Contactos →" />
+            <DatoEspejo etiqueta="Correo" valor={edicion.email}
+              enCrm={crmContacto?.email} href={hrefContacto} comoEditar="Editar en Contactos →" />
+            <DatoEspejo etiqueta="Teléfono" valor={edicion.telefono}
+              enCrm={crmContacto?.movil || crmContacto?.telefono} href={hrefContacto} comoEditar="Editar en Contactos →" />
           </div>
           <div>
             <p className="label !mb-1.5">Sistemas</p>

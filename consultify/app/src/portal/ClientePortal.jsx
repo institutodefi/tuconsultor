@@ -6,6 +6,7 @@ import MisDatosPagina from './cliente/MisDatosPagina.jsx';
 import MisOfertas from './cliente/MisOfertas.jsx';
 import { misProyectos, misPresupuestos, listTable } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
+import DocumentosCliente from '../components/DocumentosCliente.jsx';
 
 const ESTADOS = { activo: 'bg-green-100 text-green-800', 'implantación': 'bg-brand-orange/20 text-[#F9A83A]', pausado: 'bg-[#123F52] text-[#9FC0CB]', cerrado: 'bg-[#0D3242] text-[#7FA7B4]' };
 
@@ -75,10 +76,53 @@ function Soporte() {
   );
 }
 
+// ── Mis documentos ──
+// El cliente sube aquí sus certificados y los ve. La nota de análisis que
+// genera el equipo NO se le muestra: la política de `documento_notas` no se la
+// devuelve, y el componente ni siquiera la pide cuando quien mira es cliente.
+function MisDocumentos() {
+  const { user } = useAuth();
+  const [clienteId, setClienteId] = useState(undefined);
+
+  useEffect(() => {
+    let vivo = true;
+    listTable('clientes')
+      .then((cs) => {
+        const mio = (cs || []).find((c) => String(c.user_id) === String(user?.id));
+        if (vivo) setClienteId(mio?.id || null);
+      })
+      .catch(() => vivo && setClienteId(null));
+    return () => { vivo = false; };
+  }, [user?.id]);
+
+  if (clienteId === undefined) return <p className="text-sm text-[#9FC0CB]">Cargando…</p>;
+  if (!clienteId) {
+    return (
+      <div className="card">
+        <p className="font-bold text-[#EAF4F7]">Aún no hay ficha de cliente asociada a tu cuenta</p>
+        <p className="mt-1 text-sm text-[#9FC0CB]">
+          Escríbenos a hola@tuconsultor.com y la activamos.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <p className="mb-3 text-sm font-medium text-[#9FC0CB]">
+        Sube aquí tus certificados, informes de auditoría y cualquier documentación que
+        deba constar en tu expediente. Tu consultor los ve al momento.
+      </p>
+      <DocumentosCliente clienteId={clienteId} titulo="Mis documentos" />
+    </div>
+  );
+}
+
 export default function ClientePortal() {
   const tabs = [
     { to: '', end: true, label: 'Mis servicios' },
     { to: 'presupuestos', label: 'Mis presupuestos' },
+    { to: 'documentos', label: 'Mis documentos' },
     { to: 'soporte', label: 'Soporte' },
     { to: 'mis-datos', label: 'Mis datos' },
   ];
@@ -95,6 +139,7 @@ export default function ClientePortal() {
         <Routes>
           <Route index element={<Servicios />} />
           <Route path="presupuestos" element={<Presupuestos />} />
+          <Route path="documentos" element={<MisDocumentos />} />
           <Route path="soporte" element={<Soporte />} />
           <Route path="mis-datos" element={<MisDatosPagina />} />
           <Route path="*" element={<Navigate to="." replace />} />

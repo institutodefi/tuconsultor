@@ -7,6 +7,7 @@ import { TONO_SEMAFORO, fmtFecha as fmtFechaProy } from '../../lib/proyectos.js'
 import { nombreVisible } from '../../lib/crm.js';
 import { pagoAdelantado } from '../../lib/calcEngine.js';
 import { estaAceptada } from '../../lib/ofertasAceptadas.js';
+import DocumentosCliente from '../../components/DocumentosCliente.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Cartera de la empresa · ofertas, contratos y proyectos
@@ -252,6 +253,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
             <Pestana activa={pestana === 'proyectos'} onClick={() => setPestana('proyectos')} n={proyectos.length}>Proyectos</Pestana>
             <Pestana activa={pestana === 'contratos'} onClick={() => setPestana('contratos')} n={contratos.length}>Contratos</Pestana>
             <Pestana activa={pestana === 'ofertas'} onClick={() => setPestana('ofertas')} n={ofertas.length}>Ofertas</Pestana>
+            <Pestana activa={pestana === 'documentos'} onClick={() => setPestana('documentos')}>Documentos</Pestana>
           </div>
 
           {/* ── Proyectos ── */}
@@ -315,6 +317,13 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
               ))}
             </ul>
           ) : <Vacio>Ningún contrato todavía.</Vacio>)}
+
+          {/* ── Documentos ── */}
+          {pestana === 'documentos' && (
+            clienteId
+              ? <DocumentosCliente clienteId={clienteId} titulo="Documentos del cliente" />
+              : <Vacio>Esta empresa aún no tiene ficha de cliente: créala para poder adjuntar documentos.</Vacio>
+          )}
 
           {/* ── Ofertas ── */}
           {pestana === 'ofertas' && (ofertas.length ? (

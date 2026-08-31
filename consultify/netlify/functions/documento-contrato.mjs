@@ -20,6 +20,9 @@ import {
 } from './assets-oferta.mjs';
 import { LOGO_TUCONSULTOR_BLANCO, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { RGB01, emisorDe, fmtEur, fechaLarga, nombresDeNormas } from './contenido-oferta.mjs';
+// Las mismas cláusulas que la oferta, para que contrato y propuesta no puedan
+// divergir: si cambia una condición, cambia en los dos documentos.
+import { clausulas as clausulasOferta, condiciones as condicionesOferta } from './contenido-oferta.mjs';
 
 const b64 = (s) => Buffer.from(s, 'base64');
 const c = (k) => rgb(...RGB01[k]);
@@ -228,13 +231,29 @@ export async function generarPDFContrato(contrato, oferta = {}) {
   const CL = [
     ['Objeto',
      `${contrato.objeto}\n\nEl alcance concreto es el que consta en el Anexo I de la propuesta aceptada, que se incorpora a este contrato y forma parte de él.`],
-    ['Duración',
-     esImpl
-       ? `El proyecto tiene una duración estimada de ${meses || '—'} meses desde su inicio efectivo. Termina cuando el objeto queda cumplido; no se prorroga tácitamente.`
-       : 'La duración es de doce meses desde la fecha de firma. El compromiso de ambas partes se extiende a la '
-         + 'totalidad de ese periodo.\n\nUn mes antes de la fecha de finalización, la CONSULTORA emitirá una oferta '
-         + 'de renovación para el siguiente periodo anual, con el alcance y la dedicación revisados. La renovación '
-         + 'requiere aceptación expresa de la ORGANIZACIÓN: no opera de forma automática ni por silencio.'],
+    ['Duración y entrada en vigor',
+     // La vigencia arranca en el INICIO DEL PROYECTO que consta en la oferta,
+     // no en la fecha de firma. Se firma antes de empezar —a veces con semanas
+     // de margen— y contar desde la firma acortaba el servicio contratado:
+     // doce meses desde la firma terminan antes que doce desde el arranque.
+     (() => {
+       const ini = fecha(oferta?.fecha_inicio || contrato.fecha_inicio);
+       const fin = fecha(oferta?.fecha_fin || contrato.fecha_fin);
+       const desde = ini ? `el ${ini}` : 'el inicio efectivo del proyecto';
+       if (esImpl) {
+         return `El contrato entra en vigor ${desde}, fecha de inicio prevista del proyecto según la propuesta `
+           + `aceptada. La duración estimada es de ${meses || '—'} meses`
+           + (fin ? `, con finalización prevista el ${fin}` : '')
+           + '. Termina cuando el objeto queda cumplido; no se prorroga tácitamente.';
+       }
+       return `El contrato entra en vigor ${desde}, fecha de inicio del servicio según la propuesta aceptada, `
+         + `y tiene una duración de doce meses`
+         + (fin ? `, hasta el ${fin}` : '')
+         + '. El compromiso de ambas partes se extiende a la totalidad de ese periodo.'
+         + '\n\nUn mes antes de la fecha de finalización, la CONSULTORA emitirá una oferta de renovación para el '
+         + 'siguiente periodo anual, con el alcance y la dedicación revisados. La renovación requiere aceptación '
+         + 'expresa de la ORGANIZACIÓN: no opera de forma automática ni por silencio.';
+     })()],
     ['Precio',
      // El contrato fija la base. El impuesto se determina al facturar según el
      // domicilio fiscal del cliente: puede ser IVA, IGIC, IPSI, inversión del
@@ -269,6 +288,42 @@ export async function generarPDFContrato(contrato, oferta = {}) {
      'Este contrato se rige por la legislación española. Las partes se someten a los juzgados y tribunales de Madrid, con renuncia a cualquier otro fuero que pudiera corresponderles.'],
   ];
   CL.forEach(([t, cuerpo], i) => clausula(i + 1, t, cuerpo));
+
+  // ══════════════════ CONDICIONES DE LA OFERTA ══════════════════
+  //
+  // El contrato decía «el alcance es el del Anexo I de la propuesta aceptada»,
+  // pero la propuesta es otro documento: quien firma solo tiene delante esto.
+  // Si mañana hay discusión sobre qué se pactó, remitir a un PDF que quizá no
+  // se guardó es una respuesta débil.
+  //
+  // Se incorporan aquí las mismas cláusulas y condiciones que llevaba la
+  // oferta, generadas por la MISMA función (`contenido-oferta.mjs`), así que no
+  // pueden divergir: si cambia una, cambia en los dos documentos.
+  {
+    const r = { ...oferta, modelo: contrato.modelo || oferta?.modelo };
+    let clOferta = [];
+    let cndOferta = [];
+    try { clOferta = clausulasOferta(r) || []; } catch { /* oferta incompleta */ }
+    try { cndOferta = (condicionesOferta(r) || []).filter(Boolean); } catch { /* idem */ }
+
+    if (clOferta.length) {
+      rotulo('Condiciones del servicio contratado', 14);
+      parrafo('Reproducen las condiciones de la propuesta aceptada, que forman parte de este contrato.');
+      // Sus títulos ya vienen numerados desde la oferta («3 · Cumplidas las
+      // tareas…»), así que se imprimen tal cual: numerarlos otra vez daba
+      // «11. 3 · Cumplidas las tareas…».
+      clOferta.forEach(([t, cuerpo]) => {
+        asegurar(6);
+        rotulo(t, 6);
+        parrafo(cuerpo);
+      });
+    }
+
+    if (cndOferta.length) {
+      rotulo('Condiciones económicas y de validez', 12);
+      cndOferta.forEach((c) => parrafo(`· ${c}`));
+    }
+  }
 
   if (contrato.notas) {
     rotulo('Condiciones particulares', 10);
