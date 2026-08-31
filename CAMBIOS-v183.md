@@ -2139,3 +2139,55 @@ homónima dentro de una función. **Ningún caso real pendiente.**
 
 En el pie de la aplicación debe leerse **v221.0.0** o superior. Si sigue
 apareciendo otra cosa, el despliegue no ha llegado.
+
+---
+
+# v223 · Varios contactos directivos por empresa
+
+## Qué impedía tenerlos
+
+Un índice único de la v56:
+
+```sql
+create unique index empresa_contactos_rol_unico
+  on empresa_contactos (empresa_id, rol) where rol <> 'secundario';
+```
+
+Al asignar un segundo directivo, la interfaz **degradaba al primero a
+«secundario»** para no violarlo. En una empresa con dirección general, dirección
+de calidad y responsable del sistema, solo una podía constar como directiva; las
+otras acababan mezcladas con los contactos sueltos y se perdía quién manda.
+
+## Migración `v98`
+
+El índice pasa a cubrir **solo facturación y proyecto**. Ahí la ambigüedad sí es
+un problema —a quién se manda la factura, con quién se coordina— y tener dos
+obligaría a elegir igualmente. Directivo admite los que hagan falta.
+
+Sigue habiendo **un principal por empresa**: es quien firma los documentos y
+quien se sincroniza con Brevo. Varios directivos, uno principal.
+
+La migración además corrige lo que hubiera quedado descolocado: quita el
+`principal` a quien no sea directivo, y si una empresa tiene directivos pero
+ninguno marcado, asciende al más antiguo.
+
+## En la ficha
+
+- Bloque propio **«Contactos directivos (N)»** con botón «+ añadir otro».
+- El principal, primero en la lista, con distintivo **★ PRINCIPAL** y el aviso
+  de que es quien aparece en documentos y en Brevo.
+- Botón **«hacer principal»** en los demás. Cambia el anterior antes de poner el
+  nuevo, porque el índice único de la base no admite dos a la vez.
+- Aviso si hay varios directivos y **ninguno** es principal.
+- Facturación y proyecto conservan su bloque de rol único.
+
+## Detalles que había que ajustar
+
+- **Al añadir un directivo ya no se degrada a nadie.** La degradación queda solo
+  para los dos roles que siguen siendo únicos.
+- **El primer directivo es principal; los siguientes, no.** Añadir un segundo no
+  debe destronar a quien ya firmaba.
+- **Ascender a alguien a directivo tampoco le hace principal** si ya hay uno.
+
+Aplicado en las cuatro vías por las que se puede llegar: vincular existente,
+crear nuevo, cambiar de rol y copiar a otro rol.

@@ -29,6 +29,14 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
     .filter((x) => x.c), [vinculos, contactos, empresa.id]);
 
   const porRol = (rol) => mios.find((x) => x.vinc.rol === rol);
+  // Directivo admite VARIOS desde la migración v98: una empresa puede tener
+  // dirección general, dirección de calidad y responsable del sistema, y las
+  // tres son interlocutoras. Antes solo cabía una y las demás caían a
+  // «secundario», donde se mezclaban con contactos sueltos.
+  const directivos = mios
+    .filter((x) => x.vinc.rol === 'directivo')
+    // El principal primero: es quien firma y quien va a los documentos.
+    .sort((a, b) => (b.vinc.principal ? 1 : 0) - (a.vinc.principal ? 1 : 0));
   const secundarios = mios.filter((x) => x.vinc.rol === 'secundario');
 
   const candidatos = useMemo(() => {
@@ -54,8 +62,11 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
     }
     setOcupado(true);
     try {
-      // Si el rol ya estaba ocupado, el anterior pasa a secundario (índice único)
-      const previo = asignando !== 'secundario' ? porRol(asignando) : null;
+      // Facturación y proyecto siguen siendo únicos: si ya estaban ocupados, el
+      // anterior pasa a secundario. Directivo ya no, así que no se degrada a
+      // nadie al añadir otro.
+      const ROLES_UNICOS = ['facturacion', 'proyecto'];
+      const previo = ROLES_UNICOS.includes(asignando) ? porRol(asignando) : null;
       if (previo) await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
 
       const yaVinculado = mios.find((x) => String(x.c.id) === String(contacto.id));
@@ -66,7 +77,10 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
           empresa_id: empresa.id,
           contacto_id: contacto.id,
           rol: asignando,
-          principal: asignando === 'directivo',
+          // Solo hay un principal por empresa (índice único en la base). El
+          // primer directivo lo es; los siguientes se añaden sin marcar y se
+          // asciende a mano con «hacer principal».
+          principal: asignando === 'directivo' && directivos.length === 0,
           cargo: contacto.cargo || null,
         });
       }
@@ -101,11 +115,13 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
         consentimiento_fecha: nuevo.consentimiento_marketing ? new Date().toISOString() : null,
       });
       if (!creado?.id) throw new Error('el contacto se creó pero no se pudo recuperar su id; recarga la ficha.');
+      const previoUnico = ['facturacion', 'proyecto'].includes(asignando) ? porRol(asignando) : null;
+      if (previoUnico) await updateRow('empresa_contactos', previoUnico.vinc.id, { rol: 'secundario', principal: false });
       await insertRow('empresa_contactos', {
         empresa_id: empresa.id,
         contacto_id: creado.id,
         rol: asignando,
-        principal: asignando === 'directivo',
+        principal: asignando === 'directivo' && directivos.length === 0,
         cargo: nuevo.cargo?.trim() || null,
       });
       cerrar(); onCambio && onCambio();
@@ -131,14 +147,19 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
         setError(`${x.c.nombre} ya figura como ${etiquetaRol(rol).toLowerCase()} en esta empresa.`);
         return;
       }
-      // Quien ocupaba ese rol pasa a secundario: los roles nombrados son únicos.
-      if (rol !== 'secundario') {
+      // Facturación y proyecto siguen siendo únicos: quien los ocupara pasa a
+      // secundario. Directivo admite varios, así que no se desplaza a nadie.
+      if (['facturacion', 'proyecto'].includes(rol)) {
         const previo = porRol(rol);
         if (previo && previo.vinc.id !== x.vinc.id) {
           await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
         }
       }
-      await updateRow('empresa_contactos', x.vinc.id, { rol, principal: rol === 'directivo' });
+      // Solo se hace principal si aún no hay ninguno: un ascenso a directivo no
+      // debe destronar al que ya firmaba los documentos.
+      const hayPrincipal = directivos.some((d) => d.vinc.principal && d.vinc.id !== x.vinc.id);
+      await updateRow('empresa_contactos', x.vinc.id,
+        { rol, principal: rol === 'directivo' && !hayPrincipal });
       onCambio && onCambio();
     } catch (e) { setError('No se pudo cambiar el rol: ' + (e.message || '')); }
   }
@@ -153,7 +174,7 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
         setError(`${x.c.nombre} ya figura como ${etiquetaRol(rol).toLowerCase()}.`);
         return;
       }
-      if (rol !== 'secundario') {
+      if (['facturacion', 'proyecto'].includes(rol)) {
         const previo = porRol(rol);
         if (previo) await updateRow('empresa_contactos', previo.vinc.id, { rol: 'secundario', principal: false });
       }
@@ -173,6 +194,20 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
   // OJO: función invocada, no componente. Si se declara como componente dentro
   // del render, React lo trata como un tipo nuevo en cada pulsación, remonta
   // los inputs y se pierde el foco y el valor a medio escribir.
+  /** Marca a un directivo como principal y desmarca al anterior.
+      La base solo admite uno por empresa (índice único de v69), así que hay que
+      quitar el anterior ANTES de poner el nuevo o el insert falla. */
+  async function hacerPrincipal(x) {
+    try {
+      const actual = directivos.find((d) => d.vinc.principal);
+      if (actual && actual.vinc.id !== x.vinc.id) {
+        await updateRow('empresa_contactos', actual.vinc.id, { principal: false });
+      }
+      await updateRow('empresa_contactos', x.vinc.id, { principal: true });
+      onCambio && onCambio();
+    } catch (e) { setError('No se pudo cambiar el principal: ' + (e.message || '')); }
+  }
+
   const tarjeta = (x, compacta) => {
     const malEmail = !emailValido(x.c.email);
     return (
@@ -181,6 +216,12 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
           <button onClick={() => onAbrirContacto && onAbrirContacto(x.c.id)} className="min-w-0 flex-1 text-left">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-bold text-[#EAF4F7]">{x.c.nombre} {x.c.apellidos || ''}</span>
+              {/* Con varios directivos hay que ver de un vistazo cuál es el que
+                  sale en los documentos y en la sincronización con Brevo. */}
+              {x.vinc.principal && (
+                <span className="chip bg-brand-orange/20 !px-1.5 !py-0 text-[9px] font-extrabold text-brand-orange"
+                  title="Aparece en documentos y en Brevo">★ PRINCIPAL</span>
+              )}
               {x.c.consentimiento_marketing && <span className="chip bg-emerald-500/15 !px-1.5 !py-0 text-[9px] text-emerald-300">RGPD</span>}
               {x.c.brevo_sincronizado_en && <span className="chip bg-brand-verde/15 !px-1.5 !py-0 text-[9px] text-brand-verdeTexto">Brevo</span>}
             </div>
@@ -208,6 +249,13 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
                   .filter(([k]) => k !== x.vinc.rol && !vinculos.some((v) => String(v.contacto_id) === String(x.c.id) && v.rol === k))
                   .map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
+              {x.vinc.rol === 'directivo' && !x.vinc.principal && (
+                <button onClick={() => hacerPrincipal(x)}
+                  className="whitespace-nowrap rounded-full border border-[#1E5468] px-2 py-1 text-[10.5px] font-bold text-[#9FC0CB] hover:border-brand-orange hover:text-brand-orange"
+                  title="Pasa a ser quien figura en documentos y en Brevo">
+                  hacer principal
+                </button>
+              )}
               <button onClick={() => quitar(x)} className="px-1 text-xs text-[#7FA7B4] hover:text-red-400" title="Quitar de la empresa">✕</button>
             </div>
           )}
@@ -302,9 +350,41 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
         </div>
       )}
 
-      {/* Tres roles nombrados */}
+      {/* ── Directivos: varios ── */}
+      <div>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
+            <span className="text-brand-verdeTexto">★</span> Contactos directivos ({directivos.length})
+          </p>
+          {puedeEditar && directivos.length > 0 && (
+            <button onClick={() => abrir('directivo')} className="text-xs font-bold text-brand-verdeTexto hover:underline">
+              + añadir otro
+            </button>
+          )}
+        </div>
+        {directivos.length === 0 ? (
+          puedeEditar ? (
+            <button onClick={() => abrir('directivo')}
+              className="w-full rounded-xl border border-dashed border-[#1E5468] p-3 text-left text-sm font-semibold text-[#7FA7B4] hover:border-brand-verde hover:text-[#EAF4F7]">
+              + asignar directivo
+            </button>
+          ) : <p className="rounded-xl border border-dashed border-[#1E5468] p-3 text-sm text-[#7FA7B4]">sin asignar</p>
+        ) : (
+          <div className="space-y-2">
+            {directivos.map((x) => <div key={x.vinc.id}>{tarjeta(x, true)}</div>)}
+          </div>
+        )}
+        {asignando === 'directivo' && <div className="mt-2">{selector()}</div>}
+        {directivos.length > 1 && !directivos.some((x) => x.vinc.principal) && (
+          <p className="mt-1.5 text-[11px] font-bold text-amber-200">
+            Ninguno está marcado como principal. El principal es quien aparece en los documentos.
+          </p>
+        )}
+      </div>
+
+      {/* Roles únicos: facturación y proyecto */}
       <div className="space-y-2">
-        {ROLES_CONTACTO.map((r) => {
+        {ROLES_CONTACTO.filter((r) => r.k !== 'directivo').map((r) => {
           const x = porRol(r.k);
           return (
             <div key={r.k}>
