@@ -2966,3 +2966,18 @@ funciona salvo el botón de analizar, que lo dice en vez de fallar en silencio.
 el cliente ve sus documentos pero **no** las notas, no ve los de otro cliente, no
 puede subir a fichas ajenas ni borrar lo que aportó, y el cálculo de caducidad en
 sus cuatro tramos.
+
+---
+
+# v238 · Corregido el identificador del modelo
+
+En `documentos.mjs` puse `claude-sonnet-4-6`, que **no existe en el catálogo
+actual**. Las llamadas habrían devuelto un 404 (`not_found_error`).
+
+Corregido a **`claude-sonnet-5`**, y ahora se puede sobreescribir con la variable
+`MODELO_DOCUMENTOS` sin tocar código: los modelos se renuevan y no conviene tener
+que reeditar la función cada vez.
+
+Por qué Sonnet y no otro: Opus sería más caro sin ganar nada en una extracción de
+datos tan acotada, y Haiku falla más con escaneos torcidos, que es justo el caso
+difícil de un certificado antiguo.

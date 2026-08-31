@@ -17,7 +17,13 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 const DEPOSITO = 'documentos';
-const MODELO = 'claude-sonnet-4-6';
+// Sonnet 5: el equilibrio adecuado para leer un certificado. Opus sería más
+// caro sin ganar nada en una extracción de datos así de acotada, y Haiku falla
+// más con escaneos torcidos, que es justo el caso difícil.
+//
+// El identificador se puede cambiar sin tocar nada más; conviene revisarlo cada
+// cierto tiempo, porque los modelos se renuevan.
+const MODELO = process.env.MODELO_DOCUMENTOS || 'claude-sonnet-5';
 
 // Lo que se acepta. Se limita a propósito: un ejecutable o un archivo comprimido
 // en un expediente de cliente no tiene explicación, y ampliar la lista es más
