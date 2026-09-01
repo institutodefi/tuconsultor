@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { insertRow, listTable, explicarErrorBd } from '../../lib/data.js';
-import { NORMA_BY_ID } from '../../lib/calcEngine.js';
+import { NORMA_BY_ID , modeloCanonico } from '../../lib/calcEngine.js';
 import { asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 import { ofertasParaProyecto, datosDeOferta, etiquetaOferta, contratoDe } from '../../lib/ofertasAceptadas.js';
 import { normalizarCif } from '../../lib/crm.js';
@@ -109,7 +109,10 @@ export default function AltaProyecto({
         nombre: form.nombre.trim(),
         // Volcados de la oferta, sin tocar.
         normas: form.normas,
-        modelo: form.modelo,
+        // Canónico: «Implantación», no «implantacion». Si se guarda con la
+        // tilde perdida, el catálogo de tareas no encuentra nada para ese
+        // modelo y el proyecto nace sin tareas.
+        modelo: modeloCanonico(form.modelo) || form.modelo,
         estado: form.estado,
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin || null,

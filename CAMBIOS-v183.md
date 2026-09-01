@@ -3651,3 +3651,50 @@ cliente.
 Los documentos cuelgan de `clientes`, no de `empresas`. La pestaña busca la
 ficha operativa por CIF normalizado y, si no existe, lo dice —«se crea sola al
 abrir su primer proyecto»— en vez de fallar al cargar.
+
+---
+
+# v252 · El proyecto hereda las normas y el modelo de su oferta
+
+## El caso de CECE
+
+Oferta en modelo **Relación** con **9001 + 14001 + 27001**. El proyecto apareció
+con solo 9001 y modelo **Apoyo**.
+
+Esos no son datos equivocados: son **los valores por defecto de la pantalla**.
+El panel hacía esto:
+
+```js
+const ns = proyecto.normas || [];          // vacío → solo 9001
+const m  = proyecto.modelo || 'Implicación';
+```
+
+Leía la copia guardada en el proyecto y, si estaba vacía, caía a los valores por
+defecto. **Nunca miraba la oferta.** Y sin las normas correctas no hay tareas
+que volcar, porque el catálogo se filtra justo por ahí.
+
+## Corregido en tres sitios
+
+**El panel** usa ahora `resolverProyecto()`, que ya tenía la regla escrita para
+el resto de la aplicación: **manda la oferta**, la copia del proyecto es
+secundaria. Y espera a que lleguen ofertas y contratos antes de resolver, porque
+se cargan por separado y la primera pasada resolvería sin ellos.
+
+**El alta** guarda el modelo en su forma canónica, para que la tilde perdida no
+vuelva a dejar un proyecto sin tareas.
+
+**Migración `v108`** para los proyectos ya creados. La v103 hacía este relleno
+pero solo con la copia **vacía de verdad**; no cubría el caso de `{9001}` puesto
+por defecto, que es exactamente lo que pasó aquí.
+
+### Lo que la migración NO toca
+
+Un proyecto con **más** normas que su oferta se deja como está: eso es una
+ampliación deliberada —se añadió alcance sin reemitir— y sobreescribirla
+borraría una decisión. La comprobación final del script las lista, para poder
+revisarlas.
+
+## Van juntas
+
+`migraciones-v107-v108.sql`: la v108 usa una función que crea la v107, así que
+en ese orden y en la misma transacción.

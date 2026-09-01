@@ -5,7 +5,7 @@ import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, ho
 import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
 import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo , modeloCanonico } from '../../lib/calcEngine.js';
-import { resolverProyectos } from '../../lib/proyectoResuelto.js';
+import { resolverProyectos, resolverProyecto } from '../../lib/proyectoResuelto.js';
 import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 import DashboardProyectos from './DashboardProyectos.jsx';
@@ -198,16 +198,27 @@ export default function Proyectos() {
   const [meses, setMeses] = useState(MESES_MODELO['Implicación']);
   useEffect(() => {
     if (proyecto) {
-      const ns = proyecto.normas || [];
+      // ── De dónde salen las normas y el modelo ──
+      // MANDA LA OFERTA. El proyecto guarda una copia, pero en los creados
+      // antes de que el alta partiera de una oferta esa copia está vacía, y
+      // caer a los valores por defecto —9001 y «Implicación»— presentaba un
+      // proyecto de Relación con tres sistemas como si fuera otra cosa.
+      //
+      // `resolverProyecto` ya resuelve esta prioridad para toda la aplicación:
+      // se usa aquí en vez de repetir la regla.
+      const r = resolverProyecto(proyecto, { clientes, empresas, presupuestos, contratos });
+      const ns = (r?.normas?.length ? r.normas : proyecto.normas || []).map(String);
       setNormasSel(ns.includes('9001') ? ns : ['9001', ...ns]);
-      const m = proyecto.modelo || 'Implicación';
+      const m = modeloCanonico(r?.modelo || proyecto.modelo) || 'Implicación';
       setModelo(m);
       setMeses(proyecto.meses_estimados || MESES_MODELO[m] || 3);
       setNombreProy(proyecto.nombre || '');
       setEstadoProy(proyecto.estado || 'activo');
       setMsgCab(null);
     }
-  }, [proyecto]);
+    // `presupuestos` y `contratos` en las dependencias: llegan por separado y
+    // sin ellos la primera pasada resolvería sin oferta.
+  }, [proyecto, presupuestos.length, contratos.length, clientes.length, empresas.length]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   async function guardarCabecera() {
     if (!proyecto) return;
