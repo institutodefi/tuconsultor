@@ -230,6 +230,19 @@ export default function Proyectos() {
   function cambiarModelo(m) { setModelo(m); setMeses(mesesPorModelo(m, normasSel.length)); }
 
   // Tareas candidatas del modelo elegido para las normas elegidas → con anidado.
+  const candidatas = useMemo(() => {
+    if (!catalogo || !normasSel.length) return [];
+    const base = tareasDeCliente(catalogo, normasSel, modelo);
+    return anidarTareas(base, normasSel, anidar.size ? anidar : null);
+  }, [catalogo, normasSel, modelo, anidar]);
+
+  // NOTA: este efecto va DESPUÉS de `candidatas` a propósito.
+  //
+  // El array de dependencias —`[…, candidatas.length, …]`— se evalúa DURANTE el
+  // render, en el punto donde está escrito el `useEffect`, no cuando el efecto
+  // corre. Con `candidatas` declarada más abajo, leerla ahí lanzaba
+  // «Cannot access before initialization» y la pantalla entera se caía.
+  //
   // ── Las tareas entran solas ──
   // Elegir normas y modelo ES definir el trabajo. Que además hubiera que
   // guardar y pulsar un botón hacía que se quedaran proyectos sin tareas sin
@@ -257,12 +270,6 @@ export default function Proyectos() {
       if (n > 0) { cargar(); setMsg(`${n} tarea(s) del modelo ${modelo} volcadas al proyecto.`); }
     })();
   }, [proyecto?.id, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
-
-  const candidatas = useMemo(() => {
-    if (!catalogo || !normasSel.length) return [];
-    const base = tareasDeCliente(catalogo, normasSel, modelo);
-    return anidarTareas(base, normasSel, anidar.size ? anidar : null);
-  }, [catalogo, normasSel, modelo, anidar]);
 
   // Claves con más de una norma (candidatas a anidar).
   const clavesComunes = useMemo(() => {

@@ -3698,3 +3698,54 @@ revisarlas.
 
 `migraciones-v107-v108.sql`: la v108 usa una función que crea la v107, así que
 en ese orden y en la misma transacción.
+
+---
+
+# v253 · «Cannot access before initialization», y el detector que no lo vio
+
+## El fallo
+
+El `useEffect` del volcado automático que añadí en la v250 quedó **antes** de
+`candidatas`, la variable de la que depende:
+
+```js
+useEffect(() => { … }, [candidatas.length]);   // ← línea 243
+const candidatas = useMemo(…);                  // ← línea 261
+```
+
+Lo que lo hace traicionero: **el array de dependencias se evalúa DURANTE el
+render**, en el punto donde está escrito el `useEffect`, no cuando el efecto
+corre. Leer `candidatas.length` ahí lanza el error antes de que exista.
+
+Movido detrás, con una nota que explica por qué su posición importa.
+
+## El detector no lo vio, y ahora sí
+
+`buscar-tdz.py` solo miraba dentro de `useMemo`. Reescrito para cubrir los tres
+sitios donde esto ocurre, que son los tres que han pasado de verdad:
+
+| Caso | Ejemplo |
+|---|---|
+| Dentro de un `useMemo` | `vista[campo]` con `vista` más abajo (v218) |
+| Una función declarada después | `nombreCli(id)` en un filtro (v218) |
+| **Array de dependencias** | `[candidatas.length]` con `candidatas` abajo (este) |
+
+También distingue el patrón **seguro** que antes daba falso positivo:
+`useLote(lista, () => cargar())` no lee `cargar` ahora, sino cuando alguien
+llame a esa función.
+
+Y vacía cadenas y comentarios antes de analizar, para no confundir una palabra
+dentro de un texto con una variable.
+
+Sobre todo el proyecto: **cero casos**.
+
+## Los tres detectores
+
+```
+imports   componentes sin importar: 0
+efectos   efectos con retorno peligroso: 0
+tdz       variables leídas antes de declararse: 0
+```
+
+Los tres cazan errores que **compilan sin una queja y revientan en producción**.
+Pasan antes de cada entrega.
