@@ -3428,3 +3428,43 @@ sesiones.
 
 Las rutas viejas **redirigen** en lugar de dar 404: hay enlaces guardados en
 marcadores y en correos.
+
+---
+
+# v247 · «EquipoProyecto is not defined» y el detector que faltaba
+
+## El fallo
+
+Al insertar `<EquipoProyecto>` y `<DashboardProyectos>` en la ficha de proyecto,
+**los dos `import` no llegaron a escribirse**. El JSX quedó usando componentes
+que no existían.
+
+Lo que lo hace peligroso: **esbuild no lo detecta**. Compila sin una sola queja
+y revienta en el navegador con «X is not defined», y solo cuando alguien entra
+en esa pantalla concreta. El build salía en verde con la aplicación rota.
+
+Corregido. Es la segunda vez que pasa, así que:
+
+## `scripts/buscar-imports.py`
+
+Recorre los `.jsx` y busca componentes usados en JSX que no estén importados ni
+definidos en el propio archivo. Devuelve código de error, así que puede
+encadenarse antes de empaquetar.
+
+Los dos primeros avisos que dio eran **texto dentro de comentarios**: «la
+calculadora viva es `<GeneradorOfertas>`» y «PR-`<PREFIJO>`-NN». El detector
+ahora ignora comentarios de línea y de bloque, con cuidado de no confundir el
+`//` de una URL con el de un comentario.
+
+Sobre todo el proyecto: **cero casos**.
+
+## Los tres detectores, juntos
+
+| Script | Qué caza |
+|---|---|
+| `buscar-imports.py` | componentes usados sin importar |
+| `buscar-efectos.py` | `useEffect` que devuelve algo que no es limpieza |
+| `buscar-tdz.py` | variables leídas antes de declararse |
+
+Los tres cazan errores que **compilan bien y fallan en producción**, que son los
+que cuestan una ronda entera de ida y vuelta.

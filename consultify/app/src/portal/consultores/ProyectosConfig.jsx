@@ -8,6 +8,8 @@ import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo } from '../../lib/cal
 import { resolverProyectos } from '../../lib/proyectoResuelto.js';
 import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
+import DashboardProyectos from './DashboardProyectos.jsx';
+import EquipoProyecto from './EquipoProyecto.jsx';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
