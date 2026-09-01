@@ -36,6 +36,10 @@ const VACIA = () => ({ fecha: hoyISO(), hora_inicio: '09:00', hora_fin: '13:00',
 
 export default function SesionesTarea({
   tarea, contexto, fechaCertificacion, onCerrar, onGuardado,
+  // Solo se puede asignar a quien está EN el proyecto. Ofrecer todo el equipo
+  // permite programar trabajo a alguien que no lo lleva, y esa persona se lo
+  // encuentra en su agenda sin contexto de qué es ni por qué.
+  proyectoId = null,
   // De qué tabla cuelga la tarea. Conviven `cliente_tareas` (panel del
   // proyecto) y `tareas_programadas` (planificador por contextos); la sesión
   // apunta a una o a otra, nunca a las dos.
@@ -46,18 +50,28 @@ export default function SesionesTarea({
   const [equipo, setEquipo] = useState([]);
   const [nueva, setNueva] = useState(null);
   const [ocupado, setOcupado] = useState(false);
+  const [sinEquipo, setSinEquipo] = useState(false);
   const [error, setError] = useState(null);
 
   const cargar = async () => {
-    const [ss, ps] = await Promise.all([
+    const [ss, ps, eq] = await Promise.all([
       listTable('tarea_sesiones').catch(() => []),
       listTable('perfiles').catch(() => []),
+      proyectoId ? listTable('proyecto_equipo').catch(() => []) : Promise.resolve([]),
     ]);
+    const delProyecto = proyectoId
+      ? new Set((eq || [])
+          .filter((x) => String(x.proyecto_id) === String(proyectoId))
+          .map((x) => String(x.perfil_id)))
+      : null;
+    setSinEquipo(!!proyectoId && delProyecto.size === 0);
     setTodas(ss || []);
     setSesiones((ss || []).filter((s) => String(s[campoTarea]) === String(tarea.id))
       .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || String(a.hora_inicio).localeCompare(String(b.hora_inicio))));
     setEquipo((ps || [])
       .filter((p) => ['consultor', 'director', 'admin', 'superadmin'].includes(p.rol) && p.activo !== false)
+      // Acotado al equipo del proyecto cuando se sabe cuál es.
+      .filter((p) => !delProyecto || delProyecto.has(String(p.id)))
       .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''))));
   };
   useEffect(() => { cargar(); }, [tarea?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -256,15 +270,22 @@ export default function SesionesTarea({
               <div className="campo">
                 <label className="label" htmlFor="s-cons">Responsable</label>
                 <select id="s-cons" className="input" value={nueva.consultor_id}
+                  disabled={sinEquipo}
                   onChange={(e) => setNueva({ ...nueva, consultor_id: e.target.value })}>
-                  <option value="">— sin asignar —</option>
+                  <option value="">
+                    {sinEquipo ? '— el proyecto no tiene equipo —' : '— sin asignar —'}
+                  </option>
                   {equipo.map((p) => (
                     <option key={p.id} value={p.id}>
                       {`${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email}{p.nivel ? ` · ${p.nivel}` : ''}
                     </option>
                   ))}
                 </select>
-                <p className="campo-nota">Entra en su agenda ese día.</p>
+                <p className="campo-nota">
+                  {sinEquipo
+                    ? 'Asigna equipo al proyecto antes de programar.'
+                    : 'Solo el equipo de este proyecto. Entra en su agenda ese día.'}
+                </p>
               </div>
             </div>
 

@@ -3749,3 +3749,66 @@ tdz       variables leídas antes de declararse: 0
 
 Los tres cazan errores que **compilan sin una queja y revientan en producción**.
 Pasan antes de cada entrega.
+
+---
+
+# v254 · Las fechas vienen de la oferta, y las tareas en lista plana
+
+## 1 · Fechas derivadas, no tecleadas
+
+Inicio, certificación, límite y duración salen de la oferta y del contrato. Se
+muestran en solo lectura con **de dónde viene cada una**:
+
+| Campo | Origen |
+|---|---|
+| Inicio | Del contrato firmado; si no hay, de la oferta |
+| Certificación prevista | De la oferta |
+| **Fecha límite de trabajo** | **Certificación − 15 días** |
+| Duración | Del inicio a la certificación |
+
+Tecleadas a mano acababan sin coincidir con el contrato, y entonces el
+calendario del equipo va contra unas fechas y el cliente espera otras.
+
+**El límite es 15 días antes de la auditoría** y no se edita: llegar el mismo día
+con las tareas a medias no vale, hace falta margen para cerrar hallazgos y
+preparar evidencias.
+
+**Bidireccional**: si cambia la fecha en la oferta, el proyecto se alinea solo.
+No hay que acordarse de venir a tocarlo.
+
+Cuando no hay certificación, el límite **no se inventa**: se conserva el que
+tuviera el proyecto y se dice que se calculará al fijarla.
+
+## 2 · Un solo panel de tareas, en lista plana
+
+Fuera el anidado y el arrastrar-para-fusionar. Cada tarea en su fila, con la
+**etiqueta de su sistema** en la primera columna.
+
+Una tarea de la 9001 y otra de la 14001 pueden parecerse, pero son trabajos de
+sistemas distintos: fusionarlas escondía a cuál pertenecía cada una y hacía
+imposible programarlas por separado.
+
+## 3 · Solo se asigna al equipo del proyecto
+
+El desplegable de responsable ya no lista a todo el equipo, sino a **quien está
+asignado a ese proyecto**. Ofrecer a todos permite programar trabajo a alguien
+que no lo lleva, y esa persona se lo encuentra en su agenda sin contexto.
+
+Si el proyecto no tiene equipo, el desplegable lo dice y remite a asignarlo.
+
+## 4 · Fuera los bloques de ejecución
+
+Trozos de 4 h repartidos automáticamente que nadie confirmaba, y que competían
+con las sesiones reales: dos sitios distintos diciendo cuándo se hace la misma
+tarea.
+
+La columna pasa a ser un enlace **«calendario»** que abre el emergente de
+sesiones, con fecha, hora de inicio y fin, responsable y el contraste contra las
+horas comprometidas.
+
+## Verificación
+
+`scripts/test-fechas-proyecto.mjs`: el cálculo del límite incluido el cruce de
+año, que el contrato manda sobre la oferta, que la oferta manda sobre la copia
+vieja del proyecto, que sin certificación no se inventa nada, y la detección de
+desfase para la sincronización automática.

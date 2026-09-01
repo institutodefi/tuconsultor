@@ -10,6 +10,7 @@ import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 import DashboardProyectos from './DashboardProyectos.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
+import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -233,8 +234,12 @@ export default function Proyectos() {
   const candidatas = useMemo(() => {
     if (!catalogo || !normasSel.length) return [];
     const base = tareasDeCliente(catalogo, normasSel, modelo);
-    return anidarTareas(base, normasSel, anidar.size ? anidar : null);
-  }, [catalogo, normasSel, modelo, anidar]);
+    // SIN anidar. Una tarea de la 9001 y otra de la 14001 pueden parecerse,
+    // pero son tareas distintas de sistemas distintos: fusionarlas escondía
+    // cuál pertenecía a qué norma y hacía imposible programarlas por separado.
+    // Cada una en su fila, con la etiqueta de su sistema.
+    return base;
+  }, [catalogo, normasSel, modelo]);
 
   // NOTA: este efecto va DESPUÉS de `candidatas` a propósito.
   //
@@ -251,6 +256,29 @@ export default function Proyectos() {
   //
   // El `volcandoRef` evita que dos renders seguidos disparen dos volcados a la
   // vez y se dupliquen las tareas.
+  // ── Las fechas salen de la oferta y del contrato ──
+  // Inicio, certificación y duración no se teclean aquí: se derivan de lo
+  // firmado. Tecleadas a mano acaban sin coincidir con el contrato, y entonces
+  // el calendario del equipo va contra unas fechas y el cliente espera otras.
+  const fechas = useMemo(() => {
+    if (!proyecto) return null;
+    const r = resolverProyecto(proyecto, { clientes, empresas, presupuestos, contratos });
+    const ct = contratos.find((c) => String(c.id) === String(proyecto.contrato_id)) || null;
+    return fechasDeProyecto(proyecto, r?.oferta, ct, MESES_MODELO[modelo] || 12);
+  }, [proyecto, clientes, empresas, presupuestos, contratos, modelo]);
+
+  // Si lo guardado no coincide con lo que dicen oferta y contrato, se alinea.
+  // Es la bidireccionalidad: cambiar la fecha en la oferta se refleja aquí sin
+  // que nadie tenga que acordarse de venir a tocarlo.
+  useEffect(() => {
+    if (!proyecto || !fechas) return;
+    const dif = hayDesfase(proyecto, fechas);
+    if (!dif.length) return;
+    updateRow('proyectos_cliente', proyecto.id, fechas.patch)
+      .then(() => cargar())
+      .catch(() => {});
+  }, [proyecto?.id, fechas?.inicio, fechas?.certificacion, fechas?.limite, fechas?.meses]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const volcandoRef = useRef(false);
 
   useEffect(() => {
@@ -589,7 +617,8 @@ export default function Proyectos() {
         <SesionesTarea
           tarea={{ id: abierta.id, titulo: abierta.titulo, codigo: abierta.num_tarea, horas_teoricas: abierta.horas, subproceso: abierta.subproceso }}
           contexto={{ norma: abierta.norma_id }}
-          fechaCertificacion={proyecto?.fecha_limite || null}
+          fechaCertificacion={fechas?.certificacion || proyecto?.fecha_limite || null}
+          proyectoId={proyecto?.id}
           campoTarea="cliente_tarea_id"
           onCerrar={() => setAbierta(null)}
           onGuardado={() => listTable('tarea_sesiones').then(setSesiones).catch(() => {})}
@@ -736,23 +765,58 @@ export default function Proyectos() {
                   {MODELOS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
+              {/* ── Fechas: vienen de la oferta y del contrato ──
+                  No se teclean. Si se pudieran cambiar aquí, el calendario del
+                  equipo iría contra unas fechas y el cliente esperaría otras.
+                  Para moverlas se edita la oferta y bajan solas. */}
               <div>
                 <label className="label">Fecha de inicio</label>
-                <input type="date" className="input !w-44" value={proyecto?.fecha_inicio || ''}
-                  onChange={async e => { const v = e.target.value || null; await updateRow('proyectos_cliente', proyecto.id, { fecha_inicio: v }); setProyectos(ps => ps.map(p => p.id === proyecto.id ? { ...p, fecha_inicio: v } : p)); }} />
-                {proyecto?.fecha_inicio && (
-                  <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
-                    La agenda se distribuye hasta {(() => { const d = new Date(proyecto.fecha_inicio); d.setMonth(d.getMonth() + (Number(meses) || 1)); return d.toLocaleDateString('es-ES'); })()} (inicio + {meses} meses).
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="label">Duración (meses)</label>
-                <input type="number" min="1" className="input !w-28" value={meses} onChange={e => setMeses(Number(e.target.value) || 1)} />
-                <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
-                  Mínimo {mesesPorModelo(modelo, normasSel.length)} meses para {modelo}{modelo === 'Apoyo' ? ` con ${normasSel.length} sistema(s)` : ''}.
+                <div className="input !w-44 flex items-center bg-[#0A2634] text-[#B9D2DA]">
+                  {fechas?.inicio
+                    ? new Date(`${fechas.inicio}T12:00:00`).toLocaleDateString('es-ES')
+                    : <span className="text-[#5E8494]">sin fecha</span>}
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">
+                  {fechas?.origen.inicio === 'contrato' ? 'Del contrato firmado.'
+                    : fechas?.origen.inicio === 'oferta' ? 'De la oferta aceptada.'
+                    : 'La oferta no tiene fecha de inicio.'}
                 </p>
               </div>
+
+              <div>
+                <label className="label">Certificación prevista</label>
+                <div className="input !w-44 flex items-center bg-[#0A2634] text-[#B9D2DA]">
+                  {fechas?.certificacion
+                    ? new Date(`${fechas.certificacion}T12:00:00`).toLocaleDateString('es-ES')
+                    : <span className="text-[#5E8494]">por determinar</span>}
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">De la oferta. La auditoría externa.</p>
+              </div>
+
+              <div>
+                <label className="label">Fecha límite de trabajo</label>
+                <div className="input !w-44 flex items-center bg-[#0A2634] font-bold text-brand-orange">
+                  {fechas?.limite
+                    ? new Date(`${fechas.limite}T12:00:00`).toLocaleDateString('es-ES')
+                    : <span className="font-normal text-[#5E8494]">—</span>}
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">
+                  {fechas?.certificacion
+                    ? `${DIAS_ANTES_CERTIFICACION} días antes de la auditoría, para cerrar hallazgos.`
+                    : 'Se calcula al fijar la certificación.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="label">Duración (meses)</label>
+                <div className="input !w-28 flex items-center bg-[#0A2634] text-[#B9D2DA]">{fechas?.meses ?? meses}</div>
+                <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">
+                  {fechas?.origen.meses === 'calculada'
+                    ? 'Del inicio a la certificación.'
+                    : `Mínimo del modelo ${modelo}.`}
+                </p>
+              </div>
+
               <button onClick={guardarConfig} className="btn-orange !px-4 !py-2">Guardar configuración</button>
             </div>
           </div>
@@ -788,7 +852,10 @@ export default function Proyectos() {
               <h4 className="font-extrabold">Tareas resultantes ({candidatas.length})</h4>
               <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(totalHoras)}</span>
             </div>
-            <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Arrastra una tarea sobre otra del mismo proceso y subproceso para anidarlas (fusionar e integrar sus horas).</p>
+            <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
+              Cada tarea con su sistema. No se agrupan ni se fusionan: una tarea de la 9001
+              y otra de la 14001 son trabajos distintos aunque se parezcan.
+            </p>
 
             {/* Cuando no sale ninguna tarea hay que decir POR QUÉ. «Tareas
                 resultantes (0)» sin más parece un fallo, y lo normal es que el
@@ -806,23 +873,26 @@ export default function Proyectos() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-[#10394A]">
                   <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-                    <th className="py-2"></th><th className="py-2">Código</th><th className="py-2">Tipo</th><th className="py-2 text-right">Horas</th>
+                    <th className="py-2">Sistema</th><th className="py-2">Tarea</th><th className="py-2">Tipo</th><th className="py-2 text-right">Horas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-navy-50">
                   {candidatas.map((c, i) => (
-                    <tr key={c._clave + i}
-                      draggable
-                      onDragStart={() => setArrastra(c._clave)}
-                      onDragOver={(e) => { if (arrastra && puedeFusionar(arrastra, c._clave)) e.preventDefault(); }}
-                      onDrop={() => { if (arrastra && puedeFusionar(arrastra, c._clave)) { setAnidar(s => new Set([...s, c._clave])); } setArrastra(null); }}
-                      className={`${arrastra && puedeFusionar(arrastra, c._clave) ? 'bg-brand-orange/5' : ''} cursor-grab`}>
-                      <td className="py-1.5 text-[#7FA7B4]">⠿</td>
-                      <td className="py-1.5 font-medium">
-                        {codigoTareaIntegrada(cliente?.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas)}
-                        {c.integrada && <span className="ml-2 chip bg-brand-orange/15 text-[10px] font-bold text-[#F9A83A]">integrada</span>}
+                    <tr key={`${c.norma_id}-${c.proceso}-${c.subproceso}-${i}`}>
+                      {/* La etiqueta del sistema, primero: es lo que dice a qué
+                          norma pertenece cada tarea de un vistazo. */}
+                      <td className="py-1.5">
+                        <span className="chip !px-2 !py-0.5 bg-brand-verde/15 text-[10.5px] font-extrabold text-brand-verdeTexto">
+                          {NORMA_BY_ID[c.norma_id]?.nombre || c.norma_id}
+                        </span>
                       </td>
-                      <td className="py-1.5">{TIPO_LABEL[tipoTarea(c)]}</td>
+                      <td className="py-1.5 font-medium">
+                        {c.subproceso || c.proceso}
+                        {c.proceso && c.subproceso && (
+                          <span className="block text-[11px] font-normal text-[#7FA7B4]">{c.proceso}</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-[12px]">{TIPO_LABEL[tipoTarea(c)]}</td>
                       <td className="py-1.5 text-right">{fmtH(c.horas)}</td>
                     </tr>
                   ))}
@@ -950,27 +1020,18 @@ export default function Proyectos() {
                             );
                           })()}
                         </td>
+                        {/* Los «bloques de ejecución» —trozos de 4 h repartidos
+                            solos— se han retirado. Eran una estimación que
+                            nadie confirmaba y competía con las sesiones reales.
+                            Ahora se programa con el calendario de la tarea. */}
                         <td className="py-1.5 text-right">
-                          <button onClick={() => setExpandida(abierto ? null : t.id)} className="text-xs font-bold text-[#9FC0CB] hover:text-brand-orange" title="Bloques de ejecución">
-                            {abierto ? '▾' : '▸'} {bloques.length || trocearEnBloques(t.horas).length}
+                          <button onClick={() => setAbierta(t)}
+                            className="text-xs font-bold text-brand-orange hover:underline"
+                            title="Programar en el calendario">
+                            calendario
                           </button>
                         </td>
                       </tr>
-                      {abierto && (
-                        <tr className="bg-navy-50/40">
-                          <td></td>
-                          <td colSpan={6} className="py-2 pr-3">
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">Bloques de ejecución (4h por defecto, editables)</p>
-                            <EditorBloques
-                              tarea={t}
-                              bloquesIniciales={bloques.length ? bloques : trocearEnBloques(t.horas).map(h => ({ horas: h, fecha: t.fecha_estimada }))}
-                              onPersistir={guardarBloques}
-                              onAdd={addBloque}
-                              onQuitar={quitarBloque}
-                            />
-                          </td>
-                        </tr>
-                      )}
                       </>
                       );
                     })}
