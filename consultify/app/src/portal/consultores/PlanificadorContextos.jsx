@@ -3,6 +3,8 @@ import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { useAuth } from '../../lib/auth.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import ProgramarTarea from './ProgramarTarea.jsx';
+import { resumenVolcado, filaDesdeCatalogo } from '../../lib/volcadoTareas.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR CONTEXTOS
@@ -43,6 +45,10 @@ export default function PlanificadorContextos() {
   const [ayudaDe, setAyudaDe] = useState(null);       // tarea con la ficha de ayuda abierta
   const [ayudaTxt, setAyudaTxt] = useState('');
   const [simulacion, setSimulacion] = useState(null); // propuesta SIN guardar
+  const [catalogo, setCatalogo] = useState([]);       // tareas del modelo
+  const [volcado, setVolcado] = useState(null);       // previsualización del volcado
+  const [programando, setProgramando] = useState(null); // tarea abierta en el diálogo
+  const [perfiles, setPerfiles] = useState([]);
 
   const [sinOferta, setSinOferta] = useState([]);
 
@@ -53,7 +59,11 @@ export default function PlanificadorContextos() {
     // Para saber qué proyectos tienen detrás una oferta aceptada.
     listTable('presupuestos').catch(() => []),
     listTable('contratos').catch(() => []),
-  ]).then(([p, c, t, pres, ctr]) => {
+    listTable('tareas_catalogo').catch(() => []),
+    listTable('perfiles').catch(() => []),
+  ]).then(([p, c, t, pres, ctr, cat, per]) => {
+    setCatalogo(cat || []);
+    setPerfiles(per || []);
     const base = (p || []).filter((x) => x.fecha_limite || c?.some((k) => String(k.proyecto_id) === String(x.id)));
 
     // ── Solo se planifica lo que tiene oferta aceptada detrás ──
@@ -80,6 +90,17 @@ export default function PlanificadorContextos() {
   useEffect(() => { cargar(); }, [cargar]);
 
   const proyecto = proyectos.find((p) => String(p.id) === String(pid)) || null;
+
+  const nombreConsultor = (id) => {
+    const p = perfiles.find((x) => String(x.id) === String(id));
+    return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : 'sin asignar';
+  };
+  /** Iniciales para la etiqueta: en una lista larga, un nombre entero no cabe. */
+  const inicialesDe = (id) => {
+    const n = nombreConsultor(id);
+    if (n === 'sin asignar') return '—';
+    return n.split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase() || '').join('') || '—';
+  };
   const misContextos = contextos.filter((c) => String(c.proyecto_id) === String(pid));
   const tareasDe = (cid) => tareas
     .filter((t) => String(t.contexto_id) === String(cid) && t.estado !== 'anulada')
@@ -127,6 +148,57 @@ export default function PlanificadorContextos() {
   }
 
   const quitar = async (t) => { try { await deleteRow('tareas_programadas', t.id); await cargar(); } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); } };
+
+  // ── Volcar las tareas del modelo ───────────────────────────────────────
+  // `tareas_catalogo` guarda, por norma y modelo, qué tareas se hacen. Es el
+  // trabajo acumulado de la casa; tenerlo y teclearlo a mano en cada proyecto
+  // no tiene sentido.
+  //
+  // Primero se ENSEÑA lo que va a entrar y luego se confirma: volcar cuarenta
+  // tareas de golpe sin verlas antes es difícil de deshacer.
+  function previsualizarVolcado() {
+    const modelo = proyecto?.modelo;
+    if (!modelo) { setMsg({ err: true, t: 'El proyecto no tiene modelo asignado.' }); return; }
+    const porContexto = Object.fromEntries(misContextos.map((c) => [String(c.id), tareasDe(c.id)]));
+    const r = resumenVolcado({ contextos: misContextos, modelo, catalogo, tareasPorContexto: porContexto });
+    if (!r.total) {
+      setMsg({ err: true, t: r.vacios.length
+        ? `El catálogo no tiene tareas para el modelo ${modelo} en ${r.vacios.join(', ')}. Añádelas en «Control del sistema».`
+        : 'Todas las tareas del modelo ya están en el proyecto.' });
+      return;
+    }
+    setVolcado({ ...r, modelo });
+    setMsg(null);
+  }
+
+  async function confirmarVolcado() {
+    if (!volcado) return;
+    setMsg({ err: false, t: 'Volcando…' });
+    let n = 0;
+    const fallos = [];
+    for (const d of volcado.detalle) {
+      for (const c of d.tareas) {
+        try {
+          // El código lo genera la base: SUBPROCESO-NN, único por contexto.
+          let codigo = `${d.norma}-${String(n + 1).padStart(2, '0')}`;
+          if (!DEMO) {
+            const { data } = await supabase.rpc('codigo_tarea',
+              { p_contexto: d.contexto.id, p_subproceso: c.subproceso || null });
+            if (data) codigo = data;
+          }
+          await insertRow('tareas_programadas', { ...filaDesdeCatalogo(c, d.contexto.id), codigo });
+          n += 1;
+        } catch (e) {
+          fallos.push(`${c.titulo}: ${e?.message || e}`);
+        }
+      }
+    }
+    setVolcado(null);
+    await cargar();
+    setMsg(fallos.length
+      ? { err: true, t: `${n} tarea(s) volcadas, ${fallos.length} fallaron. ${fallos[0]}` }
+      : { err: false, t: `${n} tarea(s) volcadas. Prográmalas una a una desde la lista.` });
+  }
 
   /** SIMULACIÓN: reparte las tareas sin fecha entre hoy y la fecha límite,
    *  a razón de una por semana laborable por contexto. NO guarda: enseña la
@@ -232,9 +304,63 @@ export default function PlanificadorContextos() {
                 {dias < 0 ? `Vencido hace ${-dias} días` : `${dias} días hasta la fecha límite`}
               </span>
             )}
+            <button onClick={previsualizarVolcado} className="btn-orange !px-3 !py-1.5 text-xs"
+              title="Traer las tareas que el modelo define para estas normas">
+              ↓ Volcar tareas del modelo
+            </button>
             <button onClick={simular} className="btn-ghost !px-3 !py-1.5 text-xs">▶ Simular reparto</button>
             <button onClick={recodificar} className="btn-ghost !px-3 !py-1.5 text-xs" title="Renumera 9001-01, 9001-02… por orden de fecha">↻ Recodificar</button>
           </div>
+
+          {/* Qué se va a volcar. Se enseña ANTES de insertar nada: cuarenta
+              tareas de golpe sin verlas es difícil de deshacer. */}
+          {volcado && (
+            <div className="rounded-2xl border-[1.5px] border-brand-orange/50 bg-[#0D3242] p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-[14px] font-extrabold text-[#EAF4F7]">
+                  {volcado.total} tarea{volcado.total === 1 ? '' : 's'} del modelo {volcado.modelo}
+                  {volcado.horas ? <span className="ml-2 text-[12px] font-bold text-[#9FC0CB]">{volcado.horas} h previstas</span> : null}
+                </h3>
+                <button onClick={() => setVolcado(null)} className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Cancelar</button>
+              </div>
+
+              <div className="mt-2 space-y-2">
+                {volcado.detalle.filter((d) => d.n > 0).map((d) => (
+                  <div key={d.contexto.id} className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] px-3 py-2">
+                    <p className="text-[12.5px] font-extrabold text-brand-verdeTexto">
+                      {d.norma} · {d.n} tarea{d.n === 1 ? '' : 's'}
+                      {d.horas ? <span className="ml-1.5 font-medium text-[#7FA7B4]">{d.horas} h</span> : null}
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {d.tareas.slice(0, 6).map((c) => (
+                        <li key={c.id} className="truncate text-[11.5px] text-[#9FC0CB]">
+                          · {c.subproceso ? <span className="text-[#7FA7B4]">{c.subproceso} — </span> : null}{c.titulo}
+                        </li>
+                      ))}
+                      {d.tareas.length > 6 && (
+                        <li className="text-[11.5px] text-[#7FA7B4]">· y {d.tareas.length - 6} más</li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              {volcado.vacios.length > 0 && (
+                <p className="mt-2 text-[11.5px] font-bold text-amber-200">
+                  Sin tareas en el catálogo para {volcado.vacios.join(', ')} en modelo {volcado.modelo}.
+                </p>
+              )}
+
+              <p className="mt-2 text-[11.5px] leading-snug text-[#7FA7B4]">
+                Entran <b>sin fecha y sin responsable</b>: eso se decide tarea a tarea.
+                Cada norma mantiene sus tareas por separado, nunca se mezclan.
+              </p>
+
+              <button onClick={confirmarVolcado} className="btn-orange mt-3 !px-4 !py-1.5 text-[13px]">
+                Volcar {volcado.total} tarea{volcado.total === 1 ? '' : 's'}
+              </button>
+            </div>
+          )}
 
           {/* La propuesta de la simulación: se mira y se decide */}
           {simulacion && (
@@ -291,9 +417,26 @@ export default function PlanificadorContextos() {
                           className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[#3F7D93] text-[10px] font-bold text-[#9FC0CB] hover:border-brand-orange hover:text-brand-orange">
                           i
                         </button>
-                        <input type="date" value={t.fecha || ''} disabled={t.estado === 'hecha'}
-                          onChange={(e) => programar(t, e.target.value)}
-                          className="input !w-[130px] !px-1.5 !py-0.5 !text-[11px]" />
+                        {/* Responsable: quién la tiene. Sin esto una tarea con
+                            fecha no está en la agenda de nadie. */}
+                        {t.consultor_id && (
+                          <span className="chip !px-1.5 !py-0 bg-[#123F52] text-[10px] text-[#9FC0CB]"
+                            title={nombreConsultor(t.consultor_id)}>
+                            {inicialesDe(t.consultor_id)}
+                          </span>
+                        )}
+                        <button onClick={() => setProgramando({ tarea: t, contexto: ctx })}
+                          title="Programar: fecha, hora, responsable y cierre"
+                          className={`shrink-0 rounded-lg border px-2 py-0.5 text-[11px] font-bold transition ${
+                            t.estado === 'hecha'
+                              ? 'border-emerald-400/40 text-emerald-300'
+                              : t.fecha
+                                ? 'border-[#3F7D93] text-[#CFE3E9] hover:border-brand-orange hover:text-brand-orange'
+                                : 'border-brand-orange/60 text-brand-orange hover:bg-brand-orange/10'}`}>
+                          {t.estado === 'hecha' ? '✓ hecha'
+                            : t.fecha ? fmt(t.fecha)
+                            : 'programar'}
+                        </button>
                         <button onClick={() => quitar(t)} className="text-[11px] font-bold text-red-300/70 hover:text-red-300">×</button>
                       </li>
                     ))}
@@ -359,6 +502,17 @@ export default function PlanificadorContextos() {
             )}
           </div>
         </DialogoFicha>
+      )}
+
+      {/* Programar una tarea: fecha, hora, responsable y cierre. En cuanto
+          tiene fecha y responsable aparece en la agenda de esa persona, porque
+          es la misma tabla: una tabla, una verdad. */}
+      {programando && (
+        <ProgramarTarea
+          tarea={programando.tarea} contexto={programando.contexto}
+          onCerrar={() => setProgramando(null)}
+          onGuardado={async () => { setProgramando(null); await cargar(); }}
+        />
       )}
     </div>
   );

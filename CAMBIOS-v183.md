@@ -3088,3 +3088,104 @@ archivo generado.
 Tampoco el detalle de su historial laboral. La ficha resume su perfil
 profesional, que es lo que corresponde a una página de equipo; el CV completo es
 documentación interna.
+
+---
+
+# v241 · Volcado de tareas del modelo y programación por tarea
+
+## 1 · Las tareas del modelo se vuelcan
+
+`tareas_catalogo` guarda, por norma y modelo, qué tareas se hacen: el trabajo
+acumulado de la casa. Tenerlo y teclearlo a mano en cada proyecto no tenía
+sentido.
+
+Botón **«↓ Volcar tareas del modelo»**. Primero **enseña lo que va a entrar** y
+luego se confirma: cuarenta tareas de golpe sin verlas antes son difíciles de
+deshacer.
+
+```
+14 tareas del modelo Compromiso · 47 h previstas
+  9001 · 8 tareas · 26 h
+    · REVISION — Revisión por la dirección
+    · AUDITOR — Auditoría interna
+  14001 · 6 tareas · 21 h
+```
+
+Tres reglas:
+
+- **Nunca se mezclan normas.** Tres sistemas son tres contextos y tres juegos de
+  tareas independientes; una tarea de la 14001 no aparece en el contexto de la
+  9001 aunque se parezcan.
+- **No duplica.** Volcar dos veces no crea dos copias: se comparan los títulos
+  ignorando acentos y espacios, porque «Auditoría interna» y «AUDITORIA
+  INTERNA» son la misma tarea.
+- **Entran sin fecha y sin responsable.** Eso lo decide una persona, tarea a
+  tarea. Las horas del catálogo sí se traen como duración prevista.
+
+Si el catálogo no tiene tareas para ese modelo, se dice y se indica dónde
+añadirlas, en lugar de no hacer nada aparentemente.
+
+## 2 · Pantalla emergente para programar
+
+El campo de fecha suelto se queda corto: una fecha sin responsable no está en la
+agenda de nadie. El botón abre un diálogo con **fecha, hora, duración,
+responsable y notas**.
+
+Y muestra **qué tiene ya ese consultor ese día**:
+
+> Fátima Ballesteros ya tiene 3 tareas ese día · 6,5 h
+
+No bloquea —a veces se solapan a propósito— pero programar a ciegas es como se
+acaba con tres visitas el mismo martes.
+
+También avisa si la fecha cae en fin de semana, sin impedirlo: hay auditorías en
+sábado.
+
+## 3 · Al calendario del consultor, sin sincronizar nada
+
+En cuanto la tarea tiene fecha y responsable **aparece en la agenda de esa
+persona**. No hay proceso de sincronización porque no hace falta: el planificador
+y la agenda leen y escriben la misma tabla, `tareas_programadas`. Una tabla, una
+verdad.
+
+## 4 · Cerrar tareas del pasado
+
+Hace falta ahora, cargando proyectos que ya estaban en marcha: hay tareas de hace
+meses que se hicieron.
+
+Botón **«✓ Ya está hecha»**, activo solo si la fecha es de hoy o anterior. Con
+fecha futura está deshabilitado: sería registrar trabajo que aún no ha ocurrido.
+
+Y **se registra con la fecha de la tarea, no con la de hoy**. Fechar hoy una
+tarea de marzo falsearía el histórico y rompería el planificado-frente-a-real.
+Se puede indicar las horas reales dedicadas.
+
+## Verificación
+
+`scripts/test-volcado-tareas.mjs`: que no se mezclan normas, que solo entra el
+modelo del proyecto, que no duplica comparando sin acentos, la fila resultante
+sin fecha ni responsable, el resumen con horas, el aviso cuando el modelo no
+tiene tareas, y que solo se pueden cerrar tareas de hoy o anteriores.
+
+---
+
+# v242 · Paquete completo, con la versión al día
+
+`package.json` estaba en `221.0.0` desde que se introdujo el sello de versión.
+Actualizado a **`241.0.0`**: el pie de la aplicación y los informes de error
+mostraban un número anterior al del código, que es exactamente lo que el sello
+venía a evitar.
+
+## Comprobado antes de empaquetar
+
+- `buscar-efectos.py` — 0 efectos con retorno peligroso
+- `buscar-tdz.py` — 0 casos reales (5 avisos, todos texto dentro de mensajes)
+- Las diez baterías de prueba, sin fallos:
+  volcado de tareas · cartera de proyectos · documentos · permisos ·
+  precio por sistemas · guardado de ofertas · proyecto desde oferta · lote ·
+  cliente-empresa · VIES
+- Compilación limpia
+
+## Al desplegar
+
+En el pie debe leerse **v241.0.0**. Si dice otra cosa, el despliegue no llegó.
