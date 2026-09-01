@@ -47,3 +47,30 @@ console.log('\n── «Ver como»: nunca hacia arriba ──');
   console.log(' director no puede suplantar', ok(vistasDe('director').length === 0));
   console.log(' consultor no puede suplantar', ok(vistasDe('consultor').length === 0));
 }
+
+console.log('\n── Catálogo de tareas: leer vs editar ──');
+{
+  const ver = ['superadmin','admin','director','consultor','gestion'];
+  const editar = ['superadmin','admin'];
+  for (const r of ['superadmin','admin','director','consultor','gestion','cliente']) {
+    const v = can.verCatalogoTareas(r), e = can.editarCatalogoTareas(r);
+    console.log(` ${r.padEnd(11)} ve: ${String(v).padEnd(5)} edita: ${String(e).padEnd(5)}`,
+      ok(v === ver.includes(r) && e === editar.includes(r)));
+  }
+  console.log(' dirección de proyecto ve pero NO edita',
+    ok(can.verCatalogoTareas('director') && !can.editarCatalogoTareas('director')));
+  console.log(' consultoría ve pero NO edita',
+    ok(can.verCatalogoTareas('consultor') && !can.editarCatalogoTareas('consultor')));
+  console.log(' gestión ve pero NO edita',
+    ok(can.verCatalogoTareas('gestion') && !can.editarCatalogoTareas('gestion')));
+  console.log(' el cliente ni ve', ok(!can.verCatalogoTareas('cliente')));
+}
+
+console.log('\n── La pestaña aparece para quien puede leerlo ──');
+{
+  for (const r of ['director','consultor','gestion']) {
+    const tiene = tabsParaRol(r).some(t => t.to === 'sistemas');
+    console.log(` ${r.padEnd(11)}`, ok(tiene));
+  }
+  console.log(' cliente no la tiene', ok(!tabsParaRol('cliente').some(t => t.to === 'sistemas')));
+}

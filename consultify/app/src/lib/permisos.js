@@ -66,7 +66,10 @@ export const GRUPOS_PORTAL = [
           { to: 'proyectos/planificador', label: 'Planificador de proyectos', roles: ['superadmin', 'admin', 'director', 'consultor'] },
         ],
       },
-      { to: 'sistemas', label: 'Sistemas de gestión', icon: 'shield-check', roles: ['superadmin', 'admin', 'director'] },
+      // Lo ve también consultoría y gestión: necesitan consultar qué tareas
+      // define cada modelo para saber qué les toca hacer. Editarlo es otra
+      // cosa: ver `can.editarCatalogoTareas`.
+      { to: 'sistemas', label: 'Sistemas de gestión', icon: 'shield-check', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
     ],
   },
   {
@@ -130,6 +133,18 @@ export const can = {
   gestionarSuperadmins: (rol) => rol === 'superadmin',
   // Suplantar otro rol para comprobar qué ve
   verComoOtroRol: (rol) => rol === 'superadmin',
+  // ── El catálogo de tareas: se consulta mucho, se edita poco ──
+  // Dirección de proyecto, consultoría y gestión lo LEEN: es la referencia de
+  // qué hay que hacer en cada norma y modelo, y consultarla es parte del
+  // trabajo diario.
+  //
+  // Editarlo queda en Administración. No es jerarquía por jerarquía: ese
+  // catálogo alimenta las horas de TODAS las ofertas y de todos los proyectos.
+  // Cambiar las horas de una tarea ahí mueve el precio de lo que se está
+  // ofertando en ese momento, y esa decisión tiene que estar acotada.
+  verCatalogoTareas: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
+  editarCatalogoTareas: (rol) => ['superadmin', 'admin'].includes(rol),
+
   // Entrar a la zona interna
   esEquipo: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
 };

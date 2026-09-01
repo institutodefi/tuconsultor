@@ -1,6 +1,6 @@
 {
   "name": "consultify-web",
-  "version": "241.0.0",
+  "version": "245.0.0",
   "private": true,
   "type": "module",
   "scripts": {

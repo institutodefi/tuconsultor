@@ -97,7 +97,9 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 16px 0; gap: 24px;
   }
-  .nav-logo img { height: 36px; }
+  /* `width:auto` explícito: sin él, un SVG sin `width` en la etiqueta reserva
+     el ancho por defecto (300 px) hasta que carga y la cabecera da un salto. */
+  .nav-logo img { height: 36px; width: auto; }
   .nav-mid {
     display: flex; gap: 32px; align-items: center;
     font-size:13px; font-weight: 500;
@@ -416,7 +418,21 @@
     background: var(--white);
     border: 1px solid var(--line);
     border-radius: 22px;
-    padding: 36px 36px;
+    padding: clamp(24px, 2.2vw + 14px, 36px);
+    /* Antes no reaccionaba al puntero. En una rejilla de tarjetas que además
+       son enlaces, una respuesta discreta al pasar por encima dice cuál se va
+       a pulsar; sin ella hay que fijarse en el cursor. */
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  a > .norm-card:hover, a:focus-visible > .norm-card,
+  .norm-card:has(a:hover), .norm-card:has(a:focus-visible) {
+    border-color: color-mix(in srgb, var(--acento-texto) 45%, var(--line));
+    box-shadow: 0 6px 20px rgba(18, 48, 61, .07);
+    transform: translateY(-2px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .norm-card { transition: none; }
+    a > .norm-card:hover, .norm-card:has(a:hover) { transform: none; }
   }
   .norm-num {
     font-size:40px; font-weight: 200;
@@ -939,7 +955,26 @@
   a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
     outline: 3px solid var(--acento-texto); outline-offset: 3px; border-radius: 6px;
   }
-  .post-body a, .faq-a a { text-decoration: underline; text-underline-offset: 3px; }
+  /* Ninguna imagen desborda su contenedor ni deforma la maquetación. Es una
+     línea que evita la mitad de los problemas de responsive con contenido que
+     entra desde el blog, donde el ancho original no se controla. */
+  img, svg, video { max-width: 100%; }
+  /* `height:auto` solo donde no hay una altura puesta a propósito: aplicarlo a
+     todo aplastaría los logos de la cabecera y el pie, que sí la llevan. */
+  img:not([style*="height"]):not(.nav-logo img) { height: auto; }
+
+  .post-body a, .faq-a a {
+    text-decoration: underline;
+    /* `skip-ink` evita que la línea atraviese las jotas y las ges, y un grosor
+       fino la hace legible sin competir con el texto. */
+    text-decoration-skip-ink: auto;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    transition: text-decoration-color .15s ease;
+  }
+  .post-body a:hover, .faq-a a:hover,
+  .post-body a:focus-visible, .faq-a a:focus-visible { text-decoration-color: currentColor; }
   .verde-texto { color: var(--verde-texto); }
   @media (prefers-reduced-motion: reduce) {
     .tc-logo-animado animate, .tc-logo-animado animateTransform, .tc-logo-animado animateMotion { display: none; }

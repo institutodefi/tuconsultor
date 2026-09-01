@@ -36,13 +36,29 @@
   --tc-font: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --tc-font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
   --tc-peso-titulo: 600; --tc-peso-texto: 400;
-  --tc-t-xs:.78rem; --tc-t-sm:.88rem; --tc-t-base:1rem; --tc-t-lg:1.25rem;
-  --tc-t-xl:1.45rem; --tc-t-2xl:1.85rem; --tc-t-3xl:2.3rem; --tc-t-4xl:2.85rem;
+  /* Escala fluida: el tamaño crece con el viewport en lugar de saltar en cada
+     punto de ruptura. Los títulos grandes son los que más lo notan; en un
+     portátil de 1280 px un titular pensado para 1920 se ve desproporcionado, y
+     con `clamp` se resuelve sin escribir una media query por tamaño.
+
+     El mínimo y el máximo son los valores que ya se usaban: no cambia el diseño
+     en los extremos, solo el camino entre ellos. */
+  --tc-t-xs:.78rem; --tc-t-sm:.88rem; --tc-t-base:1rem;
+  --tc-t-lg:  clamp(1.12rem, 1.02rem + 0.42vw, 1.25rem);
+  --tc-t-xl:  clamp(1.28rem, 1.12rem + 0.68vw, 1.45rem);
+  --tc-t-2xl: clamp(1.55rem, 1.28rem + 1.15vw, 1.85rem);
+  --tc-t-3xl: clamp(1.85rem, 1.42rem + 1.85vw, 2.30rem);
+  --tc-t-4xl: clamp(2.10rem, 1.52rem + 2.50vw, 2.85rem);
   --tc-lh-titulo:1.1; --tc-lh-texto:1.62; --tc-medida:76ch;
 
   /* --- Espaciado, radios, sombras ------------------------- */
   --tc-e1:4px; --tc-e2:8px; --tc-e3:12px; --tc-e4:16px;
   --tc-e6:24px; --tc-e8:32px; --tc-e12:48px; --tc-e16:64px; --tc-e24:96px;
+  /* Aire entre secciones, proporcional a la pantalla. Con valores fijos, en
+     móvil las secciones se pegan y en pantallas grandes queda un hueco muerto
+     que obliga a desplazarse sin motivo. */
+  --tc-seccion:   clamp(48px, 3.2vw + 32px, 96px);
+  --tc-seccion-s: clamp(32px, 2.1vw + 22px, 64px);
   --tc-r-sm:8px; --tc-r-md:14px; --tc-r-lg:22px; --tc-r-full:999px;
   --tc-sombra-1: 0 1px 2px rgba(18,48,61,.06), 0 2px 8px rgba(18,48,61,.05);
   --tc-sombra-2: 0 4px 12px rgba(18,48,61,.08), 0 12px 32px rgba(18,48,61,.07);

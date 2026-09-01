@@ -6,6 +6,8 @@ import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
 import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo } from '../../lib/calcEngine.js';
 import { resolverProyectos } from '../../lib/proyectoResuelto.js';
+import SesionesTarea from './SesionesTarea.jsx';
+import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -62,6 +64,8 @@ function EditorBloques({ tarea, bloquesIniciales, onPersistir, onAdd, onQuitar }
 export default function Proyectos() {
   const [clientes, setClientes] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [sesiones, setSesiones] = useState([]);        // todas, para sumar horas
+  const [abierta, setAbierta] = useState(null);        // tarea en el diálogo
   const [presupuestos, setPresupuestos] = useState([]);
   const [contratos, setContratos] = useState([]);
   const [alta, setAlta] = useState(false);
@@ -120,6 +124,8 @@ export default function Proyectos() {
     // Las empresas del CRM son la lista buena para elegir cliente al abrir un
     // proyecto: `clientes` es la tabla operativa y va por detrás.
     listTable('empresas').then(setEmpresas).catch(() => setEmpresas([]));
+    // Las sesiones dan las horas planificadas y ejecutadas de cada tarea.
+    listTable('tarea_sesiones').then(setSesiones).catch(() => setSesiones([]));
     // Ofertas y contratos: de ahí salen las normas y el modelo de verdad.
     listTable('presupuestos').then(setPresupuestos).catch(() => setPresupuestos([]));
     listTable('contratos').then(setContratos).catch(() => setContratos([]));
@@ -323,6 +329,49 @@ export default function Proyectos() {
   }
 
   // Guarda las tareas configuradas y deja que el programa las distribuya por meses.
+  /**
+   * Vuelca las tareas del modelo al proyecto CON SUS HORAS, y sin fechas.
+   *
+   * Sustituye a «distribuir por meses», que repartía el calendario solo. Las
+   * horas sí se traen: son las que el modelo asigna y las que se compararán
+   * después con lo que se programe. Lo que no se decide aquí es CUÁNDO: eso lo
+   * pone quien va a hacer el trabajo, sesión a sesión.
+   */
+  async function generarTareas() {
+    if (!proyecto || !cliente) return;
+    setMsg(null);
+    try {
+      const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
+      let n = 0;
+      for (const [i, c] of candidatas.entries()) {
+        const titulo = codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas);
+        // No duplicar: volver a pulsar completa, no repite.
+        if (yaEstan.has(titulo.trim().toUpperCase())) continue;
+        await insertRow('cliente_tareas', {
+          cliente_id: cliente.id, proyecto_id: proyecto.id,
+          norma_id: c.norma_id, modelo,
+          proceso: c.proceso, subproceso: c.subproceso,
+          titulo,
+          horas: c.horas,            // ← las comprometidas, no se editan después
+          bloque: c.bloque, tipo: tipoTarea(c),
+          integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
+          orden: i, num_tarea: i + 1,
+          // Sin fecha ni consultor: se decide al programar.
+          fecha_estimada: null, consultor_id: null,
+          bloques_ejecucion: [], seguimientos: [],
+          fecha_real: null, hecha: false,
+        });
+        n += 1;
+      }
+      cargar();
+      setMsg(n
+        ? `${n} tarea(s) volcadas con sus horas. Ábrelas para programarlas.`
+        : 'Todas las tareas del modelo ya estaban en el proyecto.');
+    } catch (e) {
+      setMsg(`No se pudo volcar: ${e?.message || e}`);
+    }
+  }
+
   async function generarYDistribuir() {
     if (!proyecto || !cliente) return;
     setMsg(null);
@@ -415,6 +464,17 @@ export default function Proyectos() {
           lo que ya hace el «Abrir →» de la tabla de abajo, y solo listaba los
           activos, así que un proyecto pausado o cerrado no aparecía por ninguna
           de las dos vías. */}
+      {abierta && (
+        <SesionesTarea
+          tarea={{ id: abierta.id, titulo: abierta.titulo, codigo: abierta.num_tarea, horas_teoricas: abierta.horas, subproceso: abierta.subproceso }}
+          contexto={{ norma: abierta.norma_id }}
+          fechaCertificacion={proyecto?.fecha_limite || null}
+          campoTarea="cliente_tarea_id"
+          onCerrar={() => setAbierta(null)}
+          onGuardado={() => listTable('tarea_sesiones').then(setSesiones).catch(() => {})}
+        />
+      )}
+
       {alta ? (
         <AltaProyecto empresas={empresas} clientes={clientes}
           onCerrar={() => setAlta(false)}
@@ -625,10 +685,18 @@ export default function Proyectos() {
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex items-center gap-3">
-              <button onClick={generarYDistribuir} disabled={!candidatas.length} className="btn-orange disabled:opacity-40">
-                Guardar y distribuir por meses
+            {/* El botón de «distribuir por meses» se ha retirado: repartía las
+                tareas por el calendario sin preguntar a nadie, y programar es
+                una decisión de la persona que va a hacer el trabajo, no un
+                reparto automático. Las tareas se generan y luego se programan
+                una a una, con sus sesiones. */}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button onClick={generarTareas} disabled={!candidatas.length} className="btn-orange disabled:opacity-40">
+                Volcar {candidatas.length} tarea{candidatas.length === 1 ? '' : 's'} al proyecto
               </button>
+              <span className="text-[12px] text-[#7FA7B4]">
+                Entran con sus horas del modelo. Después se programan una a una.
+              </span>
               {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
             </div>
           </div>
@@ -640,12 +708,20 @@ export default function Proyectos() {
                 <h4 className="font-extrabold">Tareas distribuidas ({tareasProyecto.length})</h4>
                 <div className="flex items-center gap-3">
                   {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
-                  <button onClick={distribuirAgenda} disabled={distribuyendo} className="btn-orange !px-4 !py-2 disabled:opacity-40">
-                    {distribuyendo ? 'Distribuyendo…' : '↻ Distribuir agenda'}
-                  </button>
+                  {/* «Distribuir agenda» retirado: volcaba las tareas al
+                      calendario de golpe, sin que nadie decidiera cuándo ni con
+                      qué horas. Ahora la agenda se llena sola en cuanto se
+                      programa una sesión, que es cuando existe una decisión
+                      real detrás. */}
+                  <span className="text-[12px] text-[#7FA7B4]">
+                    La agenda se actualiza sola al programar cada tarea.
+                  </span>
                 </div>
               </div>
-              <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Asigna consultor responsable. Las horas reales salen del seguimiento de la tarea. Pulsa «Distribuir agenda» tras aceptar las tareas.</p>
+              <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
+                Pulsa las horas de una tarea para programarla en una o varias sesiones.
+                Las horas comprometidas vienen del modelo y no se editan.
+              </p>
 
               {/* Acciones masivas */}
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-navy-50/40 px-3 py-2">
@@ -707,7 +783,31 @@ export default function Proyectos() {
                           </select>
                         </td>
                         <td className="py-1.5 text-xs">{fechaLimite || '—'}</td>
-                        <td className="py-1.5 text-right">{fmtH(t.horas)}</td>
+                        {/* Las horas abren la programación. Se enseña lo
+                            comprometido y, debajo, lo planificado: es la
+                            comparación que importa y tiene que verse sin
+                            abrir nada. */}
+                        <td className="py-1.5 text-right">
+                          {(() => {
+                            const ss = sesiones.filter((s) => String(s.cliente_tarea_id) === String(t.id));
+                            const b = balanceTarea({ horas_teoricas: t.horas }, ss);
+                            const tono = b.estado === 'sin_planificar' ? 'text-[#7FA7B4]'
+                              : b.estado === 'corto' ? 'text-amber-200'
+                              : b.estado === 'pasado' ? 'text-red-300' : 'text-emerald-300';
+                            return (
+                              <button onClick={() => setAbierta(t)}
+                                title="Programar en una o varias sesiones"
+                                className="text-right hover:underline">
+                                <span className="block font-bold text-[#EAF4F7]">{fmtH(t.horas)}</span>
+                                <span className={`block text-[10.5px] font-bold ${tono}`}>
+                                  {b.estado === 'sin_planificar'
+                                    ? 'sin programar'
+                                    : `${b.planificadas} h en ${b.nSesiones} ses.`}
+                                </span>
+                              </button>
+                            );
+                          })()}
+                        </td>
                         <td className="py-1.5 text-right">
                           <button onClick={() => setExpandida(abierto ? null : t.id)} className="text-xs font-bold text-[#9FC0CB] hover:text-brand-orange" title="Bloques de ejecución">
                             {abierto ? '▾' : '▸'} {bloques.length || trocearEnBloques(t.horas).length}

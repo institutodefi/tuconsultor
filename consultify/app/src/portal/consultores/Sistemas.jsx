@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { sincronizarTareaAgenda } from '../../lib/sincroAgenda.js';
 import { NORMAS } from '../../lib/calcEngine.js';
+import { useAuth } from '../../lib/auth.jsx';
+import { can } from '../../lib/permisos.js';
 
 // Modelos que se editan lado a lado. Implantación ERA un precio cerrado derivado
 // de Implicación, pero desde que es un proyecto con horas propias tiene que
@@ -10,6 +12,14 @@ const MODELOS_COL = ['Apoyo', 'Implantación', 'Relación', 'Implicación', 'Com
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')}`;
 
 export default function Sistemas() {
+  // ── Quién puede tocar el catálogo ──
+  // Lo consultan dirección de proyecto, consultoría y gestión: saber qué tareas
+  // define cada modelo es parte del trabajo. Editarlo queda en Administración,
+  // porque estas horas alimentan el precio de TODAS las ofertas: cambiarlas
+  // aquí mueve lo que se está ofertando en ese momento.
+  const { role } = useAuth();
+  const puedeEditar = can.editarCatalogoTareas(role);
+
   const [catalogo, setCatalogo] = useState([]);
   const [normaSel, setNormaSel] = useState('9001');
   const [msg, setMsg] = useState(null);
@@ -141,7 +151,16 @@ export default function Sistemas() {
       <div>
         <p className="eyebrow">Configuración</p>
         <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight">Sistemas de gestión</h1>
-        <p className="mt-2 text-sm font-medium text-[#9FC0CB]">Edita las horas del catálogo maestro. Cada tarea muestra los 4 modelos en columnas para ajustarlos rápido. Los cambios se sincronizan en los proyectos que no hayas tocado a mano.</p>
+        <p className="mt-2 text-sm font-medium text-[#9FC0CB]">
+          {puedeEditar
+            ? 'Edita las horas del catálogo maestro. Cada tarea muestra los 4 modelos en columnas para ajustarlos rápido. Los cambios se sincronizan en los proyectos que no hayas tocado a mano.'
+            : 'Catálogo maestro de tareas por norma y modelo: lo que se hace en cada proyecto y las horas que lleva. Solo lectura.'}
+        </p>
+        {!puedeEditar && (
+          <p className="mt-2 inline-block rounded-lg bg-[#123F52] px-3 py-1.5 text-[12px] font-bold text-[#9FC0CB]">
+            Estas horas fijan el precio de las ofertas, así que solo las modifica Administración.
+          </p>
+        )}
       </div>
 
       {/* Subpestañas por sistema */}
@@ -161,8 +180,8 @@ export default function Sistemas() {
           </div>
           <div className="flex items-center gap-3">
             {msg && <span className="text-xs font-bold text-[#B9D2DA]">{msg}</span>}
-            {pendiente && <button onClick={sincronizarAgendas} disabled={sincronizando} className="rounded-xl border border-[#1E5468] px-4 py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40">{sincronizando ? 'Sincronizando…' : '⟳ Sincronizar proyectos'}</button>}
-            <button onClick={addTarea} className="btn-orange !px-4 !py-2">+ Añadir tarea</button>
+            {puedeEditar && pendiente && <button onClick={sincronizarAgendas} disabled={sincronizando} className="rounded-xl border border-[#1E5468] px-4 py-2 text-sm font-bold text-[#B9D2DA] hover:bg-[#0D3242] disabled:opacity-40">{sincronizando ? 'Sincronizando…' : '⟳ Sincronizar proyectos'}</button>}
+            {puedeEditar && <button onClick={addTarea} className="btn-orange !px-4 !py-2">+ Añadir tarea</button>}
           </div>
         </div>
       </div>
@@ -187,18 +206,26 @@ export default function Sistemas() {
             <tbody className="divide-y divide-navy-50">
               {grupos.map((g, i) => (
                 <tr key={g.subproceso + i}>
-                  <td className="py-1.5 pr-2"><input className="input !py-1 !text-xs" value={g.proceso || ''} onChange={e => editarTextoGrupo(g, 'proceso', e.target.value)} /></td>
-                  <td className="py-1.5 pr-2"><input className="input !py-1 !text-xs" value={g.subproceso || ''} onChange={e => editarTextoGrupo(g, 'subproceso', e.target.value)} /></td>
+                  {/* `readOnly` en vez de `disabled`: un campo deshabilitado no
+                      se puede seleccionar ni copiar, y esta pantalla se
+                      consulta para saber qué toca hacer. */}
+                  <td className="py-1.5 pr-2"><input className={`input !py-1 !text-xs ${!puedeEditar ? 'bg-[#0A2634] text-[#B9D2DA]' : ''}`} readOnly={!puedeEditar} value={g.proceso || ''} onChange={e => puedeEditar && editarTextoGrupo(g, 'proceso', e.target.value)} /></td>
+                  <td className="py-1.5 pr-2"><input className={`input !py-1 !text-xs ${!puedeEditar ? 'bg-[#0A2634] text-[#B9D2DA]' : ''}`} readOnly={!puedeEditar} value={g.subproceso || ''} onChange={e => puedeEditar && editarTextoGrupo(g, 'subproceso', e.target.value)} /></td>
                   {MODELOS_COL.map(m => (
                     <td key={m} className="py-1.5 px-1 text-right">
                       <input type="number" min="0" step="0.25"
-                        className="input !py-1 !text-xs !w-20 text-right"
+                        className={`input !py-1 !text-xs !w-20 text-right ${!puedeEditar ? 'bg-[#0A2634] text-[#B9D2DA]' : ''}`}
+                        readOnly={!puedeEditar}
                         value={g.porModelo[m]?.horas ?? ''}
                         placeholder="0"
-                        onChange={e => editarCelda(g, m, e.target.value)} />
+                        onChange={e => puedeEditar && editarCelda(g, m, e.target.value)} />
                     </td>
                   ))}
-                  <td className="py-1.5 text-right"><button onClick={() => quitarGrupo(g)} className="text-xs font-bold text-red-500 hover:underline">×</button></td>
+                  <td className="py-1.5 text-right">
+                    {puedeEditar && (
+                      <button onClick={() => quitarGrupo(g)} className="text-xs font-bold text-red-500 hover:underline">×</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

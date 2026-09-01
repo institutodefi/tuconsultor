@@ -3189,3 +3189,182 @@ venía a evitar.
 ## Al desplegar
 
 En el pie debe leerse **v241.0.0**. Si dice otra cosa, el despliegue no llegó.
+
+---
+
+# v243 · Sesiones de tarea: horas planificadas frente a comprometidas
+
+## La pieza que faltaba
+
+Una tarea tenía UNA fecha y UNA duración. El trabajo real no es así: una
+auditoría de 8 horas se hace en dos mañanas.
+
+**Migración `v104`** con la tabla `tarea_sesiones`: cada vez que alguien se
+sienta a hacer una tarea, con fecha, hora de inicio y fin y responsable. Las
+horas se calculan solas en la base —columna generada— y se suman.
+
+Y `horas_teoricas` en la tarea: **lo que el modelo dice que cuesta, y no se
+edita**. Si se pudiera cambiar, la desviación se «arreglaría» moviendo el
+objetivo y la comparación no diría nada.
+
+Las sesiones aceptan colgar de `cliente_tareas` o de `tareas_programadas` —hay
+dos tablas de tareas en paralelo— con un check que garantiza que cuelgan de una
+sola. Unificarlas ahora obligaría a migrar datos con el sistema en uso.
+
+## En el panel
+
+- **Las horas se vuelcan con las tareas.** El botón pasa a ser «Volcar N tareas
+  al proyecto»: entran con sus horas del modelo y **sin fecha**.
+- **Las horas de cada tarea son un botón** que abre la programación, y debajo se
+  lee lo planificado: `12 h` / `7 h en 2 ses.`, en color según la desviación.
+
+## El diálogo
+
+Tres cifras arriba: **comprometidas · planificadas · ejecutadas**. Las
+comprometidas se muestran como dato, no como campo.
+
+Debajo, las sesiones. Cada una con fecha, horas, responsable y su estado. Se
+añaden las que hagan falta y se pueden dar por hechas cuando la fecha ha
+llegado.
+
+**Avisa de dos cosas sin impedirlas:**
+
+- **Sesiones después de la certificación**, en rojo: ese trabajo no llega a la
+  auditoría. No se bloquea porque a veces el seguimiento posterior se planifica
+  a propósito.
+- **Solapes**: si ese consultor ya tiene algo a esa hora ese día.
+
+## Fuera «Distribuir agenda»
+
+Volcaba las tareas al calendario de golpe, sin que nadie decidiera cuándo ni con
+qué horas. **La agenda se llena sola al programar una sesión**, que es cuando
+hay una decisión real detrás.
+
+## Verificación
+
+`scripts/test-sesiones.mjs`: cálculo de horas incluidos los casos inválidos,
+suma de varias sesiones excluyendo anuladas, los cuatro estados de desviación
+con su margen, que las teóricas no cambian nunca, detección de sesiones tras la
+certificación, y solapes por consultor y día.
+
+## Pendiente
+
+El **panel del consultor** con horas y tareas ejecutadas / planificadas /
+comprometidas. Las vistas de base de datos ya están hechas
+(`v_consultor_carga`, `v_tareas_horas`, `v_cliente_tareas_horas`); falta la
+pantalla.
+
+---
+
+# v244 · Preparado el logo del 20 aniversario, y mejoras de estética
+
+## El logo: preparado, no aplicado
+
+**Los archivos del 20 aniversario no están en el proyecto.** Según el brief viven
+en OneDrive (`MARKETING/IMAGEN CORPORATIVA/TUCONSULTOR/LOGO/`), pero aquí no hay
+ninguno.
+
+He preparado `scripts/logo-20-aniversario.py`, que hace la sustitución completa
+—**898 referencias en 301 páginas**— en una sola ejecución. Comprueba primero que
+los archivos existan y, si falta alguno, **no toca nada**: dejar la web con rutas
+a ficheros inexistentes es peor que no haber empezado.
+
+Los nombres que espera en `web/marca/`:
+
+| Archivo | Para |
+|---|---|
+| `20a-horizontal-solido.svg` | fondos claros (cabecera) |
+| `20a-horizontal-blanco.svg` | fondos oscuros (pie) |
+| `20a-horizontal-solido.png` | datos estructurados de Google |
+| `20a-isotipo-solido.svg` | usos pequeños |
+| `20a-isotipo-solido.png` | ídem |
+
+El script además **sube las alturas fijas un 20 %**: el lockup del aniversario
+lleva el isotipo al 180 % y el bloque del «20» debajo, así que con la altura
+actual se vería aplastado.
+
+## Estética
+
+**Escala tipográfica fluida.** Los cuatro tamaños grandes pasan a `clamp()`: el
+texto crece con el viewport en lugar de saltar en cada punto de ruptura. En un
+portátil de 1280 px un titular pensado para 1920 se veía desproporcionado. Los
+extremos son los valores que ya había, así que el diseño no cambia en móvil ni
+en pantalla grande, solo el camino entre ambos.
+
+**Aire entre secciones proporcional.** Con valores fijos, en móvil las secciones
+se pegan y en pantallas grandes queda un hueco muerto.
+
+**Las tarjetas reaccionan al puntero.** No lo hacían: en una rejilla de tarjetas
+que además son enlaces, una respuesta discreta dice cuál se va a pulsar sin
+tener que fijarse en el cursor. Con `prefers-reduced-motion` respetado.
+
+**Subrayado de enlaces en prosa** con `skip-ink`, para que la línea no atraviese
+las jotas y las ges, y en un tono más suave que se intensifica al pasar por
+encima.
+
+**Ninguna imagen desborda ni provoca salto de maquetación.** Los logos SVG de la
+cabecera no llevaban `width:auto`, así que reservaban 300 px hasta cargar y la
+cabecera daba un salto visible.
+
+## Lo que necesito
+
+Los cinco archivos del logo, en **monocromo sólido** (negro o el azul `#0F1730`
+del manual) y **blanco sólido**, preferiblemente SVG. Déjalos en `web/marca/`
+con esos nombres y el script hace el resto.
+
+---
+
+# v245 · El catálogo de tareas: lo leen todos, lo edita Administración
+
+## Lo que había
+
+La pantalla «Sistemas de gestión» **no comprobaba permisos en absoluto**, y la
+política de base de datos era una sola:
+
+```sql
+create policy tareas_catalogo_team_all on tareas_catalogo for all
+  using (es_equipo()) with check (es_equipo());
+```
+
+Cualquiera del equipo podía cambiar las horas de cualquier tarea. Y esas horas
+no son un dato de trabajo cualquiera: **alimentan el motor de precios**. Cambiar
+las de «Auditoría interna» en modelo Compromiso mueve el importe de todas las
+ofertas que se estén preparando en ese momento. Es una decisión de negocio, no
+de ejecución.
+
+## Ahora
+
+| | Dirección de proyecto · Consultoría · Gestión | Administración · Superadministración |
+|---|---|---|
+| Ver el catálogo | Sí | Sí |
+| Editar horas | No | Sí |
+| Añadir o quitar tareas | No | Sí |
+
+La pestaña **se abre también a consultoría y gestión**, que antes ni la veían:
+saber qué tareas define cada modelo es parte del trabajo diario.
+
+## Dos detalles
+
+**`readOnly`, no `disabled`.** Un campo deshabilitado no se puede seleccionar ni
+copiar, y esta pantalla se consulta: alguien querrá copiar el nombre de un
+subproceso. Con `readOnly` se lee y se copia, pero no se cambia.
+
+**Se dice el motivo**, en lugar de dejar los campos apagados sin explicación:
+
+> Estas horas fijan el precio de las ofertas, así que solo las modifica
+> Administración.
+
+## Migración `v105`: la barrera de verdad
+
+La comprobación de la interfaz sola no vale: estas tablas se pueden tocar desde
+cualquier cliente con la sesión del usuario. Las políticas se separan en lectura
+(todo el equipo) y escritura (Administración).
+
+Se protege también `normas_catalogo`: si las horas están cerradas pero cualquiera
+puede añadir o retirar una norma, la protección se rodea por el otro lado.
+
+## Verificación
+
+`scripts/test-permisos.mjs` ampliado: los seis roles con sus dos permisos, que
+dirección, consultoría y gestión ven pero no editan, que el cliente ni ve, y que
+la pestaña aparece para quien puede leerla.
