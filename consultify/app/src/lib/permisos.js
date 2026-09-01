@@ -61,9 +61,15 @@ export const GRUPOS_PORTAL = [
         to: 'proyectos', label: 'Proyectos', icon: 'folder-kanban',
         roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'],
         hijos: [
-          { to: 'proyectos',             label: 'Cartera de proyectos',    roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
-          { to: 'proyectos/dashboard',   label: 'Panel de proyectos',      roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
-          { to: 'proyectos/planificador', label: 'Planificador de proyectos', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+          // Cartera y panel eran dos pantallas sobre los mismos proyectos: una
+          // con la tabla, otra con las cifras. Se entra a mirar «cómo va» y
+          // había que recordar en cuál estaba cada cosa. Ahora es una sola.
+          //
+          // El «planificador de proyectos» se ha retirado: repartía tareas por
+          // el calendario de forma automática, y programar es una decisión de
+          // quien va a hacer el trabajo. Eso se hace ahora tarea a tarea, con
+          // sus sesiones.
+          { to: 'proyectos', label: 'Proyectos', roles: ['superadmin', 'admin', 'director', 'gestion', 'consultor'] },
         ],
       },
       // Lo ve también consultoría y gestión: necesitan consultar qué tareas

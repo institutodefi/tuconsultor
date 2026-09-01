@@ -6,6 +6,7 @@ import { NORMA_BY_ID, fmtEUR, calcular } from '../../lib/calcEngine.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NavLink } from 'react-router-dom';
 import { ROL_LABEL, ROL_CLIENTE_LABEL, can } from '../../lib/permisos.js';
+import MisProyectos from '../../components/MisProyectos.jsx';
 
 const NAVY = '#0A2A6C', ORANGE = '#F5A623';
 const PIE_COLORS = ['#0A2A6C', '#2B4A93', '#4C6BB4', '#7E97CE', '#F5A623'];
@@ -180,6 +181,8 @@ export default function Dashboard() {
         </div>
       </div>
       <div className="space-y-8">
+      <MisProyectos />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {verEconomico ? (
           <>

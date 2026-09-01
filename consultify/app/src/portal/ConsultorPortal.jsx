@@ -185,8 +185,11 @@ export default function ConsultorPortal() {
               <Route path="clientes" element={<Navigate to="../empresas?filtro=cliente" replace />} />
               <Route path="clientes/dashboard" element={<Guard ok={verClientes}><Dashboard soloClientes /></Guard>} />
               <Route path="proveedores" element={<Guard ok={verCrm}><Proveedores /></Guard>} />
-              <Route path="proyectos/dashboard" element={<Guard ok={verPlanAgendaSist}><DashboardProyectos /></Guard>} />
-              <Route path="proyectos/planificador" element={<Guard ok={verPlanAgendaSist}><PlanificadorContextos /></Guard>} />
+              {/* «proyectos/planificador» retirado. Las rutas viejas siguen
+                  redirigiendo un tiempo: hay enlaces guardados en marcadores y
+                  en correos, y un 404 no explica nada. */}
+              <Route path="proyectos/planificador" element={<Navigate to="../proyectos" replace />} />
+              <Route path="proyectos/dashboard" element={<Navigate to="../proyectos" replace />} />
               <Route path="leads" element={<Navigate to="../empresas?filtro=potencial" replace />} />
               <Route path="empresas" element={<Guard ok={verCrm}><Empresas /></Guard>} />
               <Route path="contactos" element={<Guard ok={verCrm}><Contactos /></Guard>} />

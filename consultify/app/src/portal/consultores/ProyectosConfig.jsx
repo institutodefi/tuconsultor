@@ -452,18 +452,42 @@ export default function Proyectos() {
 
   const totalHoras = candidatas.reduce((s, c) => s + (Number(c.horas) || 0), 0);
 
+  const [vista, setVista] = useState('cartera');   // cartera | panel
+
   return (
     <div className="space-y-6">
       <div className="mb-2">
-        <p className="eyebrow">Proyectos activos</p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Configuración de proyectos</h1>
+        <p className="eyebrow">Proyectos</p>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Proyectos</h1>
       </div>
+
+      {/* Cartera y panel eran dos pantallas sobre los mismos proyectos: una con
+          la tabla, otra con las cifras. Se entra a mirar «cómo va esto» y había
+          que acordarse de en cuál estaba cada cosa. Ahora es una, con dos
+          vistas y sin perder el proyecto seleccionado al cambiar. */}
+      <div className="flex gap-1.5 border-b border-[#1E5468]">
+        {[['cartera', 'Cartera y configuración'], ['panel', 'Cómo van']].map(([k, etq]) => (
+          <button key={k} onClick={() => setVista(k)}
+            className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-bold transition ${
+              vista === k
+                ? 'border-brand-orange text-[#EAF4F7]'
+                : 'border-transparent text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
+            {etq}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'panel' && <DashboardProyectos />}
+
+      <div className={vista === 'cartera' ? 'space-y-6' : 'hidden'}>
 
       {/* Alta de proyecto.
           El desplegable «Selecciona un proyecto activo» se ha quitado: duplicaba
           lo que ya hace el «Abrir →» de la tabla de abajo, y solo listaba los
           activos, así que un proyecto pausado o cerrado no aparecía por ninguna
           de las dos vías. */}
+      </div>
+
       {abierta && (
         <SesionesTarea
           tarea={{ id: abierta.id, titulo: abierta.titulo, codigo: abierta.num_tarea, horas_teoricas: abierta.horas, subproceso: abierta.subproceso }}
@@ -584,6 +608,16 @@ export default function Proyectos() {
           </div>
 
           {/* Normas + modelo */}
+          <div className="card">
+            {/* El equipo va ANTES de las normas: al planificar un proyecto, lo
+                primero que se decide es quién lo lleva. Y sin equipo asignado
+                el proyecto no aparece en el panel de ningún consultor. */}
+            <EquipoProyecto
+              proyectoId={proyecto.id}
+              horasComprometidas={tareasProyecto.reduce((a, t) => a + (Number(t.horas) || 0), 0)}
+            />
+          </div>
+
           <div className="card">
             <h4 className="font-extrabold">Normas y modelo del proyecto</h4>
             <p className="mt-1 text-sm font-medium text-[#9FC0CB]">ISO 9001 va siempre. Solo se mostrarán las tareas de las normas y el modelo elegidos.</p>

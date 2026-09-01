@@ -3368,3 +3368,63 @@ puede añadir o retirar una norma, la protección se rodea por el otro lado.
 `scripts/test-permisos.mjs` ampliado: los seis roles con sus dos permisos, que
 dirección, consultoría y gestión ven pero no editan, que el cliente ni ve, y que
 la pestaña aparece para quien puede leerla.
+
+---
+
+# v246 · Equipo por proyecto, y una sola pantalla de proyectos
+
+## 1 · El equipo se asigna al proyecto, no al cliente
+
+Antes los consultores colgaban de `clientes`: un cliente, un equipo fijo. Pero
+un mismo cliente puede tener una implantación de ISO 27001 con el especialista
+en seguridad y un mantenimiento de 9001 con otra persona. Con el equipo atado al
+cliente, o se ponía a los dos en todo, o uno no veía su trabajo.
+
+**Migración `v106`** con `proyecto_equipo`: quién trabaja en qué proyecto, con
+qué papel —responsable, consultor, apoyo— y con cuántas horas asignadas.
+
+- **Un solo responsable por proyecto**, garantizado por índice único: con dos, no
+  hay ninguno. Si se nombra a otro, el anterior baja a consultor solo.
+- **Asignar equipo es de dirección**: reparte carga de otras personas y
+  compromete su agenda.
+- El bloque va **antes** de las normas en la ficha: al planificar, lo primero
+  que se decide es quién lo lleva.
+- Se avisa de las horas sin repartir, comparando con lo comprometido.
+
+La migración trae lo que ya había: quien llevaba el cliente pasa a llevar sus
+proyectos. Solo se migra a quien tenga cuenta de usuario; un consultor sin
+usuario no puede ver un panel, así que asignarlo no serviría de nada.
+
+## 2 · «Mis proyectos» en el panel del consultor
+
+Sale de `proyecto_equipo`, **no de las tareas que ya tenga**, que sería circular:
+sin tareas no vería el proyecto, y sin ver el proyecto no puede programarse
+tareas.
+
+Con las seis cifras: **horas y tareas comprometidas, planificadas y ejecutadas**.
+
+- **Comprometidas** salen del catálogo del modelo: es lo que se ofertó, no lo
+  que alguien haya planificado después.
+- **Planificadas** son las sesiones en calendario, excluidas las anuladas.
+- **Ejecutadas**, las cerradas.
+
+Cada proyecto lleva una barra que muestra lo planificado sobre lo comprometido,
+con lo ejecutado dentro: un número dice cuánto, la barra dice si vas justo. Y
+arriba, cuánto queda sin programar.
+
+Ordenados por fecha límite más cercana.
+
+## 3 · Una sola pantalla de proyectos
+
+Cartera y panel eran dos pantallas sobre los mismos proyectos: una con la tabla,
+otra con las cifras. Se entra a mirar «cómo va esto» y había que acordarse de en
+cuál estaba cada cosa. Ahora es **una, con dos vistas**.
+
+## 4 · Fuera el planificador de proyectos
+
+Repartía las tareas por el calendario automáticamente. Programar es una decisión
+de quien va a hacer el trabajo, y eso se hace ahora tarea a tarea con sus
+sesiones.
+
+Las rutas viejas **redirigen** en lugar de dar 404: hay enlaces guardados en
+marcadores y en correos.
