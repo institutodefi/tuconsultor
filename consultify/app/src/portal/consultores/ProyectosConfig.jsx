@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import AltaProyecto from './AltaProyecto.jsx';
 import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, horasCoordinacion, bloquesEjecucion, trocearEnBloques, codigoTarea } from '../../lib/planCliente.js';
 import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
-import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo } from '../../lib/calcEngine.js';
+import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo , modeloCanonico } from '../../lib/calcEngine.js';
 import { resolverProyectos } from '../../lib/proyectoResuelto.js';
 import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
@@ -219,6 +219,34 @@ export default function Proyectos() {
   function cambiarModelo(m) { setModelo(m); setMeses(mesesPorModelo(m, normasSel.length)); }
 
   // Tareas candidatas del modelo elegido para las normas elegidas → con anidado.
+  // ── Las tareas entran solas ──
+  // Elegir normas y modelo ES definir el trabajo. Que además hubiera que
+  // guardar y pulsar un botón hacía que se quedaran proyectos sin tareas sin
+  // que nadie lo notara. Ahora, en cuanto la configuración está completa y el
+  // catálogo tiene algo que aportar, se vuelca.
+  //
+  // El `volcandoRef` evita que dos renders seguidos disparen dos volcados a la
+  // vez y se dupliquen las tareas.
+  const volcandoRef = useRef(false);
+
+  useEffect(() => {
+    if (!proyecto || !cliente || volcandoRef.current) return;
+    if (!normasSel.length || !modelo || !candidatas.length) return;
+    // Solo lo que falte: si ya están todas, no hay nada que hacer.
+    const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
+    const faltan = candidatas.filter((c) => !yaEstan.has(
+      codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas)
+        .trim().toUpperCase()));
+    if (!faltan.length) return;
+
+    volcandoRef.current = true;
+    (async () => {
+      const n = await volcarTareasQueFalten();
+      volcandoRef.current = false;
+      if (n > 0) { cargar(); setMsg(`${n} tarea(s) del modelo ${modelo} volcadas al proyecto.`); }
+    })();
+  }, [proyecto?.id, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const candidatas = useMemo(() => {
     if (!catalogo || !normasSel.length) return [];
     const base = tareasDeCliente(catalogo, normasSel, modelo);
@@ -324,10 +352,59 @@ export default function Proyectos() {
   // la tabla con «—» en Normas y Modelo. Ahora lo hace `AltaProyecto`, que pide
   // ambas cosas y lista las empresas del CRM marcadas como cliente.
 
+  /**
+   * Guarda normas y modelo, Y VUELCA LAS TAREAS que falten.
+   *
+   * Antes había que guardar y luego pulsar otro botón para traer las tareas.
+   * Nadie lo hacía: se guardaba la configuración, se veía «Tareas resultantes»
+   * con la lista, y se daba por hecho que ya estaba. El proyecto se quedaba sin
+   * tareas y sin que nadie lo notara hasta mucho después.
+   *
+   * Ahora es un solo gesto: elegir normas y modelo ES definir el trabajo.
+   */
   async function guardarConfig() {
     if (!proyecto) return;
-    await updateRow('proyectos_cliente', proyecto.id, { normas: normasSel, modelo, meses_estimados: meses });
-    cargar(); setMsg('Configuración guardada.');
+    setMsg('Guardando…');
+    // Se guarda el nombre CANÓNICO del modelo («Implantación», no
+    // «implantacion»): así el dato queda limpio y no depende de que la
+    // comparación lo normalice cada vez.
+    await updateRow('proyectos_cliente', proyecto.id,
+      { normas: normasSel, modelo: modeloCanonico(modelo) || modelo, meses_estimados: meses });
+    // Las que ya existen no se tocan: volver a guardar completa, no duplica ni
+    // borra lo que alguien haya ajustado a mano.
+    const n = await volcarTareasQueFalten();
+    cargar();
+    setMsg(n > 0
+      ? `Configuración guardada y ${n} tarea(s) volcadas del modelo ${modelo}.`
+      : 'Configuración guardada.');
+  }
+
+  /** Inserta las tareas del modelo que aún no estén en el proyecto. Devuelve cuántas. */
+  async function volcarTareasQueFalten() {
+    if (!proyecto || !cliente || !candidatas.length) return 0;
+    const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
+    let n = 0;
+    for (const [i, c] of candidatas.entries()) {
+      const titulo = codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas);
+      if (yaEstan.has(titulo.trim().toUpperCase())) continue;
+      try {
+        await insertRow('cliente_tareas', {
+          cliente_id: cliente.id, proyecto_id: proyecto.id,
+          norma_id: c.norma_id, modelo,
+          proceso: c.proceso, subproceso: c.subproceso,
+          titulo,
+          horas: c.horas,
+          bloque: c.bloque, tipo: tipoTarea(c),
+          integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
+          orden: i, num_tarea: i + 1,
+          fecha_estimada: null, consultor_id: null,
+          bloques_ejecucion: [], seguimientos: [],
+          fecha_real: null, hecha: false,
+        });
+        n += 1;
+      } catch { /* una que falle no debe cortar el resto */ }
+    }
+    return n;
   }
 
   // Guarda las tareas configuradas y deja que el programa las distribuya por meses.
@@ -658,7 +735,7 @@ export default function Proyectos() {
                   Mínimo {mesesPorModelo(modelo, normasSel.length)} meses para {modelo}{modelo === 'Apoyo' ? ` con ${normasSel.length} sistema(s)` : ''}.
                 </p>
               </div>
-              <button onClick={guardarConfig} className="btn-ghost !px-4 !py-2">Guardar configuración</button>
+              <button onClick={guardarConfig} className="btn-orange !px-4 !py-2">Guardar configuración</button>
             </div>
           </div>
 
@@ -699,36 +776,14 @@ export default function Proyectos() {
                 resultantes (0)» sin más parece un fallo, y lo normal es que el
                 catálogo no tenga nada cargado para esa combinación de norma y
                 modelo: son datos que se rellenan en «Sistemas de gestión». */}
-            {candidatas.length === 0 && normasSel.length > 0 && (() => {
-              const enCatalogo = (catalogo || []).filter((c) => normasSel.includes(c.norma_id));
-              const conEsteModelo = enCatalogo.filter((c) => c.modelo === modelo);
-              const conHoras = conEsteModelo.filter((c) => (Number(c.horas_base) || 0) > 0);
-              const otrosModelos = [...new Set(enCatalogo.map((c) => c.modelo))].filter((m) => m !== modelo);
-
-              return (
-                <div className="mt-3 rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2.5">
-                  <p className="text-[12.5px] font-bold text-amber-200">
-                    El catálogo no da ninguna tarea para esta combinación
-                  </p>
-                  <ul className="mt-1.5 space-y-0.5 text-[11.5px] text-[#DFF1F5]">
-                    <li>· {enCatalogo.length} tarea(s) en el catálogo para {normasSel.join(', ')}</li>
-                    <li>· {conEsteModelo.length} de ellas en modelo <b>{modelo}</b></li>
-                    <li>· {conHoras.length} con horas mayores que cero
-                      {conEsteModelo.length > 0 && conHoras.length === 0 && (
-                        <b className="text-amber-200"> ← están a 0 h, por eso no salen</b>
-                      )}
-                    </li>
-                  </ul>
-                  <p className="mt-1.5 text-[11.5px] leading-snug text-[#9FC0CB]">
-                    {enCatalogo.length === 0
-                      ? 'Estas normas no tienen tareas cargadas. Añádelas en «Sistemas de gestión».'
-                      : conEsteModelo.length === 0
-                        ? `Hay tareas para ${otrosModelos.join(', ')} pero no para ${modelo}. Rellena esa columna en «Sistemas de gestión».`
-                        : 'Pon horas mayores que cero en «Sistemas de gestión»: una tarea de 0 h no se programa.'}
-                  </p>
-                </div>
-              );
-            })()}
+            {candidatas.length === 0 && normasSel.length > 0 && (
+              <p className="mt-3 rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2.5 text-[12.5px] font-bold text-amber-200">
+                El catálogo no tiene tareas con horas para {modelo} en estas normas.
+                <span className="ml-1 font-medium text-[#DFF1F5]">
+                  Rellénalas en «Sistemas de gestión» y entrarán solas.
+                </span>
+              </p>
+            )}
             <div className="mt-3 max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-[#10394A]">
@@ -762,11 +817,9 @@ export default function Proyectos() {
                 reparto automático. Las tareas se generan y luego se programan
                 una a una, con sus sesiones. */}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button onClick={generarTareas} disabled={!candidatas.length} className="btn-orange disabled:opacity-40">
-                Volcar {candidatas.length} tarea{candidatas.length === 1 ? '' : 's'} al proyecto
-              </button>
               <span className="text-[12px] text-[#7FA7B4]">
-                Entran con sus horas del modelo. Después se programan una a una.
+                Las tareas del modelo entran solas al elegir las normas.
+                {candidatas.length > 0 && ` ${candidatas.length} en total.`}
               </span>
               {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
             </div>

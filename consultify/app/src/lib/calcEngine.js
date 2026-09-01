@@ -119,6 +119,24 @@ export const MODELOS = {
 
 export const MODELO_IDS = Object.keys(MODELOS);
 
+/**
+ * Compara nombres de modelo sin que las tildes ni las mayúsculas importen.
+ *
+ * El catálogo guarda «Implantación» y algunos proyectos tienen «implantacion»,
+ * según cómo se escribiera el día que se creó. Con una comparación literal, un
+ * proyecto de implantación no encontraba NINGUNA de sus 331 tareas y la
+ * pantalla decía «0 tareas» sin que hubiera nada roto.
+ */
+export const clavModelo = (m) => String(m || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase().trim();
+
+export const mismoModelo = (a, b) => clavModelo(a) === clavModelo(b);
+
+/** El nombre canónico de un modelo, escrito como lo guarda el catálogo. */
+export const modeloCanonico = (m) =>
+  MODELO_IDS.find((x) => mismoModelo(x, m)) || m || null;
+
 // ════════════════════════════════════════════════════════════════════════════
 // PRECIO DE LOS MODELOS RECURRENTES
 //

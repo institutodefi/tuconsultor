@@ -3518,3 +3518,136 @@ Rellena esa columna en «Sistemas de gestión».
 Distingue los tres casos: normas sin tareas, tareas en otros modelos, o tareas a
 0 horas. «Tareas resultantes (0)» a secas parece un fallo del sistema, y lo
 normal es que falten datos del catálogo.
+
+---
+
+# v249 · Volcado automático y diagnóstico de por qué no se ve un proyecto
+
+## 1 · Las tareas se vuelcan al guardar la configuración
+
+Antes había que guardar normas y modelo, y **luego pulsar otro botón** para traer
+las tareas. Nadie lo hacía: se guardaba, se veía la lista de «Tareas
+resultantes» y se daba por hecho que ya estaba. El proyecto se quedaba sin
+tareas sin que nadie lo notara hasta mucho después.
+
+Ahora es un solo gesto: **«Guardar y volcar tareas»**. Elegir normas y modelo
+*es* definir el trabajo.
+
+Las que ya existen no se tocan: volver a guardar completa, no duplica ni borra
+lo que alguien haya ajustado a mano. El botón manual se queda para cuando se
+añaden tareas al catálogo después.
+
+## 2 · Cuando no hay proyectos, se dice cuál de los tres motivos es
+
+«No tienes proyectos asignados» manda a buscar donde no está si lo que pasa es
+que falta una migración. Ahora se distingue:
+
+| Situación | Mensaje |
+|---|---|
+| La tabla no existe | «Falta aplicar la migración v106 en Supabase» + el error |
+| No hay ninguna asignación en el sistema | «Todavía no hay ningún equipo asignado» |
+| Hay asignaciones pero ninguna tuya | «Hay N asignaciones, pero ninguna es tuya» |
+
+## 3 · Consulta de diagnóstico
+
+`supabase/DIAGNOSTICO-consultor-no-ve-proyecto.sql`, solo de lectura. Cinco
+comprobaciones en orden:
+
+1. **Si existen las tablas nuevas.** Si falta alguna, ese es el problema y todo
+   lo demás es consecuencia.
+2. Los proyectos del cliente, con cuántas tareas y cuántas personas tienen.
+3. **Quién está asignado y si puede verlo**: una persona sin cuenta activa puede
+   estar asignada y no ver nada, porque no hay panel donde enseñárselo.
+4. Los consultores del sistema antiguo, atados al cliente. Si aquí hay gente y
+   en el punto 3 no, la v106 no llegó a migrarlos.
+5. **Si el catálogo tiene tareas con horas** para ese modelo. Con `con_horas` a
+   cero el volcado no trae nada: una tarea de 0 h no se programa.
+
+---
+
+# v250 · La causa era una tilde
+
+## El diagnóstico lo dijo todo
+
+```
+· 331 tarea(s) en el catálogo para 9001, 14001, 27001
+· 0 de ellas en modelo implantacion
+Hay tareas para Relación, Implicación, Apoyo, Implantación, Compromiso
+pero no para implantacion
+```
+
+El proyecto tenía **`implantacion`** y el catálogo **`Implantación`**. La
+comparación era literal:
+
+```js
+.filter(t => t.modelo === modelo)
+```
+
+Un proyecto de implantación no encontraba **ninguna** de sus 331 tareas, y la
+pantalla decía «0» sin que hubiera nada roto. Y lo mismo habría pasado con
+`relacion`, `implicacion`… cualquier modelo con tilde escrito sin ella.
+
+## Corregido en tres alturas
+
+**En la comparación.** Nuevo `mismoModelo()`, que ignora tildes y mayúsculas.
+Es lo que hace que funcione hoy, sin tocar ningún dato.
+
+**Al guardar.** El modelo se escribe en su forma canónica: se guarda
+«Implantación», no lo que hubiera. Así deja de arrastrarse.
+
+**Migración `v107`**, que limpia lo ya guardado en proyectos, catálogo, tareas,
+ofertas y contratos. No es imprescindible —la aplicación ya compara bien— pero
+dejar el dato sucio significa que el próximo informe o vista que consulte por
+SQL vuelva a tropezar con lo mismo.
+
+## Las tareas entran solas
+
+Fuera los botones. En cuanto la configuración está completa y el catálogo tiene
+algo que aportar, **las tareas se vuelcan**. Elegir normas y modelo *es* definir
+el trabajo; que además hubiera que pulsar algo dejaba proyectos sin tareas sin
+que nadie lo notara.
+
+Solo entra lo que falte, así que cambiar de modelo o añadir una norma completa
+sin duplicar. Un `ref` impide que dos renders seguidos disparen dos volcados a
+la vez.
+
+El aviso largo con el desglose se reduce a una línea: con el volcado automático,
+lo único que hay que saber es si falta rellenar el catálogo.
+
+---
+
+# v251 · La ficha del cliente, en dos pestañas
+
+## Datos y Documentos
+
+La ficha se había vuelto larga: contactos, datos fiscales, estructura del grupo,
+homologación por normas, cartera comercial. Meter ahí los documentos la hacía
+inmanejable.
+
+Dos pestañas: **Datos del cliente** —todo lo que ya había— y **Documentos**.
+
+## Con el análisis por IA
+
+La pestaña de documentos incluye lo montado en la v237: subida, enlaces firmados
+que caducan, y el botón **✦ analizar** que lee cada documento y extrae lo que
+cuesta encontrar.
+
+La nota no describe el documento, lo **desmenuza**:
+
+```
+Razón social · CIF · Nº de certificado · Validez
+Alcance (literal)
+Sedes
+Avisos: el alcance no menciona los servicios contratados
+Confianza: alta
+```
+
+Y sigue siendo **solo para el equipo**: la política de `documento_notas` no la
+devuelve al cliente, y el componente ni siquiera la pide cuando quien mira es
+cliente.
+
+## Un detalle de datos
+
+Los documentos cuelgan de `clientes`, no de `empresas`. La pestaña busca la
+ficha operativa por CIF normalizado y, si no existe, lo dice —«se crea sola al
+abrir su primer proyecto»— en vez de fallar al cargar.

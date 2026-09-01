@@ -37,7 +37,10 @@ export function tareasDeCliente(catalogo, normaIds, modelo) {
   if (!catalogo?.length || !normaIds?.length) return [];
   const set = new Set(normaIds);
   return catalogo
-    .filter(t => set.has(t.norma_id) && t.modelo === modelo && (Number(t.horas_base) || 0) > 0)
+        // `mismoModelo` y no `===`: el catálogo guarda «Implantación» y algunos
+    // proyectos tienen «implantacion». Con comparación literal, un proyecto no
+    // encontraba ninguna de sus tareas y la pantalla decía «0».
+    .filter(t => set.has(t.norma_id) && mismoModelo(t.modelo, modelo) && (Number(t.horas_base) || 0) > 0)
     .map(t => ({
       norma_id: t.norma_id,
       modelo,
@@ -61,6 +64,7 @@ export function tareasDeCliente(catalogo, normaIds, modelo) {
  * @returns el mismo array con `fecha_estimada` (YYYY-MM-DD) añadido.
  */
 import { esLaborable, FESTIVOS_2026, toISO } from './agenda.js';
+import { mismoModelo } from './calcEngine.js';
 
 // Máximo de horas de PROYECTO que se programan por día.
 export const MAX_HORAS_PROYECTO_DIA = 6;

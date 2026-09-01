@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { insertRow, updateRow, deleteRow, holdedFn, brevoFn , explicarErrorBd } from '../../lib/data.js';
+import { insertRow, updateRow, deleteRow, holdedFn, brevoFn, explicarErrorBd, listTable } from '../../lib/data.js';
 import {
   validarCif, normalizarCif, emailValido, semaforoEmpresa,
   candidatasMatriz, ESTADOS_COMERCIALES,
@@ -12,6 +12,7 @@ import ServiciosProveedor from '../../components/ServiciosProveedor.jsx';
 import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 import CarteraEmpresa from './CarteraEmpresa.jsx';
+import DocumentosCliente from '../../components/DocumentosCliente.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha de empresa (una sola entidad para cliente / proveedor / potencial).
@@ -81,6 +82,26 @@ export default function FichaEmpresa({
   const esNueva = !empresa?.id;
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
+  // Dos pestañas en la ficha: los datos del cliente y sus documentos. La ficha
+  // se había vuelto muy larga —contactos, fiscal, grupo, homologación,
+  // cartera— y meter ahí los documentos la hacía inmanejable.
+  const [pestanaFicha, setPestanaFicha] = useState('datos');
+  // Los documentos cuelgan de `clientes`, no de `empresas`: se busca su ficha
+  // operativa por CIF normalizado. Si no existe, la pestaña lo dice en vez de
+  // fallar al cargar.
+  const [clienteOperativoId, setClienteOperativoId] = useState(null);
+  useEffect(() => {
+    if (!empresa?.cif) { setClienteOperativoId(null); return; }
+    let vivo = true;
+    listTable('clientes')
+      .then((cs) => {
+        const n = (s) => String(s || '').toUpperCase().replace(/[\s.-]/g, '');
+        const mio = (cs || []).find((c) => n(c.cif) && n(c.cif) === n(empresa.cif));
+        if (vivo) setClienteOperativoId(mio?.id || null);
+      })
+      .catch(() => vivo && setClienteOperativoId(null));
+    return () => { vivo = false; };
+  }, [empresa?.cif]);
   const [holded, setHolded] = useState({ estado: 'inactivo' });
   const [diag, setDiag] = useState(null);
   const [brevoOcupado, setBrevoOcupado] = useState(false);
@@ -919,7 +940,32 @@ export default function FichaEmpresa({
         {msg && <div className="mt-2">{aviso}</div>}
       </div>
 
+      {/* ── Pestañas ── */}
+      <div className="flex gap-1.5 border-b border-[#1E5468]">
+        {[['datos', 'Datos del cliente'], ['documentos', 'Documentos']].map(([k, etq]) => (
+          <button key={k} type="button" onClick={() => setPestanaFicha(k)}
+            className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-bold transition ${
+              pestanaFicha === k
+                ? 'border-brand-orange text-[#EAF4F7]'
+                : 'border-transparent text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
+            {etq}
+          </button>
+        ))}
+      </div>
+
+      {pestanaFicha === 'documentos' && (
+        clienteOperativoId ? (
+          <DocumentosCliente clienteId={clienteOperativoId} titulo="Documentos del cliente" />
+        ) : (
+          <p className="rounded-xl border border-dashed border-[#1E5468] px-3 py-4 text-center text-[12.5px] text-[#7FA7B4]">
+            Esta empresa aún no tiene ficha de cliente, y los documentos cuelgan de ella.
+            Se crea sola al abrir su primer proyecto.
+          </p>
+        )
+      )}
+
       {/* Contactos primero y abierto */}
+      <div className={pestanaFicha === 'datos' ? 'contents' : 'hidden'}>
       <Caja titulo="Contactos de la empresa" abiertaPorDefecto
         insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{cuantasPersonas || 'ninguno'}</span>}>
         <ContactosEmpresa
@@ -984,6 +1030,7 @@ export default function FichaEmpresa({
           Márcala como <strong>Proveedor</strong> para gestionar sus condiciones de homologación.
         </p>
       )}
+      </div>
     </div>
   );
 }

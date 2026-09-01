@@ -33,18 +33,26 @@ export default function MisProyectos({ perfilId = null, titulo = 'Mis proyectos'
   const id = perfilId || user?.id;
   const [datos, setDatos] = useState(null);
 
+  const [fallo, setFallo] = useState(null);
+
   useEffect(() => {
     if (!id) return;
     let vivo = true;
+    let falloEquipo = null;
     Promise.all([
-      listTable('proyecto_equipo').catch(() => []),
+      // Si la tabla no existe todavía —migración v106 sin aplicar— se marca,
+      // en vez de tratarlo como «no tienes proyectos»: son cosas distintas y
+      // la solución también.
+      listTable('proyecto_equipo').catch((e) => { falloEquipo = e; return []; }),
       listTable('proyectos_cliente').catch(() => []),
       listTable('clientes').catch(() => []),
       listTable('empresas').catch(() => []),
       listTable('cliente_tareas').catch(() => []),
       listTable('tarea_sesiones').catch(() => []),
     ]).then(([eq, pr, cl, em, ta, se]) => {
-      if (vivo) setDatos({ eq, pr, cl, em, ta, se });
+      if (!vivo) return;
+      setFallo(falloEquipo);
+      setDatos({ eq, pr, cl, em, ta, se });
     }).catch(() => vivo && setDatos({ eq: [], pr: [], cl: [], em: [], ta: [], se: [] }));
     return () => { vivo = false; };
   }, [id]);
@@ -95,13 +103,28 @@ export default function MisProyectos({ perfilId = null, titulo = 'Mis proyectos'
   if (!datos) return <p className="text-[12.5px] text-[#7FA7B4]">Cargando proyectos…</p>;
 
   if (!mios.length) {
+    // Tres motivos distintos, tres mensajes distintos. «No tienes proyectos»
+    // cuando en realidad falta una migración manda a buscar donde no está.
+    const total = datos.eq.length;
     return (
       <div className="card">
         <h3 className="text-[15px] font-extrabold text-[#EAF4F7]">{titulo}</h3>
-        <p className="mt-1.5 text-[13px] text-[#9FC0CB]">
-          No tienes proyectos asignados. El equipo de cada proyecto lo asigna dirección
-          desde la ficha del proyecto.
-        </p>
+        {fallo ? (
+          <p className="mt-1.5 text-[13px] font-bold text-amber-200">
+            No se pudo consultar el equipo de los proyectos: falta aplicar la migración v106
+            en Supabase. Detalle: {fallo?.message || String(fallo)}
+          </p>
+        ) : total === 0 ? (
+          <p className="mt-1.5 text-[13px] text-[#9FC0CB]">
+            Todavía no hay ningún equipo asignado en el sistema. Dirección los asigna
+            desde la ficha de cada proyecto, en <b>Proyectos</b>.
+          </p>
+        ) : (
+          <p className="mt-1.5 text-[13px] text-[#9FC0CB]">
+            Hay {total} asignación(es) de equipo, pero ninguna es tuya. Si deberías estar
+            en algún proyecto, pídeselo a dirección: se asigna desde la ficha del proyecto.
+          </p>
+        )}
       </div>
     );
   }
