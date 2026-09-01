@@ -4,6 +4,7 @@ import { getTareasAgenda, TIPO_BY_ID } from '../../lib/agenda.js';
 import { useAuth } from '../../lib/auth.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
 import ResumenAgenda from './ResumenAgenda.jsx';
+import MisProyectos from '../../components/MisProyectos.jsx';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const YEAR = new Date().getFullYear();
@@ -101,6 +102,12 @@ export default function MiAgenda() {
     <div className="space-y-6">
       {/* Lo urgente primero: vencimientos, clientes y foto del mes */}
       <ResumenAgenda tareas={tareas} yo={yo} />
+
+      {/* Los proyectos asignados van AQUÍ y no en el Dashboard: consultoría,
+          dirección y administración entran directos a la agenda —el `index` de
+          la ruta los redirige— y nunca llegaban a ver el panel donde estaba
+          este bloque. Un componente que nadie ve es como no tenerlo. */}
+      <MisProyectos />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>

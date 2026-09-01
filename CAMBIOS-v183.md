@@ -3468,3 +3468,53 @@ Sobre todo el proyecto: **cero casos**.
 
 Los tres cazan errores que **compilan bien y fallan en producción**, que son los
 que cuestan una ronda entera de ida y vuelta.
+
+---
+
+# v248 · Asignar sin horas, proyectos visibles y diagnóstico del catálogo
+
+## 1 · Al asignar equipo ya no se piden horas
+
+Retirado el campo. **Las horas se reparten al programar cada tarea**, que es
+donde se sabe cuántas lleva y quién la hace; pedirlas al asignar obliga a
+inventarse un número antes de tener la información.
+
+Se conserva el dato de cuántas horas tiene comprometidas el proyecto, como
+referencia.
+
+## 2 · El consultor no veía sus proyectos, y el motivo era este
+
+`<MisProyectos>` estaba en el **Dashboard**, pero la ruta índice del portal hace
+esto:
+
+```jsx
+<Route index element={verPlanAgendaSist ? <Navigate to="mi-agenda" /> : <Dashboard />} />
+```
+
+Y `verPlanAgendaSist` incluye a **consultor, director, admin y superadmin**. Es
+decir: todos ellos entran directos a la agenda y **nunca llegan al Dashboard**.
+El componente estaba bien, pero en una pantalla que esas personas no visitan.
+
+Movido a **Mi agenda**, junto al resumen de vencimientos. Un componente que
+nadie ve es como no tenerlo.
+
+## 3 · Por qué no salían las tareas
+
+Revisado `tareasDeCliente()`: filtra por norma, por modelo **y por
+`horas_base > 0`**. Ese tercer filtro es el que suele dejar la lista vacía, y no
+se veía por ninguna parte.
+
+Ahora, cuando no sale ninguna tarea, se dice el motivo con números:
+
+```
+El catálogo no da ninguna tarea para esta combinación
+· 24 tarea(s) en el catálogo para 9001, 14001, 27001
+· 0 de ellas en modelo Apoyo
+· 0 con horas mayores que cero
+Hay tareas para Compromiso, Implicación pero no para Apoyo.
+Rellena esa columna en «Sistemas de gestión».
+```
+
+Distingue los tres casos: normas sin tareas, tareas en otros modelos, o tareas a
+0 horas. «Tareas resultantes (0)» a secas parece un fallo del sistema, y lo
+normal es que falten datos del catálogo.

@@ -30,7 +30,7 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
 
   const [equipo, setEquipo] = useState(null);
   const [perfiles, setPerfiles] = useState([]);
-  const [nuevo, setNuevo] = useState({ perfil_id: '', papel: 'consultor', horas_asignadas: '' });
+  const [nuevo, setNuevo] = useState({ perfil_id: '', papel: 'consultor' });
   const [msg, setMsg] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -57,8 +57,6 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
     [perfiles, equipo],
   );
 
-  const repartidas = (equipo || []).reduce((a, e) => a + (Number(e.horas_asignadas) || 0), 0);
-  const sinRepartir = Math.round((horasComprometidas - repartidas) * 10) / 10;
 
   async function anadir() {
     if (!nuevo.perfil_id) { setMsg({ err: true, t: 'Elige a quién asignas.' }); return; }
@@ -74,9 +72,11 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
         proyecto_id: proyectoId,
         perfil_id: nuevo.perfil_id,
         papel: nuevo.papel,
-        horas_asignadas: nuevo.horas_asignadas ? Number(nuevo.horas_asignadas) : null,
+        // Sin horas: se reparten al programar cada tarea, que es donde se sabe
+        // cuántas lleva y quién la hace. Pedirlas aquí obliga a inventarse un
+        // número antes de tener la información.
       });
-      setNuevo({ perfil_id: '', papel: 'consultor', horas_asignadas: '' });
+      setNuevo({ perfil_id: '', papel: 'consultor' });
       await cargar();
     } catch (e) { setMsg({ err: true, t: explicarErrorBd(e, 'proyecto_equipo') }); }
     finally { setOcupado(false); }
@@ -110,11 +110,7 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="text-[13.5px] font-extrabold text-[#EAF4F7]">Equipo asignado ({equipo.length})</h4>
         {horasComprometidas > 0 && (
-          <span className="text-[11.5px] text-[#7FA7B4]">
-            {repartidas} de {horasComprometidas} h repartidas
-            {sinRepartir > 0 && <span className="ml-1 font-bold text-amber-200">· {sinRepartir} h sin asignar</span>}
-            {sinRepartir < 0 && <span className="ml-1 font-bold text-red-300">· {-sinRepartir} h de más</span>}
-          </span>
+          <span className="text-[11.5px] text-[#7FA7B4]">{horasComprometidas} h comprometidas en el proyecto</span>
         )}
       </div>
 
@@ -138,9 +134,6 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
                 </select>
               ) : (
                 <span className="text-[11.5px] font-bold text-[#9FC0CB]">{ETQ[e.papel]}</span>
-              )}
-              {e.horas_asignadas && (
-                <span className="text-[11.5px] font-bold text-brand-orange">{e.horas_asignadas} h</span>
               )}
               <span className="flex-1" />
               {puedeAsignar && (
@@ -167,9 +160,6 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
             onChange={(ev) => setNuevo({ ...nuevo, papel: ev.target.value })}>
             {PAPELES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <input type="number" min="0" step="0.5" placeholder="horas"
-            className="input !h-8 !w-20 !py-0 !text-[12.5px]" value={nuevo.horas_asignadas}
-            onChange={(ev) => setNuevo({ ...nuevo, horas_asignadas: ev.target.value })} />
           <button onClick={anadir} disabled={ocupado || !nuevo.perfil_id}
             className="btn-orange !px-3 !py-1 text-[12px] disabled:opacity-40">Asignar</button>
         </div>

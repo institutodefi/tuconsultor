@@ -694,6 +694,41 @@ export default function Proyectos() {
               <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(totalHoras)}</span>
             </div>
             <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Arrastra una tarea sobre otra del mismo proceso y subproceso para anidarlas (fusionar e integrar sus horas).</p>
+
+            {/* Cuando no sale ninguna tarea hay que decir POR QUÉ. «Tareas
+                resultantes (0)» sin más parece un fallo, y lo normal es que el
+                catálogo no tenga nada cargado para esa combinación de norma y
+                modelo: son datos que se rellenan en «Sistemas de gestión». */}
+            {candidatas.length === 0 && normasSel.length > 0 && (() => {
+              const enCatalogo = (catalogo || []).filter((c) => normasSel.includes(c.norma_id));
+              const conEsteModelo = enCatalogo.filter((c) => c.modelo === modelo);
+              const conHoras = conEsteModelo.filter((c) => (Number(c.horas_base) || 0) > 0);
+              const otrosModelos = [...new Set(enCatalogo.map((c) => c.modelo))].filter((m) => m !== modelo);
+
+              return (
+                <div className="mt-3 rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2.5">
+                  <p className="text-[12.5px] font-bold text-amber-200">
+                    El catálogo no da ninguna tarea para esta combinación
+                  </p>
+                  <ul className="mt-1.5 space-y-0.5 text-[11.5px] text-[#DFF1F5]">
+                    <li>· {enCatalogo.length} tarea(s) en el catálogo para {normasSel.join(', ')}</li>
+                    <li>· {conEsteModelo.length} de ellas en modelo <b>{modelo}</b></li>
+                    <li>· {conHoras.length} con horas mayores que cero
+                      {conEsteModelo.length > 0 && conHoras.length === 0 && (
+                        <b className="text-amber-200"> ← están a 0 h, por eso no salen</b>
+                      )}
+                    </li>
+                  </ul>
+                  <p className="mt-1.5 text-[11.5px] leading-snug text-[#9FC0CB]">
+                    {enCatalogo.length === 0
+                      ? 'Estas normas no tienen tareas cargadas. Añádelas en «Sistemas de gestión».'
+                      : conEsteModelo.length === 0
+                        ? `Hay tareas para ${otrosModelos.join(', ')} pero no para ${modelo}. Rellena esa columna en «Sistemas de gestión».`
+                        : 'Pon horas mayores que cero en «Sistemas de gestión»: una tarea de 0 h no se programa.'}
+                  </p>
+                </div>
+              );
+            })()}
             <div className="mt-3 max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-[#10394A]">
