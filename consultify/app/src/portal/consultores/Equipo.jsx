@@ -3,15 +3,45 @@ import { useNavigate } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
 import { NORMA_BY_ID } from '../../lib/calcEngine.js';
 import { ROL_LABEL } from '../../lib/permisos.js';
+import FichaEmpleado from './FichaEmpleado.jsx';
 
 // El equipo se deriva de los ACCESOS (perfiles con login). Esta pestaña es de
 // solo lectura: para dar de alta, cambiar rol/nivel o quitar a alguien, se usa
 // el panel de Accesos (invitación). Así equipo y accesos son siempre lo mismo.
 export default function Equipo() {
+  // Ficha en emergente: los datos de una persona y su documentación laboral
+  // no caben en una fila de tabla, y las nóminas necesitan su propio sitio.
+  const [ficha, setFicha] = useState(null);
+
   const navigate = useNavigate();
   const [rows, setRows] = useState(null);
 
-  useEffect(() => { listTable('consultores').then(setRows).catch(() => setRows([])); }, []);
+  // Se lee de `perfiles`, no de `consultores`.
+  //
+  // `consultores` es la tabla antigua y muchas de sus filas no tienen correo:
+  // por eso faltaban en la lista. `perfiles` es la que tiene la cuenta, el rol
+  // real y el correo, y es de donde depende lo que cada persona ve al entrar.
+  // Se completa con el nivel y las normas de `consultores` cuando existan.
+  const cargar = () => Promise.all([
+    listTable('perfiles').catch(() => []),
+    listTable('consultores').catch(() => []),
+  ]).then(([ps, cs]) => {
+    const porId = new Map((cs || []).map((c) => [String(c.user_id), c]));
+    setRows((ps || [])
+      .filter((p) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(p.rol))
+      .map((p) => {
+        const c = porId.get(String(p.id)) || {};
+        return {
+          ...p,
+          nivel: p.nivel || c.nivel || null,
+          normas: (p.normas?.length ? p.normas : c.normas) || [],
+          capacidad_clientes: p.capacidad_clientes || c.capacidad_clientes || null,
+        };
+      })
+      .sort((a, b) => String(a.nombre || a.email || '').localeCompare(String(b.nombre || b.email || ''))));
+  });
+
+  useEffect(() => { cargar(); }, []);
 
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
   const nombreCompleto = (c) => [c.nombre, c.apellidos].filter(Boolean).join(' ');
@@ -48,10 +78,17 @@ export default function Equipo() {
             </thead>
             <tbody>
               {rows.map(c => (
-                <tr key={c.id} className="border-b border-navy-50 last:border-0">
+                <tr key={c.id} onClick={() => setFicha(c)}
+                  className="cursor-pointer border-b border-navy-50 last:border-0 transition hover:bg-[#10394A]">
                   <td className="px-5 py-3">
                     <div className="font-bold text-[#EAF4F7]">{nombreCompleto(c) || '—'}</div>
-                    <div className="text-xs text-[#9FC0CB]">{c.email || ''}</div>
+                    {/* El correo faltaba en quienes se invitaron y no completaron
+                        ficha: `perfiles.email` quedaba vacío aunque en la cuenta
+                        sí estuviera. La migración v109 lo rellena; hasta
+                        entonces, se dice en vez de dejar el hueco en blanco. */}
+                    <div className="text-xs text-[#9FC0CB]">
+                      {c.email || <span className="text-amber-200/70">sin correo en la ficha</span>}
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-[#B9D2DA]">{ROL_LABEL[c.rol] || c.rol || '—'}</td>
                   <td className="px-3 py-3">{c.nivel ? <span className="rounded-full bg-[#123F52] px-2 py-0.5 text-xs font-bold text-[#B9D2DA]">{c.nivel}</span> : '—'}</td>
@@ -67,6 +104,9 @@ export default function Equipo() {
             </tbody>
           </table>
         </div>
+      )}
+      {ficha && (
+        <FichaEmpleado persona={ficha} onCerrar={() => setFicha(null)} onCambio={cargar} />
       )}
     </div>
   );

@@ -52,6 +52,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/empleado-documentos"
+  to = "/.netlify/functions/empleado-documentos"
+  status = 200
+
+[[redirects]]
   from = "/api/documentos"
   to = "/.netlify/functions/documentos"
   status = 200

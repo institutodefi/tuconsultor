@@ -22,6 +22,22 @@ const MODOS = [
 export default function SincronizarCrm() {
   const [abierto, setAbierto] = useState(false);
   const [modo, setModo] = useState('solo-holded');
+  const [prueba, setPrueba] = useState(null);
+
+  async function probar() {
+    setOcupado(true); setPrueba(null); setRes(null);
+    try {
+      if (DEMO) { setPrueba({ holded: 'Modo demostración.', brevo: 'Modo demostración.' }); return; }
+      const r = await fetch('/api/sincronizar-crm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modo: 'probar' }),
+      });
+      const j = await r.json();
+      setPrueba(j.prueba || { holded: j.error || 'Sin respuesta.', brevo: '' });
+    } catch (e) {
+      setPrueba({ holded: e?.message || String(e), brevo: '' });
+    } finally { setOcupado(false); }
+  }
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState(null);
 
@@ -70,7 +86,26 @@ export default function SincronizarCrm() {
             {ocupado ? 'Sincronizando…' : 'Lanzar'}
           </button>
 
-          {res && (
+          {/* Probar antes de lanzar. Descubrir que una clave no vale a mitad de
+              la sincronización deja datos a medio mover. */}
+          <button onClick={probar} disabled={ocupado}
+            className="btn-ghost !ml-2 !px-3 !py-1.5 text-[12.5px] disabled:opacity-50">
+            Probar conexiones
+          </button>
+
+          {prueba && (
+        <div className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] px-3 py-2.5">
+          <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Conexiones</p>
+          {[['Holded', prueba.holded], ['Brevo', prueba.brevo]].filter(([, v]) => v).map(([k, v]) => (
+            <p key={k} className={`mt-1 text-[12px] leading-snug ${
+              String(v).startsWith('OK') ? 'text-emerald-300' : 'text-amber-200'}`}>
+              <b>{k}:</b> <span className="font-medium">{v}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      {res && (
             <div className="space-y-2 rounded-lg bg-[#10394A] p-3">
               {res.error && <p className="text-[12px] font-bold text-red-300">{res.error}</p>}
 

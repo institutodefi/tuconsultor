@@ -300,6 +300,16 @@ export default function SesionesTarea({
               </p>
             )}
 
+            {/* Pasarse de las horas del modelo se avisa, no se impide: a veces
+                una tarea cuesta más de lo previsto y hay que registrarlo tal
+                cual. Lo que no vale es que pase inadvertido. */}
+            {bal.teoricas > 0 && (bal.planificadas + horasNueva) > bal.teoricas && (
+              <p className="mt-2 rounded-lg bg-amber-400/10 px-2.5 py-2 text-[11.5px] font-bold text-amber-200">
+                Con esta sesión se llega a {Math.round((bal.planificadas + horasNueva) * 10) / 10} h,
+                por encima de las {bal.teoricas} h que el modelo asigna a esta tarea.
+              </p>
+            )}
+
             {fechaCertificacion && String(nueva.fecha) > String(fechaCertificacion).slice(0, 10) && (
               <p className="mt-2 rounded-lg bg-red-500/10 px-2.5 py-2 text-[11.5px] font-bold text-red-200">
                 Esta fecha es posterior a la certificación ({fmt(fechaCertificacion)}): ese trabajo no llega a la auditoría.

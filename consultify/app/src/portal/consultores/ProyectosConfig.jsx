@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import AltaProyecto from './AltaProyecto.jsx';
 import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, horasCoordinacion, bloquesEjecucion, trocearEnBloques, codigoTarea } from '../../lib/planCliente.js';
 import { esLaborable, toISO, FESTIVOS_2026 } from '../../lib/agenda.js';
 import { sincronizarTareaAgenda, sincronizarVariasAgenda, borrarReflejoAgenda } from '../../lib/sincroAgenda.js';
-import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo , modeloCanonico } from '../../lib/calcEngine.js';
+import { NORMAS, NORMA_BY_ID, MESES_MODELO, mesesPorModelo , modeloCanonico , mismoModelo } from '../../lib/calcEngine.js';
 import { resolverProyectos, resolverProyecto } from '../../lib/proyectoResuelto.js';
 import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
@@ -80,7 +80,6 @@ export default function Proyectos() {
   const consultores = equipo.filter(c => (c.tipo_equipo || 'consultor') === 'consultor' && c.activo !== false);
   const [tareas, setTareas] = useState([]);
   const [sel, setSel] = useState('');         // proyecto seleccionado
-  const [anidar, setAnidar] = useState(new Set()); // claves proceso|subproceso a anidar
   const [arrastra, setArrastra] = useState(null);
   const [selT, setSelT] = useState(new Set());
   const [distribuyendo, setDistribuyendo] = useState(false);
@@ -279,6 +278,30 @@ export default function Proyectos() {
       .catch(() => {});
   }, [proyecto?.id, fechas?.inicio, fechas?.certificacion, fechas?.limite, fechas?.meses]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Las horas teóricas de una tarea, LEÍDAS DEL CATÁLOGO.
+   *
+   * `cliente_tareas.horas` es una copia del día en que se volcó. Si alguien
+   * ajusta el catálogo después —o lo ajusta mal— la copia se queda con el valor
+   * viejo y se planifica contra un tope que ya no es el vigente.
+   *
+   * El catálogo manda: es la única fuente que dice cuánto vale una tarea de esa
+   * norma en ese modelo, y es la que se usó para calcular el precio de la
+   * oferta. Planificar contra otra cosa es pasarse de horas sin enterarse.
+   *
+   * Si la tarea no se encuentra en el catálogo —se borró, o cambió de nombre—
+   * se cae a la copia: es peor no tener referencia que tener una antigua.
+   */
+  const horasTeoricas = useCallback((t) => {
+    const c = (catalogo || []).find((x) =>
+      String(x.norma_id) === String(t.norma_id)
+      && mismoModelo(x.modelo, t.modelo || modelo)
+      && String(x.subproceso || '') === String(t.subproceso || '')
+      && String(x.proceso || '') === String(t.proceso || ''));
+    const delCatalogo = Number(c?.horas_base) || 0;
+    return delCatalogo > 0 ? delCatalogo : (Number(t.horas) || 0);
+  }, [catalogo, modelo]);
+
   const volcandoRef = useRef(false);
 
   useEffect(() => {
@@ -299,15 +322,6 @@ export default function Proyectos() {
     })();
   }, [proyecto?.id, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Claves con más de una norma (candidatas a anidar).
-  const clavesComunes = useMemo(() => {
-    if (!catalogo || !normasSel.length) return [];
-    const base = tareasDeCliente(catalogo, normasSel, modelo);
-    const m = new Map();
-    for (const t of base) { const k = `${t.proceso}|${t.subproceso}`; m.set(k, (m.get(k) || 0) + 1); }
-    return [...m.entries()].filter(([, n]) => n > 1).map(([k]) => k);
-  }, [catalogo, normasSel, modelo]);
-
   function toggleNorma(id) {
     if (id === '9001') return; // base obligatoria
     setNormasSel(s => {
@@ -320,8 +334,6 @@ export default function Proyectos() {
   function toggleAnidar(k) {
     setAnidar(s => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
   }
-  function anidarTodas() { setAnidar(new Set(clavesComunes)); }
-  function anidarNinguna() { setAnidar(new Set()); }
 
   // Edita una tarea ya distribuida: marca editada_manual para que la sincronización
   // del catálogo no la pise, y refleja el cambio en la agenda.
@@ -431,7 +443,11 @@ export default function Proyectos() {
     const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
     let n = 0;
     for (const [i, c] of candidatas.entries()) {
-      const titulo = codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas);
+      // Código legible para la agenda: 9001-03. Corto, dice de qué sistema es
+      // y en qué orden va, que es lo que hace falta para hablar de una tarea
+      // por teléfono sin leer un título de ochenta caracteres.
+      const codigo = `${c.norma_id}-${String(i + 1).padStart(2, '0')}`;
+      const titulo = `${codigo} · ${c.subproceso || c.proceso}`;
       if (yaEstan.has(titulo.trim().toUpperCase())) continue;
       try {
         await insertRow('cliente_tareas', {
@@ -441,7 +457,8 @@ export default function Proyectos() {
           titulo,
           horas: c.horas,
           bloque: c.bloque, tipo: tipoTarea(c),
-          integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
+          // Sin integrar: una tarea, una norma.
+          integrada: false, normas_integradas: [c.norma_id],
           orden: i, num_tarea: i + 1,
           fecha_estimada: null, consultor_id: null,
           bloques_ejecucion: [], seguimientos: [],
@@ -615,7 +632,14 @@ export default function Proyectos() {
 
       {abierta && (
         <SesionesTarea
-          tarea={{ id: abierta.id, titulo: abierta.titulo, codigo: abierta.num_tarea, horas_teoricas: abierta.horas, subproceso: abierta.subproceso }}
+          tarea={{
+            id: abierta.id, titulo: abierta.titulo,
+            codigo: `${abierta.norma_id}-${String(abierta.num_tarea || 0).padStart(2, '0')}`,
+            // Del catálogo, no de la copia: es el tope real contra el que se
+            // planifica.
+            horas_teoricas: horasTeoricas(abierta),
+            subproceso: abierta.subproceso,
+          }}
           contexto={{ norma: abierta.norma_id }}
           fechaCertificacion={fechas?.certificacion || proyecto?.fecha_limite || null}
           proyectoId={proyecto?.id}
@@ -822,29 +846,9 @@ export default function Proyectos() {
           </div>
 
           {/* Anidado de tareas comunes */}
-          {clavesComunes.length > 0 && (
-            <div className="card">
-              <div className="flex items-center justify-between">
-                <h4 className="font-extrabold">Anidar tareas comunes ({clavesComunes.length})</h4>
-                <div className="flex gap-2">
-                  <button onClick={anidarTodas} className="chip border border-brand-orange bg-brand-orange/10 text-xs font-bold text-[#F9A83A]">Anidar todas</button>
-                  <button onClick={anidarNinguna} className="chip border border-[#1E5468] text-xs font-bold text-[#9FC0CB]">Ninguna</button>
-                </div>
-              </div>
-              <p className="mt-1 text-sm font-medium text-[#9FC0CB]">Tareas que existen en varias normas. Al anidar, se funden en una tarea integrada con la suma de horas.</p>
-              <div className="mt-3 space-y-1">
-                {clavesComunes.map(k => {
-                  const [proc, sub] = k.split('|');
-                  return (
-                    <label key={k} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={anidar.has(k)} onChange={() => toggleAnidar(k)} />
-                      <span className="font-medium">{proc} - {sub}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* El panel de «anidar tareas comunes» se ha retirado: cada norma
+              lleva sus tareas por separado y no se fusionan. */}
+
 
           {/* Vista previa de la configuración */}
           <div className="card">
@@ -965,12 +969,17 @@ export default function Proyectos() {
                   <thead className="sticky top-0 bg-[#10394A] z-10">
                     <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                       <th className="py-2 w-8"><input type="checkbox" checked={selT.size === tareasProyecto.length && tareasProyecto.length > 0} onChange={e => e.target.checked ? setSelT(new Set(tareasProyecto.map(t => t.id))) : setSelT(new Set())} /></th>
-                      <th className="py-2 w-16 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
+                      {/* Solo lo que hace falta para planificar: qué tarea es,
+                          cuánto vale y cómo va. El consultor y la fecha se ven
+                          y se cambian en su calendario, que es donde de verdad
+                          se decide, y puede haber varias personas y varias
+                          fechas por tarea. */}
+                      <th className="py-2 w-20 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
                       <th className="py-2 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
-                      <th className="py-2 w-40 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('consultor')}>Consultor/a{flechaOrden('consultor')}</th>
-                      <th className="py-2 w-28 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('fecha')}>Fecha límite{flechaOrden('fecha')}</th>
-                      <th className="py-2 text-right w-16 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('horas')}>Horas{flechaOrden('horas')}</th>
-                      <th className="py-2 w-8"></th>
+                      <th className="py-2 text-right w-20">Teóricas</th>
+                      <th className="py-2 text-right w-24">Programadas</th>
+                      <th className="py-2 text-right w-20">Ejecutadas</th>
+                      <th className="py-2 w-24"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-navy-50">
@@ -983,51 +992,46 @@ export default function Proyectos() {
                       <>
                       <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${selT.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
                         <td className="py-1.5"><input type="checkbox" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
-                        <td className="py-1.5 font-bold text-[#9FC0CB] text-xs">{codigo}</td>
+                        <td className="py-1.5 text-xs font-bold text-brand-verdeTexto">{codigo}</td>
                         <td className="py-1.5">
-                          <div className="font-medium leading-snug min-w-[220px] max-w-[420px] whitespace-normal break-words">{t.titulo}</div>
-                          {t.integrada && <span className="chip bg-brand-orange/15 text-[10px] font-bold text-[#F9A83A]">integrada</span>}
+                          <div className="min-w-[220px] max-w-[420px] whitespace-normal break-words font-medium leading-snug">
+                            {t.titulo}
+                          </div>
                         </td>
-                        <td className="py-1.5">
-                          <select className="input !py-1 !text-xs" value={t.consultor_id || ''} onChange={e => patchTarea(t, { consultor_id: e.target.value || null })}>
-                            <option value="">—</option>
-                            {consultores.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.apellidos || ''}</option>)}
-                          </select>
-                        </td>
-                        <td className="py-1.5 text-xs">{fechaLimite || '—'}</td>
-                        {/* Las horas abren la programación. Se enseña lo
-                            comprometido y, debajo, lo planificado: es la
-                            comparación que importa y tiene que verse sin
-                            abrir nada. */}
-                        <td className="py-1.5 text-right">
-                          {(() => {
-                            const ss = sesiones.filter((s) => String(s.cliente_tarea_id) === String(t.id));
-                            const b = balanceTarea({ horas_teoricas: t.horas }, ss);
-                            const tono = b.estado === 'sin_planificar' ? 'text-[#7FA7B4]'
-                              : b.estado === 'corto' ? 'text-amber-200'
-                              : b.estado === 'pasado' ? 'text-red-300' : 'text-emerald-300';
-                            return (
-                              <button onClick={() => setAbierta(t)}
-                                title="Programar en una o varias sesiones"
-                                className="text-right hover:underline">
-                                <span className="block font-bold text-[#EAF4F7]">{fmtH(t.horas)}</span>
-                                <span className={`block text-[10.5px] font-bold ${tono}`}>
-                                  {b.estado === 'sin_planificar'
-                                    ? 'sin programar'
-                                    : `${b.planificadas} h en ${b.nSesiones} ses.`}
-                                </span>
-                              </button>
-                            );
-                          })()}
-                        </td>
-                        {/* Los «bloques de ejecución» —trozos de 4 h repartidos
-                            solos— se han retirado. Eran una estimación que
-                            nadie confirmaba y competía con las sesiones reales.
-                            Ahora se programa con el calendario de la tarea. */}
+
+                        {/* ── Las tres cifras ──
+                            Teóricas del catálogo del modelo: es el tope, y no
+                            se edita. Programadas y ejecutadas salen de las
+                            sesiones. Juntas dicen si la tarea está cubierta,
+                            corta o pasada de horas. */}
+                        {(() => {
+                          const ss = sesiones.filter((s) => String(s.cliente_tarea_id) === String(t.id));
+                          const b = balanceTarea({ horas_teoricas: horasTeoricas(t) }, ss);
+                          const tono = b.estado === 'sin_planificar' ? 'text-[#7FA7B4]'
+                            : b.estado === 'corto' ? 'text-amber-200'
+                            : b.estado === 'pasado' ? 'text-red-300' : 'text-emerald-300';
+                          return (
+                            <>
+                              <td className="py-1.5 text-right font-bold text-[#EAF4F7]">{fmtH(b.teoricas)}</td>
+                              <td className={`py-1.5 text-right font-bold ${tono}`}>
+                                {b.planificadas ? fmtH(b.planificadas) : '—'}
+                                {b.nSesiones > 0 && (
+                                  <span className="block text-[10px] font-normal text-[#7FA7B4]">
+                                    {b.nSesiones} sesión{b.nSesiones === 1 ? '' : 'es'}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-1.5 text-right font-bold text-emerald-300">
+                                {b.ejecutadas ? fmtH(b.ejecutadas) : '—'}
+                              </td>
+                            </>
+                          );
+                        })()}
+
                         <td className="py-1.5 text-right">
                           <button onClick={() => setAbierta(t)}
                             className="text-xs font-bold text-brand-orange hover:underline"
-                            title="Programar en el calendario">
+                            title="Ver y programar las sesiones de esta tarea">
                             calendario
                           </button>
                         </td>

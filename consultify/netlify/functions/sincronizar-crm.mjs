@@ -44,8 +44,74 @@ export default async (req) => {
   const informe = { holded: { leidas: 0, creadas: 0, actualizadas: 0, sin_cambios: 0 },
                     brevo: { subidas: 0, bajas: 0 }, conflictos: [], errores: [] };
 
+  /**
+   * Traduce un fallo de Holded a algo accionable.
+   *
+   * «Holded devolvió 400» no dice nada: hay que leer el cuerpo, que sí trae el
+   * motivo, y explicar qué significa cada código en ESTA integración concreta.
+   * Sin esto, el único camino era ir probando.
+   */
+  async function explicarHolded(r) {
+    let detalle = '';
+    try {
+      const t = await r.text();
+      try {
+        const j = JSON.parse(t);
+        detalle = j.message || j.error || j.info || t;
+      } catch { detalle = t; }
+    } catch { /* sin cuerpo */ }
+    detalle = String(detalle).slice(0, 300).trim();
+
+    const pistas = {
+      400: 'Petición rechazada. Suele ser una clave de la API v2 usada contra la v1: '
+         + 'en Holded, Configuración → Desarrolladores → Credenciales, hay que crear la '
+         + 'clave desde «Api Keys v1», no la general.',
+      401: 'Clave no válida o caducada. Genera una nueva en Holded y actualiza '
+         + 'HOLDED_API_KEY en Netlify.',
+      403: 'La clave no tiene permiso sobre Contactos. Al crearla se eligen los '
+         + 'permisos: hace falta el de Contactos en lectura.',
+      404: 'Endpoint no encontrado: puede que Holded haya retirado esa versión.',
+      429: 'Demasiadas peticiones seguidas. Espera unos minutos y repite.',
+    };
+    return `Holded devolvió ${r.status}. ${pistas[r.status] || ''}${detalle ? ` Respuesta: ${detalle}` : ''}`.trim();
+  }
+
   try {
     const { modo = 'completo' } = await req.json().catch(() => ({}));
+
+    // ══════════ 0 · COMPROBAR CONEXIONES ══════════
+    // Modo aparte que solo prueba las claves, sin escribir nada. Lanzar la
+    // sincronización completa para descubrir que una clave no vale mueve datos
+    // por medio y tarda; esto responde en un segundo.
+    if (modo === 'probar') {
+      const prueba = { holded: null, brevo: null };
+
+      if (!holdedKey) prueba.holded = 'Falta HOLDED_API_KEY en las variables de Netlify.';
+      else {
+        const r = await fetch('https://api.holded.com/api/invoicing/v1/contacts', {
+          headers: { key: holdedKey, Accept: 'application/json' },
+        });
+        if (r.ok) {
+          const c = await r.json().catch(() => []);
+          prueba.holded = `OK · ${Array.isArray(c) ? c.length : 0} contactos accesibles`;
+        } else prueba.holded = await explicarHolded(r);
+      }
+
+      if (!brevoKey) prueba.brevo = 'Falta BREVO_API_KEY en las variables de Netlify.';
+      else {
+        const r = await fetch('https://api.brevo.com/v3/account', {
+          headers: { 'api-key': brevoKey, Accept: 'application/json' },
+        });
+        if (r.ok) {
+          const a = await r.json().catch(() => ({}));
+          prueba.brevo = `OK · cuenta ${a.email || a.companyName || 'conectada'}`;
+        } else prueba.brevo = `Brevo devolvió ${r.status}. Revisa BREVO_API_KEY.`;
+      }
+
+      return new Response(JSON.stringify({ ok: true, prueba }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // ══════════ 1 · HOLDED → CRM ══════════
     // Solo lo fiscal. Lo comercial del CRM no se toca.
@@ -54,7 +120,7 @@ export default async (req) => {
         headers: { key: holdedKey, Accept: 'application/json' },   // v1 usa `key`, no Bearer
       });
       if (!r.ok) {
-        informe.errores.push(`Holded devolvió ${r.status}`);
+        informe.errores.push(await explicarHolded(r));
       } else {
         const contactos = await r.json();
         informe.holded.leidas = Array.isArray(contactos) ? contactos.length : 0;
@@ -150,6 +216,13 @@ export default async (req) => {
               body: JSON.stringify({ holded_id: d.id, holded_sincronizado_en: new Date().toISOString() }),
             });
           }
+        } else {
+          // Antes se ignoraba en silencio: la sincronización decía «10 empresas»
+          // aunque Holded las hubiera rechazado todas. Un fallo por empresa se
+          // registra con su nombre, que es lo que permite corregirlo.
+          const motivo = await explicarHolded(r);
+          if (informe.errores.length < 10) informe.errores.push(`${e.nombre}: ${motivo}`);
+          else if (informe.errores.length === 10) informe.errores.push('… y más errores del mismo tipo.');
         }
       }
     }

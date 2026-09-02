@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listTable, updateRow } from '../../lib/data.js';
 import { supabase, DEMO } from '../../lib/supabase.js';
+import { useAuth } from '../../lib/auth.jsx';
+import { can } from '../../lib/permisos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AGENDA · la otra cara del planificador
@@ -25,13 +27,40 @@ export default function AgendaTareas() {
   const [cargando, setCargando] = useState(true);
   const [msg, setMsg] = useState(null);
 
+  const { user, role } = useAuth();
+  const [verTodoElEquipo, setVerTodoElEquipo] = useState(true);
+
   const cargar = useCallback(async () => {
-    const [t, c, p] = await Promise.all([
+    const [t, c, p, eq] = await Promise.all([
       listTable('tareas_programadas').catch(() => []),
       listTable('proyecto_contextos').catch(() => []),
       listTable('proyectos_cliente').catch(() => []),
+      listTable('proyecto_equipo').catch(() => []),
     ]);
-    setTareas(t || []); setContextos(c || []); setProyectos(p || []);
+
+    // ── La agenda del equipo, acotada a lo propio ──
+    // Un consultor ve los proyectos EN LOS QUE ESTÁ, no todos. La agenda
+    // completa de la casa no le sirve para nada y le enseña la carga de
+    // trabajo de clientes que no lleva.
+    //
+    // Administración y dirección sí la ven entera: repartir trabajo exige ver
+    // dónde está el que ya hay.
+    const verTodo = ['superadmin', 'admin', 'director'].includes(role);
+    const mios = new Set((eq || [])
+      .filter((x) => String(x.perfil_id) === String(user?.id))
+      .map((x) => String(x.proyecto_id)));
+
+    const proyectosVisibles = verTodo ? (p || []) : (p || []).filter((x) => mios.has(String(x.id)));
+    const idsVisibles = new Set(proyectosVisibles.map((x) => String(x.id)));
+    const ctxVisibles = (c || []).filter((k) => idsVisibles.has(String(k.proyecto_id)));
+    const idsCtx = new Set(ctxVisibles.map((k) => String(k.id)));
+
+    setTareas((t || []).filter((k) => !k.contexto_id || idsCtx.has(String(k.contexto_id))));
+    setContextos(ctxVisibles);
+    setProyectos(proyectosVisibles);
+    setVerTodoElEquipo(verTodo);
+    // Reasignados a las variables que usa el resto de la función.
+    const c2 = ctxVisibles, p2 = proyectosVisibles;
     // Los pendientes por horizonte: de la función de la base; si no llega
     // (demo), se calculan aquí con lo cargado. El dato es el mismo.
     let h = null;
@@ -41,9 +70,9 @@ export default function AgendaTareas() {
     }
     if (!h) {
       const hoy = new Date(new Date().toDateString());
-      h = (p || []).filter((x) => x.fecha_limite).map((x) => {
+      h = p2.filter((x) => x.fecha_limite).map((x) => {
         const dias = Math.round((new Date(`${x.fecha_limite}T00:00:00`) - hoy) / 864e5);
-        const cts = (c || []).filter((k) => String(k.proyecto_id) === String(x.id)).map((k) => String(k.id));
+        const cts = c2.filter((k) => String(k.proyecto_id) === String(x.id)).map((k) => String(k.id));
         const pend = (t || []).filter((k) => cts.includes(String(k.contexto_id)) && ['pendiente', 'programada'].includes(k.estado)).length;
         return dias <= 90 && pend ? { proyecto_id: x.id, codigo_proyecto: x.codigo, fecha_limite: x.fecha_limite,
           horizonte: dias <= 30 ? 30 : dias <= 60 ? 60 : 90, pendientes: pend } : null;
@@ -51,7 +80,7 @@ export default function AgendaTareas() {
     }
     setHorizonte(h || []);
     setCargando(false);
-  }, []);
+  }, [user?.id, role]);
   useEffect(() => { cargar(); }, [cargar]);
 
   const ctxDe = (id) => contextos.find((c) => String(c.id) === String(id));

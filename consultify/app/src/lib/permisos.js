@@ -27,7 +27,11 @@ export const GRUPOS_PORTAL = [
   {
     label: 'Operación',
     items: [
-      { to: 'panel',  label: 'Dashboard', icon: 'layout-dashboard', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      // El panel de gestión enseña MRR, márgenes y cartera: cifras de negocio.
+      // Solo Administración. Consultoría y gestión tienen su propio arranque en
+      // Inicio, con lo suyo: tareas de hoy y proyectos asignados.
+      { to: '',       label: 'Inicio', icon: 'home', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'panel',  label: 'Panel de gestión', icon: 'layout-dashboard', roles: ['superadmin', 'admin'] },
       { to: 'agenda', label: 'Agenda',    icon: 'calendar-days',    roles: ['superadmin', 'admin', 'director', 'consultor'] },
     ],
   },

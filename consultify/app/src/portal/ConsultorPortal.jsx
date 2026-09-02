@@ -25,6 +25,7 @@ import GeneradorOfertas from '../pages/GeneradorOfertas.jsx';
 import BarraVerComo from '../components/BarraVerComo.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { gruposParaRol, can } from '../lib/permisos.js';
+import Inicio from './consultores/Inicio.jsx';
 
 // Iconos SVG inline (sin dependencias). 20×20, stroke currentColor.
 const Icon = ({ name, className = 'h-5 w-5' }) => {
@@ -163,8 +164,15 @@ export default function ConsultorPortal() {
               {/* Al entrar se aterriza en Mi agenda: lo primero es saber qué
                   toca hoy. Quien no tenga acceso a agenda (gestión, cliente)
                   sigue cayendo en el panel. */}
-              <Route index element={verPlanAgendaSist ? <Navigate to="mi-agenda" replace /> : <Dashboard />} />
-              <Route path="panel" element={<Dashboard />} />
+              {/* Todos entran por Inicio: sus tareas de hoy, sus proyectos y
+                  los accesos a lo que usa su rol. Antes cada rol aterrizaba en
+                  una pantalla distinta, y los consultores no veían sus
+                  proyectos porque el bloque vivía donde no llegaban. */}
+              <Route index element={<Inicio />} />
+              {/* Cifras de negocio: solo Administración. Protegido también
+                  en la ruta, no solo escondido del menú: una URL escrita a
+                  mano llegaba igual. */}
+              <Route path="panel" element={<Guard ok={verEconomico}><Dashboard /></Guard>} />
               <Route path="proyectos" element={<Guard ok={verClientes}><ProyectosConfig /></Guard>} />
               <Route path="agenda" element={<Guard ok={verPlanAgendaSist}><AgendaTareas /></Guard>} />
               <Route path="mi-agenda" element={<Guard ok={verPlanAgendaSist}><MiAgenda /></Guard>} />

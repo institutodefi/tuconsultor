@@ -3812,3 +3812,204 @@ horas comprometidas.
 año, que el contrato manda sobre la oferta, que la oferta manda sobre la copia
 vieja del proyecto, que sin certificación no se inventa nada, y la detección de
 desfase para la sincronización automática.
+
+---
+
+# v255 · Equipo pasa a ser el portal del empleado
+
+## Ficha en emergente, con dos pestañas
+
+Pulsar una fila abre la ficha: **Datos** y **Documentación laboral**. Los datos
+de una persona y sus nóminas no caben en una fila de tabla.
+
+## Nóminas y documentación laboral
+
+Nueva tabla `empleado_documentos` con tipos: nómina, contrato, finiquito,
+certificado, formación, PRL.
+
+Las nóminas se ordenan por **periodo**, no por fecha de subida: una nómina de
+marzo cargada en junio sigue siendo de marzo y tiene que salir donde le toca.
+
+### El acceso, que aquí es lo que importa
+
+Una nómina dice cuánto cobra alguien. Es de lo más sensible que va a guardar
+este sistema, y filtrarla no se arregla pidiendo perdón.
+
+| | Ve las suyas | Ve las de otros | Sube |
+|---|---|---|---|
+| Superadministración · Administración | sí | **sí** | **sí** |
+| Dirección de proyecto | sí | **no** | no |
+| Consultoría · Gestión | sí | no | no |
+
+**Dirección de proyecto queda fuera a propósito.** Lleva equipos, pero la
+retribución de sus compañeros no es asunto suyo, y meterla en su alcance por
+comodidad es como se acaban filtrando estas cosas.
+
+**Ni siquiera la propia persona sube su nómina**: la emite la empresa, y dejar
+que cada uno cargue las suyas abriría la puerta a versiones que no coinciden con
+las emitidas.
+
+El depósito es privado y los enlaces caducan en **diez minutos** —no una hora,
+como los de cliente—: una nómina no necesita un enlace vivo mucho después de
+haberla abierto.
+
+La comprobación de propiedad se hace **también en el servidor**: la función usa
+`service_role`, que se salta RLS, así que sin ese control cualquiera con un id
+podría descargar la nómina de otro.
+
+## Los correos que faltaban
+
+La pantalla leía de `consultores`, la tabla antigua, donde muchas filas no
+tienen correo. Ahora lee de **`perfiles`**, que es la que tiene la cuenta, el rol
+real y el correo, y se completa con el nivel y las normas de `consultores`
+cuando existan.
+
+La migración además **rellena los correos vacíos** desde `auth.users`, y añade un
+trigger para que un perfil nuevo herede el correo de su cuenta. Así no vuelve a
+pasar.
+
+---
+
+# v256 · «Holded devolvió 400» ahora dice por qué
+
+## El problema del mensaje
+
+```
+Holded devolvió 400
+```
+
+Eso es todo lo que había. **No se leía el cuerpo de la respuesta**, que es donde
+Holded explica qué ha rechazado, así que el único camino era ir probando.
+
+Ahora se lee el cuerpo y se acompaña de lo que significa cada código **en esta
+integración**:
+
+| Código | Qué suele ser |
+|---|---|
+| **400** | Una clave de la API v2 usada contra la v1. En Holded hay que crearla desde «Api Keys v1», no la general |
+| 401 | Clave no válida o caducada |
+| 403 | La clave no tiene el permiso de Contactos |
+| 429 | Demasiadas peticiones seguidas |
+
+Mi apuesta para este caso es el 400: la documentación de Holded avisa de que
+para la v1 hay que entrar por el banner **«Go to Api Keys v1»**, y una clave
+creada en la pantalla general no sirve aunque parezca correcta.
+
+## La escritura fallaba en silencio
+
+`if (r.ok) { … }` sin `else`. La sincronización informaba «10 empresas» aunque
+Holded las hubiera **rechazado todas**: se contaba el intento, no el resultado.
+
+Ahora cada fallo se registra con el nombre de la empresa, hasta diez, y luego se
+agrupa. Sin el nombre no hay forma de saber cuál corregir.
+
+## Botón «Probar conexiones»
+
+Comprueba las claves de Holded y de Brevo **sin escribir nada**, y responde en
+un segundo:
+
+```
+Holded: OK · 412 contactos accesibles
+Brevo:  OK · cuenta hola@tuconsultor.com
+```
+
+Lanzar la sincronización completa para descubrir que una clave no vale deja
+datos a medio mover. Esto se prueba antes.
+
+---
+
+# v256 · Pantalla de inicio, y cada rol ve lo suyo
+
+## Por qué los consultores seguían sin ver sus proyectos
+
+`<MisProyectos>` estaba en **Mi agenda**. Tu captura era de **Agenda**, que es
+otra pantalla. Y antes había estado en el Dashboard, al que tampoco llegaban.
+
+El problema no era dónde ponerlo: era que **cada rol aterrizaba en una pantalla
+distinta** y encontrar lo propio dependía de saber en qué menú buscarlo.
+
+## Nueva pantalla de Inicio
+
+Todos entran por aquí. Lo que ve cualquiera al abrir:
+
+- **Hoy · Próximos 7 días · Sin cerrar**, de sus propias sesiones
+- **Lo de hoy con nombre y hora** — un número no dice qué hay que hacer
+- **Mis proyectos**, con horas comprometidas, planificadas y ejecutadas
+- **Accesos directos** a lo que usa su rol
+
+## Cada rol ve lo suyo
+
+| | Panel de gestión | Agenda del equipo |
+|---|---|---|
+| Superadministración · Administración | sí | todos los proyectos |
+| Dirección de proyecto | **no** | todos los proyectos |
+| Consultoría | **no** | **solo los suyos** |
+| Gestión | **no** | solo los suyos |
+
+**El panel de gestión enseña MRR, márgenes y cartera.** Son cifras de negocio, y
+consultoría no las necesita para trabajar. Protegido **en la ruta**, no solo
+escondido del menú: una URL escrita a mano llegaba igual.
+
+**La agenda del equipo se acota a los proyectos donde estás.** La agenda completa
+de la casa no le sirve a un consultor y le enseña la carga de clientes que no
+lleva. Dirección y Administración sí la ven entera: repartir trabajo exige ver
+dónde está el que ya hay.
+
+Y se dice qué se está viendo: una agenda recortada sin avisar parece vacía.
+
+## Nota
+
+El filtrado de la agenda depende de `proyecto_equipo`, que crea la **migración
+v106**. Sin ella, un consultor vería la agenda vacía en lugar de la suya.
+
+---
+
+# v257 · El planificador de tareas, tal y como tiene que ser
+
+## Anidar: retirado del todo
+
+Fuera el estado, las funciones y el panel de «anidar tareas comunes». Cada norma
+lleva sus tareas por separado y no se fusionan.
+
+Los códigos pasan a ser **`9001-03`**: corto, dice de qué sistema es y en qué
+orden va. Es lo que hace falta para hablar de una tarea por teléfono sin leer un
+título de ochenta caracteres.
+
+## Las horas teóricas se leen del catálogo, siempre
+
+Era lo más importante de tu lista. `cliente_tareas.horas` es una **copia** del
+día en que se volcó la tarea: si alguien ajusta el catálogo después, la copia se
+queda con el valor viejo y **se planifica contra un tope que ya no es el
+vigente**.
+
+Ahora se busca la tarea en `tareas_catalogo` por norma, modelo, proceso y
+subproceso, y se usa esa cifra. Es la que se utilizó para calcular el precio de
+la oferta; planificar contra otra cosa es pasarse de horas sin enterarse.
+
+Si la tarea no aparece en el catálogo —se borró o cambió de nombre— se cae a la
+copia: peor es no tener referencia que tenerla antigua.
+
+## Al abrir la planificación, solo cinco columnas
+
+```
+Código      Tarea                      Teóricas  Programadas  Ejecutadas
+9001-02     Auditoría interna              8 h      5 h            4 h
+                                                    2 sesiones
+```
+
+Fuera el consultor y la fecha límite de la fila: **puede haber varias personas y
+varias fechas por tarea**, y meterlas en una columna obligaba a elegir una. Se
+ven y se cambian en el calendario de la tarea, que es donde se decide.
+
+El color de «programadas» dice el estado de un vistazo: ámbar si falta, verde si
+está cubierta, rojo si se ha pasado.
+
+## Al pinchar en calendario
+
+Las sesiones individuales, cada una con fecha, horas, responsable y si está
+hecha. Las cerradas son las que cuentan como ejecutadas y las que suben al
+panel.
+
+**Y avisa al pasarse**: si una sesión nueva lleva el total por encima de las
+horas del modelo, se dice antes de guardarla. No se impide —a veces una tarea
+cuesta más y hay que registrarlo— pero no pasa inadvertido.
