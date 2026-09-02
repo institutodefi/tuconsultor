@@ -3,7 +3,14 @@
 # consultify.tuconsultor.com (alias servido por rewrites por host).
 
 [build]
-  command = "cd consultify/app && npm install && npm run build && cd ../netlify/functions && npm install && cd ../../.. && node build-dist.mjs"
+  # `npm ci` y no `npm install`: instala exactamente lo del lock, así que un
+  # conflicto de versiones se ve aquí en local y no tumbando el despliegue.
+  # Fue lo que pasó al añadir ESLint: `@eslint/js@^10` saltó a la 10 y dejó de
+  # ser compatible con `eslint@9`, y Netlify falló tres veces con ERESOLVE.
+  #
+  # El lint NO va en el build: si un aviso de estilo puede impedir publicar,
+  # acaba desactivándose. Se pasa antes de entregar, con scripts/comprobar.sh.
+  command = "cd consultify/app && npm ci --no-audit && npm run build && cd ../netlify/functions && npm ci --no-audit && cd ../../.. && node build-dist.mjs"
   publish = "dist"
   functions = "consultify/netlify/functions"
 

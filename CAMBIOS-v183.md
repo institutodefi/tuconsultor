@@ -4266,3 +4266,48 @@ cuando ambos coinciden.
 
 Verificado en el render, no solo en el texto extraído: el texto no revela un
 solapamiento.
+
+---
+
+# v263 · Los tres despliegues fallidos: culpa de ESLint
+
+## Qué pasó
+
+```
+Failed during stage 'building site': Build script returned non-zero exit code: 2
+```
+
+Tres veces seguidas, desde la v257. Justo cuando añadí ESLint.
+
+**No era el lint**, que ni siquiera corre en el build. Era la instalación:
+
+```
+npm error code ERESOLVE
+npm error While resolving: @eslint/js@10.0.1
+npm error Found: eslint@9.39.5
+```
+
+Instalé `@eslint/js` con `^`, npm resolvió la **versión 10**, y esa exige
+`eslint@10`. Yo tenía el 9. En local lo salvé con `--legacy-peer-deps` —y ahí
+está el error— pero Netlify hace `npm install` a secas y no perdona.
+
+Que yo usara una bandera para saltarme el conflicto es exactamente por qué el
+despliegue falló y yo no me enteré.
+
+## Corregido
+
+Ambas fijadas a `^9.39.0`. `npm install` limpio, sin banderas.
+
+## Y blindado
+
+El build pasa a `npm ci`, que instala **exactamente lo del lock**. Un conflicto
+de versiones se ve en local al regenerar el lock, no tumbando el despliegue.
+
+**El lint sigue fuera del build**, a propósito: si un aviso de estilo puede
+impedir publicar, acaba desactivándose el día que haya prisa. Se pasa antes de
+entregar, con `scripts/comprobar.sh`.
+
+## Verificado como lo hace Netlify
+
+`rm -rf node_modules && npm ci && npm run build` en las dos carpetas, sin
+banderas. Correcto.
