@@ -137,6 +137,33 @@ export default function SesionesTarea({
     finally { setOcupado(false); }
   }
 
+  // ── Editar una sesión ya creada ──
+  // Se movía la reunión, cambiaba el consultor o se alargaba media hora, y la
+  // única salida era borrarla y volver a crearla: se perdía si estaba hecha y
+  // las horas ya registradas.
+  const [editandoSesion, setEditandoSesion] = useState(null);
+
+  async function guardarSesion() {
+    const s = editandoSesion;
+    if (!s) return;
+    if (!horasEntre(s.hora_inicio, s.hora_fin)) {
+      setError('La hora de fin tiene que ser posterior a la de inicio.'); return;
+    }
+    setOcupado(true); setError(null);
+    try {
+      await updateRow('tarea_sesiones', s.id, {
+        fecha: s.fecha,
+        hora_inicio: s.hora_inicio,
+        hora_fin: s.hora_fin,
+        consultor_id: s.consultor_id || null,
+        notas: s.notas?.trim() || null,
+      });
+      setEditandoSesion(null);
+      await cargar(); onGuardado?.();
+    } catch (e) { setError(explicarErrorBd(e, 'tarea_sesiones')); }
+    finally { setOcupado(false); }
+  }
+
   async function cambiarEstado(s, estado) {
     setOcupado(true);
     try {
@@ -274,6 +301,64 @@ export default function SesionesTarea({
               {sesiones.map((s) => {
                 const pasada = esPasado(s.fecha);
                 const post = fechaCertificacion && String(s.fecha).slice(0, 10) > String(fechaCertificacion).slice(0, 10);
+                // En edición, la fila se convierte en formulario: se ve dónde
+                // estaba y no hay que buscarla otra vez al guardar.
+                if (editandoSesion?.id === s.id) {
+                  const e = editandoSesion;
+                  const hs = horasEntre(e.hora_inicio, e.hora_fin);
+                  return (
+                    <li key={s.id} className="rounded-lg border border-brand-orange/60 bg-[#0D3242] p-2.5">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="campo !w-[140px]">
+                          <label className="label" htmlFor={`e-f-${s.id}`}>Fecha</label>
+                          <input id={`e-f-${s.id}`} type="date" className="input !py-1 !text-[12.5px]"
+                            value={String(e.fecha).slice(0, 10)}
+                            onChange={(ev) => setEditandoSesion({ ...e, fecha: ev.target.value })} />
+                        </div>
+                        <div className="campo !w-[100px]">
+                          <label className="label" htmlFor={`e-i-${s.id}`}>Desde</label>
+                          <input id={`e-i-${s.id}`} type="time" className="input !py-1 !text-[12.5px]"
+                            value={String(e.hora_inicio).slice(0, 5)}
+                            onChange={(ev) => setEditandoSesion({ ...e, hora_inicio: ev.target.value })} />
+                        </div>
+                        <div className="campo !w-[100px]">
+                          <label className="label" htmlFor={`e-h-${s.id}`}>Hasta</label>
+                          <input id={`e-h-${s.id}`} type="time" className="input !py-1 !text-[12.5px]"
+                            value={String(e.hora_fin).slice(0, 5)}
+                            onChange={(ev) => setEditandoSesion({ ...e, hora_fin: ev.target.value })} />
+                        </div>
+                        <div className="campo min-w-[160px] flex-1">
+                          <label className="label" htmlFor={`e-c-${s.id}`}>Responsable</label>
+                          <select id={`e-c-${s.id}`} className="input !py-1 !text-[12.5px]"
+                            value={e.consultor_id || ''}
+                            onChange={(ev) => setEditandoSesion({ ...e, consultor_id: ev.target.value })}>
+                            <option value="">— sin asignar —</option>
+                            {equipo.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {`${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <input className="input mt-2 !py-1 !text-[12.5px]" placeholder="Notas (opcional)"
+                        value={e.notas || ''}
+                        onChange={(ev) => setEditandoSesion({ ...e, notas: ev.target.value })} />
+                      <div className="mt-2 flex items-center gap-2">
+                        <button onClick={guardarSesion} disabled={ocupado || !hs}
+                          className="btn-orange !px-3 !py-1 text-[12.5px] disabled:opacity-40">
+                          {ocupado ? 'Guardando…' : `Guardar ${hs ? `${hs} h` : ''}`}
+                        </button>
+                        <button onClick={() => { setEditandoSesion(null); setError(null); }}
+                          className="btn-ghost !px-3 !py-1 text-[12.5px]">Cancelar</button>
+                        {s.estado === 'hecha' && (
+                          <span className="text-[11px] text-[#7FA7B4]">Sigue marcada como hecha.</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={s.id}
                     className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border px-2.5 py-1.5 ${
@@ -303,6 +388,9 @@ export default function SesionesTarea({
                         marcar hecha
                       </button>
                     )}
+                    <button onClick={() => setEditandoSesion({ ...s })} disabled={ocupado}
+                      className="text-[11px] font-bold text-[#7FA7B4] hover:text-brand-orange"
+                      title="Cambiar fecha, hora o responsable">✎</button>
                     <button onClick={() => borrar(s)} disabled={ocupado}
                       className="text-[11px] font-bold text-red-300/70 hover:text-red-300">×</button>
                   </li>

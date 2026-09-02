@@ -4522,3 +4522,97 @@ certificación cuando son menos de sesenta. Se puede cambiar a ver por norma.
 
 En un proyecto concreto, siempre por norma: es donde importa saber si la 14001
 va más retrasada que la 9001.
+
+---
+
+# v268 · Editar sesiones, agenda en dos vistas y panel de gestión completo
+
+## 1 · Las sesiones se editan
+
+Solo se podían marcar como hechas o borrar. Si se movía la reunión, cambiaba el
+consultor o se alargaba media hora, la única salida era **borrarla y crearla de
+nuevo**: se perdía si estaba hecha, y con ella las horas ya registradas.
+
+Botón **✎** en cada sesión. La fila se convierte en formulario en su sitio —se
+ve dónde estaba y no hay que buscarla al guardar— con fecha, hora de inicio y
+fin, responsable y notas. Si estaba marcada como hecha, sigue estándolo.
+
+## 2 · La agenda del equipo, en dos vistas
+
+**Por tarea**: qué hay que hacer, por días.
+
+**Calendario**: semana de lunes a domingo, una fila por consultor. Es donde se
+ve de un golpe quién está cargado y qué días quedan libres. Con navegación entre
+semanas y «volver a hoy».
+
+Solo aparecen los consultores con algo esa semana: quince columnas vacías no
+ayudan. Y un día con **más de 8 h** se marca en rojo: es donde se rompe una
+agenda.
+
+Cada bloque abre su tarea.
+
+## 3 · Panel de gestión: todo
+
+Cuatro bloques, en el orden en que se preguntan las cosas:
+
+**Cartera** — MRR de cuotas vivas, importe en juego de las emitidas, aceptadas
+con tasa de acierto, contratos firmados, clientes y contactos.
+
+**Proyectos y horas** — activos, tareas, comprometidas, programadas, ejecutadas
+y **cuántas horas quedan sin llevar al calendario**.
+
+**Carga del equipo, próximos 30 días** — barra por persona, con sus proyectos y
+sus sesiones sin cerrar. La barra llena son 120 h en 30 días, una jornada
+completa a 6 h al día: por encima, esa persona no llega y conviene moverlo
+antes.
+
+**Qué hay que mirar** — sesiones sin cerrar, tareas sin agendar, proyectos sin
+equipo, proyectos sin oferta, y las certificaciones a menos de 60 días con
+cuántas tareas quedan pendientes en cada una.
+
+## Sobre la actualización de los datos
+
+Lo revisé, que era tu duda. **No hay ninguna cifra precalculada**: el panel
+consulta las once tablas y calcula al vuelo cada vez que se abre. Nada puede
+quedarse viejo porque no se guarda nada.
+
+Hay además un **«↻ actualizar»** con la hora del último cálculo, para releer sin
+recargar la página.
+
+Las horas teóricas se leen del catálogo por `catalogo_id`, así que renombrar una
+tarea no descuadra ninguna cifra del panel.
+
+---
+
+# v269 · Laura Vargas en el Team
+
+Segunda ficha de la sección, junto a Daniela.
+
+- **Consultora · Sistemas de Gestión y Business Intelligence**
+- Ingeniera Industrial y Máster en Business Intelligence
+- ISO 9001, 14001, 45001 y 27001, con análisis de datos y Power BI
+- Enlace a su LinkedIn
+
+La descripción une las dos mitades de su perfil en lugar de listarlas: la
+consultoría en sistemas y el análisis de datos, y qué sale de juntarlas —los
+cuadros de mando que convierten los indicadores de un sistema en decisiones—.
+Un listado de herramientas dice menos que eso.
+
+Versión inglesa con la descripción traducida, no copiada.
+
+## La foto
+
+Venía en círculo sobre fondo crema. Al recortar en vertical para la ficha
+(330×360) se veía el **borde curvo en las esquinas**, así que se pinta primero
+el lienzo del mismo crema y se pega la foto encima: el recorte queda limpio.
+
+También la versión cuadrada de 400×400 para avatares.
+
+## Lo que no se publica
+
+El CV traía teléfono, correo personal y dirección. **No van a una página pública
+indexada**: quedan expuestos a rastreo y spam indefinidamente. Comprobado en el
+archivo generado.
+
+Tampoco el detalle del historial laboral: la ficha resume el perfil, que es lo
+que corresponde a una página de equipo.
