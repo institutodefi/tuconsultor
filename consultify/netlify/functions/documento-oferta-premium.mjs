@@ -147,7 +147,10 @@ export async function generarPDFOferta(r, cli, anexo) {
 
   // Importe protagonista, abajo
   const yImp = U * 19;
-  cover.drawText(esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN', { x: MG, y: yImp + U * 6.5, size: 8.5, font: med, color: TEAL, characterSpacing: 2 });
+  const esWeb = r?.canal === 'web';
+  cover.drawText(
+    (esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN') + (esWeb ? ' DESDE' : ''),
+    { x: MG, y: yImp + U * 6.5, size: 8.5, font: med, color: TEAL, characterSpacing: 2 });
   const importe = esImpl ? (r.formasPago?.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
   cover.drawText(eur0(importe), { x: MG, y: yImp + U * 1.5, size: 44, font: bold, color: BLANCO });
   const anchoImp = bold.widthOfTextAtSize(eur0(importe), 44);
@@ -328,14 +331,18 @@ export async function generarPDFOferta(r, cli, anexo) {
   // ── 4 · Inversión ──
   // El pago adelantado añade una caja debajo: hay que reservarle sitio o se
   // dibuja encima de la de la cuota.
-  seccion('Inversión', (esImpl ? 22 : 17) + (r.pagoAdelantado && r.adelantado ? 9 : 0));
+  seccion('Inversión', (esImpl ? 22 : 17)
+    + (r.pagoAdelantado && r.adelantado ? 9 : 0)
+    + (r?.canal === 'web' ? 7 : 0));
   asegurar(14);
   const alturaCaja = esImpl ? U * 16 : U * 11;
   p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: ANCHO, height: alturaCaja, color: SUAVE });
   p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: U * 0.5, height: alturaCaja, color: NARANJA });
 
   let yc = cursor - U * 1;
-  p.drawText(esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO', { x: MG + U * 3, y: yc, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.4 });
+  p.drawText(
+    (esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
+    { x: MG + U * 3, y: yc, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.4 });
   yc -= U * 4;
   p.drawText(eur(esImpl ? (r.formasPago?.dos?.sinIva ?? r.precioCatalogo) : r.precioCatalogo),
     { x: MG + U * 3, y: yc, size: 26, font: bold, color: TINTA });
@@ -343,6 +350,29 @@ export async function generarPDFOferta(r, cli, anexo) {
   yc -= U * 2.6;
   p.drawText('Impuestos indirectos no incluidos.',
     { x: MG + U * 3, y: yc, size: 9.5, font: reg, color: APAGADO });
+
+  // ── Aviso de estimación, junto al precio ──
+  // La cláusula completa va en las condiciones, pero ahí llega enterrada entre
+  // otras cinco. Quien recibe una propuesta mira el importe: si es una
+  // estimación pendiente de revisar, tiene que leerlo AHÍ, no tres páginas
+  // después.
+  if (r?.canal === 'web') {
+    // Se arranca por debajo de la caja del importe, con margen: la línea de
+    // «impuestos indirectos» todavía ocupa espacio bajo el cursor. Es el mismo
+    // solapamiento que ya dio la caja del pago adelantado.
+    const alto = U * 3;
+    const top = (cursor - alturaCaja + U * 2) - U * 1.2
+      - (r.pagoAdelantado && r.adelantado ? U * 5.2 : 0);   // debajo del bloque 11×12 si lo hay
+    p.drawRectangle({ x: MG, y: top - alto, width: ANCHO, height: alto,
+      color: rgb(0.996, 0.953, 0.878) });
+    p.drawRectangle({ x: MG, y: top - alto, width: U * 0.35, height: alto, color: NARANJA });
+    p.drawText('ESTIMACIÓN · PENDIENTE DE APROBACIÓN',
+      { x: MG + U * 1.4, y: top - U * 1.2, size: 7.5, font: med,
+        color: rgb(0.55, 0.35, 0.03), characterSpacing: 1.1 });
+    p.drawText('El equipo consultor revisará alcance, sedes y plantilla antes de la propuesta definitiva.',
+      { x: MG + U * 1.4, y: top - U * 2.4, size: 8.5, font: reg, color: rgb(0.42, 0.28, 0.04) });
+    cursor = top - alto - U * 0.8;
+  }
 
   // Pago anual por adelantado: la cifra que de verdad se factura, junto a la
   // cuota. Enseñar solo la mensual cuando se cobra el año entero de una vez

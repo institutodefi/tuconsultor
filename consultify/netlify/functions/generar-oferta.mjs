@@ -216,7 +216,8 @@ async function generarPPTX(r, cli, anexo) {
   });
   s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 3.1, h: 1.6, fill: { color: C.suave } });
   s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 0.05, h: 1.6, fill: { color: C.naranja } });
-  s.addText(esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO', { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
+  s.addText((esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
+    { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
   s.addText(fmtEur(esImpl ? ((r.formasPago && r.formasPago.dos.sinIva) || r.precioCatalogo) : r.precioCatalogo),
     { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
   // El pago adelantado, junto a la cuota: es la cifra que se factura de verdad.
@@ -500,7 +501,10 @@ export default async (req) => {
     }
   }
 
-  const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false } = body;
+  const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false,
+    // De dónde nace la oferta. Las de la web llevan cláusula de aprobación
+    // posterior; las que emite el equipo van en firme y no la llevan.
+    canal = 'interno' } = body;
   // `fecha_inicio` y `fecha_certificacion` se leen más abajo, al enriquecer `r`.
   // El motor del servidor recibe lo mismo que el del navegador. Sin `fasesPlan`,
   // `ajustes` y `preciosSistema` recalculaba con el plan entero, sin el trato
@@ -514,6 +518,7 @@ export default async (req) => {
     aplicarReglas: body.aplicar_reglas !== false,
     pagoAdelantado: body.pago_adelantado === true,
   });
+  if (r) r.canal = canal;
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
 
   // ── Reglas comerciales ──

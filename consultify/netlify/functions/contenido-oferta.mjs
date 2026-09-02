@@ -78,6 +78,20 @@ export function condiciones(r) {
       + `con vencimiento a la fecha del contrato. Cubre ${r.adelantado.mesesServicio} meses de servicio `
       + `(${r.adelantado.mesesCobrados} mensualidades).`,
     ] : []),
+    // ── Ofertas nacidas en la web ──
+    // Las calcula el visitante con los datos que él mismo introduce: no ha
+    // contado sus sedes ni su plantilla, y nadie de la casa ha mirado su
+    // organización. Decirlo aquí, y no en letra pequeña, es lo que separa una
+    // estimación de un compromiso.
+    //
+    // Las emitidas por el equipo NO llevan esta cláusula: van aprobadas y en
+    // firme, y añadir un condicional sería dejar la puerta abierta a subirlas.
+    ...(r?.canal === 'web' ? [
+      'Propuesta pendiente de aprobación. El importe se ha calculado con los datos facilitados en el '
+      + 'formulario web y queda sujeto a la revisión del equipo consultor, que confirmará el alcance del '
+      + 'sistema, el número de sedes o centros de trabajo y el número de personas trabajadoras antes de '
+      + 'emitir la propuesta definitiva.',
+    ] : []),
     'Impuestos indirectos no incluidos. Todos los importes se expresan sin impuestos. El impuesto aplicable '
       + '(IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura. En '
       + 'operaciones intracomunitarias con NIF-IVA válido en VIES se aplica la inversión del sujeto pasivo.',

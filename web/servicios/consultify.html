@@ -985,6 +985,11 @@
     line-height: 1;
     margin-bottom: 14px;
   }
+    /* El «desde» acompaña a la cifra sin competir con ella: es un matiz, no el
+       dato. En minúscula y a la mitad de tamaño. */
+    .impl-desde{font-size:.42em;font-weight:600;letter-spacing:.02em;
+      text-transform:lowercase;opacity:.62;vertical-align:.35em;margin-right:.15em}
+    .impl-nota{max-width:62ch;margin:.5rem 0 0;font-size:.82rem;line-height:1.5;opacity:.72}
   .impl-card.combo.featured .impl-price { color: var(--white); }
   .impl-price span:last-child { font-size: 18px; font-weight: 700; margin-left: 2px; }
   
@@ -1542,69 +1547,70 @@
         <span data-i18n="impl.indiv.title">Por norma individual</span>
       </h3>
       <p class="impl-subdesc" data-i18n="impl.indiv.desc">Implanta una sola norma ISO desde cero. Bolsa de horas cerrada · prepago 100%.</p>
+      <p class="impl-nota" data-i18n="impl.indiv.nota">Precio de partida por norma. Cada sistema se presupuesta de forma individual según la complejidad del alcance, el número de sedes o centros de trabajo y el número de personas trabajadoras.</p>
     </div>
 
     <div class="impl-grid">
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>9001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.9001">Calidad</div>
-        <div class="impl-price"><span data-keep-ltr>3.400</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>3.350</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>38 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>14001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.14001">Medio Ambiente</div>
-        <div class="impl-price"><span data-keep-ltr>4.500</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>4.500</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>51 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>27001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.27001">Seguridad de la Información</div>
-        <div class="impl-price"><span data-keep-ltr>6.000</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>6.000</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>90 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>45001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.45001">Salud y Seguridad</div>
-        <div class="impl-price"><span data-keep-ltr>4.700</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>4.650</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>70 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>42001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.42001">Inteligencia Artificial</div>
-        <div class="impl-price"><span data-keep-ltr>4.200</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>4.150</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>47 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>9001 + 21001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.21001">Organizaciones Educativas · con ISO 9001</div>
-        <div class="impl-price"><span data-keep-ltr>5.200</span><span>€</span></div>
-        <div class="impl-time"><span data-keep-ltr>59 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>4.225</span><span>€</span></div>
+        <div class="impl-time"><span data-keep-ltr>48 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>56001</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.56001">Innovación</div>
-        <div class="impl-price"><span data-keep-ltr>7.400</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>7.325</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>83 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">ISO <span data-keep-ltr>9001 + 9004</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.9004">Calidad Sostenible · con ISO 9001</div>
-        <div class="impl-price"><span data-keep-ltr>4.400</span><span>€</span></div>
-        <div class="impl-time"><span data-keep-ltr>50 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>3.875</span><span>€</span></div>
+        <div class="impl-time"><span data-keep-ltr>44 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
       <div class="impl-card">
         <div class="impl-norm">UNE <span data-keep-ltr>93200</span></div>
         <div class="impl-cov" data-i18n="impl.indiv.une93200">Cartas de Servicios</div>
-        <div class="impl-price"><span data-keep-ltr>2.500</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>2.500</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>28 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
@@ -1624,7 +1630,7 @@
         <div class="impl-badge" data-keep-ltr>88 h</div>
         <div class="impl-norm" data-keep-ltr>9001 + 14001</div>
         <div class="impl-cov" data-i18n="impl.combo.c1">2 sistemas integrados</div>
-        <div class="impl-price"><span data-keep-ltr>7.800</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>7.800</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>88 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
@@ -1632,7 +1638,7 @@
         <div class="impl-badge" data-keep-ltr>178 h</div>
         <div class="impl-norm" data-keep-ltr>9001 + 14001 + 27001</div>
         <div class="impl-cov" data-i18n="impl.combo.c2">3 sistemas integrados</div>
-        <div class="impl-price"><span data-keep-ltr>13.800</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>13.800</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>178 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
@@ -1640,7 +1646,7 @@
         <div class="impl-badge" data-keep-ltr>158 h</div>
         <div class="impl-norm" data-keep-ltr>9001 + 14001 + 45001</div>
         <div class="impl-cov" data-i18n="impl.combo.c3">3 sistemas integrados</div>
-        <div class="impl-price"><span data-keep-ltr>12.400</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>12.400</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>158 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
@@ -1648,7 +1654,7 @@
         <div class="impl-badge max" data-keep-ltr>247 h</div>
         <div class="impl-norm" data-keep-ltr>9001 + 14001 + 45001 + 27001</div>
         <div class="impl-cov" data-i18n="impl.combo.c4">Sistema integrado total · 4 sistemas</div>
-        <div class="impl-price"><span data-keep-ltr>18.300</span><span>€</span></div>
+        <div class="impl-price"><span class="impl-desde" data-i18n="impl.desde">desde</span> <span data-keep-ltr>18.300</span><span>€</span></div>
         <div class="impl-time"><span data-keep-ltr>247 h</span> <span data-i18n="impl.weeks">de consultoría incluidas</span></div>
         <div class="impl-pace"><span data-i18n="impl.oneoff">Prepago 100% · pago único</span></div>
       </div>
@@ -1991,6 +1997,8 @@ const i18n = {
     'impl.lead': 'Bolsa de horas prepagada al 100% que cubre la implantación completa de tu sistema. Precio cerrado por norma, sin sorpresas. No contratable a menos de 60 días de tu auditoría externa. Acompañamiento a auditoría aparte: 600 €/jornada.',
     'impl.indiv.title': 'Por norma individual',
     'impl.indiv.desc': 'Implanta una sola norma ISO desde cero. Bolsa de horas cerrada · prepago 100%.',
+    'impl.indiv.nota': 'Precio de partida por norma. Cada sistema se presupuesta de forma individual según la complejidad del alcance, el número de sedes o centros de trabajo y el número de personas trabajadoras.',
+    'impl.desde': 'desde',
     'impl.indiv.9001': 'Calidad',
     'impl.indiv.14001': 'Medio Ambiente',
     'impl.indiv.27001': 'Seguridad de la Información',
@@ -2183,6 +2191,8 @@ const i18n = {
     'impl.lead': '100% prepaid bank of hours covering your full system implementation. Fixed price per standard, no surprises. Cannot be contracted within 60 days of your external audit. Audit accompaniment billed separately: €600/day.',
     'impl.indiv.title': 'Per individual standard',
     'impl.indiv.desc': 'Implement a single ISO standard from scratch. Fixed bank of hours · 100% prepaid.',
+    'impl.indiv.nota': 'Starting price per standard. Each system is quoted individually according to the complexity of the scope, the number of sites or workplaces and the number of employees.',
+    'impl.desde': 'from',
     'impl.indiv.9001': 'Quality',
     'impl.indiv.14001': 'Environment',
     'impl.indiv.27001': 'Information Security',
@@ -2377,6 +2387,8 @@ const i18n = {
     'impl.lead': 'رصيد ساعات مدفوع مسبقًا بنسبة 100% يغطي التطبيق الكامل لنظامك. سعر ثابت لكل معيار، بدون مفاجآت. لا يمكن التعاقد عليه قبل أقل من 60 يومًا من التدقيق الخارجي. مرافقة التدقيق تُحسب بشكل منفصل: 600 يورو/يوم.',
     'impl.indiv.title': 'حسب المعيار الفردي',
     'impl.indiv.desc': 'طبّق معيار أيزو واحدًا من الصفر. رصيد ساعات محدد · دفع مسبق 100%.',
+    'impl.indiv.nota': 'سعر مبدئي لكل معيار. يُسعَّر كل نظام بشكل فردي حسب مدى تعقيد النطاق وعدد المواقع وعدد العاملين.',
+    'impl.desde': 'ابتداءً من',
     'impl.indiv.9001': 'الجودة',
     'impl.indiv.14001': 'البيئة',
     'impl.indiv.27001': 'أمن المعلومات',

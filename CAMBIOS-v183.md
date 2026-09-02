@@ -4065,3 +4065,204 @@ Ninguno lo habría encontrado leyendo el código.
 
 Un solo comando con todo lo que hay que pasar antes de entregar: ESLint,
 efectos, zonas muertas y compilación.
+
+---
+
+# v259 · «Desde» en todos los precios por norma
+
+## El «desde» ya no depende de dónde se mire
+
+`prefijoPrecio(publico)` solo lo ponía en la calculadora pública. En el
+generador interno el importe salía a secas.
+
+Eso creaba un problema real: quien prepara una oferta veía «450 €/mes» y lo
+trasladaba al cliente como si fuera el precio. **No lo es.** Lo que calcula el
+motor es un punto de partida por norma y modelo; el precio final depende del
+alcance, de las sedes y del número de personas trabajadoras.
+
+Y un precio cerrado dicho por teléfono es muy difícil de subir después.
+
+Ahora va **siempre**: en el generador, en el desglose por sistema, en la portada
+del PDF y en el PPT.
+
+```
+CUOTA MENSUAL DESDE        IMPORTE DEL PROYECTO DESDE
+```
+
+## El aviso, donde se mira antes de dar un precio
+
+Junto al desglose por sistema, no solo en el pie:
+
+> Precio de partida por norma. Cada sistema se presupuesta de forma individual
+> según la complejidad del alcance, el número de sedes o centros de trabajo y el
+> número de personas trabajadoras.
+
+Y como **condición** en el PDF y el PPT, la primera de la lista. Generada por la
+misma función que usa el contrato, así que aparece también allí.
+
+## Dos textos nuevos en `lib/legal.js`
+
+`AVISO_NORMA_INDIVIDUAL` para donde hay sitio y `AVISO_NORMA_CORTO` para
+tarjetas y tablas. Fuente única: si hay que matizar la redacción, se cambia ahí
+y sale corregido en la web, el generador, el PDF, el PPT y el contrato.
+
+---
+
+# v260 · «Desde» solo en la web, y quién aprueba la oferta
+
+## Revertido en el generador interno
+
+Tenías razón: una oferta emitida llega al cliente como **precio en firme**.
+Poner «desde» en un documento que el cliente recibe sería dejar la puerta
+abierta a subirlo después, que es justo lo que no se hace.
+
+`prefijoPrecio(publico)` vuelve a distinguir. El PDF y el PPT dicen otra vez
+«CUOTA MENSUAL» e «IMPORTE DEL PROYECTO», sin condicionales, y se retira de las
+condiciones el aviso de precio de partida.
+
+## Quién aprueba, en el generador
+
+Bloque nuevo antes de generar:
+
+> **Aprobación del precio**
+> Esta oferta llega al cliente como precio en firme. Quien la aprueba confirma
+> que se han valorado el alcance, las sedes y la plantilla.
+
+Desplegable con Superadministración, Administración y Dirección de proyecto —los
+que pueden responder de un precio— y un campo opcional para dejar por qué a ese
+importe.
+
+**Sin aprobador no se puede generar**: el botón queda deshabilitado y lo dice.
+No es burocracia; es tener a quién preguntar si mañana surge la duda de por qué
+se ofertó así.
+
+**Migración `v110`**: `aprobada_por`, `aprobada_en` y `aprobada_nota`.
+
+## En la web, «desde» y el aviso
+
+Las trece tarjetas de norma individual llevan ahora **desde** delante de la
+cifra, en minúscula y a la mitad de tamaño: es un matiz, no el dato.
+
+Y bajo la entradilla:
+
+> Precio de partida por norma. Cada sistema se presupuesta de forma individual
+> según la complejidad del alcance, el número de sedes o centros de trabajo y el
+> número de personas trabajadoras.
+
+Traducido a los tres idiomas de la página.
+
+## `scripts/precios-web.mjs`
+
+Los precios de la web están escritos a mano, así que cada cambio de tarifa hay
+que replicarlo en trece tarjetas. Este script los calcula con el motor y avisa
+de las que no cuadran. **Publica el resultado, nunca la regla**: el visitante ve
+«desde 3.350 €», no de dónde sale.
+
+### Seis tarjetas no cuadran con el motor
+
+```
+ISO 9001           web 3.400 €   motor 3.350 €
+ISO 45001          web 4.700 €   motor 4.650 €
+ISO 42001          web 4.200 €   motor 4.150 €
+ISO 56001          web 7.400 €   motor 7.325 €
+ISO 9001 + 21001   web 5.200 € / 59 h   motor 4.225 € / 48 h
+ISO 9001 + 9004    web 4.400 € / 50 h   motor 3.875 € / 44 h
+```
+
+**No las he tocado.** Las cuatro primeras parecen redondeos al alza
+deliberados. Las dos combinaciones difieren en casi mil euros y en horas: o el
+motor no contempla algo del paquete, o la web se quedó con precios viejos. Es
+una decisión de negocio, no técnica.
+
+`node scripts/precios-web.mjs --aplicar` las alinea cuando decidas.
+
+---
+
+# v261 · El motor manda, y cada canal con su cláusula
+
+## Los precios de la web salen del motor
+
+Aplicado. Las seis tarjetas que no cuadraban ya coinciden:
+
+| | Antes | Ahora |
+|---|---|---|
+| ISO 9001 | 3.400 € | **3.350 €** |
+| ISO 45001 | 4.700 € | **4.650 €** |
+| ISO 42001 | 4.200 € | **4.150 €** |
+| ISO 56001 | 7.400 € | **7.325 €** |
+| ISO 9001 + 21001 | 5.200 € / 59 h | **4.225 € / 48 h** |
+| ISO 9001 + 9004 | 4.400 € / 50 h | **3.875 € / 44 h** |
+
+Las dos combinaciones bajan casi mil euros: la web llevaba precios de una tarifa
+anterior. Ahora el escaparate y el generador dicen lo mismo, que es lo que
+importa cuando alguien llega diciendo «en vuestra web pone 5.200».
+
+`scripts/precios-web.mjs` queda para volver a alinearlas cuando cambien las
+reglas. Publica el resultado, nunca la regla.
+
+## Cada canal, su cláusula
+
+**Desde el formulario web**, primera condición del PDF y del PPT:
+
+> Propuesta pendiente de aprobación. El importe se ha calculado con los datos
+> facilitados en el formulario web y queda sujeto a la revisión del equipo
+> consultor, que confirmará el alcance del sistema, el número de sedes o centros
+> de trabajo y el número de personas trabajadoras antes de emitir la propuesta
+> definitiva.
+
+Lo calcula el visitante con sus propios datos: no ha contado sus sedes ni su
+plantilla, y nadie de la casa ha mirado su organización.
+
+**Desde el generador interno**, ninguna cláusula. Va aprobada y en firme;
+añadir un condicional sería dejar la puerta abierta a subirla.
+
+### Un eslabón que faltaba
+
+El backend **no recibía el `canal`**: la cláusula nunca habría salido. El
+frontend lo guardaba en la fila pero no lo enviaba al generar el documento.
+Conectado.
+
+## Verificado
+
+Generados los dos PDF: el de canal web lleva la cláusula, el interno no.
+
+---
+
+# v262 · El «desde» y el aviso, donde se ven
+
+## Dos fallos en la entrega anterior
+
+**El «desde» desapareció también del canal web.** Al revertirlo para el
+generador interno lo quité de los dos sitios. Ahora depende del **canal**, que
+es lo que de verdad distingue una estimación de un precio en firme:
+
+```
+web      →  CUOTA MENSUAL DESDE
+interno  →  CUOTA MENSUAL
+```
+
+**La cláusula estaba enterrada.** Iba en las condiciones, entre otras cinco, tres
+páginas después del precio. Quien recibe una propuesta mira el importe: si es
+una estimación pendiente de revisar, tiene que leerlo **ahí**.
+
+Ahora hay un aviso junto a la cifra, en ámbar:
+
+> **ESTIMACIÓN · PENDIENTE DE APROBACIÓN**
+> El equipo consultor revisará alcance, sedes y plantilla antes de la propuesta
+> definitiva.
+
+La cláusula completa sigue en las condiciones: una cosa es el aviso visible y
+otra el texto que vale como condición.
+
+## Y un solapamiento, otra vez
+
+El aviso se dibujaba encima de la caja del importe: partía del cursor de texto
+en vez del final de la caja anterior, y la sección no le reservaba altura. **Es
+el tercer bloque que cae en el mismo error** —antes el pago adelantado y la
+caja de inversión—.
+
+Corregido, y ahora se coloca también por debajo del bloque de pago adelantado
+cuando ambos coinciden.
+
+Verificado en el render, no solo en el texto extraído: el texto no revela un
+solapamiento.

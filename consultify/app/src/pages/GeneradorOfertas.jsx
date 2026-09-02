@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
-import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio } from '../lib/legal.js';
+import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio , AVISO_NORMA_INDIVIDUAL, AVISO_NORMA_CORTO } from '../lib/legal.js';
 import FasesPlanes from '../components/FasesPlanes.jsx';
 import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { EMISORAS_BASE } from '../lib/emisoras.js';
@@ -150,7 +150,29 @@ export default function GeneradorOfertas({ publico = false }) {
   }, []);
 
   // "desde" en el canal público: el precio de la web es una estimación de partida.
+  // Solo en la web. Una oferta emitida desde aquí llega al cliente como precio
+  // en firme: el equipo ya conoce la organización cuando la prepara.
   const desde = prefijoPrecio(publico);
+
+  // ── Quién aprueba el precio ──
+  // La oferta sale en firme, así que alguien tiene que responder de ella. Se
+  // propone quien la está emitiendo, pero se puede cambiar: a veces la prepara
+  // una persona y la valida otra.
+  const [aprobador, setAprobador] = useState('');
+  const [notaAprobacion, setNotaAprobacion] = useState('');
+  const [equipoAprob, setEquipoAprob] = useState([]);
+
+  useEffect(() => {
+    if (publico) return;
+    listTable('perfiles').then((ps) => {
+      const aptos = (ps || [])
+        .filter((p) => ['superadmin', 'admin', 'director'].includes(p.rol) && p.activo !== false)
+        .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || '')));
+      setEquipoAprob(aptos);
+      // Si quien emite puede aprobar, se propone a sí mismo.
+      if (aptos.some((p) => String(p.id) === String(user?.id))) setAprobador(String(user.id));
+    }).catch(() => setEquipoAprob([]));
+  }, [publico, user?.id]);
 
   const toggle = (id) => {
 
@@ -161,6 +183,11 @@ export default function GeneradorOfertas({ publico = false }) {
     () => calcular(sel, modelo, {
       meses: mesesContrato, tiene9001, reglas, aplicarReglas,
       canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes,
+      // Quién responde de este precio. Solo en las emitidas por el equipo: una
+      // solicitud de la web no la aprueba nadie todavía.
+      aprobada_por: publico ? null : (aprobador || null),
+      aprobada_en: publico || !aprobador ? null : new Date().toISOString(),
+      aprobada_nota: publico ? null : (notaAprobacion.trim() || null),
       preciosSistema: clienteAntiguo ? preciosSistema : null,
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
@@ -292,6 +319,9 @@ export default function GeneradorOfertas({ publico = false }) {
           normas: sel, modelo, empresa: cli.empresa, contacto: contactoCompleto,
           cif: cli.cif, cargo: cli.cargo, ref: numero, comercial,
           meses: res.meses, tiene9001, direccion: cli.direccion,
+          // De dónde nace: las de la web llevan cláusula de aprobación
+          // posterior, las del equipo van en firme.
+          canal: publico ? 'web' : 'interno',
           // Sin estas dos, el cuadro de facturación del PDF arrancaba en la
           // fecha de hoy en lugar de en el inicio real del servicio.
           fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
@@ -823,7 +853,10 @@ export default function GeneradorOfertas({ publico = false }) {
                           {s.manual && <span className="ml-1 text-[10px] font-bold text-brand-orange">pactado</span>}
                           {s.suelo && <span className="ml-1 text-[10px] text-white/40">mínimo</span>}
                         </span>
-                        <span className="font-bold text-white">{fmtEUR(s.precio)}</span>
+                        <span className="font-bold text-white">
+                          {publico && <span className="text-[10px] font-normal text-white/50">desde </span>}
+                          {fmtEUR(s.precio)}
+                        </span>
                       </p>
                     ))}
                     {res.volumen.importePresencial > 0 && (
@@ -850,6 +883,15 @@ export default function GeneradorOfertas({ publico = false }) {
                       15 % con 4 o más. Nunca más del {res.volumen.tope} %.
                     </p>
                   </div>
+                )}
+
+                {/* El precio de cada norma es un punto de partida, no una
+                    tarifa. Decirlo aquí, junto a las cifras, y no solo en el
+                    pie: es donde alguien mira antes de dar un precio. */}
+                {publico && res.desgloseSistemas?.length > 0 && (
+                  <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-snug text-white/60">
+                    {AVISO_NORMA_INDIVIDUAL}
+                  </p>
                 )}
 
                 {!res.reglasActivas && (
@@ -919,10 +961,42 @@ export default function GeneradorOfertas({ publico = false }) {
                   </label>
                 </div>
 
+                {/* ── Quién aprueba, solo en el generador interno ──
+                    La oferta sale en firme: sin «desde» y sin condicionales.
+                    Alguien tiene que responder de ese precio si mañana surge la
+                    pregunta de por qué se ofertó así. */}
+                {!publico && (
+                  <div className="mt-4 rounded-xl border border-brand-orange/40 bg-white/[0.06] p-3">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-brand-orange">
+                      Aprobación del precio
+                    </p>
+                    <p className="mt-1 text-[11.5px] leading-snug text-white/70">
+                      Esta oferta llega al cliente como precio en firme. Quien la aprueba
+                      confirma que se han valorado el alcance, las sedes y la plantilla.
+                    </p>
+                    <select value={aprobador} onChange={(e) => setAprobador(e.target.value)}
+                      className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white focus:border-brand-orange focus:outline-none">
+                      <option value="">— quién aprueba —</option>
+                      {equipoAprob.map((p) => (
+                        <option key={p.id} value={p.id} className="text-navy-900">
+                          {`${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email}
+                        </option>
+                      ))}
+                    </select>
+                    <input value={notaAprobacion} onChange={(e) => setNotaAprobacion(e.target.value)}
+                      placeholder="Por qué a este importe (opcional): sedes, complejidad, plantilla…"
+                      className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-[13px] text-white placeholder-white/40 focus:border-brand-orange focus:outline-none" />
+                  </div>
+                )}
+
                 <div className="mt-4 flex gap-2">
-                  <button onClick={() => generar('pdf')} disabled={estado === 'gen' || plazoMal} className="flex-1 rounded-xl bg-[#10394A] py-3 text-sm font-extrabold text-[#EAF4F7] transition hover:bg-white/90 disabled:opacity-50">
+                  <button onClick={() => generar('pdf')}
+                    disabled={estado === 'gen' || plazoMal || (!publico && !aprobador)}
+                    title={!publico && !aprobador ? 'Elige quién aprueba el precio' : ''}
+                    className="flex-1 rounded-xl bg-[#10394A] py-3 text-sm font-extrabold text-[#EAF4F7] transition hover:bg-white/90 disabled:opacity-50">
                     {estado === 'gen' ? 'Generando…'
                       : plazoMal ? `El plazo no llega al mínimo del modelo (${res.minMeses} meses)`
+                      : (!publico && !aprobador) ? 'Falta quién aprueba el precio'
                       : (publico ? 'Recibir mi propuesta' : 'Generar oferta')}
                   </button>
                 </div>

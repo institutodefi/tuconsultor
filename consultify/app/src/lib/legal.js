@@ -34,4 +34,23 @@ export const FACTORES_PRECIO = [
  * porque es una estimación de partida; en el generador interno se muestra el
  * importe cerrado que se va a ofertar.
  */
+/**
+ * El «desde» va SOLO en la web pública.
+ *
+ * En la web es un precio de partida: quien lo mira no ha contado sus sedes ni
+ * su plantilla, y el importe se ajustará. En el generador interno, no: cuando
+ * el equipo emite una oferta ya conoce la organización, y lo que sale de ahí
+ * llega al cliente como **precio en firme**. Poner «desde» en un documento que
+ * el cliente recibe sería dejar la puerta abierta a subirlo después, que es
+ * exactamente lo que no se hace.
+ */
 export const prefijoPrecio = (publico) => (publico ? 'desde ' : '');
+
+/** Aviso para el precio de UNA norma suelta. Solo para la web pública. */
+export const AVISO_NORMA_INDIVIDUAL =
+  'Precio de partida por norma. Cada sistema se presupuesta de forma individual según la complejidad '
+  + 'del alcance, el número de sedes o centros de trabajo y el número de personas trabajadoras.';
+
+/** Versión de una línea, para tarjetas y tablas donde no cabe el aviso entero. */
+export const AVISO_NORMA_CORTO =
+  'Desde. Se presupuesta según alcance, sedes y plantilla.';
