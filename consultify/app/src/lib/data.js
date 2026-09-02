@@ -6,7 +6,7 @@ let demoState = null;
 function demo() {
   if (!demoState) demoState = {
     consultores: demoClone('consultores'), clientes: demoClone('clientes'),
-    proyectos: demoClone('proyectos'), presupuestos: demoClone('presupuestos'),
+    presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
     reglas_comerciales: [],
     versiones: [],
@@ -82,7 +82,10 @@ function demo() {
         obligatorio: true, orden: 20, creado: '2026-02-02T09:05:00Z' },
     ],
     tareas_catalogo: catalogoFilas(), agenda_tareas: [], cliente_tareas: [], proyectos_cliente: [],
+    // Una sola definición de `proyectos`: antes había dos en el mismo objeto y
+    // la segunda anulaba a la primera en silencio.
     proyectos: [
+      ...demoClone('proyectos'),
       { id: 'p1', nombre: 'ISO 9001 · ACADEMIA AXON', empresa_id: 'e1', consultor_id: 'c1' },
       { id: 'p2', nombre: 'ISO 14001 · GRUPO MERIDIA', empresa_id: 'e2', consultor_id: 'c1' },
       { id: 'p3', nombre: 'ENS · AYUNTAMIENTO DE ALCORCÓN', empresa_id: 'e3', consultor_id: 'c1' },

@@ -4013,3 +4013,55 @@ panel.
 **Y avisa al pasarse**: si una sesión nueva lleva el total por encima de las
 horas del modelo, se dice antes de guardarla. No se impide —a veces una tarea
 cuesta más y hay que registrarlo— pero no pasa inadvertido.
+
+---
+
+# v259 · ESLint, y tres errores que llevaban tiempo escondidos
+
+## El fallo
+
+`<Guard ok={verEconomico}>` con `verEconomico` sin declarar. Es la **tercera vez**
+que entrego algo que compila sin una queja y revienta al abrir una pantalla
+—antes fueron `EquipoProyecto` y `candidatas`—.
+
+## Intenté cazarlo con regex y salió mal
+
+Amplié `buscar-imports.py` para detectar variables además de componentes.
+Resultado: **128 falsos positivos**. Marcaba números, parámetros de función y
+funciones declaradas dentro del componente.
+
+Un detector con 128 falsos positivos es lo mismo que no tener detector: nadie
+lee una lista así.
+
+## ESLint hace esto bien
+
+Entiende el ámbito de cada variable, que es justo lo que las expresiones
+regulares no pueden hacer. Configuración **deliberadamente corta**: no es un
+linter de estilo, no avisa de comillas ni sangrías. Solo de lo que rompe la
+aplicación en manos del cliente.
+
+```
+no-undef · no-const-assign · no-dupe-keys · no-unreachable
+no-cond-assign · use-isnan · valid-typeof
+```
+
+`buscar-imports.py` queda retirado: hacía lo mismo, peor.
+
+## Y encontró tres errores que ya estaban ahí
+
+**`totalMes` en Control del sistema.** La variable se llama `totalHoras`. Esa
+pantalla reventaba al abrir un grupo con casuísticas.
+
+**Un `)}` duplicado en Contactos.** Error de sintaxis que esbuild aceptaba y
+ESLint no; la pantalla fallaba al montar el diálogo.
+
+**Clave `proyectos` duplicada en `data.js`.** Aparecía dos veces en el mismo
+objeto y la segunda anulaba a la primera **en silencio**: en modo demostración,
+`proyectos` ignoraba los datos clonados.
+
+Ninguno lo habría encontrado leyendo el código.
+
+## `scripts/comprobar.sh`
+
+Un solo comando con todo lo que hay que pasar antes de entregar: ESLint,
+efectos, zonas muertas y compilación.

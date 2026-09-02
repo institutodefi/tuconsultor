@@ -102,7 +102,7 @@ export default function ControlSistema() {
             <div className="flex items-center justify-between border-b border-[#1E5468] bg-navy-50/60 px-5 py-3">
               <div>
                 <h3 className="font-extrabold text-[#EAF4F7]">Modelo {modelo}</h3>
-                <p className="text-xs font-semibold text-[#9FC0CB]">{items.length} casuística(s) · {totalMes} h</p>
+                <p className="text-xs font-semibold text-[#9FC0CB]">{items.length} casuística(s) · {totalHoras} h</p>
               </div>
               <button onClick={() => setEdit(VACIA(normaSel, modelo))} className="btn-ghost !px-3 !py-1.5 text-sm">+ Añadir</button>
             </div>

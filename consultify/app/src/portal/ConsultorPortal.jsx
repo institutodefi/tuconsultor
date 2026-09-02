@@ -120,6 +120,8 @@ export default function ConsultorPortal() {
   const { role, politicasOk } = useAuth();
   const grupos = gruposParaRol(role);
   const verEquipo = can.gestionarEquipo(role);
+  // El panel de gestión: MRR, márgenes y cartera. Solo Administración.
+  const verEconomico = can.verEconomico(role);
   const verPlanAgendaSist = ['superadmin', 'admin', 'director', 'consultor'].includes(role);
   const verClientes = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
   // CRM (Empresas · Contactos): el consultor también entra, así ve con quién habla.

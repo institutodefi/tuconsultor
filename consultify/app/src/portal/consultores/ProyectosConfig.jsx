@@ -331,10 +331,6 @@ export default function Proyectos() {
       return next;
     });
   }
-  function toggleAnidar(k) {
-    setAnidar(s => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n; });
-  }
-
   // Edita una tarea ya distribuida: marca editada_manual para que la sincronización
   // del catálogo no la pise, y refleja el cambio en la agenda.
   async function addBloque(t) {
