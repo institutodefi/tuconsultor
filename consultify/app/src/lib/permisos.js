@@ -19,20 +19,30 @@ export const ROL_LABEL = {
 // Navegación agrupada para la barra lateral.
 export const GRUPOS_PORTAL = [
   {
-    label: null, // sin título: pestaña suelta
+    label: null, // sin título: lo primero que se ve
     items: [
+      // Inicio arriba del todo y suelto: es la pantalla de entrada y desde ahí
+      // se llega a lo demás. Estaba dentro de «Operación», por debajo de la
+      // agenda, así que quien quería volver al principio no sabía dónde mirar.
+      { to: '', label: 'Inicio', icon: 'home', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+    ],
+  },
+  {
+    label: 'Agendas',
+    items: [
+      // La propia primero: es la que se mira todos los días.
       { to: 'mi-agenda', label: 'Mi agenda', icon: 'calendar-check', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+      // La global reparte trabajo de otras personas, así que es de quien lo
+      // reparte. Consultoría ve la suya y la de sus proyectos, no la de la casa.
+      { to: 'agenda', label: 'Agenda del equipo', icon: 'calendar-days', roles: ['superadmin', 'admin', 'director'] },
     ],
   },
   {
     label: 'Operación',
     items: [
       // El panel de gestión enseña MRR, márgenes y cartera: cifras de negocio.
-      // Solo Administración. Consultoría y gestión tienen su propio arranque en
-      // Inicio, con lo suyo: tareas de hoy y proyectos asignados.
-      { to: '',       label: 'Inicio', icon: 'home', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      // Solo Administración.
       { to: 'panel',  label: 'Panel de gestión', icon: 'layout-dashboard', roles: ['superadmin', 'admin'] },
-      { to: 'agenda', label: 'Agenda',    icon: 'calendar-days',    roles: ['superadmin', 'admin', 'director', 'consultor'] },
     ],
   },
   {

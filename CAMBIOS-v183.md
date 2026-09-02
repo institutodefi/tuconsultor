@@ -4311,3 +4311,73 @@ entregar, con `scripts/comprobar.sh`.
 
 `rm -rf node_modules && npm ci && npm run build` en las dos carpetas, sin
 banderas. Correcto.
+
+---
+
+# v264 · Códigos propios, relojes en la agenda y calendario para Outlook
+
+## 1 · Código y nombre propios, sin perder el origen
+
+Es lo que pedías para CECE. En un proyecto de 65 tareas hace falta un código
+corto —**«S1 PE1»**— y un nombre que se entienda, y eso lo pone quien planifica
+según cómo se organice ese cliente.
+
+**Renombrar no rompe nada.** Migración `v111` con tres campos:
+
+| Campo | Qué es |
+|---|---|
+| `codigo`, `titulo` | lo que se ve y se edita |
+| `catalogo_id` | enlace a la fila del catálogo · **no se toca** |
+| `titulo_origen` | cómo se llamaba, para saber qué se renombró |
+
+Las horas teóricas salen ahora de `catalogo_id`, un enlace directo. Antes se
+buscaban por norma + proceso + subproceso, que se rompe justo cuando alguien
+renombra. Así la comparación entre lo ejecutado y lo comprometido sobrevive a
+cualquier renombrado.
+
+Bajo cada nombre se lee de qué tarea del catálogo procede, y si alguna quedara
+sin enlazar se marca.
+
+**Un código no se repite dentro de un proyecto**: si dos tareas son «S1 PE1», el
+código deja de servir para lo único que sirve. Garantizado por índice único.
+
+La migración enlaza las tareas existentes y les pone un código de partida
+—`9001-01`, `14001-02`— para que 65 tareas no nazcan sin nada.
+
+## 2 · Los relojes en la agenda del equipo
+
+No aparecían porque la agenda leía `tareas_programadas`, que guarda una fecha
+por tarea y ninguna hora. Ahora lee **`tarea_sesiones`**, que es donde están la
+hora de inicio y de fin:
+
+```
+lunes 12 de marzo                              6,5 h · 3 sesiones
+  09:00–13:00  4 h  S1 PE1  Gestión del contexto   9001   Daniela
+  15:00–17:30  2,5 h S2 AU1 Auditoría interna     14001   Laura
+```
+
+Con el total de horas del día, que es lo que dice si una jornada está llena.
+
+## 3 · Inicio primero, luego las agendas
+
+Inicio sale del grupo «Operación» y pasa arriba del todo, suelto. Estaba por
+debajo de la agenda y quien quería volver al principio no sabía dónde mirar.
+
+Grupo **«Agendas»** nuevo: la propia primero —es la que se mira a diario— y la
+del equipo debajo, solo para **Superadministración, Administración y Dirección
+de proyecto**. Reparte trabajo de otras personas, así que es de quien lo
+reparte.
+
+## 4 · Calendario suscribible en Outlook
+
+El feed `.ics` existía pero leía la tabla antigua: enseñaba una fecha por tarea
+y se perdía la mitad del trabajo. Ahora publica **las sesiones**, con su franja
+horaria real.
+
+- Se suscribe una vez y se actualiza solo (`REFRESH-INTERVAL:PT1H`).
+- Las sesiones ya ejecutadas van como **libres**: ocupar el calendario con
+  trabajo hecho impide que Outlook proponga ese hueco.
+- Cada evento lleva código, nombre, norma, responsable y horas.
+
+URL: `/api/agenda-feed?c=<perfil_id>&t=<token>`, con `AGENDA_FEED_TOKEN` en
+Netlify.

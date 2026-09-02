@@ -29,13 +29,21 @@ export default function AgendaTareas() {
 
   const { user, role } = useAuth();
   const [verTodoElEquipo, setVerTodoElEquipo] = useState(true);
+  const [sesiones, setSesiones] = useState([]);
+  const [perfiles, setPerfiles] = useState([]);
 
   const cargar = useCallback(async () => {
-    const [t, c, p, eq] = await Promise.all([
+    const [t, c, p, eq, ses, ct, pf] = await Promise.all([
       listTable('tareas_programadas').catch(() => []),
       listTable('proyecto_contextos').catch(() => []),
       listTable('proyectos_cliente').catch(() => []),
       listTable('proyecto_equipo').catch(() => []),
+      // Las sesiones: es donde están las horas. Sin esto la agenda enseñaba
+      // tareas con fecha pero sin franja horaria, así que no se veía cuánto
+      // ocupa cada cosa ni si un día está lleno.
+      listTable('tarea_sesiones').catch(() => []),
+      listTable('cliente_tareas').catch(() => []),
+      listTable('perfiles').catch(() => []),
     ]);
 
     // ── La agenda del equipo, acotada a lo propio ──
@@ -59,6 +67,16 @@ export default function AgendaTareas() {
     setContextos(ctxVisibles);
     setProyectos(proyectosVisibles);
     setVerTodoElEquipo(verTodo);
+    setPerfiles(pf || []);
+
+    // Sesiones de los proyectos visibles, con el título de su tarea.
+    const idsCT = new Set((ct || [])
+      .filter((x) => idsVisibles.has(String(x.proyecto_id)))
+      .map((x) => String(x.id)));
+    const porTarea = Object.fromEntries((ct || []).map((x) => [String(x.id), x]));
+    setSesiones((ses || [])
+      .filter((s) => s.estado !== 'anulada' && idsCT.has(String(s.cliente_tarea_id)))
+      .map((s) => ({ ...s, tarea: porTarea[String(s.cliente_tarea_id)] || null })));
     // Reasignados a las variables que usa el resto de la función.
     const c2 = ctxVisibles, p2 = proyectosVisibles;
     // Los pendientes por horizonte: de la función de la base; si no llega
@@ -111,6 +129,41 @@ export default function AgendaTareas() {
   const sinFecha = activas.filter((t) => !t.fecha);
   const proximas = activas.filter((t) => t.fecha && t.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const porDia = proximas.reduce((m, t) => { (m[t.fecha] = m[t.fecha] || []).push(t); return m; }, {});
+
+  // Las sesiones, por día. Son las que llevan hora de inicio y fin: sin ellas
+  // la agenda enseñaba qué hay que hacer pero no cuándo ni cuánto ocupa.
+  const sesionesPorDia = sesiones.reduce((m, s) => {
+    const d = String(s.fecha).slice(0, 10);
+    (m[d] = m[d] || []).push(s);
+    return m;
+  }, {});
+  for (const d of Object.keys(sesionesPorDia)) {
+    sesionesPorDia[d].sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+  }
+  const nombreDe = (id) => {
+    const p = perfiles.find((x) => String(x.id) === String(id));
+    return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : 'sin asignar';
+  };
+  const horasDelDia = (d) => Math.round((sesionesPorDia[d] || [])
+    .reduce((a, s) => a + (Number(s.horas) || 0), 0) * 10) / 10;
+
+  /** Una sesión con su franja: la hora es el dato que faltaba. */
+  const FilaSesion = ({ s }) => (
+    <li className={`flex flex-wrap items-center gap-2 rounded-lg px-2.5 py-1.5 ${
+      s.estado === 'hecha' ? 'bg-emerald-500/[0.08]' : 'bg-[#0D3242]'}`}>
+      <span className="whitespace-nowrap text-[11.5px] font-extrabold text-brand-orange">
+        {String(s.hora_inicio).slice(0, 5)}–{String(s.hora_fin).slice(0, 5)}
+      </span>
+      <span className="whitespace-nowrap text-[10.5px] font-bold text-[#7FA7B4]">{s.horas} h</span>
+      {s.tarea?.codigo && (
+        <code className="text-[11px] font-extrabold tracking-wide text-brand-verdeTexto">{s.tarea.codigo}</code>
+      )}
+      <span className="min-w-0 flex-1 truncate text-[12px] text-[#DFF1F5]">{s.tarea?.titulo || 'Tarea'}</span>
+      {s.tarea?.norma_id && <span className="chip !px-1.5 !py-0 text-[9.5px]">{s.tarea.norma_id}</span>}
+      <span className="truncate text-[10.5px] text-[#7FA7B4]">{nombreDe(s.consultor_id)}</span>
+      {s.estado === 'hecha' && <span className="text-[10.5px] font-bold text-emerald-300">hecha</span>}
+    </li>
+  );
 
   const Fila = ({ t }) => {
     const p = proyDe(t); const c = ctxDe(t.contexto_id);
@@ -172,6 +225,18 @@ export default function AgendaTareas() {
           <ul className="space-y-1">{atrasadas.map((t) => <Fila key={t.id} t={t} />)}</ul>
         </section>
       )}
+
+      {/* Los días con sesiones, con sus horas. Van primero: es lo que de
+          verdad ocupa la jornada de alguien. */}
+      {Object.entries(sesionesPorDia).sort(([a], [b]) => a.localeCompare(b)).map(([dia, ss]) => (
+        <div key={`s-${dia}`} className="card !p-3">
+          <div className="mb-1.5 flex items-baseline justify-between gap-2">
+            <p className="text-[12.5px] font-extrabold text-[#EAF4F7]">{fmtDia(dia)}</p>
+            <p className="text-[11px] font-bold text-[#7FA7B4]">{horasDelDia(dia)} h · {ss.length} sesión{ss.length === 1 ? '' : 'es'}</p>
+          </div>
+          <ul className="space-y-1">{ss.map((s) => <FilaSesion key={s.id} s={s} />)}</ul>
+        </div>
+      ))}
 
       {Object.entries(porDia).map(([dia, ts]) => (
         <section key={dia}>

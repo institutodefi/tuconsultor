@@ -44,31 +44,60 @@ export default async (req) => {
 
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
 
-  // Consultor (para nombre y nivel)
-  const cRes = await fetch(`${base}/rest/v1/consultores?id=eq.${consultorId}&select=nombre,apellidos,nivel`, { headers });
-  const cArr = await cRes.json();
-  const c = Array.isArray(cArr) && cArr[0] ? cArr[0] : null;
-  const nivel = c?.nivel || 'J2';
+  // Quién es. Se busca en `perfiles`: es donde está la cuenta con la que se
+  // asignan las sesiones. `consultores` es la tabla antigua y muchas filas no
+  // tienen ni correo.
+  const pRes = await fetch(`${base}/rest/v1/perfiles?id=eq.${consultorId}&select=nombre,apellidos,nivel`, { headers });
+  const pArr = await pRes.json();
+  const c = Array.isArray(pArr) && pArr[0] ? pArr[0] : null;
   const nombre = c ? `${c.nombre || ''} ${c.apellidos || ''}`.trim() : 'Consultor';
 
-  // Tareas del consultor
-  const tRes = await fetch(`${base}/rest/v1/agenda_tareas?consultor_id=eq.${consultorId}&select=*&order=fecha_prevista`, { headers });
-  const tareas = await tRes.json();
+  // ── Las SESIONES, que es donde están las horas de verdad ──
+  // Una tarea puede tener varias sesiones con hora de inicio y fin distintas;
+  // el feed antiguo leía `agenda_tareas`, que solo guardaba una fecha por
+  // tarea, así que en el calendario faltaba la mitad del trabajo.
+  const sRes = await fetch(
+    `${base}/rest/v1/tarea_sesiones?consultor_id=eq.${consultorId}`
+    + `&estado=neq.anulada&select=*&order=fecha`, { headers });
+  const sesiones = await sRes.json();
 
-  const eventos = (Array.isArray(tareas) ? tareas : []).map((t) => {
-    const fecha = t.fecha_efectiva && t.horas_reales ? t.fecha_efectiva : t.fecha_prevista;
-    const horas = t.horas_reales || t.horas_previstas
-      || (t.horas_base ? t.horas_base * (EFICIENCIA[nivel] ?? 1) : 1);
-    const tipo = TIPOS[t.tipo || 'produccion'];
-    const desc = [tipo, t.descripcion, `Responsable: ${nombre}`, `Horas: ${horas}`].filter(Boolean).join(' · ');
+  // Los títulos de las tareas, para que el evento diga qué es y no un id.
+  const idsCT = [...new Set((Array.isArray(sesiones) ? sesiones : [])
+    .map((s) => s.cliente_tarea_id).filter(Boolean))];
+  let titulos = {};
+  if (idsCT.length) {
+    const tRes = await fetch(
+      `${base}/rest/v1/cliente_tareas?id=in.(${idsCT.join(',')})`
+      + '&select=id,titulo,codigo,norma_id,proyecto_id', { headers });
+    const arr = await tRes.json();
+    if (Array.isArray(arr)) titulos = Object.fromEntries(arr.map((t) => [String(t.id), t]));
+  }
+
+  const eventos = (Array.isArray(sesiones) ? sesiones : []).map((s) => {
+    const t = titulos[String(s.cliente_tarea_id)] || {};
+    const horas = Number(s.horas) || 1;
+    const etq = [t.codigo, t.titulo].filter(Boolean).join(' · ') || 'Tarea';
+    const desc = [
+      t.norma_id ? `Norma ${t.norma_id}` : null,
+      s.notas,
+      `Responsable: ${nombre}`,
+      `${horas} h`,
+      s.estado === 'hecha' ? 'Ejecutada' : 'Programada',
+    ].filter(Boolean).join(' · ');
+
     return [
       'BEGIN:VEVENT',
-      `UID:${t.id}@consultify.pro`,
+      `UID:${s.id}@consultify.pro`,
       `DTSTAMP:${dt(new Date().toISOString().slice(0, 10), '00:00')}`,
-      `DTSTART:${dt(fecha, t.hora_inicio, 0)}`,
-      `DTEND:${dt(fecha, t.hora_inicio, horas)}`,
-      `SUMMARY:${esc(t.titulo)} [${tipo}]`,
+      // Hora de inicio y fin reales, no una duración estimada.
+      `DTSTART:${dt(String(s.fecha).slice(0, 10), String(s.hora_inicio).slice(0, 5), 0)}`,
+      `DTEND:${dt(String(s.fecha).slice(0, 10), String(s.hora_fin).slice(0, 5), 0)}`,
+      `SUMMARY:${esc(etq)}`,
       `DESCRIPTION:${esc(desc)}`,
+      // Las ya ejecutadas se marcan como libres: ocupar el calendario con
+      // trabajo hecho impide que Outlook proponga ese hueco para otra cosa.
+      s.estado === 'hecha' ? 'TRANSP:TRANSPARENT' : 'TRANSP:OPAQUE',
+      'STATUS:CONFIRMED',
       'END:VEVENT',
     ].join('\r\n');
   });
@@ -76,6 +105,10 @@ export default async (req) => {
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Consultify//Agenda//ES',
     'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', `X-WR-CALNAME:Consultify · ${esc(nombre)}`,
+    // Cada cuánto vuelve a mirar el calendario suscrito. Una hora: las sesiones
+    // se programan con días de antelación, no al minuto.
+    'X-PUBLISHED-TTL:PT1H', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
+    `X-WR-TIMEZONE:Europe/Madrid`,
     ...eventos, 'END:VCALENDAR',
   ].join('\r\n');
 

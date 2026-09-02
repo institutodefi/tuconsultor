@@ -293,7 +293,11 @@ export default function Proyectos() {
    * se cae a la copia: es peor no tener referencia que tener una antigua.
    */
   const horasTeoricas = useCallback((t) => {
-    const c = (catalogo || []).find((x) =>
+    // Primero por enlace directo: `catalogo_id` sobrevive a que alguien
+    // renombre el código o el título de la tarea, que es justo lo que se hace
+    // al planificar un proyecto de 65 tareas.
+    const c = (t.catalogo_id && (catalogo || []).find((x) => String(x.id) === String(t.catalogo_id)))
+      || (catalogo || []).find((x) =>
       String(x.norma_id) === String(t.norma_id)
       && mismoModelo(x.modelo, t.modelo || modelo)
       && String(x.subproceso || '') === String(t.subproceso || '')
@@ -455,6 +459,11 @@ export default function Proyectos() {
           bloque: c.bloque, tipo: tipoTarea(c),
           // Sin integrar: una tarea, una norma.
           integrada: false, normas_integradas: [c.norma_id],
+          // El enlace al catálogo y el título original: de ahí salen las horas
+          // teóricas, y sobreviven a que se renombre la tarea.
+          catalogo_id: c.id || null,
+          codigo,
+          titulo_origen: c.subproceso || c.proceso || null,
           orden: i, num_tarea: i + 1,
           fecha_estimada: null, consultor_id: null,
           bloques_ejecucion: [], seguimientos: [],
@@ -988,11 +997,39 @@ export default function Proyectos() {
                       <>
                       <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${selT.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
                         <td className="py-1.5"><input type="checkbox" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
-                        <td className="py-1.5 text-xs font-bold text-brand-verdeTexto">{codigo}</td>
+                        {/* ── Código y nombre, editables ──
+                            En un proyecto de 65 tareas hace falta un código
+                            corto para hablar de ellas en la agenda —«S1 PE1»— y
+                            un nombre que se entienda. Lo pone quien planifica,
+                            según cómo se organice ese cliente.
+
+                            Renombrar NO rompe nada: las horas teóricas salen de
+                            `catalogo_id`, que no se toca. Debajo se ve de qué
+                            tarea del catálogo procede. */}
                         <td className="py-1.5">
-                          <div className="min-w-[220px] max-w-[420px] whitespace-normal break-words font-medium leading-snug">
-                            {t.titulo}
-                          </div>
+                          <input
+                            className="w-[76px] rounded-md border border-transparent bg-transparent px-1 py-0.5 text-xs font-bold text-brand-verdeTexto hover:border-[#1E5468] focus:border-brand-orange focus:bg-[#0B2E3D] focus:outline-none"
+                            value={t.codigo || codigo}
+                            placeholder="S1 PE1"
+                            onChange={(e) => patchTarea(t, { codigo: e.target.value })} />
+                        </td>
+                        <td className="py-1.5">
+                          <input
+                            className="w-full min-w-[220px] max-w-[420px] rounded-md border border-transparent bg-transparent px-1 py-0.5 font-medium leading-snug hover:border-[#1E5468] focus:border-brand-orange focus:bg-[#0B2E3D] focus:outline-none"
+                            value={t.titulo || ''}
+                            onChange={(e) => patchTarea(t, { titulo: e.target.value })} />
+                          {/* La referencia al catálogo, siempre visible: es lo
+                              que garantiza que las horas se comparan contra la
+                              tarea correcta aunque el nombre haya cambiado. */}
+                          <span className="block px-1 text-[10.5px] text-[#5E8494]">
+                            {t.norma_id}
+                            {t.titulo_origen && t.titulo_origen !== t.titulo ? ` · ${t.titulo_origen}` : ''}
+                            {!t.catalogo_id && (
+                              <span className="ml-1 font-bold text-amber-200/80" title="Sin enlace al catálogo: las horas teóricas se buscan por nombre">
+                                sin enlazar
+                              </span>
+                            )}
+                          </span>
                         </td>
 
                         {/* ── Las tres cifras ──
