@@ -20,5 +20,9 @@ echo "── Variables leídas antes de declararse ──"
 python3 scripts/buscar-tdz.py
 
 echo ""
+echo "── Hooks tras un return ──"
+python3 scripts/buscar-hooks.py
+
+echo ""
 echo "── Compilación ──"
 (cd consultify/app && npm run build >/dev/null 2>&1 && echo "  correcta")

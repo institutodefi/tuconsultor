@@ -4616,3 +4616,101 @@ archivo generado.
 
 Tampoco el detalle del historial laboral: la ficha resume el perfil, que es lo
 que corresponde a una página de equipo.
+
+---
+
+# v270 · «Rendered more hooks than during the previous render»
+
+## El fallo
+
+```
+Minified React error #310
+```
+
+Los dos `useMemo` de la vista de calendario quedaron **después** del
+`if (cargando) return …`:
+
+```jsx
+if (cargando) return <p>Cargando agenda…</p>;   // línea 134
+…
+const diasSemana = useMemo(…);                   // línea 168
+```
+
+React exige que un componente ejecute **siempre los mismos hooks en el mismo
+orden**. Colocados ahí, en el primer render no corrían —había return antes— y en
+el segundo sí. La pantalla entera se cae.
+
+Movidos delante del return.
+
+## `scripts/buscar-hooks.py`
+
+Es un error que esbuild no ve y que ya me ha costado una ronda. Lo cazaría
+`eslint-plugin-react-hooks`, pero ese plugin arrastra su propia cadena de
+dependencias, y añadir ESLint ya nos costó **tres despliegues fallidos** por un
+conflicto de versiones. Para una regla concreta sale más barato un detector
+propio.
+
+Probado con un componente que falla y otro correcto: distingue los dos.
+
+## Los cuatro detectores
+
+```
+ESLint    variables y componentes sin declarar     0
+efectos   useEffect que devuelve algo que no limpia 0
+tdz       variables leídas antes de declararse      0
+hooks     hooks tras un return                      0
+```
+
+Todos cazan errores que **compilan sin una queja y revientan en producción**.
+Van juntos en `scripts/comprobar.sh`, que paso antes de cada entrega.
+
+---
+
+# v271 · Las reglas comerciales, a la vista · y ninguna tarea integrada
+
+## 1 · CECE: 88 tareas, una a una
+
+Quedaba `generarTareas()`, una copia antigua del volcado que **fusionaba tareas
+de varias normas** en una sola con título «… - Integrada 9001 14001 27001». Ya
+no se llamaba desde ningún sitio, pero seguía ahí.
+
+Retirada. Y los títulos pasan a ser simples —`subproceso · norma`— sin marcar
+integraciones.
+
+Integrar o no lo decide el consultor mirando la organización, tarea a tarea. Dar
+por hecho que las tareas parecidas de sistemas distintos son la misma es
+precisamente lo que no se puede automatizar.
+
+## 2 · Repaso de todas las reglas comerciales
+
+Estaban dentro de `calcEngine.js`. **Migración `v112`** con la tabla
+`reglas_comerciales` y las dieciséis que había, con sus valores actuales:
+aplicarla no cambia ningún precio.
+
+| Grupo | Qué contiene |
+|---|---|
+| **Tarifas** | J1 30 € · J2 40 € · J3 55 € · Senior 75 € |
+| **Margen** | margen 60 % · IVA 21 % |
+| **Descuentos** | pago único 5 % · volumen 5/10/15 % · tope 15 % |
+| **Mínimos** | suelo por sistema 350 €/mes |
+| **Servicios** | acompañamiento a auditoría 600 €/jornada · pago adelantado 11×12 |
+| **Otros** | porcentaje productivo 70 % |
+
+### Cómo se comportan
+
+**Las lee todo el equipo**, las **edita Administración**. Saber a qué tarifa se
+factura una hora es información de trabajo; cambiarla es una decisión de
+negocio.
+
+**Con topes por regla.** Un margen del 900 % o una tarifa negativa son un error
+de tecleo, y sin límite se propagan a todas las ofertas.
+
+**Con rastro de cambios.** Si dentro de seis meses una oferta parece rara, hay
+que poder ver qué valía esa regla y quién la cambió.
+
+**Y con respaldo.** Si la tabla no responde —migración sin aplicar, consulta
+caída— el motor usa sus constantes. Un sistema que deja de dar precios porque
+falla una consulta es peor que uno que da el precio de ayer.
+
+Sin la migración aplicada, la pantalla lo dice y **enseña igualmente los valores
+internos**, para que se sepan aunque no se puedan tocar.

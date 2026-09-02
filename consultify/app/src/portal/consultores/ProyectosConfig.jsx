@@ -307,6 +307,19 @@ export default function Proyectos() {
     return delCatalogo > 0 ? delCatalogo : (Number(t.horas) || 0);
   }, [catalogo, modelo]);
 
+  /**
+   * El título de una tarea al volcarla.
+   *
+   * Antes se usaba `codigoTareaIntegrada`, que fusionaba varias normas en un
+   * título tipo «… - Integrada 9001 14001 27001». Eso daba por hecho que las
+   * tareas parecidas de sistemas distintos son la misma, y no lo son: integrar
+   * o no lo decide el consultor mirando la organización, tarea a tarea.
+   *
+   * Cada tarea lleva su norma y su subproceso, y nada más.
+   */
+  const tituloTarea = useCallback((c) =>
+    [c.subproceso || c.proceso, c.norma_id].filter(Boolean).join(' · '), []);
+
   const volcandoRef = useRef(false);
 
   useEffect(() => {
@@ -315,8 +328,7 @@ export default function Proyectos() {
     // Solo lo que falte: si ya están todas, no hay nada que hacer.
     const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
     const faltan = candidatas.filter((c) => !yaEstan.has(
-      codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas)
-        .trim().toUpperCase()));
+      tituloTarea(c).trim().toUpperCase()));
     if (!faltan.length) return;
 
     volcandoRef.current = true;
@@ -485,40 +497,9 @@ export default function Proyectos() {
    * después con lo que se programe. Lo que no se decide aquí es CUÁNDO: eso lo
    * pone quien va a hacer el trabajo, sesión a sesión.
    */
-  async function generarTareas() {
-    if (!proyecto || !cliente) return;
-    setMsg(null);
-    try {
-      const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
-      let n = 0;
-      for (const [i, c] of candidatas.entries()) {
-        const titulo = codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas);
-        // No duplicar: volver a pulsar completa, no repite.
-        if (yaEstan.has(titulo.trim().toUpperCase())) continue;
-        await insertRow('cliente_tareas', {
-          cliente_id: cliente.id, proyecto_id: proyecto.id,
-          norma_id: c.norma_id, modelo,
-          proceso: c.proceso, subproceso: c.subproceso,
-          titulo,
-          horas: c.horas,            // ← las comprometidas, no se editan después
-          bloque: c.bloque, tipo: tipoTarea(c),
-          integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
-          orden: i, num_tarea: i + 1,
-          // Sin fecha ni consultor: se decide al programar.
-          fecha_estimada: null, consultor_id: null,
-          bloques_ejecucion: [], seguimientos: [],
-          fecha_real: null, hecha: false,
-        });
-        n += 1;
-      }
-      cargar();
-      setMsg(n
-        ? `${n} tarea(s) volcadas con sus horas. Ábrelas para programarlas.`
-        : 'Todas las tareas del modelo ya estaban en el proyecto.');
-    } catch (e) {
-      setMsg(`No se pudo volcar: ${e?.message || e}`);
-    }
-  }
+  // `generarTareas()` retirada: era una copia antigua que fusionaba tareas
+  // de varias normas en una sola. Integrar o no lo decide el consultor, tarea
+  // a tarea, no un volcado automático.
 
   async function generarYDistribuir() {
     if (!proyecto || !cliente) return;
@@ -532,7 +513,7 @@ export default function Proyectos() {
         cliente_id: cliente.id, proyecto_id: proyecto.id,
         norma_id: c.norma_id, modelo,
         proceso: c.proceso, subproceso: c.subproceso,
-        titulo: codigoTareaIntegrada(cliente.empresa, modelo, c.proceso, c.subproceso, c.normas_integradas),
+        titulo: tituloTarea(c),
         horas: c.horas, bloque: c.bloque, tipo: tipoTarea(c),
         integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
         consultor_id: proyecto.consultor_1_id || null, orden: i, num_tarea: i + 1,

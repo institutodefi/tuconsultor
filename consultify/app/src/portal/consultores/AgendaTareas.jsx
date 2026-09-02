@@ -131,31 +131,11 @@ export default function AgendaTareas() {
     } catch (e) { setMsg({ err: true, t: `${e?.message || e}` }); }
   }
 
-  if (cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando agenda…</p>;
-
-  const activas = tareas.filter((t) => t.estado !== 'anulada' && t.estado !== 'hecha');
-  const hoy = hoyISO();
-  const atrasadas = activas.filter((t) => t.fecha && t.fecha < hoy);
-  const sinFecha = activas.filter((t) => !t.fecha);
-  const proximas = activas.filter((t) => t.fecha && t.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  const porDia = proximas.reduce((m, t) => { (m[t.fecha] = m[t.fecha] || []).push(t); return m; }, {});
-
-  // Las sesiones, por día. Son las que llevan hora de inicio y fin: sin ellas
-  // la agenda enseñaba qué hay que hacer pero no cuándo ni cuánto ocupa.
-  const sesionesPorDia = sesiones.reduce((m, s) => {
-    const d = String(s.fecha).slice(0, 10);
-    (m[d] = m[d] || []).push(s);
-    return m;
-  }, {});
-  for (const d of Object.keys(sesionesPorDia)) {
-    sesionesPorDia[d].sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
-  }
-  const nombreDe = (id) => {
-    const p = perfiles.find((x) => String(x.id) === String(id));
-    return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : 'sin asignar';
-  };
-  const horasDelDia = (d) => Math.round((sesionesPorDia[d] || [])
-    .reduce((a, s) => a + (Number(s.horas) || 0), 0) * 10) / 10;
+  // Los `useMemo` van ANTES del return de «Cargando»: React exige que se
+  // ejecuten siempre los mismos hooks en el mismo orden. Colocados después,
+  // en el primer render no corrían y en el segundo sí, y eso lanza el error
+  // #310 —«se han renderizado más hooks que en el render anterior»— que tumba
+  // la pantalla entera.
 
   // ── Vista de calendario ──
   // Semana de lunes a domingo, con las sesiones colocadas por consultor. Es
@@ -185,6 +165,32 @@ export default function AgendaTareas() {
   const sesionesDe = (consultorId, dia) => sesiones.filter((s) =>
     String(s.consultor_id || 'sin') === String(consultorId)
     && String(s.fecha).slice(0, 10) === dia);
+
+  if (cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando agenda…</p>;
+
+  const activas = tareas.filter((t) => t.estado !== 'anulada' && t.estado !== 'hecha');
+  const hoy = hoyISO();
+  const atrasadas = activas.filter((t) => t.fecha && t.fecha < hoy);
+  const sinFecha = activas.filter((t) => !t.fecha);
+  const proximas = activas.filter((t) => t.fecha && t.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const porDia = proximas.reduce((m, t) => { (m[t.fecha] = m[t.fecha] || []).push(t); return m; }, {});
+
+  // Las sesiones, por día. Son las que llevan hora de inicio y fin: sin ellas
+  // la agenda enseñaba qué hay que hacer pero no cuándo ni cuánto ocupa.
+  const sesionesPorDia = sesiones.reduce((m, s) => {
+    const d = String(s.fecha).slice(0, 10);
+    (m[d] = m[d] || []).push(s);
+    return m;
+  }, {});
+  for (const d of Object.keys(sesionesPorDia)) {
+    sesionesPorDia[d].sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+  }
+  const nombreDe = (id) => {
+    const p = perfiles.find((x) => String(x.id) === String(id));
+    return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : 'sin asignar';
+  };
+  const horasDelDia = (d) => Math.round((sesionesPorDia[d] || [])
+    .reduce((a, s) => a + (Number(s.horas) || 0), 0) * 10) / 10;
 
   /** Una sesión con su franja: la hora es el dato que faltaba. */
   const FilaSesion = ({ s }) => (

@@ -8,6 +8,7 @@ import {
 import { NORMAS, MODELO_IDS, calcular, fmtEUR } from '../../lib/calcEngine.js';
 import { COMPLEJIDADES, PERFILES, MAX_EQUIPO } from '../../lib/proyecto.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import TarifasEditables from '../../components/TarifasEditables.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // REGLAS COMERCIALES
@@ -129,6 +130,9 @@ export default function ReglasComerciales() {
 
   return (
     <div className="space-y-5">
+      {/* Tarifas, margen y descuentos: lo que estaba dentro del código. */}
+      <TarifasEditables />
+
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">Comercial</p>
