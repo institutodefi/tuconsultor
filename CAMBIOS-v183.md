@@ -4714,3 +4714,35 @@ falla una consulta es peor que uno que da el precio de ayer.
 
 Sin la migración aplicada, la pantalla lo dice y **enseña igualmente los valores
 internos**, para que se sepan aunque no se puedan tocar.
+
+---
+
+# v272 · La v112 chocaba con una tabla que ya existía
+
+```
+ERROR: 42703: column "clave" of relation "reglas_comerciales" does not exist
+```
+
+`reglas_comerciales` **existe desde la v57** y es otra cosa: reglas
+**condicionales** —por modelo, por norma, por canal, con vigencia y prioridad—
+que se aplican encima del precio ya calculado.
+
+Lo que yo quería guardar son los **parámetros base** del motor: tarifas por
+nivel, margen, suelos, descuentos por volumen. No dependen de ninguna condición.
+
+Meterlos en aquella tabla habría obligado a rellenar columnas de condición
+vacías en cada tarifa, y a que dos cosas distintas compartieran sitio.
+
+## Tabla propia: `parametros_precio`
+
+Renombrada la migración entera, con su histórico y su trigger. **No toca
+`reglas_comerciales`**, que sigue funcionando como estaba.
+
+En la pantalla se llama «Tarifas y parámetros de precio», para que no se
+confunda con las reglas condicionales que ya se editan en esa misma sección.
+
+## Comprobado antes de entregar
+
+Barrido de todas las migraciones buscando colisiones: las dos tablas nuevas y la
+función no existen en ninguna otra. Es la comprobación que me faltó hacer la vez
+anterior.

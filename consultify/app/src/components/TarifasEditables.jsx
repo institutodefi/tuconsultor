@@ -5,7 +5,7 @@ import { can } from '../lib/permisos.js';
 import { POR_DEFECTO, olvidarReglas } from '../lib/reglasComerciales.js';
 
 // ════════════════════════════════════════════════════════════════════════════
-// TARIFAS Y REGLAS DE PRECIO
+// TARIFAS Y PARÁMETROS DE PRECIO
 //
 // Lo que estaba dentro del código: tarifas por nivel, margen, descuentos,
 // suelos. Ahora se ve y se edita.
@@ -45,8 +45,8 @@ export default function TarifasEditables() {
 
   const cargar = async () => {
     const [r, hist] = await Promise.all([
-      listTable('reglas_comerciales').catch(() => null),
-      listTable('reglas_comerciales_historico').catch(() => []),
+      listTable('parametros_precio').catch(() => null),
+      listTable('parametros_precio_historico').catch(() => []),
     ]);
     setFilas(r);
     setHistorico((hist || []).sort((a, b) => String(b.cuando).localeCompare(String(a.cuando))).slice(0, 8));
@@ -78,8 +78,8 @@ export default function TarifasEditables() {
         fallos.push(`${f.etiqueta}: fuera de ${f.minimo}–${f.maximo}`);
         continue;
       }
-      try { await updateRow('reglas_comerciales', clave, { valor: n }, 'clave'); }
-      catch (e) { fallos.push(`${f.etiqueta}: ${explicarErrorBd(e, 'reglas_comerciales')}`); }
+      try { await updateRow('parametros_precio', clave, { valor: n }, 'clave'); }
+      catch (e) { fallos.push(`${f.etiqueta}: ${explicarErrorBd(e, 'parametros_precio')}`); }
     }
     setBorrador({});
     olvidarReglas();          // el motor vuelve a leerlas
@@ -93,7 +93,7 @@ export default function TarifasEditables() {
   if (filas === null) {
     return (
       <div className="card">
-        <h3 className="text-[15px] font-extrabold text-[#EAF4F7]">Tarifas y reglas de precio</h3>
+        <h3 className="text-[15px] font-extrabold text-[#EAF4F7]">Tarifas y parámetros de precio</h3>
         <p className="mt-1.5 text-[13px] font-bold text-amber-200">
           Falta aplicar la migración v112 en Supabase.
         </p>
@@ -116,7 +116,7 @@ export default function TarifasEditables() {
     <div className="card space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h3 className="text-[15px] font-extrabold text-[#EAF4F7]">Tarifas y reglas de precio</h3>
+          <h3 className="text-[15px] font-extrabold text-[#EAF4F7]">Tarifas y parámetros de precio</h3>
           <p className="mt-0.5 text-[12px] text-[#9FC0CB]">
             De aquí sale el precio de cada oferta.
             {puedeEditar

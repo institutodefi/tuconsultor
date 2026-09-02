@@ -1,8 +1,13 @@
 // ════════════════════════════════════════════════════════════════════════════
-// LAS REGLAS COMERCIALES, LEÍDAS DE LA BASE
+// LOS PARÁMETROS DE PRECIO, LEÍDOS DE LA BASE
 //
 // Tarifas, margen, descuentos y suelos vivían dentro de `calcEngine.js`. Ahora
-// están en `reglas_comerciales` y se pueden editar sin desplegar.
+// están en `parametros_precio` y se pueden editar sin desplegar.
+//
+// No confundir con `reglas_comerciales`, que existe desde la v57 y es otra
+// cosa: reglas CONDICIONALES —por modelo, por norma, por canal, con vigencia—
+// que se aplican encima del precio ya calculado. Esto son los parámetros base,
+// que no dependen de ninguna condición.
 //
 // Con una condición: si la tabla no responde —migración sin aplicar, sesión
 // caída— se usan las constantes del motor. Un sistema que deja de dar precios
@@ -33,7 +38,7 @@ export const POR_DEFECTO = {
 export async function cargarReglas() {
   if (cache) return cache;
   if (cargando) return cargando;
-  cargando = listTable('reglas_comerciales')
+  cargando = listTable('parametros_precio')
     .then((filas) => {
       const m = { ...POR_DEFECTO };
       for (const f of filas || []) {

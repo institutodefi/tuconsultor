@@ -1,5 +1,14 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- v112 · LAS REGLAS COMERCIALES, VISIBLES Y EDITABLES
+-- v112 · LOS PARÁMETROS DE PRECIO, VISIBLES Y EDITABLES
+--
+-- OJO con el nombre: `reglas_comerciales` YA EXISTE desde la v57 y es otra
+-- cosa —reglas condicionales con vigencia, canal y prioridad, que se aplican
+-- ENCIMA del precio—. Esto son los parámetros BASE del motor: tarifas por
+-- nivel, margen, suelos, descuentos por volumen. No dependen de ninguna
+-- condición, así que meterlos en aquella tabla obligaría a rellenar columnas
+-- de condición vacías en cada tarifa.
+--
+-- Tabla propia: `parametros_precio`.
 --
 -- Hasta ahora vivían dentro de `calcEngine.js`: tarifas por nivel, margen,
 -- suelo por sistema, descuentos por volumen, descuento por pago único, precio
@@ -16,7 +25,7 @@
 -- haya aplicado, en lugar de dejar de dar precios.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-create table if not exists public.reglas_comerciales (
+create table if not exists public.parametros_precio (
   clave       text primary key,
   valor       numeric(12,4) not null,
   -- Para agrupar en la pantalla y para saber qué mueve cada una.
@@ -35,13 +44,13 @@ create table if not exists public.reglas_comerciales (
   actualizado_por uuid references public.perfiles(id) on delete set null
 );
 
-comment on table public.reglas_comerciales is
-  'Tarifas, márgenes y descuentos que fijan el precio. Las lee el motor de cálculo; las edita Administración.';
+comment on table public.parametros_precio is
+  'Parámetros base del motor: tarifas, margen, suelos y descuentos por volumen. Distinto de reglas_comerciales, que son condicionales.';
 
 -- ── Los valores actuales del motor ─────────────────────────────────────────
 -- Se insertan tal y como están hoy en `calcEngine.js`: aplicar esta migración
 -- NO cambia ningún precio.
-insert into public.reglas_comerciales (clave, valor, grupo, etiqueta, descripcion, unidad, minimo, maximo, orden) values
+insert into public.parametros_precio (clave, valor, grupo, etiqueta, descripcion, unidad, minimo, maximo, orden) values
   ('tarifa_j1',      30, 'tarifas', 'Tarifa J1',      'Coste por hora de un consultor J1.',            'euros', 10, 300, 10),
   ('tarifa_j2',      40, 'tarifas', 'Tarifa J2',      'Coste por hora de un consultor J2.',            'euros', 10, 300, 20),
   ('tarifa_j3',      55, 'tarifas', 'Tarifa J3',      'Coste por hora de un consultor J3.',            'euros', 10, 300, 30),
@@ -66,29 +75,29 @@ insert into public.reglas_comerciales (clave, valor, grupo, etiqueta, descripcio
 on conflict (clave) do nothing;
 
 -- ── Quién las ve y quién las toca ──────────────────────────────────────────
-alter table public.reglas_comerciales enable row level security;
+alter table public.parametros_precio enable row level security;
 
 -- Las LEE todo el equipo: saber a qué tarifa se factura una hora es información
 -- de trabajo, no un secreto. Y el motor las necesita para calcular.
-drop policy if exists rc_lectura on public.reglas_comerciales;
-create policy rc_lectura on public.reglas_comerciales for select to authenticated
+drop policy if exists pp_lectura on public.parametros_precio;
+create policy pp_lectura on public.parametros_precio for select to authenticated
   using (coalesce(public.mi_rol(), '') in
          ('superadmin','admin','director','consultor','gestion'));
 
 -- Las EDITA Administración. Cambiar una tarifa mueve el precio de todas las
 -- ofertas que se preparen a partir de ese momento: es una decisión de negocio.
-drop policy if exists rc_escritura on public.reglas_comerciales;
-create policy rc_escritura on public.reglas_comerciales for update to authenticated
+drop policy if exists pp_escritura on public.parametros_precio;
+create policy pp_escritura on public.parametros_precio for update to authenticated
   using (coalesce(public.mi_rol(), '') in ('superadmin','admin'))
   with check (coalesce(public.mi_rol(), '') in ('superadmin','admin'));
 
-grant select on public.reglas_comerciales to authenticated;
-grant update on public.reglas_comerciales to authenticated;
+grant select on public.parametros_precio to authenticated;
+grant update on public.parametros_precio to authenticated;
 
 -- ── Rastro de cambios ──────────────────────────────────────────────────────
 -- Si dentro de seis meses una oferta parece rara, hay que poder ver qué valía
 -- esa regla el día que se emitió y quién la cambió.
-create table if not exists public.reglas_comerciales_historico (
+create table if not exists public.parametros_precio_historico (
   id          uuid primary key default gen_random_uuid(),
   clave       text not null,
   valor_antes numeric(12,4),
@@ -97,19 +106,19 @@ create table if not exists public.reglas_comerciales_historico (
   cuando      timestamptz not null default now()
 );
 
-create index if not exists rch_clave on public.reglas_comerciales_historico (clave, cuando desc);
+create index if not exists pph_clave on public.parametros_precio_historico (clave, cuando desc);
 
-alter table public.reglas_comerciales_historico enable row level security;
-drop policy if exists rch_lectura on public.reglas_comerciales_historico;
-create policy rch_lectura on public.reglas_comerciales_historico for select to authenticated
+alter table public.parametros_precio_historico enable row level security;
+drop policy if exists pph_lectura on public.parametros_precio_historico;
+create policy pph_lectura on public.parametros_precio_historico for select to authenticated
   using (coalesce(public.mi_rol(), '') in ('superadmin','admin','director'));
-grant select on public.reglas_comerciales_historico to authenticated;
+grant select on public.parametros_precio_historico to authenticated;
 
-create or replace function public.registrar_cambio_regla()
+create or replace function public.registrar_cambio_parametro()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if new.valor is distinct from old.valor then
-    insert into public.reglas_comerciales_historico (clave, valor_antes, valor_nuevo, quien)
+    insert into public.parametros_precio_historico (clave, valor_antes, valor_nuevo, quien)
     values (new.clave, old.valor, new.valor, auth.uid());
     new.actualizado := now();
     new.actualizado_por := auth.uid();
@@ -117,11 +126,11 @@ begin
   return new;
 end $$;
 
-drop trigger if exists trg_regla_historico on public.reglas_comerciales;
-create trigger trg_regla_historico
-  before update on public.reglas_comerciales
-  for each row execute function public.registrar_cambio_regla();
+drop trigger if exists trg_parametro_historico on public.parametros_precio;
+create trigger trg_parametro_historico
+  before update on public.parametros_precio
+  for each row execute function public.registrar_cambio_parametro();
 
 notify pgrst, 'reload schema';
 
-select 'v112 aplicada' as ok, count(*) as reglas from public.reglas_comerciales;
+select 'v112 aplicada' as ok, count(*) as parametros from public.parametros_precio;
