@@ -4,6 +4,7 @@ import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
+import CuadroTareas from '../../components/CuadroTareas.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // INICIO · lo primero que ve cualquiera al entrar
@@ -158,6 +159,10 @@ export default function Inicio() {
           Aquí y no en una pantalla interior: es lo primero que alguien necesita
           saber al entrar, y esconderlo en un menú es como no tenerlo. */}
       <MisProyectos />
+
+      {/* Cómo van las horas en conjunto. Debajo de los proyectos: primero qué
+          llevo, luego si voy bien de tiempo. */}
+      <CuadroTareas titulo="Cuadro de tareas" />
 
       {/* ── Accesos directos ── */}
       <div>

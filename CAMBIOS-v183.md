@@ -4381,3 +4381,144 @@ horaria real.
 
 URL: `/api/agenda-feed?c=<perfil_id>&t=<token>`, con `AGENDA_FEED_TOKEN` en
 Netlify.
+
+---
+
+# v265 · Un solo cuadro de tareas
+
+## Eran dos listas de lo mismo
+
+**«Tareas resultantes»** era una previsualización de lo que el catálogo iba a
+dar: no se podía tocar. **«Tareas distribuidas»** eran las tareas de verdad, con
+su código y su calendario.
+
+Dos listas de lo mismo, una sin poder editar y otra sí. Y desde que las tareas
+se vuelcan solas al elegir normas y modelo, la previsualización enseñaba durante
+un segundo lo que aparecía justo debajo.
+
+Fuera. Queda **un cuadro**, «Tareas resultantes», con las tareas reales:
+
+```
+Código    Tarea                        Teóricas  Programadas  Ejecutadas
+S1 PE1    Gestión del contexto y GI       6 h      6 h           4 h
+          14001 · Análisis del contexto            2 sesiones           calendario
+```
+
+De cada una cuelga su codificación, su nombre y su programación, que es lo que
+pedías.
+
+El aviso de «el catálogo no da nada» pasa a la sección de normas, que es donde
+se buscaría el motivo.
+
+## Comprobada la agenda agregada
+
+La del equipo —**Superadministración, Administración y Dirección de proyecto**—
+muestra por día:
+
+- **franja horaria** de cada sesión y sus horas
+- **total del día**, que es lo que dice si una jornada está llena
+- código, nombre y norma de la tarea
+- **quién la tiene**
+- las ejecutadas marcadas
+
+Consultoría no la ve: reparte trabajo de otras personas, así que es de quien lo
+reparte. Tiene la suya en «Mi agenda» y sus proyectos en Inicio.
+
+---
+
+# v266 · La tarea se edita desde donde se está mirando
+
+## Dentro del calendario
+
+El diálogo de sesiones lleva ahora **«✎ Cambiar código o nombre»**. Quien abre
+el calendario de una tarea es quien está planificando: obligarle a cerrar,
+buscarla en la tabla, cambiarle el nombre y volver a abrirla es un viaje sin
+motivo.
+
+Y se dice lo que no cambia:
+
+> Sigue vinculada a 14001 · Análisis del contexto: las horas comprometidas no
+> cambian.
+
+Porque es la duda razonable al renombrar algo que sirve para comparar horas.
+
+## Desde las dos agendas
+
+**Agenda del equipo**: el nombre de cada sesión abre su tarea, con código,
+nombre y todas sus sesiones.
+
+**Mi agenda**: bloque nuevo `MisSesiones` con la agenda real —franja horaria,
+horas y total del día—, y lo mismo al pulsar.
+
+La lista que ya había son tareas con fecha, que es otra cosa: no llevan hora ni
+suman horas.
+
+### Además, lo que ya pasó y sigue abierto
+
+Arriba del todo, en rojo:
+
+> 3 sesiones sin cerrar · 9,5 h
+
+Una sesión de la semana pasada sin marcar como hecha no aparecía por ningún
+lado, y es justo lo que descuadra la comparación entre lo ejecutado y lo
+comprometido.
+
+## Por qué importa
+
+Se ve una sesión, se detecta que el nombre está mal o que falta media hora, y
+hasta ahora había que ir a Proyectos, buscar el proyecto, buscar la tarea entre
+sesenta y cinco y abrirla. Nadie hace ese viaje: el dato se quedaba sin
+corregir.
+
+---
+
+# v267 · Cuadro de mando de tareas
+
+Un componente, dos alcances: **global** en Inicio y **por proyecto** en su ficha,
+desglosado por norma.
+
+## Las tres cifras, siempre las mismas
+
+| | |
+|---|---|
+| **Teóricas** | lo que el catálogo asigna. Es lo que se ofertó y el único número que no se mueve |
+| **Programadas** | la suma de las sesiones en calendario |
+| **Ejecutadas** | la suma de las sesiones cerradas |
+
+Las teóricas se leen del catálogo por `catalogo_id`, así que renombrar una tarea
+no altera la comparación.
+
+## Dos barras, no una
+
+Son dos preguntas distintas y pueden ir en sentidos opuestos:
+
+- **Programado sobre comprometido** — ¿cabe el trabajo? Si va al 40 % faltan
+  horas por llevar al calendario; si pasa del 100 % se ha planificado de más y
+  la barra se pone roja.
+- **Ejecutado** — ¿se está cumpliendo?
+
+Un proyecto puede estar programado al 100 % y ejecutado al 20 %: con una sola
+barra eso no se ve.
+
+## Estado de cada tarea
+
+```
+38 sin programar · 21 faltan horas · 4 pasadas de horas · 52 completadas
+Quedan 174 h sin llevar al calendario.
+```
+
+«Faltan horas» y «pasadas» llevan medio punto de margen: una tarea de 8 h con
+7,8 programadas está bien, no corta.
+
+## Qué ve cada uno
+
+Consultoría solo cuenta **sus** proyectos: el estado de la cartera entera no le
+sirve y le enseña clientes que no lleva. Administración y dirección ven todo.
+
+## El desglose
+
+En el global, por cliente y proyecto, con los días que quedan hasta la
+certificación cuando son menos de sesenta. Se puede cambiar a ver por norma.
+
+En un proyecto concreto, siempre por norma: es donde importa saber si la 14001
+va más retrasada que la 9001.

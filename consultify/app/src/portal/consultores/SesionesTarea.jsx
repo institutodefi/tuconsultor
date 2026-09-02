@@ -44,6 +44,10 @@ export default function SesionesTarea({
   // proyecto) y `tareas_programadas` (planificador por contextos); la sesión
   // apunta a una o a otra, nunca a las dos.
   campoTarea = 'tarea_id',
+  // Con qué tabla se guarda la edición del código y el nombre. Solo las de
+  // `cliente_tareas` son editables: las del planificador por contextos llevan
+  // su código generado.
+  editable = false,
 }) {
   const [sesiones, setSesiones] = useState(null);
   const [todas, setTodas] = useState([]);       // de todo el mundo, para ver solapes
@@ -51,6 +55,26 @@ export default function SesionesTarea({
   const [nueva, setNueva] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [sinEquipo, setSinEquipo] = useState(false);
+  // Código y nombre, editables desde aquí. Quien abre el calendario de una
+  // tarea es quien está planificando: obligarle a cerrar, buscarla en la tabla
+  // y volver a abrirla para cambiarle el nombre es un viaje sin motivo.
+  const [edicion, setEdicion] = useState(null);
+  const [guardandoTarea, setGuardandoTarea] = useState(false);
+
+  async function guardarTarea() {
+    if (!edicion) return;
+    setGuardandoTarea(true); setError(null);
+    try {
+      await updateRow('cliente_tareas', tarea.id, {
+        codigo: edicion.codigo?.trim() || null,
+        titulo: edicion.titulo?.trim() || tarea.titulo,
+      });
+      setEdicion(null);
+      onGuardado?.();
+    } catch (e) {
+      setError(explicarErrorBd(e, 'cliente_tareas'));
+    } finally { setGuardandoTarea(false); }
+  }
   const [error, setError] = useState(null);
 
   const cargar = async () => {
@@ -148,6 +172,47 @@ export default function SesionesTarea({
       pie={<button onClick={onCerrar} className="btn-orange !px-4 !py-1.5 text-[13px]">Cerrar</button>}
     >
       <div className="space-y-3">
+        {/* ── Código y nombre ──
+            Se editan aquí porque quien abre el calendario es quien planifica.
+            Renombrar no toca la referencia al catálogo: las horas teóricas
+            siguen saliendo de la misma tarea del sistema de gestión. */}
+        {editable && (
+          edicion ? (
+            <div className="rounded-xl border border-brand-orange/50 bg-[#0D3242] p-3">
+              <div className="flex flex-wrap gap-2">
+                <div className="campo !w-32">
+                  <label className="label" htmlFor="st-cod">Código</label>
+                  <input id="st-cod" className="input !py-1.5 !text-[13px]" value={edicion.codigo}
+                    placeholder="S1 PE1"
+                    onChange={(e) => setEdicion({ ...edicion, codigo: e.target.value })} />
+                </div>
+                <div className="campo min-w-[240px] flex-1">
+                  <label className="label" htmlFor="st-tit">Nombre de la tarea</label>
+                  <input id="st-tit" className="input !py-1.5 !text-[13px]" value={edicion.titulo}
+                    onChange={(e) => setEdicion({ ...edicion, titulo: e.target.value })} />
+                </div>
+              </div>
+              <p className="mt-1 text-[11px] text-[#7FA7B4]">
+                Sigue vinculada a {contexto?.norma || 'su norma'}
+                {tarea?.subproceso ? ` · ${tarea.subproceso}` : ''}: las horas comprometidas no cambian.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button onClick={guardarTarea} disabled={guardandoTarea}
+                  className="btn-orange !px-4 !py-1.5 text-[13px] disabled:opacity-50">
+                  {guardandoTarea ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button onClick={() => { setEdicion(null); setError(null); }}
+                  className="btn-ghost !px-3 !py-1.5 text-[13px]">Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setEdicion({ codigo: tarea?.codigo || '', titulo: tarea?.titulo || '' })}
+              className="text-[12px] font-bold text-[#7FA7B4] hover:text-brand-orange">
+              ✎ Cambiar código o nombre
+            </button>
+          )
+        )}
+
         {/* ── Lo comprometido frente a lo planificado ──
             Las teóricas se enseñan como dato, no como campo: no se editan. */}
         <div className="grid grid-cols-3 gap-2">

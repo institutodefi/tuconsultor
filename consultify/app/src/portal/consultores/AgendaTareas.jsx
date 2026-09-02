@@ -3,6 +3,7 @@ import { listTable, updateRow } from '../../lib/data.js';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
+import SesionesTarea from './SesionesTarea.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AGENDA · la otra cara del planificador
@@ -31,6 +32,10 @@ export default function AgendaTareas() {
   const [verTodoElEquipo, setVerTodoElEquipo] = useState(true);
   const [sesiones, setSesiones] = useState([]);
   const [perfiles, setPerfiles] = useState([]);
+  // Tarea abierta desde la agenda. Se ve una sesión y se quiere cambiar algo:
+  // tener que ir a Proyectos, buscar el proyecto y luego la tarea es un viaje
+  // que nadie hace, así que el dato se queda sin corregir.
+  const [tareaAbierta, setTareaAbierta] = useState(null);
 
   const cargar = useCallback(async () => {
     const [t, c, p, eq, ses, ct, pf] = await Promise.all([
@@ -158,7 +163,12 @@ export default function AgendaTareas() {
       {s.tarea?.codigo && (
         <code className="text-[11px] font-extrabold tracking-wide text-brand-verdeTexto">{s.tarea.codigo}</code>
       )}
-      <span className="min-w-0 flex-1 truncate text-[12px] text-[#DFF1F5]">{s.tarea?.titulo || 'Tarea'}</span>
+      <button onClick={() => s.tarea && setTareaAbierta(s.tarea)}
+        disabled={!s.tarea}
+        className="min-w-0 flex-1 truncate text-left text-[12px] text-[#DFF1F5] hover:text-brand-orange hover:underline disabled:hover:text-[#DFF1F5] disabled:hover:no-underline"
+        title="Abrir la tarea: código, nombre y sesiones">
+        {s.tarea?.titulo || 'Tarea'}
+      </button>
       {s.tarea?.norma_id && <span className="chip !px-1.5 !py-0 text-[9.5px]">{s.tarea.norma_id}</span>}
       <span className="truncate text-[10.5px] text-[#7FA7B4]">{nombreDe(s.consultor_id)}</span>
       {s.estado === 'hecha' && <span className="text-[10.5px] font-bold text-emerald-300">hecha</span>}
@@ -255,6 +265,20 @@ export default function AgendaTareas() {
           <h2 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Sin programar · {sinFecha.length}</h2>
           <ul className="space-y-1">{sinFecha.map((t) => <Fila key={t.id} t={t} />)}</ul>
         </section>
+      )}
+      {tareaAbierta && (
+        <SesionesTarea
+          tarea={{
+            id: tareaAbierta.id, titulo: tareaAbierta.titulo, codigo: tareaAbierta.codigo,
+            horas_teoricas: tareaAbierta.horas, subproceso: tareaAbierta.subproceso,
+          }}
+          contexto={{ norma: tareaAbierta.norma_id }}
+          proyectoId={tareaAbierta.proyecto_id}
+          campoTarea="cliente_tarea_id"
+          editable
+          onCerrar={() => setTareaAbierta(null)}
+          onGuardado={cargar}
+        />
       )}
     </div>
   );

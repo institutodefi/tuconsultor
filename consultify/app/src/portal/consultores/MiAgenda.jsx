@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
 import ResumenAgenda from './ResumenAgenda.jsx';
 import MisProyectos from '../../components/MisProyectos.jsx';
+import MisSesiones from '../../components/MisSesiones.jsx';
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const YEAR = new Date().getFullYear();
@@ -107,6 +108,10 @@ export default function MiAgenda() {
           dirección y administración entran directos a la agenda —el `index` de
           la ruta los redirige— y nunca llegaban a ver el panel donde estaba
           este bloque. Un componente que nadie ve es como no tenerlo. */}
+      {/* Las sesiones con su franja horaria: es la agenda de verdad. La lista
+          de abajo son tareas con fecha, que es otra cosa. */}
+      <MisSesiones />
+
       <MisProyectos />
 
       <div className="flex flex-wrap items-end justify-between gap-3">

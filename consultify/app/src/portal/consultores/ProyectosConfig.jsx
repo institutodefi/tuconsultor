@@ -11,6 +11,7 @@ import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 import DashboardProyectos from './DashboardProyectos.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
+import CuadroTareas from '../../components/CuadroTareas.jsx';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -648,7 +649,7 @@ export default function Proyectos() {
           contexto={{ norma: abierta.norma_id }}
           fechaCertificacion={fechas?.certificacion || proyecto?.fecha_limite || null}
           proyectoId={proyecto?.id}
-          campoTarea="cliente_tarea_id"
+          campoTarea="cliente_tarea_id" editable
           onCerrar={() => setAbierta(null)}
           onGuardado={() => listTable('tarea_sesiones').then(setSesiones).catch(() => {})}
         />
@@ -773,6 +774,9 @@ export default function Proyectos() {
             />
           </div>
 
+          {/* Cómo va este proyecto, desglosado por norma. */}
+          <CuadroTareas proyectoId={proyecto.id} titulo="Cómo van las horas" />
+
           <div className="card">
             <h4 className="font-extrabold">Normas y modelo del proyecto</h4>
             <p className="mt-1 text-sm font-medium text-[#9FC0CB]">ISO 9001 va siempre. Solo se mostrarán las tareas de las normas y el modelo elegidos.</p>
@@ -855,78 +859,32 @@ export default function Proyectos() {
               lleva sus tareas por separado y no se fusionan. */}
 
 
-          {/* Vista previa de la configuración */}
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <h4 className="font-extrabold">Tareas resultantes ({candidatas.length})</h4>
-              <span className="text-sm font-bold text-[#EAF4F7]">{fmtH(totalHoras)}</span>
-            </div>
-            <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
-              Cada tarea con su sistema. No se agrupan ni se fusionan: una tarea de la 9001
-              y otra de la 14001 son trabajos distintos aunque se parezcan.
-            </p>
+          {/* El cuadro de «Tareas resultantes» que había aquí era una
+              PREVISUALIZACIÓN de lo que el catálogo iba a dar, y convivía con
+              el de «Tareas distribuidas», que eran las tareas de verdad. Dos
+              listas de lo mismo: una que no se podía tocar y otra que sí.
 
-            {/* Cuando no sale ninguna tarea hay que decir POR QUÉ. «Tareas
-                resultantes (0)» sin más parece un fallo, y lo normal es que el
-                catálogo no tenga nada cargado para esa combinación de norma y
-                modelo: son datos que se rellenan en «Sistemas de gestión». */}
-            {candidatas.length === 0 && normasSel.length > 0 && (
-              <p className="mt-3 rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2.5 text-[12.5px] font-bold text-amber-200">
-                El catálogo no tiene tareas con horas para {modelo} en estas normas.
-                <span className="ml-1 font-medium text-[#DFF1F5]">
-                  Rellénalas en «Sistemas de gestión» y entrarán solas.
-                </span>
-              </p>
-            )}
-            <div className="mt-3 max-h-80 overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#10394A]">
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-                    <th className="py-2">Sistema</th><th className="py-2">Tarea</th><th className="py-2">Tipo</th><th className="py-2 text-right">Horas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-navy-50">
-                  {candidatas.map((c, i) => (
-                    <tr key={`${c.norma_id}-${c.proceso}-${c.subproceso}-${i}`}>
-                      {/* La etiqueta del sistema, primero: es lo que dice a qué
-                          norma pertenece cada tarea de un vistazo. */}
-                      <td className="py-1.5">
-                        <span className="chip !px-2 !py-0.5 bg-brand-verde/15 text-[10.5px] font-extrabold text-brand-verdeTexto">
-                          {NORMA_BY_ID[c.norma_id]?.nombre || c.norma_id}
-                        </span>
-                      </td>
-                      <td className="py-1.5 font-medium">
-                        {c.subproceso || c.proceso}
-                        {c.proceso && c.subproceso && (
-                          <span className="block text-[11px] font-normal text-[#7FA7B4]">{c.proceso}</span>
-                        )}
-                      </td>
-                      <td className="py-1.5 text-[12px]">{TIPO_LABEL[tipoTarea(c)]}</td>
-                      <td className="py-1.5 text-right">{fmtH(c.horas)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* El botón de «distribuir por meses» se ha retirado: repartía las
-                tareas por el calendario sin preguntar a nadie, y programar es
-                una decisión de la persona que va a hacer el trabajo, no un
-                reparto automático. Las tareas se generan y luego se programan
-                una a una, con sus sesiones. */}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className="text-[12px] text-[#7FA7B4]">
-                Las tareas del modelo entran solas al elegir las normas.
-                {candidatas.length > 0 && ` ${candidatas.length} en total.`}
+              Ahora hay una sola, la de abajo, con las tareas reales del
+              proyecto. Se vuelcan solas al elegir normas y modelo, así que la
+              previsualización no aportaba nada que no se viera un segundo
+              después. */}
+
+          {/* Sin tareas y con normas elegidas: el catálogo no da nada para esa
+              combinación. Se dice aquí, que es donde se buscaría. */}
+          {tareasProyecto.length === 0 && normasSel.length > 0 && (
+            <p className="rounded-xl border border-amber-300/40 bg-amber-400/[0.07] px-3 py-2.5 text-[12.5px] font-bold text-amber-200">
+              El catálogo no tiene tareas con horas para {modelo} en estas normas.
+              <span className="ml-1 font-medium text-[#DFF1F5]">
+                Rellénalas en «Sistemas de gestión» y entrarán solas.
               </span>
-              {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
-            </div>
-          </div>
+            </p>
+          )}
 
-          {/* Tareas ya distribuidas */}
+          {/* Las tareas del proyecto: código, nombre y programación */}
           {tareasProyecto.length > 0 && (
             <div className="card">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="font-extrabold">Tareas distribuidas ({tareasProyecto.length})</h4>
+                <h4 className="font-extrabold">Tareas resultantes ({tareasProyecto.length})</h4>
                 <div className="flex items-center gap-3">
                   {msg && <span className="text-sm font-bold text-[#B9D2DA]">{msg}</span>}
                   {/* «Distribuir agenda» retirado: volcaba las tareas al
