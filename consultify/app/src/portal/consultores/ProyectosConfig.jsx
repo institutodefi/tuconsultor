@@ -320,15 +320,34 @@ export default function Proyectos() {
   const tituloTarea = useCallback((c) =>
     [c.subproceso || c.proceso, c.norma_id].filter(Boolean).join(' · '), []);
 
+  /**
+   * La IDENTIDAD de una tarea, para no duplicarla.
+   *
+   * Comparar por título fue un error: al cambiar el formato del nombre —de
+   * «… - Integrada 9001 14001» a «subproceso · norma»— el volcado dejó de
+   * reconocer las que ya estaban y las insertó otra vez. Así es como CECE pasó
+   * de 88 a 127 tareas.
+   *
+   * La identidad real es la fila del catálogo de la que sale. Si no hay enlace
+   * —tareas antiguas— se compone con norma, proceso y subproceso, que es lo que
+   * define una tarea en el catálogo. El título nunca entra: es lo único que
+   * cambia.
+   */
+  const identidad = useCallback((x) => {
+    if (x.catalogo_id) return `C:${x.catalogo_id}`;
+    const n = (s) => String(s || '').trim().toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return `K:${n(x.norma_id)}|${n(x.proceso)}|${n(x.subproceso)}`;
+  }, []);
+
   const volcandoRef = useRef(false);
 
   useEffect(() => {
     if (!proyecto || !cliente || volcandoRef.current) return;
     if (!normasSel.length || !modelo || !candidatas.length) return;
     // Solo lo que falte: si ya están todas, no hay nada que hacer.
-    const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
-    const faltan = candidatas.filter((c) => !yaEstan.has(
-      tituloTarea(c).trim().toUpperCase()));
+    const yaEstan = new Set(tareasProyecto.map(identidad));
+    const faltan = candidatas.filter((c) => !yaEstan.has(identidad(c)));
     if (!faltan.length) return;
 
     volcandoRef.current = true;
@@ -453,7 +472,7 @@ export default function Proyectos() {
   /** Inserta las tareas del modelo que aún no estén en el proyecto. Devuelve cuántas. */
   async function volcarTareasQueFalten() {
     if (!proyecto || !cliente || !candidatas.length) return 0;
-    const yaEstan = new Set(tareasProyecto.map((t) => String(t.titulo || '').trim().toUpperCase()));
+    const yaEstan = new Set(tareasProyecto.map(identidad));
     let n = 0;
     for (const [i, c] of candidatas.entries()) {
       // Código legible para la agenda: 9001-03. Corto, dice de qué sistema es
@@ -461,7 +480,9 @@ export default function Proyectos() {
       // por teléfono sin leer un título de ochenta caracteres.
       const codigo = `${c.norma_id}-${String(i + 1).padStart(2, '0')}`;
       const titulo = `${codigo} · ${c.subproceso || c.proceso}`;
-      if (yaEstan.has(titulo.trim().toUpperCase())) continue;
+      // Por identidad, no por título: el título cambia y la tarea es la misma.
+      if (yaEstan.has(identidad(c))) continue;
+      yaEstan.add(identidad(c));   // no repetir dentro del mismo volcado
       try {
         await insertRow('cliente_tareas', {
           cliente_id: cliente.id, proyecto_id: proyecto.id,
@@ -952,11 +973,15 @@ export default function Proyectos() {
                             placeholder="S1 PE1"
                             onChange={(e) => patchTarea(t, { codigo: e.target.value })} />
                         </td>
+                        {/* El NOMBRE no se edita: lo genera el sistema desde el
+                            catálogo. Editable, cada uno escribía el suyo y dos
+                            tareas idénticas de proyectos distintos dejaban de
+                            poder compararse. El código sí se cambia: es la
+                            referencia corta para la agenda y es de cada casa. */}
                         <td className="py-1.5">
-                          <input
-                            className="w-full min-w-[220px] max-w-[420px] rounded-md border border-transparent bg-transparent px-1 py-0.5 font-medium leading-snug hover:border-[#1E5468] focus:border-brand-orange focus:bg-[#0B2E3D] focus:outline-none"
-                            value={t.titulo || ''}
-                            onChange={(e) => patchTarea(t, { titulo: e.target.value })} />
+                          <div className="min-w-[220px] max-w-[420px] whitespace-normal break-words px-1 font-medium leading-snug text-[#EAF4F7]">
+                            {t.titulo}
+                          </div>
                           {/* La referencia al catálogo, siempre visible: es lo
                               que garantiza que las horas se comparan contra la
                               tarea correcta aunque el nombre haya cambiado. */}

@@ -65,10 +65,8 @@ export default function SesionesTarea({
     if (!edicion) return;
     setGuardandoTarea(true); setError(null);
     try {
-      await updateRow('cliente_tareas', tarea.id, {
-        codigo: edicion.codigo?.trim() || null,
-        titulo: edicion.titulo?.trim() || tarea.titulo,
-      });
+      // Solo el código: el título es del catálogo.
+      await updateRow('cliente_tareas', tarea.id, { codigo: edicion.codigo?.trim() || null });
       setEdicion(null);
       onGuardado?.();
     } catch (e) {
@@ -207,16 +205,21 @@ export default function SesionesTarea({
           edicion ? (
             <div className="rounded-xl border border-brand-orange/50 bg-[#0D3242] p-3">
               <div className="flex flex-wrap gap-2">
-                <div className="campo !w-32">
+                <div className="campo !w-40">
                   <label className="label" htmlFor="st-cod">Código</label>
                   <input id="st-cod" className="input !py-1.5 !text-[13px]" value={edicion.codigo}
                     placeholder="S1 PE1"
                     onChange={(e) => setEdicion({ ...edicion, codigo: e.target.value })} />
                 </div>
+                {/* El nombre lo pone el sistema desde el catálogo y no se
+                    edita: si cada uno escribe el suyo, dos tareas idénticas
+                    de proyectos distintos dejan de poder compararse. */}
                 <div className="campo min-w-[240px] flex-1">
-                  <label className="label" htmlFor="st-tit">Nombre de la tarea</label>
-                  <input id="st-tit" className="input !py-1.5 !text-[13px]" value={edicion.titulo}
-                    onChange={(e) => setEdicion({ ...edicion, titulo: e.target.value })} />
+                  <span className="label">Nombre</span>
+                  <div className="input flex items-center bg-[#0A2634] !py-1.5 !text-[13px] text-[#B9D2DA]">
+                    {tarea?.titulo}
+                  </div>
+                  <p className="campo-nota">Lo genera el catálogo. Solo el código es tuyo.</p>
                 </div>
               </div>
               <p className="mt-1 text-[11px] text-[#7FA7B4]">
@@ -235,7 +238,7 @@ export default function SesionesTarea({
           ) : (
             <button onClick={() => setEdicion({ codigo: tarea?.codigo || '', titulo: tarea?.titulo || '' })}
               className="text-[12px] font-bold text-[#7FA7B4] hover:text-brand-orange">
-              ✎ Cambiar código o nombre
+              ✎ Cambiar el código
             </button>
           )
         )}

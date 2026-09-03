@@ -40,7 +40,9 @@ export default function AgendaTareas() {
   // calendario, para «cómo está la semana». Una sola vista obliga a llevar la
   // otra en la cabeza.
   const [vista, setVista] = useState('lista');
-  const [semana, setSemana] = useState(0);   // desplazamiento en semanas
+  // Periodo del calendario y cuántos periodos me he movido desde hoy.
+  const [periodo, setPeriodo] = useState('semana');
+  const [desplaz, setDesplaz] = useState(0);
 
   const cargar = useCallback(async () => {
     const [t, c, p, eq, ses, ct, pf] = await Promise.all([
@@ -138,59 +140,121 @@ export default function AgendaTareas() {
   // la pantalla entera.
 
   // ── Vista de calendario ──
-  // Semana de lunes a domingo, con las sesiones colocadas por consultor. Es
-  // donde se ve de un golpe quién está cargado y qué días quedan libres.
-  const lunesDe = (desplaz) => {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + desplaz * 7);
-    return d;
-  };
-  const diasSemana = useMemo(() => {
-    const l = lunesDe(semana);
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(l); d.setDate(l.getDate() + i);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    });
-  }, [semana]);
+  //
+  // Cuatro periodos, porque son cuatro preguntas distintas:
+  //
+  //   día      ¿cómo está hoy? Franjas horarias, una columna por persona.
+  //   semana   ¿cómo va la semana? Es la vista de trabajo habitual.
+  //   mes      ¿dónde se acumula la carga? Rejilla de días con las horas.
+  //   año      ¿cómo se reparte el año? Doce meses con su total.
+  //
+  // A más rango, menos detalle: en un año no caben las franjas horarias, y
+  // meterlas convertiría la pantalla en ruido.
 
-  // Quién aparece: solo los que tienen algo esa semana. Enseñar quince
-  // columnas vacías no ayuda a nadie.
-  const consultoresSemana = useMemo(() => {
-    const ids = new Set(sesiones
-      .filter((s) => diasSemana.includes(String(s.fecha).slice(0, 10)))
-      .map((s) => String(s.consultor_id || 'sin')));
-    return [...ids];
-  }, [sesiones, diasSemana]);
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+  /** El rango visible según el periodo y el desplazamiento. */
+  const rango = useMemo(() => {
+    // `base` y no `base`: hay otra `base` en el componente y tener dos con el
+    // mismo nombre obliga a mirar el ámbito para saber cuál se está usando.
+    const base = new Date(); base.setHours(0, 0, 0, 0);
+
+    if (periodo === 'dia') {
+      const d = new Date(base); d.setDate(d.getDate() + desplaz);
+      return { dias: [iso(d)], etiqueta: d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) };
+    }
+
+    if (periodo === 'semana') {
+      const l = new Date(base);
+      l.setDate(l.getDate() - ((l.getDay() + 6) % 7) + desplaz * 7);   // lunes
+      const dias = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(l); d.setDate(l.getDate() + i); return iso(d);
+      });
+      const f = new Date(`${dias[6]}T12:00:00`);
+      return {
+        dias,
+        etiqueta: `${l.getDate()} ${l.toLocaleDateString('es-ES', { month: 'short' })} – ${f.getDate()} ${f.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}`,
+      };
+    }
+
+    if (periodo === 'mes') {
+      const m = new Date(base.getFullYear(), base.getMonth() + desplaz, 1);
+      const ultimo = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+      return {
+        dias: Array.from({ length: ultimo }, (_, i) => iso(new Date(m.getFullYear(), m.getMonth(), i + 1))),
+        etiqueta: m.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+        // Hueco inicial para que el día 1 caiga en su columna de la semana.
+        offset: (new Date(m.getFullYear(), m.getMonth(), 1).getDay() + 6) % 7,
+      };
+    }
+
+    // Año: se trabaja por meses, no por días.
+    const y = base.getFullYear() + desplaz;
+    return {
+      meses: Array.from({ length: 12 }, (_, i) => `${y}-${String(i + 1).padStart(2, '0')}`),
+      etiqueta: String(y),
+      dias: [],
+    };
+  }, [periodo, desplaz]);
+
+  /** Horas de un consultor en un día. */
   const sesionesDe = (consultorId, dia) => sesiones.filter((s) =>
     String(s.consultor_id || 'sin') === String(consultorId)
     && String(s.fecha).slice(0, 10) === dia);
 
-  if (cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando agenda…</p>;
+  const horasEn = (lista) => Math.round(lista.reduce((a, s) => a + (Number(s.horas) || 0), 0) * 10) / 10;
 
-  const activas = tareas.filter((t) => t.estado !== 'anulada' && t.estado !== 'hecha');
-  const hoy = hoyISO();
-  const atrasadas = activas.filter((t) => t.fecha && t.fecha < hoy);
-  const sinFecha = activas.filter((t) => !t.fecha);
-  const proximas = activas.filter((t) => t.fecha && t.fecha >= hoy).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  const porDia = proximas.reduce((m, t) => { (m[t.fecha] = m[t.fecha] || []).push(t); return m; }, {});
+  /** Quién aparece: solo los que tienen algo en el rango. */
+  const consultoresRango = useMemo(() => {
+    const enRango = (s) => {
+      const f = String(s.fecha).slice(0, 10);
+      return periodo === 'anio' ? f.startsWith(rango.etiqueta) : rango.dias.includes(f);
+    };
+    return [...new Set(sesiones.filter(enRango).map((s) => String(s.consultor_id || 'sin')))];
+  }, [sesiones, rango, periodo]);
 
-  // Las sesiones, por día. Son las que llevan hora de inicio y fin: sin ellas
-  // la agenda enseñaba qué hay que hacer pero no cuándo ni cuánto ocupa.
-  const sesionesPorDia = sesiones.reduce((m, s) => {
-    const d = String(s.fecha).slice(0, 10);
-    (m[d] = m[d] || []).push(s);
-    return m;
-  }, {});
-  for (const d of Object.keys(sesionesPorDia)) {
-    sesionesPorDia[d].sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
-  }
+  /** Sesiones de un consultor en un mes «AAAA-MM». */
+  const sesionesDelMes = (consultorId, mes) => sesiones.filter((s) =>
+    String(s.consultor_id || 'sin') === String(consultorId)
+    && String(s.fecha).slice(0, 7) === mes);
+
+  /** Color de una celda según lo cargada que esté. */
+  const tonoCarga = (hs, tope) => {
+    if (!hs) return '';
+    const p = hs / tope;
+    return p >= 1 ? 'bg-red-400/25' : p >= 0.75 ? 'bg-amber-300/20' : 'bg-brand-orange/15';
+  };
+
+  // ── Datos de la vista por tarea ──
+  // Quedaron fuera al reescribir el calendario; se restauran aquí, antes de
+  // los componentes que los usan.
   const nombreDe = (id) => {
     const p = perfiles.find((x) => String(x.id) === String(id));
     return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : 'sin asignar';
   };
-  const horasDelDia = (d) => Math.round((sesionesPorDia[d] || [])
-    .reduce((a, s) => a + (Number(s.horas) || 0), 0) * 10) / 10;
+
+  const hoy = new Date(new Date().toDateString()).toISOString().slice(0, 10);
+
+  // Tareas con fecha (sin sesión), separadas entre vencidas y por venir.
+  const proximas = tareas.filter((t) => t.fecha && String(t.fecha).slice(0, 10) >= hoy && t.estado !== 'hecha');
+  const atrasadas = tareas.filter((t) => t.fecha && String(t.fecha).slice(0, 10) < hoy && t.estado !== 'hecha');
+  // Tareas sin fecha: existen pero no están en ningún calendario.
+  const sinFecha = tareas.filter((t) => !t.fecha && t.estado !== 'hecha');
+
+  const porDia = proximas.reduce((m, t) => {
+    const d = String(t.fecha).slice(0, 10);
+    (m[d] = m[d] || []).push(t); return m;
+  }, {});
+
+  // Sesiones agrupadas por día, con su total.
+  const sesionesPorDia = sesiones.reduce((m, s) => {
+    const d = String(s.fecha).slice(0, 10);
+    (m[d] = m[d] || []).push(s); return m;
+  }, {});
+  for (const d of Object.keys(sesionesPorDia)) {
+    sesionesPorDia[d].sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+  }
+  const horasDelDia = (d) => horasEn(sesionesPorDia[d] || []);
 
   /** Una sesión con su franja: la hora es el dato que faltaba. */
   const FilaSesion = ({ s }) => (
@@ -288,88 +352,205 @@ export default function AgendaTareas() {
           ))}
         </div>
         {vista === 'calendario' && (
-          <div className="flex items-center gap-2">
-            <button onClick={() => setSemana(semana - 1)} className="btn-ghost !px-2.5 !py-1 text-sm">←</button>
-            <button onClick={() => setSemana(0)}
-              className={`text-[12px] font-bold ${semana === 0 ? 'text-[#7FA7B4]' : 'text-brand-orange hover:underline'}`}>
-              {semana === 0 ? 'esta semana' : 'volver a hoy'}
-            </button>
-            <button onClick={() => setSemana(semana + 1)} className="btn-ghost !px-2.5 !py-1 text-sm">→</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-xl border border-[#1E5468] p-0.5">
+              {[['dia', 'Día'], ['semana', 'Semana'], ['mes', 'Mes'], ['anio', 'Año']].map(([k, etq]) => (
+                <button key={k} onClick={() => { setPeriodo(k); setDesplaz(0); }}
+                  className={`rounded-lg px-2.5 py-1 text-[13px] font-bold transition ${
+                    periodo === k ? 'bg-navy-800 text-white' : 'text-[#9FC0CB] hover:text-[#CFE3E9]'}`}>
+                  {etq}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setDesplaz(desplaz - 1)} className="btn-ghost !px-2.5 !py-1 text-sm">←</button>
+            <span className="min-w-[180px] text-center text-[12.5px] font-bold text-[#EAF4F7]">
+              {rango.etiqueta}
+            </span>
+            <button onClick={() => setDesplaz(desplaz + 1)} className="btn-ghost !px-2.5 !py-1 text-sm">→</button>
+            {desplaz !== 0 && (
+              <button onClick={() => setDesplaz(0)} className="text-[12px] font-bold text-brand-orange hover:underline">
+                hoy
+              </button>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Calendario semanal ── */}
+      {/* ── Calendario ── */}
       {vista === 'calendario' && (
-        consultoresSemana.length === 0 ? (
+        consultoresRango.length === 0 ? (
           <p className="card py-6 text-center text-[12.5px] text-[#7FA7B4]">
-            Nada programado esta semana.
+            Nada programado en este {periodo === 'dia' ? 'día' : periodo === 'semana' ? 'periodo' : periodo === 'mes' ? 'mes' : 'año'}.
           </p>
         ) : (
           <div className="card !p-3 overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse">
-              <thead>
-                <tr>
-                  <th className="w-36 border-b border-[#1E5468] p-1.5 text-left text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
-                    Consultor
-                  </th>
-                  {diasSemana.map((d) => {
-                    const f = new Date(`${d}T12:00:00`);
-                    const finde = [0, 6].includes(f.getDay());
-                    const esHoy = d === new Date().toISOString().slice(0, 10);
-                    return (
-                      <th key={d} className={`border-b border-[#1E5468] p-1.5 text-center text-[10.5px] font-bold ${
-                        esHoy ? 'text-brand-orange' : finde ? 'text-[#5E8494]' : 'text-[#9FC0CB]'}`}>
-                        {f.toLocaleDateString('es-ES', { weekday: 'short' })}
-                        <span className="block text-[13px] font-extrabold">{f.getDate()}</span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {consultoresSemana.map((cid) => {
-                  const total = diasSemana.reduce((a, d) =>
-                    a + sesionesDe(cid, d).reduce((x, s) => x + (Number(s.horas) || 0), 0), 0);
+
+            {/* ── DÍA · franjas horarias, una columna por persona ── */}
+            {periodo === 'dia' && (
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${consultoresRango.length}, minmax(180px, 1fr))` }}>
+                {consultoresRango.map((cid) => {
+                  const ss = sesionesDe(cid, rango.dias[0])
+                    .sort((a, b) => String(a.hora_inicio).localeCompare(String(b.hora_inicio)));
+                  const hs = horasEn(ss);
                   return (
+                    <div key={cid}>
+                      <div className="mb-1.5 border-b border-[#1E5468] pb-1">
+                        <p className="truncate text-[12.5px] font-bold text-[#EAF4F7]">
+                          {cid === 'sin' ? 'Sin asignar' : nombreDe(cid)}
+                        </p>
+                        <p className={`text-[10.5px] font-bold ${hs > 8 ? 'text-red-300' : 'text-[#7FA7B4]'}`}>{hs} h</p>
+                      </div>
+                      {ss.map((s) => (
+                        <button key={s.id} onClick={() => s.tarea && setTareaAbierta(s.tarea)}
+                          className={`mb-1 block w-full rounded-lg px-2 py-1.5 text-left transition hover:brightness-125 ${
+                            s.estado === 'hecha' ? 'bg-emerald-500/20' : 'bg-brand-orange/20'}`}>
+                          <span className="block text-[11px] font-extrabold text-brand-orange">
+                            {String(s.hora_inicio).slice(0, 5)}–{String(s.hora_fin).slice(0, 5)}
+                          </span>
+                          <span className="block truncate text-[11.5px] text-[#EAF4F7]">
+                            {s.tarea?.codigo ? `${s.tarea.codigo} · ` : ''}{s.tarea?.titulo || 'Tarea'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── SEMANA · una fila por persona, siete columnas ── */}
+            {periodo === 'semana' && (
+              <table className="w-full min-w-[900px] border-collapse">
+                <thead>
+                  <tr>
+                    <th className="w-36 border-b border-[#1E5468] p-1.5 text-left text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Consultor</th>
+                    {rango.dias.map((d) => {
+                      const f = new Date(`${d}T12:00:00`);
+                      const finde = [0, 6].includes(f.getDay());
+                      const esHoy = d === iso(new Date());
+                      return (
+                        <th key={d} className={`border-b border-[#1E5468] p-1.5 text-center text-[10.5px] font-bold ${
+                          esHoy ? 'text-brand-orange' : finde ? 'text-[#5E8494]' : 'text-[#9FC0CB]'}`}>
+                          {f.toLocaleDateString('es-ES', { weekday: 'short' })}
+                          <span className="block text-[13px] font-extrabold">{f.getDate()}</span>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {consultoresRango.map((cid) => (
                     <tr key={cid} className="align-top">
                       <td className="border-b border-[#153F52] p-1.5">
                         <span className="block truncate text-[12px] font-bold text-[#EAF4F7]">
                           {cid === 'sin' ? 'Sin asignar' : nombreDe(cid)}
                         </span>
-                        <span className="text-[10.5px] text-[#7FA7B4]">{Math.round(total * 10) / 10} h</span>
+                        <span className="text-[10.5px] text-[#7FA7B4]">
+                          {horasEn(rango.dias.flatMap((d) => sesionesDe(cid, d)))} h
+                        </span>
                       </td>
-                      {diasSemana.map((d) => {
+                      {rango.dias.map((d) => {
                         const ss = sesionesDe(cid, d);
-                        const hs = ss.reduce((a, s) => a + (Number(s.horas) || 0), 0);
+                        const hs = horasEn(ss);
                         return (
                           <td key={d} className="border-b border-l border-[#153F52] p-1 align-top">
-                            {/* Más de 8 h en un día es una jornada pasada: se
-                                marca, porque es donde se rompe una agenda. */}
-                            {hs > 8 && (
-                              <span className="mb-0.5 block text-center text-[9.5px] font-extrabold text-red-300">{hs} h</span>
-                            )}
+                            {hs > 8 && <span className="mb-0.5 block text-center text-[9.5px] font-extrabold text-red-300">{hs} h</span>}
                             {ss.map((s) => (
                               <button key={s.id} onClick={() => s.tarea && setTareaAbierta(s.tarea)}
                                 title={`${s.tarea?.titulo || ''} · ${s.horas} h`}
                                 className={`mb-1 block w-full rounded-md px-1.5 py-1 text-left transition hover:brightness-125 ${
                                   s.estado === 'hecha' ? 'bg-emerald-500/20' : 'bg-brand-orange/20'}`}>
-                                <span className="block text-[10px] font-extrabold text-[#EAF4F7]">
-                                  {String(s.hora_inicio).slice(0, 5)}
-                                </span>
-                                <span className="block truncate text-[10px] text-[#CFE3E9]">
-                                  {s.tarea?.codigo || s.tarea?.titulo || 'Tarea'}
-                                </span>
+                                <span className="block text-[10px] font-extrabold text-[#EAF4F7]">{String(s.hora_inicio).slice(0, 5)}</span>
+                                <span className="block truncate text-[10px] text-[#CFE3E9]">{s.tarea?.codigo || s.tarea?.titulo || 'Tarea'}</span>
                               </button>
                             ))}
                           </td>
                         );
                       })}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* ── MES · rejilla de días con las horas del equipo ──
+                En un mes no caben las franjas: lo que se busca aquí es dónde
+                se acumula la carga, no a qué hora empieza cada cosa. */}
+            {periodo === 'mes' && (
+              <div>
+                <div className="grid grid-cols-7 gap-1">
+                  {['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'].map((d) => (
+                    <div key={d} className="pb-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{d}</div>
+                  ))}
+                  {Array.from({ length: rango.offset || 0 }).map((_, i) => <div key={`h${i}`} />)}
+                  {rango.dias.map((d) => {
+                    const ss = sesiones.filter((s) => String(s.fecha).slice(0, 10) === d);
+                    const hs = horasEn(ss);
+                    const personas = new Set(ss.map((s) => String(s.consultor_id || 'sin'))).size;
+                    const esHoy = d === iso(new Date());
+                    // El tope del día es 8 h por persona con algo agendado.
+                    return (
+                      <button key={d} onClick={() => { setPeriodo('dia'); setDesplaz(Math.round((new Date(`${d}T12:00:00`) - new Date(iso(new Date()) + 'T12:00:00')) / 86400000)); }}
+                        className={`min-h-[64px] rounded-lg border p-1.5 text-left transition hover:border-brand-orange/60 ${
+                          esHoy ? 'border-brand-orange/60' : 'border-[#153F52]'} ${tonoCarga(hs, 8 * Math.max(1, personas))}`}>
+                        <span className={`block text-[11px] font-extrabold ${esHoy ? 'text-brand-orange' : 'text-[#CFE3E9]'}`}>
+                          {new Date(`${d}T12:00:00`).getDate()}
+                        </span>
+                        {hs > 0 && (
+                          <>
+                            <span className="block text-[12px] font-extrabold text-[#EAF4F7]">{hs} h</span>
+                            <span className="block text-[9.5px] text-[#7FA7B4]">{personas} persona{personas === 1 ? '' : 's'}</span>
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[10.5px] text-[#5E8494]">Pulsa un día para verlo por horas.</p>
+              </div>
+            )}
+
+            {/* ── AÑO · doce meses por persona ── */}
+            {periodo === 'anio' && (
+              <table className="w-full min-w-[860px] border-collapse">
+                <thead>
+                  <tr>
+                    <th className="w-36 border-b border-[#1E5468] p-1.5 text-left text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Consultor</th>
+                    {rango.meses.map((mes) => (
+                      <th key={mes} className="border-b border-[#1E5468] p-1 text-center text-[10px] font-bold text-[#9FC0CB]">
+                        {new Date(`${mes}-01T12:00:00`).toLocaleDateString('es-ES', { month: 'short' })}
+                      </th>
+                    ))}
+                    <th className="border-b border-[#1E5468] p-1 text-right text-[10px] font-extrabold text-[#7FA7B4]">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consultoresRango.map((cid) => {
+                    const total = horasEn(rango.meses.flatMap((mes) => sesionesDelMes(cid, mes)));
+                    return (
+                      <tr key={cid}>
+                        <td className="border-b border-[#153F52] p-1.5 truncate text-[12px] font-bold text-[#EAF4F7]">
+                          {cid === 'sin' ? 'Sin asignar' : nombreDe(cid)}
+                        </td>
+                        {rango.meses.map((mes) => {
+                          const hs = horasEn(sesionesDelMes(cid, mes));
+                          // 120 h al mes es una jornada completa a 6 h al día.
+                          return (
+                            <td key={mes} className={`border-b border-l border-[#153F52] p-1 text-center text-[11px] font-bold ${
+                              tonoCarga(hs, 120)} ${hs ? 'text-[#EAF4F7]' : 'text-[#3F6478]'}`}>
+                              {hs || '·'}
+                            </td>
+                          );
+                        })}
+                        <td className="border-b border-l border-[#153F52] p-1 text-right text-[11.5px] font-extrabold text-brand-orange">
+                          {total}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         )
       )}

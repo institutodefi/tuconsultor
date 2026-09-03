@@ -4746,3 +4746,92 @@ confunda con las reglas condicionales que ya se editan en esa misma sección.
 Barrido de todas las migraciones buscando colisiones: las dos tablas nuevas y la
 función no existen en ninguna otra. Es la comprobación que me faltó hacer la vez
 anterior.
+
+---
+
+# v273 · Las 127 tareas de CECE, y quién pone los nombres
+
+## Por qué 88 pasaron a 127
+
+El volcado comprobaba si una tarea ya existía **comparando su título**. Y el
+formato del título cambió al retirar la integración: de
+«… - Integrada 9001 14001» a «subproceso · norma».
+
+Al no reconocer las que ya estaban, las insertó otra vez. 88 + 39 = 127.
+
+**La identidad de una tarea no es su nombre**: es la fila del catálogo de la que
+sale. El nombre es justo lo único que cambia.
+
+Ahora se compara por `catalogo_id` y, si no lo hay, por norma + proceso +
+subproceso, ignorando acentos y mayúsculas. El título no entra en la
+comparación.
+
+## Migración `v113`
+
+**Borra las duplicadas.** Conserva la más antigua y, de haber empate, la que
+tenga sesiones: borrar una tarea con trabajo agendado dejaría sesiones
+huérfanas y perdería horas ya ejecutadas.
+
+**Sella la identidad en la base.** Dos índices únicos: una tarea del catálogo,
+una vez por proyecto. Aunque la aplicación se equivoque, la base lo rechaza.
+
+**Y limpia los títulos con «Integrada»**, rehaciéndolos con el formato actual.
+
+## Los nombres los pone el sistema
+
+Retirada la edición del nombre, en la tabla y en el diálogo. Se genera desde el
+catálogo: `subproceso · norma`.
+
+Si cada uno escribe el suyo, dos tareas idénticas de proyectos distintos dejan
+de poder compararse, y comparar es justo para lo que sirve el catálogo.
+
+**El código sí se edita**: es la referencia corta para la agenda —«S1 PE1»— y esa
+sí es de cada casa.
+
+## Antes de aplicar
+
+Ejecuta primero la **v111** si no la tienes: la v113 necesita `catalogo_id`, que
+la crea aquella.
+
+---
+
+# v274 · El calendario del equipo, en cuatro periodos
+
+Día, semana, mes y año. Son cuatro preguntas distintas, así que cada una enseña
+lo que corresponde: **a más rango, menos detalle**. En un año no caben las
+franjas horarias, y meterlas convertiría la pantalla en ruido.
+
+## Día · ¿cómo está hoy?
+
+Una columna por persona, con sus franjas ordenadas por hora. Debajo del nombre,
+sus horas del día, en rojo si pasan de 8.
+
+## Semana · la vista de trabajo
+
+Como estaba: una fila por consultor, siete columnas. Es la que se mira a diario.
+
+## Mes · ¿dónde se acumula la carga?
+
+Rejilla de días con las horas del equipo y cuántas personas hay agendadas. El
+color sube con la carga: naranja, ámbar y rojo cuando se pasa de 8 h por
+persona.
+
+Aquí no hay franjas a propósito: lo que se busca es dónde se amontona el
+trabajo, no a qué hora empieza cada cosa. **Pulsando un día se abre en vista de
+día.**
+
+## Año · ¿cómo se reparte?
+
+Doce columnas por persona, con las horas de cada mes y el total. La barra de
+color usa 120 h al mes como jornada completa, seis horas al día.
+
+Es la vista para ver si hay meses vacíos y otros imposibles antes de que
+lleguen.
+
+## Un aviso sobre el proceso
+
+Al reescribir el bloque del calendario me llevé por delante las definiciones que
+usaba la vista por tarea —`nombreDe`, `porDia`, `atrasadas`, `sinFecha`—.
+
+**ESLint las cazó las 16**: sin él habría entregado una pantalla que compila y
+revienta al abrirse. Es la tercera vez que paga el haberlo instalado.
