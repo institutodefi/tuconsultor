@@ -1,0 +1,95 @@
+:root{--navy:#061B45;--navy2:#0A2A6C;--orange:#F5A623;--orange-d:#d8910e;--orange-txt:#A16707;--ink:#0c1424;--muted:#5b6b86;--line:#e3e9f2;--soft:#f3f6fb}
+*{box-sizing:border-box}
+body{margin:0;background:#eef2f8;font-family:'Manrope',system-ui,-apple-system,sans-serif;color:var(--ink);line-height:1.6}
+.wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--navy),var(--navy2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px}
+.logo b{color:var(--orange)}
+.topbar .name{font-weight:800;color:var(--navy);font-size:18px;letter-spacing:-.3px}
+.topbar a{margin-left:auto;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600}
+.topbar a:hover{color:var(--orange-txt)}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:34px 36px;box-shadow:0 1px 3px rgba(8,20,60,.05)}
+h1{font-size:28px;color:var(--navy);margin:0 0 6px;letter-spacing:-.5px}
+.upd{color:var(--muted);font-size:13px;margin:0 0 26px}
+h2{font-size:18px;color:var(--navy);margin:30px 0 10px;letter-spacing:-.2px}
+h3{font-size:15px;color:var(--navy2);margin:20px 0 6px}
+p,li{font-size:14.5px;color:#27324a}
+a{color:var(--orange-txt)}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--soft);color:var(--navy);font-weight:700}
+.box{background:var(--soft);border-left:3px solid var(--orange);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13.5px}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:30px;line-height:1.5}
+.foot .madrid{color:var(--orange-txt);font-style:italic;font-weight:600}
+.nav-legal{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;font-size:13px}
+.nav-legal a{font-weight:600;text-decoration:none}
+
+
+/* ── Contraste ──────────────────────────────────────────────────────────────
+   El naranja de marca (#F5A623) da 2,03:1 sobre blanco: muy por debajo del
+   4,5:1 que exige WCAG AA para texto. Se conserva para fondos y adornos, donde
+   no hay que leer nada, y para TEXTO se usa --orange-txt (#A16707, 4,71:1).
+   Es el mismo tono, oscurecido lo justo para que se pueda leer. */
+a { color: var(--orange-txt); }
+a:hover, a:focus-visible { color: var(--navy2); text-decoration: underline; }
+
+/* ── PIE COMÚN ───────────────────────────────────────────────────────────────
+   Las cuatro páginas legales no tenían pie: se entraba desde un enlace y no
+   había forma de volver ni de ver de quién era la web. En páginas legales eso
+   importa más que en ninguna otra, porque son las que alguien abre buscando
+   quién responde.
+
+   Las tres marcas juntas: TuConsultor es la casa, Consultify el servicio y
+   Orbita la herramienta. Verlas juntas explica la relación sin texto. */
+.pie-tc {
+  margin-top: 48px;
+  padding: 36px 20px 30px;
+  border-top: 1px solid var(--line);
+  background: var(--navy);
+  color: #cfd9ea;
+  text-align: center;
+}
+.pie-marcas {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 14px;
+  margin-bottom: 18px;
+}
+.pie-marcas img { height: 26px; width: auto; display: block; opacity: .92; }
+.pie-marcas a { display: inline-flex; border-radius: 6px; }
+/* Foco visible: sin esto, quien navega con teclado no sabe dónde está. */
+.pie-marcas a:focus-visible,
+.pie-enlaces a:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.pie-marcas a:hover img { opacity: 1; }
+/* Era #5b6b86: 3,11:1 sobre el navy, por debajo del mínimo. Es decorativo y
+   lleva aria-hidden, así que técnicamente no lo exige la norma — pero un punto
+   que apenas se ve tampoco separa nada, que es para lo que está. */
+.pie-sep { color: #8fa3c4; font-size: 15px; }
+
+.pie-legal { font-size: 13px; color: #cfd9ea; margin: 0 0 10px; }
+
+.pie-enlaces {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 18px;
+  margin-bottom: 14px;
+}
+/* #cfd9ea sobre #061B45 da 11,4:1 — AAA. En pie de página, donde el texto es
+   pequeño, no vale con quedarse en el mínimo. */
+.pie-enlaces a {
+  color: #cfd9ea; font-size: 13px; font-weight: 600;
+  text-decoration: none; border-bottom: 1px solid transparent;
+}
+.pie-enlaces a:hover, .pie-enlaces a:focus-visible {
+  color: #fff; border-bottom-color: var(--orange);
+}
+
+.pie-corazon {
+  font-size: 12.5px; font-style: italic;
+  color: var(--orange); margin: 0;
+}
+
+@media (max-width: 560px) {
+  .pie-marcas { gap: 10px; }
+  .pie-marcas img { height: 22px; }
+  .pie-sep { display: none; }
+  .pie-enlaces { gap: 12px; }
+}
