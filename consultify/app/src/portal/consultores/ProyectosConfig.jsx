@@ -12,6 +12,9 @@ import DashboardProyectos from './DashboardProyectos.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
+// La sigla del cliente: la misma que usan los códigos de proyecto, para que
+// «CECE» signifique lo mismo en el proyecto y en cada una de sus tareas.
+import { siglaCliente } from '../../lib/codigos.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -146,6 +149,17 @@ export default function Proyectos() {
   useEffect(() => { cargar(); }, []);
   // Enriquece una tarea con el código de su cliente (para el código CLI-Txxx-By).
   const conCod = (t) => ({ ...t, codigo_cliente: codigoCli(t.cliente_id) });
+
+  // ── Abrir un proyecto ──
+  // El detalle está DEBAJO de una tabla que puede tener cien filas. Sin llevar
+  // la vista hasta él, pulsar «Abrir» no parecía hacer nada y la gente volvía
+  // a pulsar.
+  const detalleRef = useRef(null);
+  const abrirProyecto = (id) => {
+    setSel(String(id));
+    requestAnimationFrame(() =>
+      detalleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   // Llegada desde otra pantalla:
   //   ?proyecto=ID  abre ese proyecto
@@ -315,30 +329,51 @@ export default function Proyectos() {
    * tareas parecidas de sistemas distintos son la misma, y no lo son: integrar
    * o no lo decide el consultor mirando la organización, tarea a tarea.
    *
-   * Cada tarea lleva su norma y su subproceso, y nada más.
+   * Solo el subproceso. La norma y el cliente ya van en el codigo
+   * -CECE-9001-01- y la norma tiene ademas su propia columna.
    */
-  const tituloTarea = useCallback((c) =>
-    [c.subproceso || c.proceso, c.norma_id].filter(Boolean).join(' · '), []);
+  const tituloTarea = useCallback((c) => c.subproceso || c.proceso || '', []);
+
+  /**
+   * El CODIGO de una tarea: CECE-9001-01.
+   *
+   * Sigla del cliente (la misma que usan los codigos de proyecto), norma y
+   * correlativo dentro de esa norma. Corto, dice de quien y de que sistema es,
+   * y sirve para hablar de una tarea por telefono. Quien planifica puede
+   * cambiarlo despues: es la referencia de cada casa.
+   */
+  const codigoDeTarea = useCallback(
+    (norma, n) => `${siglaCliente(cliente?.empresa) || 'CLI'}-${norma || 'GEN'}-${String(n).padStart(2, '0')}`,
+    [cliente?.empresa]);
 
   /**
    * La IDENTIDAD de una tarea, para no duplicarla.
    *
-   * Comparar por título fue un error: al cambiar el formato del nombre —de
-   * «… - Integrada 9001 14001» a «subproceso · norma»— el volcado dejó de
-   * reconocer las que ya estaban y las insertó otra vez. Así es como CECE pasó
-   * de 88 a 127 tareas.
+   * Comparar por titulo fue un error: al cambiar el formato del nombre el
+   * volcado dejo de reconocer las que ya estaban y las inserto otra vez.
    *
-   * La identidad real es la fila del catálogo de la que sale. Si no hay enlace
-   * —tareas antiguas— se compone con norma, proceso y subproceso, que es lo que
-   * define una tarea en el catálogo. El título nunca entra: es lo único que
-   * cambia.
+   * Comparar SOLO por `catalogo_id` fue el segundo error, y el que llevo a
+   * CECE de 65 tareas a 127: las tareas nacian sin enlace -el catalogo no
+   * arrastraba su `id`-, asi que una copia enlazada y otra sin enlazar se
+   * veian como tareas distintas y ninguna reconocia a la otra.
+   *
+   * Por eso una tarea tiene DOS claves y basta con que coincida una: el enlace
+   * al catalogo, si lo hay, y la composicion norma + proceso + subproceso, que
+   * es lo que define una tarea en el catalogo. El titulo nunca entra: es lo
+   * unico que cambia.
    */
-  const identidad = useCallback((x) => {
-    if (x.catalogo_id) return `C:${x.catalogo_id}`;
+  const clavesDe = useCallback((x) => {
     const n = (s) => String(s || '').trim().toUpperCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return `K:${n(x.norma_id)}|${n(x.proceso)}|${n(x.subproceso)}`;
+    const ks = [`K:${n(x.norma_id)}|${n(x.proceso)}|${n(x.subproceso)}`];
+    const cid = x.catalogo_id || x.id;   // en una candidata, `id` es el del catalogo
+    if (cid) ks.push(`C:${cid}`);
+    return ks;
   }, []);
+
+  // Una tarea ya esta si CUALQUIERA de sus claves esta registrada.
+  const yaRegistrada = useCallback((conjunto, x) => clavesDe(x).some((k) => conjunto.has(k)), [clavesDe]);
+  const registrar = useCallback((conjunto, x) => { clavesDe(x).forEach((k) => conjunto.add(k)); }, [clavesDe]);
 
   const volcandoRef = useRef(false);
 
@@ -346,8 +381,9 @@ export default function Proyectos() {
     if (!proyecto || !cliente || volcandoRef.current) return;
     if (!normasSel.length || !modelo || !candidatas.length) return;
     // Solo lo que falte: si ya están todas, no hay nada que hacer.
-    const yaEstan = new Set(tareasProyecto.map(identidad));
-    const faltan = candidatas.filter((c) => !yaEstan.has(identidad(c)));
+    const yaEstan = new Set();
+    tareasProyecto.forEach((t) => registrar(yaEstan, t));
+    const faltan = candidatas.filter((c) => !yaRegistrada(yaEstan, c));
     if (!faltan.length) return;
 
     volcandoRef.current = true;
@@ -472,17 +508,28 @@ export default function Proyectos() {
   /** Inserta las tareas del modelo que aún no estén en el proyecto. Devuelve cuántas. */
   async function volcarTareasQueFalten() {
     if (!proyecto || !cliente || !candidatas.length) return 0;
-    const yaEstan = new Set(tareasProyecto.map(identidad));
+    const yaEstan = new Set();
+    tareasProyecto.forEach((t) => registrar(yaEstan, t));
     let n = 0;
+    // Correlativo POR NORMA, y arrancando donde lo dejaron las que ya están:
+    // reanudar en 01 chocaba con el código de una tarea existente y el insert
+    // se caía en silencio (el índice único `cliente_tareas_codigo_unico`).
+    const ultimoDe = {};
+    for (const t of tareasProyecto) {
+      const m = String(t.codigo || '').match(/-(\d+)$/);
+      const k = t.norma_id || 'GEN';
+      if (m) ultimoDe[k] = Math.max(ultimoDe[k] || 0, parseInt(m[1], 10));
+    }
     for (const [i, c] of candidatas.entries()) {
-      // Código legible para la agenda: 9001-03. Corto, dice de qué sistema es
-      // y en qué orden va, que es lo que hace falta para hablar de una tarea
-      // por teléfono sin leer un título de ochenta caracteres.
-      const codigo = `${c.norma_id}-${String(i + 1).padStart(2, '0')}`;
-      const titulo = `${codigo} · ${c.subproceso || c.proceso}`;
       // Por identidad, no por título: el título cambia y la tarea es la misma.
-      if (yaEstan.has(identidad(c))) continue;
-      yaEstan.add(identidad(c));   // no repetir dentro del mismo volcado
+      if (yaRegistrada(yaEstan, c)) continue;
+      registrar(yaEstan, c);   // no repetir dentro del mismo volcado
+      const k = c.norma_id || 'GEN';
+      ultimoDe[k] = (ultimoDe[k] || 0) + 1;
+      // «CECE-9001-01»: cliente, sistema y orden dentro del sistema.
+      const codigo = codigoDeTarea(c.norma_id, ultimoDe[k]);
+      // El título es solo el subproceso: el resto ya está en el código.
+      const titulo = tituloTarea(c);
       try {
         await insertRow('cliente_tareas', {
           cliente_id: cliente.id, proyecto_id: proyecto.id,
@@ -535,8 +582,11 @@ export default function Proyectos() {
         norma_id: c.norma_id, modelo,
         proceso: c.proceso, subproceso: c.subproceso,
         titulo: tituloTarea(c),
+        codigo: codigoDeTarea(c.norma_id, i + 1),
+        catalogo_id: c.id || null,
+        titulo_origen: c.subproceso || c.proceso || null,
         horas: c.horas, bloque: c.bloque, tipo: tipoTarea(c),
-        integrada: !!c.integrada, normas_integradas: c.normas_integradas || [c.norma_id],
+        integrada: false, normas_integradas: [c.norma_id],
         consultor_id: proyecto.consultor_1_id || null, orden: i, num_tarea: i + 1,
       }));
 
@@ -584,7 +634,7 @@ export default function Proyectos() {
           cliente_id: cliente.id, proyecto_id: proyecto.id,
           norma_id: '9001', modelo,
           proceso: 'PM COORDINACIÓN', subproceso: 'Reunión de coordinación del proyecto',
-          titulo: `${cliente.empresa} - ${modelo} - Coordinación del proyecto`,
+          titulo: 'Reunión de coordinación del proyecto',
           horas: horasCoord, bloque: 'PM', tipo: 'coordinacion',
           integrada: false, normas_integradas: normasSel,
           consultor_id: proyecto.consultor_1_id || null,
@@ -687,44 +737,67 @@ export default function Proyectos() {
           </div>
         </div>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* ── Anchos ──
+              Normas, modelo, estado y el botón ocupan lo que dice su texto
+              (`w-px` + `whitespace-nowrap`: la columna se encoge a su
+              contenido). Lo que sobra se lo reparten cliente y proyecto, que
+              son las dos frases largas. Con `min-w` en la tabla, si la
+              ventana es estrecha se desplaza en horizontal en vez de
+              apretar los nombres hasta partirlos letra a letra. */}
+          <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-                <th className="py-2">Cliente</th><th className="py-2">Proyecto</th><th className="py-2">Normas</th><th className="py-2">Modelo</th><th className="py-2">Estado</th><th className="py-2"></th>
+                <th className="w-[26%] min-w-[170px] py-2 pr-4">Cliente</th>
+                <th className="py-2 pr-4">Proyecto</th>
+                <th className="w-px whitespace-nowrap py-2 pr-4">Normas</th>
+                <th className="w-px whitespace-nowrap py-2 pr-4">Modelo</th>
+                <th className="w-px whitespace-nowrap py-2 pr-4">Estado</th>
+                <th className="w-px py-2"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy-50">
               {proyectosPagina.map(p => (
-                <tr key={p.id} className={`cursor-pointer hover:bg-navy-50/50 ${String(p.id) === String(sel) ? 'bg-brand-orange/5' : ''}`} onClick={() => setSel(String(p.id))}>
-                  <td className="py-2 font-medium">
+                <tr key={p.id}
+                  className={`cursor-pointer align-top hover:bg-navy-50/50 ${String(p.id) === String(sel) ? 'bg-brand-orange/5' : ''}`}
+                  onClick={() => abrirProyecto(p.id)}>
+                  <td className="py-2 pr-4 font-medium leading-snug break-words hyphens-none">
                     {p.nombreCliente}
                     {/* La razón social solo si difiere: repetirla en cada fila
                         es ruido, pero cuando no coincide hace falta verla. */}
                     {p.razonSocial && p.razonSocial !== p.nombreCliente && (
-                      <span className="block text-[11px] font-normal text-[#7FA7B4]">{p.razonSocial}</span>
+                      <span className="block text-[11px] font-normal leading-snug text-[#7FA7B4]">{p.razonSocial}</span>
                     )}
                   </td>
-                  <td className="py-2">
+                  <td className="py-2 pr-4 leading-snug break-words">
                     {p.nombre}
                     {p.numeroOferta && (
                       <span className="block text-[11px] text-[#7FA7B4]">{p.numeroOferta}</span>
                     )}
                   </td>
-                  <td className="py-2 text-xs text-[#9FC0CB]">
+                  <td className="w-px whitespace-nowrap py-2 pr-4 text-xs text-[#9FC0CB]">
                     {p.normas.length ? p.normas.join(', ') : <span className="text-[#5E8494]">—</span>}
                     {p.desfases.some((d) => d.campo === 'normas') && (
                       <span className="ml-1 text-[10px] font-bold text-amber-200"
                         title="El proyecto tiene un alcance distinto del ofertado">≠ oferta</span>
                     )}
                   </td>
-                  <td className="py-2 text-xs">
+                  <td className="w-px whitespace-nowrap py-2 pr-4 text-xs">
                     {p.modelo || <span className="text-[#5E8494]">—</span>}
                     {p.desfases.some((d) => d.campo === 'modelo') && (
                       <span className="ml-1 text-[10px] font-bold text-amber-200" title="Distinto del modelo ofertado">≠</span>
                     )}
                   </td>
-                  <td className="py-2"><span className={`chip text-[11px] font-bold ${p.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{p.estado}</span></td>
-                  <td className="py-2 text-right"><span className="text-xs font-bold text-[#F9A83A]">Abrir →</span></td>
+                  <td className="w-px whitespace-nowrap py-2 pr-4"><span className={`chip text-[11px] font-bold ${p.estado === 'activo' ? 'bg-green-100 text-green-700' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{p.estado}</span></td>
+                  {/* Un BOTÓN, no un texto naranja. La fila entera seguía
+                      siendo pulsable, pero nada lo decía: había que
+                      adivinarlo. `stopPropagation` para no abrir dos veces. */}
+                  <td className="w-px py-2 text-right">
+                    <button type="button"
+                      onClick={(e) => { e.stopPropagation(); abrirProyecto(p.id); }}
+                      className="btn-orange whitespace-nowrap !px-3 !py-1.5 !text-xs">
+                      Abrir
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -738,6 +811,9 @@ export default function Proyectos() {
           </div>
         )}
       </div>
+
+      {/* Ancla del detalle: hasta aquí desplaza «Abrir». */}
+      <div ref={detalleRef} className="scroll-mt-4" />
 
       {!proyecto ? (
         <p className="card text-sm font-medium text-[#9FC0CB]">Abre un proyecto de la tabla para configurar sus normas, su modelo y sus tareas.</p>
@@ -930,7 +1006,7 @@ export default function Proyectos() {
               </div>
 
               <div className="mt-3 max-h-[32rem] overflow-y-auto overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
+                <table className="w-full min-w-[820px] text-sm">
                   <thead className="sticky top-0 bg-[#10394A] z-10">
                     <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                       <th className="py-2 w-8"><input type="checkbox" checked={selT.size === tareasProyecto.length && tareasProyecto.length > 0} onChange={e => e.target.checked ? setSelT(new Set(tareasProyecto.map(t => t.id))) : setSelT(new Set())} /></th>
@@ -939,12 +1015,16 @@ export default function Proyectos() {
                           y se cambian en su calendario, que es donde de verdad
                           se decide, y puede haber varias personas y varias
                           fechas por tarea. */}
-                      <th className="py-2 w-20 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
-                      <th className="py-2 cursor-pointer select-none hover:text-[#9FC0CB]" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
-                      <th className="py-2 text-right w-20">Teóricas</th>
-                      <th className="py-2 text-right w-24">Programadas</th>
-                      <th className="py-2 text-right w-20">Ejecutadas</th>
-                      <th className="py-2 w-24"></th>
+                      {/* El código pasó de «9001-01» a «CECE-9001-01»: en 80 px
+                          se cortaba. Las columnas de cifras se quedan con lo
+                          que mide su cabecera y el resto es para la tarea, que
+                          es la frase larga. */}
+                      <th className="w-36 cursor-pointer select-none py-2 pr-3 hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
+                      <th className="cursor-pointer select-none py-2 pr-4 hover:text-[#9FC0CB]" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
+                      <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Teóricas</th>
+                      <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Programadas</th>
+                      <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Ejecutadas</th>
+                      <th className="w-px py-2 pl-3"><span className="sr-only">Sesiones</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-navy-50">
@@ -952,11 +1032,14 @@ export default function Proyectos() {
                       const bloques = Array.isArray(t.bloques_ejecucion) ? t.bloques_ejecucion : [];
                       const fechaLimite = bloques.length ? bloques.map(b => b.fecha).filter(Boolean).sort().slice(-1)[0] : t.fecha_estimada;
                       const abierto = expandida === t.id;
-                      const codigo = codigoTarea(codigoCli(t.cliente_id), t.num_tarea || (idx + 1));
+                      // Si la tarea aún no tiene código propio se compone al
+                      // vuelo con el mismo formato con que se graban: no puede
+                      // enseñarse un formato en la tabla y grabarse otro.
+                      const codigo = codigoDeTarea(t.norma_id, t.num_tarea || (idx + 1));
                       return (
                       <>
                       <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${selT.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
-                        <td className="py-1.5"><input type="checkbox" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
+                        <td className="py-1.5 align-top"><input type="checkbox" className="mt-0.5" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
                         {/* ── Código y nombre, editables ──
                             En un proyecto de 65 tareas hace falta un código
                             corto para hablar de ellas en la agenda —«S1 PE1»— y
@@ -966,11 +1049,11 @@ export default function Proyectos() {
                             Renombrar NO rompe nada: las horas teóricas salen de
                             `catalogo_id`, que no se toca. Debajo se ve de qué
                             tarea del catálogo procede. */}
-                        <td className="py-1.5">
+                        <td className="py-1.5 pr-3 align-top">
                           <input
-                            className="w-[76px] rounded-md border border-transparent bg-transparent px-1 py-0.5 text-xs font-bold text-brand-verdeTexto hover:border-[#1E5468] focus:border-brand-orange focus:bg-[#0B2E3D] focus:outline-none"
+                            className="w-full max-w-[132px] rounded-md border border-transparent bg-transparent px-1 py-0.5 text-xs font-bold text-brand-verdeTexto hover:border-[#1E5468] focus:border-brand-orange focus:bg-[#0B2E3D] focus:outline-none"
                             value={t.codigo || codigo}
-                            placeholder="S1 PE1"
+                            placeholder="CECE-9001-01"
                             onChange={(e) => patchTarea(t, { codigo: e.target.value })} />
                         </td>
                         {/* El NOMBRE no se edita: lo genera el sistema desde el
@@ -978,8 +1061,13 @@ export default function Proyectos() {
                             tareas idénticas de proyectos distintos dejaban de
                             poder compararse. El código sí se cambia: es la
                             referencia corta para la agenda y es de cada casa. */}
-                        <td className="py-1.5">
-                          <div className="min-w-[220px] max-w-[420px] whitespace-normal break-words px-1 font-medium leading-snug text-[#EAF4F7]">
+                        <td className="py-1.5 pr-4 align-top">
+                          {/* Sin `max-w`: el título es la frase que hay que leer
+                              y la columna ya se lleva todo el espacio libre.
+                              Recortarla a 420 px partía nombres como «S3 PA1
+                              GESTIÓN REL LABORAL, SEGURIDAD Y SALUD» en tres
+                              líneas sin necesidad. */}
+                          <div className="min-w-[240px] whitespace-normal break-words px-1 font-medium leading-snug text-[#EAF4F7]">
                             {t.titulo}
                           </div>
                           {/* La referencia al catálogo, siempre visible: es lo
@@ -1009,8 +1097,8 @@ export default function Proyectos() {
                             : b.estado === 'pasado' ? 'text-red-300' : 'text-emerald-300';
                           return (
                             <>
-                              <td className="py-1.5 text-right font-bold text-[#EAF4F7]">{fmtH(b.teoricas)}</td>
-                              <td className={`py-1.5 text-right font-bold ${tono}`}>
+                              <td className="w-px whitespace-nowrap py-1.5 pl-3 text-right align-top font-bold text-[#EAF4F7]">{fmtH(b.teoricas)}</td>
+                              <td className={`w-px whitespace-nowrap py-1.5 pl-3 text-right align-top font-bold ${tono}`}>
                                 {b.planificadas ? fmtH(b.planificadas) : '—'}
                                 {b.nSesiones > 0 && (
                                   <span className="block text-[10px] font-normal text-[#7FA7B4]">
@@ -1018,18 +1106,20 @@ export default function Proyectos() {
                                   </span>
                                 )}
                               </td>
-                              <td className="py-1.5 text-right font-bold text-emerald-300">
+                              <td className="w-px whitespace-nowrap py-1.5 pl-3 text-right align-top font-bold text-emerald-300">
                                 {b.ejecutadas ? fmtH(b.ejecutadas) : '—'}
                               </td>
                             </>
                           );
                         })()}
 
-                        <td className="py-1.5 text-right">
-                          <button onClick={() => setAbierta(t)}
-                            className="text-xs font-bold text-brand-orange hover:underline"
+                        {/* Botón, como el de «Abrir» de la lista: si algo se
+                            pulsa, tiene que parecer que se pulsa. */}
+                        <td className="w-px py-1.5 pl-3 text-right align-top">
+                          <button type="button" onClick={() => setAbierta(t)}
+                            className="btn-ghost whitespace-nowrap !px-3 !py-1 !text-xs"
                             title="Ver y programar las sesiones de esta tarea">
-                            calendario
+                            Calendario
                           </button>
                         </td>
                       </tr>

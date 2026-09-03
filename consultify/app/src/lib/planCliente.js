@@ -42,11 +42,21 @@ export function tareasDeCliente(catalogo, normaIds, modelo) {
     // encontraba ninguna de sus tareas y la pantalla decía «0».
     .filter(t => set.has(t.norma_id) && mismoModelo(t.modelo, modelo) && (Number(t.horas_base) || 0) > 0)
     .map(t => ({
+      // El `id` de la fila del catálogo VIAJA con la tarea.
+      //
+      // Sin él, `catalogo_id` se guardaba siempre a null: el volcado comprueba
+      // si una tarea ya está por ese enlace, no la reconocía, y la insertaba
+      // otra vez en cada pasada. Así es como el proyecto de CECE llegó a 127
+      // tareas de las 65 que define el modelo Relación para 9001+14001+27001.
+      id: t.id,
       norma_id: t.norma_id,
       modelo,
       proceso: t.proceso,
       subproceso: t.subproceso,
-      titulo: `${t.norma_id} - ${t.proceso} - ${t.subproceso}`,
+      // Solo el subproceso: el cliente, el modelo y la norma van en su columna
+      // y en el código de la tarea. Repetirlos aquí hacía títulos de ochenta
+      // caracteres que no caben en la pantalla de planificación.
+      titulo: t.subproceso || t.proceso || '',
       horas: horasNetas(t),
       bloque: bloqueDeProceso(t.proceso),
       orden: t.orden ?? 0,
