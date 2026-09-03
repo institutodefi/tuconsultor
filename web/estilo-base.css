@@ -1283,3 +1283,129 @@ footer a:hover, .pie-tc a:hover { color: #A16707 !important; }
 .tc-sello-ver { color: #A16707 !important; }
 html[data-sitio="consultify"] footer,
 html[data-sitio="consultify"] .pie-tc { background: #EAF0F9 !important; color: #22314F !important; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     PREMIOS VANGUARDISTAS
+     Reutiliza la rejilla y las tarjetas del resto del sitio; solo se añade
+     lo que no existía: la portada, el bloque de dotación y el calendario.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  .hero-premios {
+    padding: clamp(48px, 6vw, 96px) 0 clamp(32px, 4vw, 56px);
+    background: linear-gradient(180deg, var(--fondo-suave, #F3F8F9) 0%, transparent 100%);
+  }
+  .hero-premios h1 {
+    margin: 8px 0 0;
+    font-size: clamp(2rem, 1.4rem + 2.8vw, 3.2rem);
+    line-height: 1.08; letter-spacing: -0.02em;
+  }
+  .hero-claim {
+    margin: 16px 0 0; max-width: 46ch;
+    font-size: clamp(1.05rem, .96rem + .4vw, 1.3rem);
+    font-weight: 600; color: var(--acento-texto);
+  }
+  .hero-espiritu { margin: 12px 0 0; max-width: 62ch; font-size: 1rem; line-height: 1.6; opacity: .82; }
+
+  .premios-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 28px; }
+  .btn-lg { padding: 14px 28px; font-size: 1rem; }
+  .premios-plazo { font-size: .95rem; font-weight: 600; opacity: .75; }
+  /* En la recta final el plazo deja de ser un dato y pasa a ser un aviso. */
+  .premios-plazo.urgente { color: var(--acento-texto); opacity: 1; }
+  .premios-plazo.cerrado { opacity: .55; text-decoration: line-through; }
+  .premios-duracion { margin: 10px 0 0; font-size: .85rem; opacity: .6; }
+
+  .premios-texto { max-width: 68ch; }
+  .premios-texto p { margin: 0 0 14px; line-height: 1.65; }
+  .premios-vanguardia-in { font-weight: 600; margin-top: 24px !important; }
+  .premios-hitos { margin: 8px 0 18px; padding-left: 20px; }
+  .premios-hitos li { margin-bottom: 8px; line-height: 1.6; }
+
+  .premios-dos { display: grid; gap: clamp(24px, 3vw, 48px); }
+  @media (min-width: 720px) { .premios-dos { grid-template-columns: 1fr 1fr; } }
+
+  .premios-lista { list-style: none; margin: 12px 0 0; padding: 0; }
+  .premios-lista li {
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .premios-lista li:last-child { border-bottom: 0; }
+  .premios-lista strong { font-size: .98rem; }
+  .premios-lista span { font-size: .88rem; opacity: .72; line-height: 1.5; }
+
+  .premios-elegibilidad {
+    margin-top: 28px; padding: 14px 18px; border-radius: 14px;
+    background: var(--fondo-suave, #F3F8F9); font-size: .92rem; line-height: 1.6;
+  }
+
+  /* ── Premio especial ── */
+  .premio-especial {
+    padding: clamp(24px, 3vw, 40px); border-radius: 22px;
+    background: var(--tinta, #0A2B3A); color: #fff;
+  }
+  .premio-especial .section-eyebrow { color: var(--acento-texto); }
+  .premio-especial-desc { max-width: 62ch; margin: 10px 0 24px; line-height: 1.65; opacity: .9; }
+  .premio-dotacion { display: grid; gap: 16px; }
+  @media (min-width: 620px) { .premio-dotacion { grid-template-columns: 1fr 1fr; } }
+  .premio-dotacion > div {
+    padding: 16px 18px; border-radius: 16px; background: rgba(255,255,255,.06);
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px;
+  }
+  .premio-importe { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
+  .premio-moneda { font-size: 1.1rem; font-weight: 600; opacity: .8; margin-right: 8px; }
+  .premio-concepto { flex: 1 1 100%; font-size: .85rem; opacity: .7; }
+  .premio-total { margin: 18px 0 0; font-size: .95rem; opacity: .85; }
+
+  /* ── Calendario ── */
+  .premios-calendario { list-style: none; margin: 12px 0 0; padding: 0; }
+  .premios-calendario li {
+    display: flex; gap: 18px; align-items: baseline;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+  }
+  .premios-calendario li:last-child { border-bottom: 0; }
+  .cal-fecha {
+    flex: 0 0 84px; font-size: .95rem; font-weight: 700;
+    color: var(--acento-texto); text-transform: uppercase; letter-spacing: .04em;
+  }
+  .cal-titulo { line-height: 1.5; }
+  .premios-acto { margin-top: 22px; max-width: 64ch; line-height: 1.65; }
+  .premios-nota { font-size: .88rem; opacity: .7; }
+
+  /* ── Bloques de la candidatura ── */
+  .premios-bloques { list-style: none; margin: 12px 0 0; padding: 0; }
+  .premios-bloques li { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .premios-bloques li:last-child { border-bottom: 0; }
+  .bloque-n {
+    flex: 0 0 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--fondo-suave, #F3F8F9);
+    font-size: .85rem; font-weight: 800; color: var(--acento-texto);
+  }
+  .premios-bloques strong { display: block; margin-bottom: 3px; }
+  .premios-bloques span { font-size: .9rem; line-height: 1.55; opacity: .75; }
+
+  .premios-proceso { margin: 12px 0 0; padding-left: 20px; }
+  .premios-proceso li { margin-bottom: 10px; line-height: 1.6; }
+  .premios-proceso strong { display: block; }
+  .premios-proceso span { font-size: .9rem; opacity: .75; }
+
+  /* ── Ediciones anteriores ── */
+  .premios-ediciones { list-style: none; display: grid; gap: 12px; margin: 12px 0 0; padding: 0; }
+  @media (min-width: 620px) { .premios-ediciones { grid-template-columns: repeat(3, 1fr); } }
+  .premios-ediciones li {
+    padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .premios-ediciones strong { font-size: 1.4rem; letter-spacing: -.01em; }
+  .premios-ediciones span { font-size: .85rem; opacity: .72; }
+  .ed-lugar { font-size: .8rem !important; opacity: .55 !important; }
+
+  /* ── Privacidad y contacto ── */
+  .premios-privacidad {
+    padding: 14px 18px; border: 1px solid var(--line); border-radius: 16px;
+    font-size: .88rem; line-height: 1.6;
+  }
+  .premios-privacidad summary { cursor: pointer; font-weight: 700; font-size: .95rem; }
+  .premios-privacidad p { margin: 12px 0 0; opacity: .8; }
+  .premios-contacto { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px; }
+  .premios-contacto span { display: flex; flex-direction: column; gap: 2px; font-size: .88rem; }
+  .premios-contacto strong { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; opacity: .6; }

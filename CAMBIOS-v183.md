@@ -4835,3 +4835,63 @@ usaba la vista por tarea —`nombreDe`, `porDia`, `atrasadas`, `sinFecha`—.
 
 **ESLint las cazó las 16**: sin él habría entregado una pantalla que compila y
 revienta al abrirse. Es la tercera vez que paga el haberlo instalado.
+
+---
+
+# v275 · Premios Vanguardistas: página web y campaña
+
+## 1 · La página se genera desde el JSON
+
+`/premios/` — nueva sección, construida por `scripts/premios-web.py` a partir de
+`bases-2026.json`.
+
+**Generada y no escrita a mano** porque las bases cambian cada edición —fechas,
+ámbitos, dotación, lugar— y mantener eso en HTML es como acaba publicada una
+fecha del año pasado. Para la V edición: se cambia el JSON y se vuelve a
+ejecutar.
+
+Lleva portada con el claim, los cuatro ámbitos con su color, categorías y
+requisitos, el Premio Especial XX Aniversario con su dotación, el calendario,
+las cinco preguntas de la candidatura, los criterios del jurado, las tres
+ediciones anteriores y el apartado de privacidad completo.
+
+**Los días que quedan los calcula el navegador**, no el generador: escritos en
+el HTML, al día siguiente la página miente. Y en los últimos 45 días el plazo
+cambia de dato a aviso.
+
+Con `Event` en JSON-LD, para que Google pueda mostrarlo como evento.
+
+## 2 · Campaña diaria hasta el 30 de octubre
+
+`social-calendario/premios-vanguardistas-2026.csv` — **58 días, 116
+publicaciones**, LinkedIn a las 9:00 e Instagram a las 19:00.
+
+### Sobre publicar a diario
+
+Lo he generado como pediste, pero conviene saberlo: **publicar todos los días lo
+mismo en LinkedIn agota a la audiencia y baja el alcance de la propia cuenta**.
+
+Por eso no repiten el aviso: rotan **13 ángulos distintos** —un ámbito, una
+categoría, un requisito, una de las cinco preguntas, un criterio del jurado, una
+edición anterior, el acto…—. El premio no cambia; lo que se cuenta de él, sí.
+
+Los últimos siete días sí son cuenta atrás pura.
+
+**Seis días marcados como `intensidad=alta`**: apertura, mitad de plazo y recta
+final. Son los que conviene impulsar si hay presupuesto; el resto sostienen la
+presencia.
+
+Los dos textos son distintos por red: LinkedIn admite contexto y párrafos,
+Instagram necesita frases cortas y remite a la bio.
+
+## 3 · Los logos: no puedo
+
+El JSON los referencia, pero **son rutas relativas a un pack que no ha llegado**:
+
+```
+logos/20-aniversario/manrope/svg/A-horizontal-sello-light.svg
+logos/manrope/svg/horizontal-light.svg
+```
+
+Sigue pendiente lo mismo que en la v244: los archivos en `web/marca/`. El script
+`logo-20-aniversario.py` hace las 898 sustituciones en cuanto estén.

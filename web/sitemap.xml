@@ -82,6 +82,12 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/sistemas-de-gestion.html"/>
   </url>
   <url>
+    <loc>https://www.tuconsultor.com/premios/</loc>
+    <lastmod>2026-09-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://www.tuconsultor.com/de/</loc>
     <lastmod>2026-08-11</lastmod>
     <changefreq>monthly</changefreq>
