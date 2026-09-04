@@ -174,7 +174,7 @@
     // TuConsultor, Consultify y Orbita son la misma casa. Es la pregunta que
     // se hace todo el mundo al ver tres nombres distintos.
     + '<div class="tc-p-marcas" aria-hidden="true">'
-    +   '<img src="/marca/horizontal-dark.svg" alt="" />'
+    +   '<img src="/marca/20-aniversario/web-horizontal-blanco-600.png" alt="" />'
     +   '<span>·</span>'
     +   '<img src="/marca/consultify-horizontal-blanco.svg" alt="" />'
     +   '<span>·</span>'

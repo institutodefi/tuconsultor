@@ -3,6 +3,7 @@ import { listAll, updateRow, deleteRow , explicarErrorBd } from '../../lib/data.
 import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR , pagoAdelantado } from '../../lib/calcEngine.js';
+import { precioClienteAntiguo } from '../../lib/reglasComerciales.js';
 import { COMPLEJIDADES } from '../../lib/proyecto.js';
 import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
 import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.jsx';
@@ -731,14 +732,28 @@ export default function Ofertas() {
 
               <label className="mt-2.5 flex cursor-pointer items-start gap-2.5">
                 <input type="checkbox" className="mt-0.5" checked={!!edicion.cliente_antiguo}
-                  onChange={(ev) => setEdicion({
-                    ...edicion, cliente_antiguo: ev.target.checked,
-                    precios_sistema: ev.target.checked ? (edicion.precios_sistema || {}) : {},
-                  })} />
+                  onChange={(ev) => {
+                    const on = ev.target.checked;
+                    if (!on) { setEdicion({ ...edicion, cliente_antiguo: false, precios_sistema: {} }); return; }
+                    // Si la oferta ya traía precios pactados se respetan: son
+                    // los que se negociaron. La tarifa heredada solo rellena
+                    // lo que esté vacío.
+                    const ya = edicion.precios_sistema || {};
+                    const heredado = precioClienteAntiguo(edicion.modelo);
+                    const prop = { ...ya };
+                    if (heredado) {
+                      for (const x of (calcEdicion.desgloseSistemas || [])) {
+                        if (prop[x.id] == null) prop[x.id] = heredado;
+                      }
+                    }
+                    setEdicion({ ...edicion, cliente_antiguo: true, precios_sistema: prop });
+                  }} />
                 <span className="text-[12.5px] leading-snug">
                   <span className="font-bold text-[#EAF4F7]">Cliente antiguo con tarifa pactada</span>
                   <span className="block text-[11px] text-[#9FC0CB]">
-                    Los sistemas en blanco siguen el catálogo, con su mínimo de {calcEdicion.volumen?.suelo ?? 350} €.
+                    {precioClienteAntiguo(edicion.modelo)
+                      ? `Se proponen ${precioClienteAntiguo(edicion.modelo)} €/mes por sistema, la tarifa heredada de ${edicion.modelo}. Lo ya pactado no se toca.`
+                      : `${edicion.modelo} no tiene tarifa heredada. Fija a mano lo que haga falta.`}
                   </span>
                 </span>
               </label>

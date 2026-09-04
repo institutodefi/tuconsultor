@@ -32,7 +32,7 @@
   var PERIODO = 8000;
 
   var LOGO = {
-    tuconsultor: '/marca/horizontal-dark.svg',
+    tuconsultor: '/marca/20-aniversario/web-horizontal-blanco-600.png',   // 20 aniversario, sobre oscuro
     consultify: '/marca/consultify-horizontal-blanco.svg',
     orbita: '/marca/orbita-esfera-anim.svg',
     magic: '/marca/magic-blanco.png',

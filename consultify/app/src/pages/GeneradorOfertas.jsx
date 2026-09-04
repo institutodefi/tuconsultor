@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
+import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
 import { DISCLAIMER_OFERTA, DISCLAIMER_CORTO, prefijoPrecio , AVISO_NORMA_INDIVIDUAL, AVISO_NORMA_CORTO } from '../lib/legal.js';
@@ -529,12 +530,25 @@ export default function GeneradorOfertas({ publico = false }) {
 
               <label className="mt-3 flex cursor-pointer items-start gap-2.5">
                 <input type="checkbox" className="mt-0.5" checked={clienteAntiguo}
-                  onChange={(e) => { setClienteAntiguo(e.target.checked); if (!e.target.checked) setPreciosSistema({}); }} />
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setClienteAntiguo(on);
+                    // Al marcarla se propone la tarifa heredada del modelo en
+                    // todos los sistemas: es lo que se teclaba a mano en cada
+                    // oferta. Sigue siendo editable uno a uno, y al desmarcar
+                    // se vacía para volver al precio de catálogo.
+                    if (!on) { setPreciosSistema({}); return; }
+                    const heredado = precioClienteAntiguo(modelo);
+                    if (!heredado) return;   // Apoyo e Implantación no son cuota
+                    setPreciosSistema(Object.fromEntries(
+                      (res.desgloseSistemas || []).map((x) => [x.id, heredado])));
+                  }} />
                 <span className="text-[13px] leading-snug">
                   <span className="font-bold text-[#EAF4F7]">Cliente antiguo con tarifa pactada</span>
                   <span className="block text-[11.5px] text-[#9FC0CB]">
-                    Fija el precio de los sistemas que tengan precio heredado. Los que dejes en blanco
-                    siguen la regla de catálogo, con su suelo de {res.volumen?.suelo ?? 350} €.
+                    {precioClienteAntiguo(modelo)
+                      ? `Se proponen ${precioClienteAntiguo(modelo)} €/mes por sistema, la tarifa heredada de ${modelo}. Edita el que haga falta; los que dejes en blanco siguen el precio de catálogo. Los descuentos por volumen se aplican después.`
+                      : `${modelo} no tiene tarifa heredada: no es una cuota mensual. Fija a mano el precio de los sistemas que lo necesiten.`}
                   </span>
                 </span>
               </label>
@@ -548,6 +562,7 @@ export default function GeneradorOfertas({ publico = false }) {
                         <input id={`ps-${s.id}`} type="number" min="0" step="25"
                           className="input"
                           placeholder={String(s.manual ? '' : s.precio)}
+                          title={`Suelo de este sistema: ${sueloSistema(s.id, complejidad)} €/mes`}
                           value={preciosSistema[s.id] ?? ''}
                           onChange={(e) => {
                             const v = e.target.value;

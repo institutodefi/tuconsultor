@@ -11,6 +11,20 @@ import ClientePortal from './portal/ClientePortal.jsx';
 import ConsultorPortal from './portal/ConsultorPortal.jsx';
 import './index.css';
 import BarreraErrores from './components/BarreraErrores.jsx';
+import { cargarReglas } from './lib/reglasComerciales.js';
+
+// Los parámetros de precio —tarifas, suelos y la tarifa de cliente antiguo—
+// se leen UNA vez al arrancar y quedan en memoria: el motor recalcula en cada
+// pulsación de tecla y no puede ir a la base cada vez.
+//
+// Sin esta llamada, `parametros_precio` era una pantalla donde se editaban
+// números que no llegaban a ningún cálculo: la caché nunca se llenaba y el
+// motor usaba siempre sus valores de respaldo.
+//
+// No se espera al resultado ni se bloquea el arranque: si la consulta falla o
+// tarda, se calcula con los valores de respaldo, que son los mismos que tenía
+// el motor escritos a mano.
+cargarReglas().catch(() => {});
 
 function Protected({ allow, children }) {
   const { user, role, loading } = useAuth();

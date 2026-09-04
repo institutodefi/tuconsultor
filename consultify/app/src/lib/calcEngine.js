@@ -153,6 +153,77 @@ export const modeloCanonico = (m) =>
 /** Cuota mínima por sistema y mes en los modelos recurrentes. */
 export const SUELO_POR_SISTEMA = 350;
 
+// ── Suelos y tarifas heredadas, ajustables sin desplegar ──────────────────
+//
+// El motor NO consulta la base: es una función pura y sus pruebas
+// (`scripts/test-*.mjs`) lo importan suelto, sin sesión ni red. Si tirara de
+// `reglasComerciales.js` arrastraría a `data.js` y al cliente de Supabase, y
+// dejaría de poder ejecutarse fuera del navegador.
+//
+// Así que la dirección es la contraria: aquí viven los valores de partida, y
+// quien los lee de `parametros_precio` los EMPUJA con `aplicarParametros()`
+// al arrancar la aplicación. Sin esa llamada, el motor sigue calculando con
+// estos números.
+const PARAMS = {
+  suelo_por_sistema: SUELO_POR_SISTEMA,
+  // La ISO 9001 es la puerta de entrada más habitual y con 350 € se quedaba
+  // fuera de precio. Su suelo depende de la complejidad del cliente.
+  suelo_9001_baja: 199, suelo_9001_media: 199, suelo_9001_alta: 249,
+  // Tarifa heredada que se propone al marcar «cliente antiguo», por sistema.
+  precio_antiguo_relacion: 199, precio_antiguo_implicacion: 349, precio_antiguo_compromiso: 549,
+};
+
+/** Sobrescribe los parámetros con los de la base. Ignora lo que no sea número. */
+export function aplicarParametros(mapa) {
+  for (const [k, v] of Object.entries(mapa || {})) {
+    const n = Number(v);
+    if (Number.isFinite(n)) PARAMS[k] = n;
+  }
+}
+
+/**
+ * Cuota mínima mensual de UN sistema, según su norma y la complejidad.
+ *
+ * Mismo orden de búsqueda que la función `suelo_sistema()` de la base (v115),
+ * para que pantalla, motor y base no puedan discrepar:
+ *   1. suelo_<norma>_<complejidad>   → suelo_9001_alta
+ *   2. suelo_<norma>                 → suelo_9001
+ *   3. suelo_por_sistema             → el general, 350 €
+ *
+ * Dar suelo propio a otra norma es crear su parámetro: aquí no se toca nada.
+ */
+export function sueloSistema(normaId, complejidad) {
+  const n = String(normaId || '').trim().toLowerCase();
+  const c = String(complejidad || '').trim().toLowerCase();
+  const val = (clave) => (Number.isFinite(PARAMS[clave]) ? PARAMS[clave] : null);
+  // Con `??` hay que devolver null, no la cadena vacía: `'' ?? x` vale '' y
+  // cortaba la cadena de respaldo. Una norma sin complejidad —45001 sin
+  // clasificar— se quedaba sin suelo en vez de caer a los 350 €.
+  const porComplejidad = (n && c) ? val(`suelo_${n}_${c}`) : null;
+  const porNorma = n ? val(`suelo_${n}`) : null;
+  return porComplejidad ?? porNorma ?? val('suelo_por_sistema') ?? SUELO_POR_SISTEMA;
+}
+
+// Modelos con tarifa heredada. Apoyo e Implantación no la tienen: no son cuota
+// mensual, así que proponer un precio por sistema no significaría nada.
+const CLAVE_ANTIGUO = {
+  'relación': 'precio_antiguo_relacion',    'relacion': 'precio_antiguo_relacion',
+  'implicación': 'precio_antiguo_implicacion', 'implicacion': 'precio_antiguo_implicacion',
+  'compromiso': 'precio_antiguo_compromiso',
+};
+
+/**
+ * Precio mensual POR SISTEMA que se propone a un cliente antiguo, por modelo.
+ * `null` donde no hay tarifa heredada. Es una propuesta editable: los
+ * descuentos por volumen se aplican después, como con cualquier precio fijado
+ * a mano.
+ */
+export function precioClienteAntiguo(modelo) {
+  const clave = CLAVE_ANTIGUO[String(modelo || '').trim().toLowerCase()];
+  if (!clave) return null;
+  return Number.isFinite(PARAMS[clave]) ? PARAMS[clave] : null;
+}
+
 /** Tope del descuento por volumen. Nunca se baja más de aquí. */
 export const TOPE_DESCUENTO_VOLUMEN = 15;
 
@@ -438,8 +509,13 @@ export function calcular(normaIds, modeloId, opts = {}) {
       const hCoord = (s.nivel === 'J2' || s.nivel === 'J3') ? s.horas * 1.10 : s.horas;
       const horas = Math.ceil(hCoord);
       const bruto = Math.ceil((horas * tarifa[s.nivel] * (1 + margen)) / m.paso) * m.paso;
-      const precio = Math.max(SUELO_POR_SISTEMA, bruto);
-      return { ...s, horas, precio, manual: false, suelo: precio === SUELO_POR_SISTEMA && bruto < SUELO_POR_SISTEMA };
+      // El suelo es de ESTE sistema: la ISO 9001 tiene el suyo según la
+      // complejidad (199 baja y media, 249 alta) y el resto mantienen los
+      // 350 €. Con 9001 en baja más una 14001, el mínimo conjunto es 549.
+      const sueloDeEste = sueloSistema(s.id, ctx.complejidad);   // ver más abajo
+      const precio = Math.max(sueloDeEste, bruto);
+      return { ...s, horas, precio, manual: false, sueloAplicado: sueloDeEste,
+               suelo: bruto < sueloDeEste };
     });
 
     // Las horas presenciales son por cliente, no por sistema: se suman una vez.
@@ -462,7 +538,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
       pct, importeDto,
       total: Math.round((subtotal - importeDto) * 100) / 100,
       tope: TOPE_DESCUENTO_VOLUMEN,
+      // Informativo para la pantalla: el suelo general. Cada sistema lleva el
+      // suyo en `sueloAplicado`, que es el que de verdad se le ha aplicado.
       suelo: SUELO_POR_SISTEMA,
+      suelos: Object.fromEntries(desgloseSistemas.map((x) => [x.id, x.sueloAplicado ?? null])),
     };
     precioCatalogo = volumen.total;
   }

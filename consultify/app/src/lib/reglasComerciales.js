@@ -18,6 +18,10 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import { listTable } from './data.js';
+// El motor guarda los valores de partida y los expone; aquí solo se le empujan
+// los de la base. La dirección importa: si fuera al revés, `calcEngine.js`
+// arrastraría el cliente de Supabase y dejaría de poder probarse suelto.
+import { aplicarParametros, sueloSistema, precioClienteAntiguo } from './calcEngine.js';
 
 let cache = null;
 let cargando = null;
@@ -29,6 +33,11 @@ export const POR_DEFECTO = {
   dto_pago_unico: 5,
   dto_volumen_2: 5, dto_volumen_3: 10, dto_volumen_4: 15, tope_dto_volumen: 15,
   suelo_por_sistema: 350,
+  // El suelo de la ISO 9001 depende de la complejidad: es la puerta de entrada
+  // más habitual y con el suelo general de 350 € se quedaba fuera de precio.
+  suelo_9001_baja: 199, suelo_9001_media: 199, suelo_9001_alta: 249,
+  // Tarifa heredada que se propone al marcar «cliente antiguo», por sistema.
+  precio_antiguo_relacion: 199, precio_antiguo_implicacion: 349, precio_antiguo_compromiso: 549,
   acompanamiento_auditoria_dia: 600,
   meses_cobrados_adelantado: 11, meses_servicio_adelantado: 12,
   pct_productivo: 70,
@@ -46,6 +55,8 @@ export async function cargarReglas() {
         if (Number.isFinite(v)) m[f.clave] = v;
       }
       cache = m;
+      // Desde aquí el motor calcula con lo que diga la base.
+      aplicarParametros(m);
       return m;
     })
     .catch(() => {
@@ -84,3 +95,7 @@ export function descuentoVolumen(nSistemas) {
     : 0;
   return Math.min(d, regla('tope_dto_volumen'));
 }
+
+
+// Se reexportan para que las pantallas no tengan que saber de dónde salen.
+export { sueloSistema, precioClienteAntiguo };

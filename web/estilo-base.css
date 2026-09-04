@@ -99,7 +99,9 @@
   }
   /* `width:auto` explícito: sin él, un SVG sin `width` en la etiqueta reserva
      el ancho por defecto (300 px) hasta que carga y la cabecera da un salto. */
-  .nav-logo img { height: 36px; width: auto; }
+  /* El logo del 20 aniversario lleva la línea «20 años · marcando la diferencia»
+     debajo: a 36 px no se leía. */
+  .nav-logo img { height: 44px; width: auto; }
   .nav-mid {
     display: flex; gap: 32px; align-items: center;
     font-size:13px; font-weight: 500;
@@ -815,9 +817,9 @@
     margin-bottom: 28px;
   }
   .footer-brand img {
-    height: 32px;
+    height: 44px;   /* logo del 20 aniversario: con la línea de abajo legible */
     margin-bottom: 16px;
-    opacity: 0.92;
+    opacity: 1;
   }
   .footer-brand p {
     font-size:13px; line-height: 1.6;
@@ -928,7 +930,7 @@
   .models-grid.four { grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 1100px) { .models-grid.four { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px)  { .models-grid.four { grid-template-columns: 1fr; } }
-  .nav-logo img { height: 34px; width: auto; }
+  .nav-logo img { height: 40px; width: auto; }
   .consultify-band { background: #101C36; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .consultify-band .section-eyebrow { color: #9DBEF3; }
   .consultify-band .section-eyebrow::before { background: #9DBEF3; }
