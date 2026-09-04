@@ -71,6 +71,64 @@
   </div>
 </nav>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     PREMIOS VANGUARDISTAS 2026 · módulo de convocatoria
+     Va ANTES del hero, no dentro: la portada tiene un solo h1 y es el de
+     TuConsultor. Esto es una franja de aviso, no una portada alternativa.
+     Se retira sola después del acto de entrega (data-caduca="si").
+     ══════════════════════════════════════════════════════════════════════ -->
+<aside class="pv-banda" data-premios-modulo data-caduca="si" data-estado="normal"
+       aria-labelledby="pv-titulo">
+  <div class="container pv-banda-in">
+
+    <a class="pv-logo" href="/premios/">
+      <img src="/premios/logos/aniversario/A-horizontal-sello-mono-blanco-600.png"
+           width="600" height="123" loading="eager" decoding="async"
+           alt="Premios Vanguardistas · IV Edición 2026 · TuConsultor, 20 años marcando la diferencia" />
+    </a>
+
+    <div class="pv-texto">
+      <p class="pv-eyebrow" id="pv-titulo">Premios Vanguardistas 2026 · IV Edición</p>
+
+      <!-- Sin JavaScript se ve esto, y con esto ya se entiende el módulo:
+           dice hasta cuándo hay plazo. La cuenta atrás es la mejora, no el
+           requisito. Es también el texto que leen los lectores de pantalla. -->
+      <p class="pv-plazo" data-plazo-estatico>
+        Plazo de candidaturas abierto hasta el
+        <time datetime="2026-10-30T23:59:59+01:00"><strong>30 de octubre de 2026</strong></time>,
+        a las 23:59 (hora de Madrid).
+      </p>
+
+      <!-- El contador NO se anuncia: cuatro cifras cambiando cada segundo
+           harían inservible un lector de pantalla. La fecha va arriba. -->
+      <div class="pv-reloj" data-cuenta-atras hidden aria-hidden="true" aria-live="off">
+        <span class="pv-caja" data-dias><b data-num>00</b><i data-eti>días</i></span>
+        <span class="pv-sep" aria-hidden="true">:</span>
+        <span class="pv-caja" data-horas><b data-num>00</b><i data-eti>horas</i></span>
+        <span class="pv-sep" aria-hidden="true">:</span>
+        <span class="pv-caja" data-minutos><b data-num>00</b><i data-eti>minutos</i></span>
+        <span class="pv-sep" aria-hidden="true">:</span>
+        <span class="pv-caja" data-segundos><b data-num>00</b><i data-eti>segundos</i></span>
+      </div>
+      <p class="pv-aviso">Últimos días</p>
+
+      <p class="pv-cerrado" data-cerrado hidden>
+        Convocatoria cerrada · Nos vemos el 3 de diciembre
+      </p>
+    </div>
+
+    <div class="pv-acciones">
+      <a class="btn btn-orange" data-cta
+         href="https://es.surveymonkey.com/r/VANGUARDISTAS_IV_EDICION"
+         target="_blank" rel="noopener"
+         data-href-cerrado="/premios/#calendario"
+         data-texto-cerrado="El acto de entrega">Presenta tu candidatura</a>
+      <a class="pv-bases" href="/premios/">Ver las bases</a>
+    </div>
+
+  </div>
+</aside>
+
 <header class="hero" role="banner">
   <div class="container hero-content">
     <div class="pre-tag">GESTIÓN CON CORAZÓN desde 2006 <span class="heart" aria-hidden="true">❤</span></div>
@@ -261,5 +319,6 @@
   <script src="/sellos.js?v=188" defer></script>
   <script src="/buscador-normas.js?v=188" defer></script>
   <script src="/menu-movil.js?v=188" defer></script>
+<script src="/premios/cuenta-atras.js" defer></script>
 </body>
 </html>

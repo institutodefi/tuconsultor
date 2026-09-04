@@ -12,7 +12,11 @@
 <meta property="og:title" content="Premios Vanguardistas 2026 · IV Edición · TuConsultor" />
 <meta property="og:description" content="Convocatoria de los Premios Vanguardistas 2026, edición especial del XX Aniversario de TuConsultor. Candidaturas del 1 de septiembre al 30 de octubre de 2026." />
 <meta property="og:url" content="https://www.tuconsultor.com/premios/" />
-<meta property="og:image" content="https://www.tuconsultor.com/social-img/og-default.png" />
+<meta property="og:image" content="https://www.tuconsultor.com/social-img/og-premios-vanguardistas-2026.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Premios Vanguardistas 2026 · IV Edición · Candidaturas hasta el 30 de octubre de 2026" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="stylesheet" href="/tokens.css" />
 <link rel="stylesheet" href="/estilo-base.css" />
@@ -49,6 +53,24 @@
         "@type": "Organization",
         "name": "TuConsultor",
         "url": "https://www.tuconsultor.com"
+      },
+      "subEvent": {
+        "@type": "Event",
+        "name": "Convocatoria de candidaturas · Premios Vanguardistas 2026",
+        "description": "Plazo de presentación de candidaturas.",
+        "startDate": "2026-09-01T00:00:00+02:00",
+        "endDate": "2026-10-30T23:59:59+01:00",
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": "https://es.surveymonkey.com/r/VANGUARDISTAS_IV_EDICION"
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "TuConsultor",
+          "url": "https://www.tuconsultor.com"
+        }
       }
     }
   ]
@@ -69,19 +91,48 @@
 </header>
 
 <main id="main">
-<section class="hero-premios">
+<section class="hero-premios" data-premios-modulo data-estado="normal">
   <div class="container">
+    <!-- El sello del XX aniversario va como endoso de TuConsultor, detrás del
+         filete, no como parte de la marca del evento. Variante `mono-blanco`
+         porque el hero es petrol: con la `light`, la palabra «Premios» —que va
+         en petrol— desaparecía sobre el fondo. -->
+    <img class="premios-logo"
+         src="/premios/logos/aniversario/A-horizontal-sello-mono-blanco-900.png"
+         width="900" height="184" loading="eager" decoding="async"
+         alt="Premios Vanguardistas · IV Edición 2026 · TuConsultor, 20 años marcando la diferencia" />
     <p class="section-eyebrow">IV Edición · Edición Especial XX Aniversario de TuConsultor</p>
     <h1>Premios Vanguardistas 2026</h1>
     <p class="hero-claim">Reconocemos a las organizaciones que se adelantan. Premiamos el avance.</p>
     <p class="hero-espiritu">Estos premios no reconocen organizaciones: reconocen proyectos. Iniciativas concretas que un equipo se empeñó en sacar adelante y que cambiaron algo dentro de su organización.</p>
 
     <div class="premios-cta">
-      <a class="btn-primary btn-lg" href="https://es.surveymonkey.com/r/VANGUARDISTAS_IV_EDICION" target="_blank" rel="noopener">Presenta tu candidatura</a>
-      <span class="premios-plazo" id="plazo" data-cierre="2026-10-30">
-        Plazo hasta el 30 de octubre de 2026
-      </span>
+      <a class="btn-primary btn-lg" data-cta href="https://es.surveymonkey.com/r/VANGUARDISTAS_IV_EDICION" target="_blank" rel="noopener"
+         data-href-cerrado="#calendario" data-texto-cerrado="El acto de entrega">Presenta tu candidatura</a>
+      <a class="btn-ghost btn-lg" href="/premios/bases-premios-vanguardistas-2026.pdf" download>
+        Descargar las bases (PDF)
+      </a>
     </div>
+
+    <!-- Sin JavaScript queda esto, que ya dice todo lo que hace falta saber.
+         Es además el texto que leen los lectores de pantalla: el contador se
+         marca `aria-hidden` porque cuatro cifras por segundo no se anuncian. -->
+    <p class="premios-plazo" data-plazo-estatico>
+      Plazo de candidaturas abierto hasta el
+      <time datetime="2026-10-30T23:59:59+01:00"><strong>30 de octubre de 2026</strong></time>,
+      a las 23:59 (hora de Madrid).
+    </p>
+    <div class="pv-reloj pv-reloj-hero" data-cuenta-atras hidden aria-hidden="true" aria-live="off">
+      <span class="pv-caja" data-dias><b data-num>00</b><i data-eti>días</i></span>
+      <span class="pv-sep" aria-hidden="true">:</span>
+      <span class="pv-caja" data-horas><b data-num>00</b><i data-eti>horas</i></span>
+      <span class="pv-sep" aria-hidden="true">:</span>
+      <span class="pv-caja" data-minutos><b data-num>00</b><i data-eti>minutos</i></span>
+      <span class="pv-sep" aria-hidden="true">:</span>
+      <span class="pv-caja" data-segundos><b data-num>00</b><i data-eti>segundos</i></span>
+    </div>
+    <p class="pv-aviso">Últimos días</p>
+    <p class="premios-plazo cerrado" data-cerrado hidden>Convocatoria cerrada · Nos vemos el 3 de diciembre</p>
     <p class="premios-duracion">7 minutos · formulario online</p>
   </div>
 </section>
@@ -132,7 +183,7 @@
 <div><span class="premio-importe">3.000</span><span class="premio-moneda">€</span><span class="premio-concepto">Valor del Informe GAP Estratégico basado en el Modelo MAGIC®</span></div>
 </div><p class="premio-total">Dotación total: <strong>4.000 €</strong></p>
 </div></div></section>
-<section class="norms" style="padding-top:0"><div class="container"><div class="section-head"><div class="section-eyebrow">Calendario</div></div><ol class="premios-calendario">
+<section class="norms" style="padding-top:0"><div class="container"><div class="section-head"><div class="section-eyebrow" id="calendario">Calendario</div></div><ol class="premios-calendario">
 <li><span class="cal-fecha">1 sep</span><span class="cal-titulo">Apertura del plazo de presentación de candidaturas</span></li>
 <li><span class="cal-fecha">30 oct</span><span class="cal-titulo">Cierre del plazo, inclusive</span></li>
 <li><span class="cal-fecha">3 dic</span><span class="cal-titulo">Acto de entrega de los Premios Vanguardistas · 19:00 h</span></li>
@@ -148,7 +199,8 @@
 <li><strong>El jurado evalúa</strong><span>Propone las tres mejores prácticas por categoría y ámbito.</span></li>
 <li><strong>Se valida la propuesta</strong><span>La presidencia, junto con la dirección técnica de TuConsultor, valida la propuesta presentada por el jurado.</span></li>
 <li><strong>El jurado decide</strong><span>Una vez validada su propuesta, el jurado decide los ganadores de los Premios Vanguardistas.</span></li>
-</ol><div class="premios-dos" style="margin-top:24px"><div><div class="section-eyebrow">Criterios</div><ul class="premios-lista">
+</ol>
+<p class="premios-feedback"><strong>Participar sirve aunque no se gane.</strong> Todas las candidaturas, resulten premiadas o no, reciben el resultado de su evaluación con la identificación de sus principales puntos fuertes y de los aspectos en los que pueden seguir avanzando.</p><div class="premios-dos" style="margin-top:24px"><div><div class="section-eyebrow">Criterios</div><ul class="premios-lista">
 <li><strong>Replicabilidad</strong><span>Grado en el que el proyecto podría llevarse a cabo en otras organizaciones.</span></li>
 <li><strong>Innovación</strong><span>Elementos diferenciadores que hayan supuesto una innovación en la gestión de la organización.</span></li>
 <li><strong>Resultados</strong><span>Aprendizajes y resultados de avance.</span></li>
@@ -173,22 +225,6 @@
 </div></div></section>
 </main>
 
-<script>
-// Los días que quedan se calculan en el navegador. Escritos en el HTML, al día
-// siguiente la página miente.
-(function () {
-  var el = document.getElementById('plazo');
-  if (!el) return;
-  var cierre = new Date(el.dataset.cierre + 'T23:59:59');
-  var d = Math.ceil((cierre - new Date()) / 86400000);
-  if (d > 0 && d <= 45) {
-    el.innerHTML = 'Quedan <strong>' + d + ' día' + (d === 1 ? '' : 's') + '</strong> para presentar tu candidatura';
-    el.classList.add('urgente');
-  } else if (d <= 0) {
-    el.textContent = 'El plazo de candidaturas está cerrado';
-    el.classList.add('cerrado');
-  }
-})();
-</script>
+<script src="/premios/cuenta-atras.js" defer></script>
 </body>
 </html>

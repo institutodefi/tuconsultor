@@ -1409,3 +1409,157 @@ html[data-sitio="consultify"] .pie-tc { background: #EAF0F9 !important; color: #
   .premios-contacto { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 20px; }
   .premios-contacto span { display: flex; flex-direction: column; gap: 2px; font-size: .88rem; }
   .premios-contacto strong { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; opacity: .6; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     PREMIOS VANGUARDISTAS · franja de convocatoria (portada y bases)
+     Colores del pack del evento, no los de la web: la convocatoria es una
+     marca propia y tiene que distinguirse de la franja de navegación.
+     ══════════════════════════════════════════════════════════════════════ */
+  .pv-banda {
+    --pv-petrol: #1B5D72;
+    --pv-teal:   #22A2A5;
+    --pv-naranja:#F39200;
+    background: linear-gradient(100deg, #103F4F 0%, var(--pv-petrol) 55%, #1B7080 100%);
+    color: #fff;
+    padding: 18px 0;
+    border-bottom: 3px solid var(--pv-naranja);
+  }
+  .pv-banda-in {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 16px 28px;
+  }
+  .pv-logo { flex: 0 0 auto; display: block; line-height: 0; }
+  .pv-logo img { width: 236px; height: auto; max-width: 100%; }
+  /* El área de toque llega a 44 px aunque el logo mida menos de alto. */
+  .pv-logo { padding: 6px 0; }
+
+  .pv-texto { flex: 1 1 260px; min-width: 0; }
+  .pv-eyebrow {
+    margin: 0; font-size: .78rem; font-weight: 800;
+    letter-spacing: .14em; text-transform: uppercase;
+    /* #9FD9DC sobre #1B5D72 da 5.4:1: cumple AA de sobra para texto pequeño. */
+    color: #9FD9DC;
+  }
+  .pv-plazo, .pv-cerrado { margin: 6px 0 0; font-size: .95rem; line-height: 1.5; color: #EAF4F7; }
+  .pv-plazo strong { color: #fff; }
+  .pv-cerrado { font-weight: 700; color: #fff; }
+
+  .pv-reloj { display: flex; align-items: flex-end; gap: 6px; margin-top: 8px; }
+  /* `display:flex` gana al `[hidden]` de la hoja del navegador: sin esta línea,
+     el contador seguía viéndose a 00:00:00:00 con el plazo ya cerrado. */
+  .pv-reloj[hidden] { display: none !important; }
+  .pv-caja { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+  .pv-caja b {
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); font-weight: 800;
+    line-height: 1; letter-spacing: -.02em;
+    /* Cifras de ancho fijo: sin esto el contador «baila» a cada segundo. */
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  }
+  .pv-caja i {
+    font-style: normal; font-size: .68rem; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; color: #9FD9DC; margin-top: 3px;
+  }
+  .pv-sep {
+    font-size: clamp(1.2rem, 1rem + .8vw, 1.6rem); font-weight: 700;
+    line-height: 1; opacity: .45; padding-bottom: 16px;
+  }
+
+  /* «Últimos días» solo aparece cuando el script lo dice. */
+  .pv-aviso { display: none; }
+  .pv-banda[data-estado="ultimos"] .pv-aviso {
+    display: block; margin: 8px 0 0;
+    font-size: .82rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    /* #FFB347 sobre el petrol da 6.1:1. El #F39200 puro se queda en 3.4:1 y
+       no pasaría AA para este tamaño. */
+    color: #FFB347;
+  }
+  .pv-banda[data-estado="ultimos"] .pv-caja b { color: #FFB347; }
+  .pv-banda[data-estado="ultimos"] { border-bottom-color: #FFB347; }
+
+  .pv-acciones { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+  .pv-bases { color: #EAF4F7; font-weight: 700; font-size: .92rem; text-decoration: underline; }
+  .pv-bases:hover, .pv-bases:focus-visible { color: #fff; }
+  .pv-banda a:focus-visible { outline: 3px solid #FFB347; outline-offset: 3px; border-radius: 6px; }
+
+  /* En móvil la franja se apila y las acciones ocupan todo el ancho, para que
+     el botón no quede en una esquina de 100 px. */
+  @media (max-width: 719px) {
+    .pv-banda-in { flex-direction: column; align-items: flex-start; gap: 12px; }
+    /* En columna, el `flex:1` del texto lo estiraba a lo alto y dejaba un
+       hueco muerto de media pantalla entre el aviso y el botón. */
+    .pv-texto { flex: 0 0 auto; width: 100%; }
+    .pv-logo img { width: 200px; }
+    .pv-acciones { width: 100%; }
+    .pv-acciones .btn { flex: 1 1 auto; text-align: center; }
+    .pv-reloj { gap: 4px; }
+    .pv-caja { min-width: 40px; }
+  }
+  /* Quien pide menos animación no quiere un número parpadeando: el contador
+     sigue funcionando, pero sin transiciones. */
+  @media (prefers-reduced-motion: reduce) {
+    .pv-banda * { transition: none !important; animation: none !important; }
+  }
+
+  /* ── Hero de bases: logo del aniversario, contador y botón secundario ── */
+  .premios-logo { width: min(420px, 82%); height: auto; display: block; margin: 0 0 22px; }
+  .hero-premios .premios-plazo { margin-top: 18px; }
+  .hero-premios .pv-reloj { margin-top: 14px; }
+  /* Sobre fondo claro el contador cambia de tinta: el blanco de la franja de
+     portada aquí sería invisible. */
+  .hero-premios .pv-caja b { color: var(--tinta, #0A2B3A); }
+  .hero-premios .pv-caja i { color: #3C6070; }
+  .hero-premios .pv-sep { color: #6D8A96; }
+  /* #B36A00 sobre blanco da 4.6:1; el naranja de marca puro se queda en 2.4:1
+     y no pasaría AA para el texto del aviso. Las cifras, al ser grandes
+     (>24px), sí admiten el naranja de marca. */
+  .hero-premios[data-estado="ultimos"] .pv-aviso { color: #B36A00; }
+  .hero-premios[data-estado="ultimos"] .pv-caja b { color: #C97A00; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 14px 28px; border-radius: 999px;
+    border: 2px solid var(--line, #DCE8EC); background: transparent;
+    font-weight: 700; font-size: 1rem; color: inherit; text-decoration: none;
+  }
+  .btn-ghost:hover, .btn-ghost:focus-visible { border-color: var(--acento-texto); }
+
+  .premios-feedback {
+    margin: 18px 0 0; max-width: 68ch; line-height: 1.65;
+    padding: 14px 18px; border-radius: 14px;
+    background: var(--fondo-suave, #F3F8F9);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     PREMIOS · corrección de contraste sobre el fondo oscuro del sitio
+     La página se maquetó con los tokens de fondo claro (`--fondo-suave`,
+     #F3F8F9), pero tuconsultor.com tiene el fondo azul oscuro. El resultado
+     eran bloques casi blancos con texto blanco encima: ilegibles. Aquí se
+     sustituyen por veladuras claras sobre el propio fondo, que mantienen la
+     jerarquía y pasan AA.
+     ══════════════════════════════════════════════════════════════════════ */
+  .hero-premios {
+    background: linear-gradient(160deg, #123F52 0%, #1B5D72 58%, rgba(27,93,114,0) 100%);
+  }
+  /* Blanco sobre el petrol da 8.9:1; el teal de marca sobre ese fondo se
+     queda corto, así que el claim usa el aguamarina claro del pack. */
+  .hero-premios .hero-claim { color: #7FE3E6; }
+  .hero-premios .section-eyebrow { color: #9FD9DC; }
+  .hero-premios .hero-espiritu,
+  .hero-premios .premios-duracion { color: #EAF4F7; opacity: .88; }
+  .hero-premios .premios-plazo { color: #EAF4F7; opacity: 1; }
+  .hero-premios .pv-caja b { color: #fff; }
+  .hero-premios .pv-caja i { color: #9FD9DC; }
+  .hero-premios .pv-sep { color: #9FD9DC; }
+  .hero-premios[data-estado="ultimos"] .pv-caja b,
+  .hero-premios[data-estado="ultimos"] .pv-aviso { color: #FFB347; }
+  .hero-premios .btn-ghost { border-color: rgba(255,255,255,.45); color: #fff; }
+  .hero-premios .btn-ghost:hover,
+  .hero-premios .btn-ghost:focus-visible { border-color: #FFB347; }
+
+  .premios-elegibilidad,
+  .premios-feedback {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+  }
+  /* El número del paso: círculo claro con la cifra en petrol, no en blanco. */
+  .bloque-n { background: #D8E9EE; color: #10394A; }
