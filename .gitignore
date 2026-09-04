@@ -1,0 +1,9 @@
+# Dependencias y salidas de build: las regenera Netlify con `npm ci` y `node build-dist.mjs`.
+node_modules/
+dist/
+consultify/dist/
+consultify/app/dist/
+.DS_Store
+*.log
+.env
+.env.*

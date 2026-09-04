@@ -1,0 +1,80 @@
+ASUNTO:      Abrimos la convocatoria de los Premios Vanguardistas 2026
+PREHEADER:   IV edición · XX Aniversario. Tenéis hasta el 30 de octubre.
+DE:          TuConsultor <hola@tuconsultor.com>
+RESPONDER A: hola@tuconsultor.com
+
+---------------------------------------------------------------
+
+Hola, {{NOMBRE}}:
+
+Este año TuConsultor cumple 20 años, y lo celebramos abriendo la
+convocatoria que más ilusión nos hace: los Premios Vanguardistas 2026,
+IV edición y Edición Especial XX Aniversario.
+
+Estos premios no reconocen organizaciones: reconocen proyectos.
+Iniciativas concretas que alguien, dentro de una organización, se empeñó
+en sacar adelante y que acabaron cambiando algo. Por eso en tres
+ediciones hemos premiado a hospitales públicos, fundaciones, colegios,
+empresas de tecnología y asociaciones que no tienen nada que ver entre
+sí, salvo lo único que importa aquí: se adelantaron.
+
+
+QUÉ BUSCAMOS
+
+Un proyecto desarrollado en 2025 o 2026 que sea:
+
+  - Replicable: que pueda llevarse a cabo en otras organizaciones.
+  - Innovador: que aporte algo que antes no se hacía.
+  - Con resultados: lo que no se mide no existe.
+
+
+CÓMO PRESENTARSE
+
+La candidatura se presenta en un formulario online. Se tarda unos
+7 minutos y hay que preparar cinco bloques: el eslogan de la buena
+práctica, el para qué y por qué, el cómo, el qué y el para quién.
+
+Cuatro ámbitos: estrategia e innovación, sostenibilidad y ODS, gestión
+cultural y del talento, y tecnología y blockchain.
+Tres categorías: pyme, gran empresa y administración pública.
+
+
+PREMIO ESPECIAL XX ANIVERSARIO
+
+Este año, además, el jurado elegirá un ganador global entre todas las
+candidaturas presentadas: 1.000 € y un Informe GAP Estratégico basado
+en el Modelo MAGIC valorado en 3.000 €.
+
+
+FECHAS
+
+  Plazo de candidaturas   1 de septiembre - 30 de octubre de 2026
+  Acto de entrega         Jueves 3 de diciembre de 2026, 19:00 h
+  Lugar                   Área Gran Reserva del BÁLAMO, Madrid
+
+
+PRESENTA TU CANDIDATURA
+https://es.surveymonkey.com/r/VANGUARDISTAS_IV_EDICION
+
+Bases completas: https://www.tuconsultor.com/premios/
+
+
+Y si estás pensando "nosotros hicimos algo parecido, pero no sé si da la
+talla": preséntalo. Todas las candidaturas reciben un informe de
+evaluación con sus puntos fuertes y sus áreas de avance, ganen o no.
+Solo por eso ya compensa.
+
+Cualquier duda, respóndenos a este correo.
+
+Un abrazo,
+
+Fátima Ballesteros
+Directora · TuConsultor
+hola@tuconsultor.com · www.tuconsultor.com
+
+---------------------------------------------------------------
+TuConsultor es una marca de TRESCORE PROYECTOS I.T.E., S.L.
+C/ Fuente Cisneros, 66, 7.º D · 28922 Alcorcón (Madrid)
+Protección de datos: rgpd@tuconsultor.com
+Si no quieres recibir más correos sobre los Premios Vanguardistas,
+puedes darte de baja aquí: {{URL_BAJA}}
