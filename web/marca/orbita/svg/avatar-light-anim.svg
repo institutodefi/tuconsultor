@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300"><defs><radialGradient id="gavla" cx="32%" cy="26%" r="78%">
+  <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.93"/><stop offset="55%" stop-color="#E6F2F4" stop-opacity="0.8"/>
+  <stop offset="100%" stop-color="#CFE4E8" stop-opacity="0.95"/></radialGradient>
+ <linearGradient id="ravla" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#22A2A5"/>
+  <stop offset="58%" stop-color="#22A2A5"/><stop offset="100%" stop-color="#F39200"/></linearGradient>
+ <radialGradient id="havla" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFF" stop-opacity="0.55"/>
+  <stop offset="100%" stop-color="#FFF" stop-opacity="0"/></radialGradient></defs><circle cx="150" cy="150" r="150" fill="#F2F7F8"/><circle cx="150.0" cy="150.0" r="108" fill="url(#gavla)"/>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-0.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-1.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-2.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-3.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-4.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="108" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"><animate attributeName="rx" values="108;0;108" keyTimes="0;0.5;1" dur="6.0s" begin="-5.000s" repeatCount="indefinite" calcMode="spline" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/></ellipse>
+  <ellipse cx="150.0" cy="150.0" rx="108" ry="33.5" fill="none" stroke="#93BFC9" stroke-width="1.7" opacity="0.85"/>
+  <ellipse cx="150.0" cy="186.8" rx="101.5" ry="20.3" fill="none" stroke="#93BFC9" stroke-width="1.2" opacity="0.45"/>
+  <ellipse cx="150.0" cy="113.2" rx="101.5" ry="20.3" fill="none" stroke="#93BFC9" stroke-width="1.2" opacity="0.45"/>
+  <ellipse cx="113.3" cy="106.8" rx="45.4" ry="32.4" fill="url(#havla)"/>
+  <circle cx="150.0" cy="150.0" r="108" fill="none" stroke="url(#ravla)" stroke-width="4.75"/><g transform="translate(121.00,123.26) scale(0.5800)">
+  <path d="M50 0 L100 28.5 L76.7 42.2 L50 27.6 L23.3 42.2 L0 28.5 Z" fill="#F39200"/>
+  <path d="M0 28.5 L23.3 42.2 L23.3 92.2 L0 82.8 Z" fill="#22A2A5"/>
+  <path d="M100 28.5 L76.7 42.2 L76.7 92.2 L100 82.8 Z" fill="#22A2A5"/>
+  <path d="M39.1 58.4 L23.3 92.2 L23.3 67.8 Z" fill="#1B5D72"/>
+  <path d="M60.9 58.4 L76.7 92.2 L76.7 67.8 Z" fill="#1B5D72"/></g><circle r="5.2" fill="#F39200"><animateMotion dur="12.0s" repeatCount="indefinite" path="M 258.0 150.0 A 108 33.5 0 1 1 42.0 150.0 A 108 33.5 0 1 1 258.0 150.0"/><animate attributeName="opacity" values="1;0.35;1;1;1" keyTimes="0;0.25;0.5;0.75;1" dur="12.0s" repeatCount="indefinite"/></circle></svg>
