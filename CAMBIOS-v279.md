@@ -183,3 +183,6 @@
 - Las 22 tareas de la 9001 de CECE llevaban las horas SUMADAS de las tres normas (S1 PE1: 3 + 3 + 3 = 9 h): se volcaron el 1 de septiembre con la versión del volcado que anidaba tareas iguales de varias normas, y después las de 14001 y 27001 se volcaron también por separado. Contadas dos veces. DICS y FGUP cuadran con el catálogo; el volcado actual ya no anida.
 - **Migración `migracion-v130-horas-cece-9001.sql`** (ya aplicada en la base): devuelve al catálogo las tareas no integradas con horas ≥ 2× el catálogo. CECE queda 9001 56 h · 14001 78 h · 27001 135 h = 269 h (antes 472 h). Laura: 215,2 h; Fátima: 53,8 h.
 - Queda una tarea con diferencia pequeña y sin marca de edición (CECE-14001-07, 6 h frente a 4 h del catálogo): no se toca.
+
+## Programador de sesiones · se quedaba en «Cargando…»
+- `portal/consultores/SesionesTarea.jsx` · para administración y dirección (acceso total a los proyectos) la carga leía `delProyecto.size` con `delProyecto` a null, reventaba en silencio y el calendario de la tarea no salía nunca de «Cargando…». Corregido; además, cualquier fallo al cargar se enseña como error en vez de dejar el programador colgado.

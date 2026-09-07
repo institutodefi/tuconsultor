@@ -89,17 +89,20 @@ export default function SesionesTarea({
   const [error, setError] = useState(null);
 
   const cargar = async () => {
+   try {
     const [ss, ps, eq] = await Promise.all([
       listTable('tarea_sesiones').catch(() => []),
       listTable('perfiles').catch(() => []),
       proyectoId ? listTable('proyecto_equipo').catch(() => []) : Promise.resolve([]),
     ]);
-    const delProyecto = proyectoId && !sinLimiteEquipo
-      ? new Set((eq || [])
-          .filter((x) => String(x.proyecto_id) === String(proyectoId))
-          .map((x) => String(x.perfil_id)))
-      : null;
-    setSinEquipo(!!proyectoId && delProyecto.size === 0);
+    const enEquipo = new Set((eq || [])
+      .filter((x) => String(x.proyecto_id) === String(proyectoId))
+      .map((x) => String(x.perfil_id)));
+    // Con acceso total (administración y dirección) no se acota al equipo del
+    // proyecto. Ojo: antes aquí se leía `delProyecto.size` con `delProyecto`
+    // a null y el programador se quedaba en «Cargando…» para siempre.
+    const delProyecto = proyectoId && !sinLimiteEquipo ? enEquipo : null;
+    setSinEquipo(!!proyectoId && enEquipo.size === 0);
     setTodas(ss || []);
     setSesiones((ss || []).filter((s) => String(s[campoTarea]) === String(tarea.id))
       .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || String(a.hora_inicio).localeCompare(String(b.hora_inicio))));
@@ -108,6 +111,10 @@ export default function SesionesTarea({
       // Acotado al equipo del proyecto cuando se sabe cuál es.
       .filter((p) => !delProyecto || delProyecto.has(String(p.id)))
       .sort((a, b) => String(a.nombre || '').localeCompare(String(b.nombre || ''))));
+   } catch (e) {
+    // Que un fallo al cargar no deje el programador colgado en «Cargando…».
+    setSesiones([]); setError(`No se pudo cargar el programador: ${e?.message || e}`);
+   }
   };
   useEffect(() => { cargar(); }, [tarea?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
