@@ -157,13 +157,13 @@ async function generarPPTX(r, cli, anexo) {
     bold: true, color: C.blanco, valign: 'top' });
   s.addText(normNames.join('  ·  '), { x: 0.6, y: 2.65, w: 8.8, h: 0.5, fontFace: F, fontSize: 12, color: C.claro });
 
-  const impPortada = esImpl ? ((r.formasPago && r.formasPago.unico.sinIva) || r.precioCatalogo) : r.precioCatalogo;
+  const impPortada = r.formasPago ? (r.formasPago.unico.sinIva || r.precioCatalogo) : r.precioCatalogo;
   s.addText(esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN', { x: 0.6, y: 3.45, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.teal, charSpacing: 2 });
   s.addText([
     { text: fmtEur0(impPortada), options: { fontSize: 38, bold: true, color: C.blanco } },
     { text: esMes ? '  /mes · sin impuestos' : '  sin impuestos', options: { fontSize: 11, color: C.claro } },
   ], { x: 0.6, y: 3.7, w: 8.8, h: 0.7, fontFace: F });
-  if (esImpl && r.formasPago) {
+  if (r.formasPago) {
     s.addText('con ' + Math.round(r.formasPago.descuentoUnico * 100) + ' % de descuento por pago único',
       { x: 0.6, y: 4.35, w: 8.8, h: 0.26, fontFace: F, fontSize: 10, color: C.naranja });
   }
@@ -221,7 +221,7 @@ async function generarPPTX(r, cli, anexo) {
   s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 0.05, h: 1.6, fill: { color: C.naranja } });
   s.addText((esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
     { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
-  s.addText(fmtEur(esImpl ? ((r.formasPago && r.formasPago.dos.sinIva) || r.precioCatalogo) : r.precioCatalogo),
+  s.addText(fmtEur(r.formasPago ? (r.formasPago.dos.sinIva || r.precioCatalogo) : r.precioCatalogo),
     { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
   // El pago adelantado, junto a la cuota: es la cifra que se factura de verdad.
   s.addText(r.pagoAdelantado && r.adelantado

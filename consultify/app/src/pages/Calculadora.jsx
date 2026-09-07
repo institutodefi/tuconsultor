@@ -286,7 +286,7 @@ export default function Calculadora() {
               <p className="mt-3 font-semibold text-white/60">Selecciona al menos una norma para ver el precio.</p>
             )}
             <div className="mt-5 border-t border-white/15 pt-4 text-xs font-medium leading-relaxed text-white/50">
-              Precio de catálogo. Suelo de 350 €/mes en modelos recurrentes. Apoyo no contratable a &lt;60 días de auditoría externa.
+              Precio de catálogo. Suelo de 350 €/mes en modelos recurrentes. Apoyo solo con tres meses o menos hasta la certificación.
               <span className="mt-2 block font-semibold text-white/65">{LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.</span>
             </div>
           </div>

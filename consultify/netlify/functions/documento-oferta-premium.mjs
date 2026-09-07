@@ -156,7 +156,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   cover.drawText(
     (adelantadoPortada ? 'PAGO ANUAL POR ADELANTADO' : esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN') + (esWeb ? ' DESDE' : ''),
     { x: MG, y: yImp + U * 6.5, size: 8.5, font: med, color: TEAL, characterSpacing: 2 });
-  const importe = adelantadoPortada ? r.adelantado.total : esImpl ? (r.formasPago?.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
+  const importe = adelantadoPortada ? r.adelantado.total : r.formasPago ? (r.formasPago.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
   cover.drawText(eur0(importe), { x: MG, y: yImp + U * 1.5, size: 44, font: bold, color: BLANCO });
   const anchoImp = bold.widthOfTextAtSize(eur0(importe), 44);
   cover.drawText(adelantadoPortada ? '/año · sin impuestos' : esMes ? '/mes · sin impuestos' : 'sin impuestos', { x: MG + anchoImp + U, y: yImp + U * 1.9, size: 10, font: reg, color: rgb(0.55, 0.72, 0.78) });
@@ -164,7 +164,7 @@ export async function generarPDFOferta(r, cli, anexo) {
     cover.drawText(`${r.adelantado.mesesServicio} meses de servicio por ${r.adelantado.mesesCobrados} mensualidades de ${eur0(r.precioCatalogo)} · ahorro de ${eur0(r.adelantado.ahorro)}`,
       { x: MG, y: yImp - U * 0.6, size: 9, font: reg, color: NARANJA });
   }
-  if (esImpl && r.formasPago) {
+  if (r.formasPago) {
     cover.drawText(`con ${Math.round(r.formasPago.descuentoUnico * 100)} % de descuento por pago único`,
       { x: MG, y: yImp - U * 0.6, size: 9, font: reg, color: NARANJA });
   }
@@ -340,20 +340,20 @@ export async function generarPDFOferta(r, cli, anexo) {
   // ── 4 · Inversión ──
   // El pago adelantado añade una caja debajo: hay que reservarle sitio o se
   // dibuja encima de la de la cuota.
-  seccion('Inversión', (esImpl ? 22 : 17)
+  seccion('Inversión', (r.formasPago ? 22 : 17)
     + (r.pagoAdelantado && r.adelantado ? 9 : 0)
     + (r?.canal === 'web' ? 7 : 0));
   asegurar(14);
-  const alturaCaja = esImpl ? U * 16 : U * 11;
+  const alturaCaja = r.formasPago ? U * 16 : U * 11;
   p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: ANCHO, height: alturaCaja, color: SUAVE });
   p.drawRectangle({ x: MG, y: cursor - alturaCaja + U * 2, width: U * 0.5, height: alturaCaja, color: NARANJA });
 
   let yc = cursor - U * 1;
   p.drawText(
-    (esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
+    (esMes ? 'CUOTA MENSUAL' : r.tipo === 'bolsa' ? 'IMPORTE DE LA BOLSA' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
     { x: MG + U * 3, y: yc, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.4 });
   yc -= U * 4;
-  p.drawText(eur(esImpl ? (r.formasPago?.dos?.sinIva ?? r.precioCatalogo) : r.precioCatalogo),
+  p.drawText(eur(r.formasPago ? (r.formasPago.dos?.sinIva ?? r.precioCatalogo) : r.precioCatalogo),
     { x: MG + U * 3, y: yc, size: 26, font: bold, color: TINTA });
   p.drawText(esMes ? '/mes sin impuestos' : 'sin impuestos', { x: MG + U * 3 + bold.widthOfTextAtSize(eur(r.precioCatalogo), 26) + U, y: yc + 3, size: 9.5, font: reg, color: APAGADO });
   yc -= U * 2.6;
@@ -436,7 +436,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   // ── 5 · Formas de pago (solo implantación) ──
   if (r.formasPago) {
     seccion('Formas de pago', 24);   // rótulo + entradilla + las dos tarjetas
-    parrafo('La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:');
+    parrafo(r.formasPago.intro || 'La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:');
     const opciones = [r.formasPago.unico, r.formasPago.dos];
     const anchoCol = (ANCHO - U * 2) / 2;
     asegurar(14);

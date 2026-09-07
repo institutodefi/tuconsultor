@@ -1,4 +1,4 @@
-import { mesesPorModelo } from './calcEngine.js';
+import { mesesPorModelo, MAX_MESES_APOYO } from './calcEngine.js';
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICACIÓN POR FECHAS
 //
@@ -177,17 +177,15 @@ export function validarPlanificacion({ inicio, certificacion, fin, modelo, norma
     }
   }
 
-  // APOYO: la bolsa de horas se dimensiona por meses, y el mínimo sube con el
-  // número de sistemas. Con menos plazo, las horas no tienen dónde encajar.
-  // Bloquea.
-  if (modelo === 'Apoyo' && mesesContrato != null) {
-    const min = mesesPorModelo('Apoyo', normas.length);
-    if (mesesContrato < min) {
-      errores.push(
-        `La bolsa de Apoyo para ${normas.length} sistema${normas.length === 1 ? '' : 's'} necesita al menos ` +
-        `${min} meses y el plazo es de ${mesesContrato}. Amplía la fecha de fin o reduce el alcance.`,
-      );
-    }
+  // APOYO: es el modelo de la recta final. Solo se contrata cuando quedan
+  // TRES MESES O MENOS hasta la certificación; con más plazo, lo que toca es
+  // una implantación o un modelo de cuota. Se mide contra la certificación (o
+  // el fin, si no hay fecha de auditoría). Bloquea.
+  if (modelo === 'Apoyo' && meses != null && meses > MAX_MESES_APOYO) {
+    errores.push(
+      `Apoyo solo se contrata con ${MAX_MESES_APOYO} meses o menos hasta la certificación y aquí quedan ${meses}. ` +
+      'Con más plazo, elige Implantación o un modelo de cuota.',
+    );
   }
 
   // IMPLANTACIÓN: NO bloquea. No hay cuotas —se paga en uno o dos pagos por un

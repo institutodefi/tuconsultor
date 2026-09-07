@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto } from '../lib/calcEngine.js';
+import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto } from '../lib/calcEngine.js';
 import RentabilidadOferta from '../components/RentabilidadOferta.jsx';
 import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
@@ -11,7 +11,7 @@ import ClienteDeOferta from '../components/ClienteDeOferta.jsx';
 import { EMISORAS_BASE } from '../lib/emisoras.js';
 import { validarPlanificacion, motivoNoDisponible, mesesEntre, hoyISO, sumarMeses, finContratoRecurrente, MODELOS_PROYECTO } from '../lib/planificacion.js';
 import AjustesOferta from '../components/AjustesOferta.jsx';
-import { COMPLEJIDADES, PERFILES, MAX_EQUIPO, EQUIPO_VACIO, totalEquipo, cabeMas, describirEquipo, tarifaEquipo } from '../lib/proyecto.js';
+import { COMPLEJIDADES, totalEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 
@@ -60,6 +60,8 @@ export default function GeneradorOfertas({ publico = false }) {
   // Fin sugerido: en recurrentes, doce meses y un día (contrato completo); en
   // Apoyo e Implantación, doce meses como punto de partida a ajustar.
   function finPorDefecto(ini) {
+    // Apoyo dura lo que queda hasta la certificación: tres meses como mucho.
+    if (modelo === 'Apoyo') return sumarMeses(ini, 3);
     return finEsManual ? sumarMeses(ini, 12) : finContratoRecurrente(ini);
   }
 
@@ -70,7 +72,7 @@ export default function GeneradorOfertas({ publico = false }) {
     if (finTocado || !fechaInicio) return;
     const sug = finPorDefecto(fechaInicio);
     if (fechaFin !== sug) setFechaFin(sug);
-  }, [finEsManual, fechaInicio]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [finEsManual, modelo, fechaInicio]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Plazo para planificar las tareas: hasta la auditoría si la hay, y si no,
   // hasta el fin del contrato. Así la oferta se puede emitir sin fecha de
@@ -83,9 +85,13 @@ export default function GeneradorOfertas({ publico = false }) {
   // En Implantación es distinto: no hay permanencia, hay un calendario de
   // trabajo. Manda el plazo hasta la auditoría si la hay, porque es la fecha
   // que hay que cumplir; ese número es el que reparte las tareas por meses.
+  // En Apoyo manda el plazo hasta la certificación: es lo que decide si el
+  // modelo cabe (tres meses o menos) y lo que dimensiona la bolsa.
   const mesesContrato = modelo === 'Implantación'
     ? (meses || mesesEntre(fechaInicio, fechaFin) || '')
-    : (mesesEntre(fechaInicio, fechaFin) || meses);
+    : modelo === 'Apoyo'
+      ? (mesesEntre(fechaInicio, fechaCert || fechaFin) || meses)
+      : (mesesEntre(fechaInicio, fechaFin) || meses);
   const [tiene9001, setTiene9001] = useState(false); // "ya tengo la 9001" → −50% horas 9001
   const [cli, setCli] = useState({ nombre: '', apellidos: '', empresa: '', cif: '', cargo: '', email: '', telefono: '', direccion: '' });
   const location = useLocation();
@@ -117,7 +123,6 @@ export default function GeneradorOfertas({ publico = false }) {
   // ── Características del proyecto ──
   const [complejidad, setComplejidad] = useState('media');
   const [sedes, setSedes] = useState(1);
-  const [equipo, setEquipo] = useState(EQUIPO_VACIO());
   // Reparto de la carga por nivel (% de las horas para J1, J2, J3 y Senior).
   // null = automático: cada norma carga en su nivel. Con reparto manual el
   // precio sale de quién va a hacer el trabajo de verdad.
@@ -191,7 +196,7 @@ export default function GeneradorOfertas({ publico = false }) {
   const res = useMemo(
     () => calcular(sel, modelo, {
       meses: mesesContrato, tiene9001, reglas, aplicarReglas,
-      canal: publico ? 'web' : 'interno', complejidad, sedes, equipo, fasesPlan, ajustes,
+      canal: publico ? 'web' : 'interno', complejidad, sedes, equipo: null, fasesPlan, ajustes,
       // Quién responde de este precio. Solo en las emitidas por el equipo: una
       // solicitud de la web no la aprueba nadie todavía.
       aprobada_por: publico ? null : (aprobador || null),
@@ -202,8 +207,13 @@ export default function GeneradorOfertas({ publico = false }) {
       pagoAdelantado: pagoMes === 'adelantado',
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
-     equipo, fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes],
+     fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes],
   );
+  // Equipo interno: se deduce del reparto por nivel (una persona por nivel
+  // con carga). No se enseña ni cambia el precio; se guarda con la oferta y
+  // pasa al proyecto al abrirlo, para saber qué perfiles asignar.
+  const equipo = useMemo(() => equipoDesdeReparto(reparto || res?.rentabilidad?.repartoAuto || null), [reparto, res]);
+  const equipoTexto = (eq) => Object.entries(eq || {}).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(' + ') || 'sin definir';
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
   const esMes = res?.tipo === 'mes' && !esImpl;
@@ -225,7 +235,9 @@ export default function GeneradorOfertas({ publico = false }) {
     if (!/^\S+@\S+\.\S+$/.test(cli.email)) { setError('El email no tiene un formato válido.'); return; }
     if (!consent) { setError('Debes aceptar la política de privacidad para continuar.'); return; }
     if (!res.plazoOk) {
-      setError(`El modelo ${modelo} requiere un mínimo de ${res.minMeses} meses. Ajusta la duración.`);
+      setError(res.plazoLargo
+        ? `Apoyo solo se contrata con ${res.maxMeses} meses o menos hasta la certificación (aquí ${res.meses}). Elige Implantación o un modelo de cuota.`
+        : `El modelo ${modelo} requiere un mínimo de ${res.minMeses} meses. Ajusta la duración.`);
       return;
     }
     setError(null); setEstado('gen');
@@ -274,7 +286,7 @@ export default function GeneradorOfertas({ publico = false }) {
         precio_catalogo: res?.precioAntesDeAjustes ?? precioLead,
         ajuste_oferta: res?.ajusteOferta ?? 0,
         notas_oferta: notas || null, notas_internas: notasInternas || null,
-        forma_pago: modelo === 'Implantación' ? formaPago : null,
+        forma_pago: res?.formasPago ? formaPago : null,
         pago_adelantado: !!adelantado,
         modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
@@ -346,7 +358,7 @@ export default function GeneradorOfertas({ publico = false }) {
           ajustes, fasesPlan, emisora_id: emisora,
           notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
-          forma_pago: modelo === 'Implantación' ? formaPago : null,
+          forma_pago: res?.formasPago ? formaPago : null,
           pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
@@ -604,8 +616,8 @@ export default function GeneradorOfertas({ publico = false }) {
             <div className="mt-4 rounded-2xl border-[1.5px] border-[#1E5468] bg-[#0D3242] p-4">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-brand-orange">Características del proyecto</h3>
               <p className="mt-1 text-[11.5px] text-[#9FC0CB]">
-                No cambian el precio por sí solas: las usan las reglas comerciales. El equipo sí afecta,
-                porque de él sale la tarifa real.
+                No cambian el precio por sí solas: las usan las reglas comerciales. Lo que sí lo cambia es el
+                reparto de la carga por nivel, de más abajo: de él sale quién hace el trabajo y a qué tarifa.
               </p>
 
               {emisoras.length > 1 && (
@@ -669,34 +681,6 @@ export default function GeneradorOfertas({ publico = false }) {
                   </p>
                 </div>
 
-                <div>
-                  <p className="label !mb-1.5">
-                    Equipo consultor estimado
-                    <span className={`ml-2 font-bold ${totalEquipo(equipo) > MAX_EQUIPO ? 'text-red-300' : 'text-[#7FA7B4]'}`}>
-                      {totalEquipo(equipo)}/{MAX_EQUIPO}
-                    </span>
-                  </p>
-                  <div className="space-y-1">
-                    {PERFILES.map((pf) => (
-                      <div key={pf.k} className="flex items-center gap-2">
-                        <span className="w-16 text-[12px] font-bold text-[#EAF4F7]">{pf.label}</span>
-                        <span className="w-14 text-[11px] text-[#7FA7B4]">{pf.tarifa} €/h</span>
-                        <button type="button" aria-label={`Quitar ${pf.label}`}
-                          onClick={() => setEquipo((e) => ({ ...e, [pf.k]: Math.max(0, (e[pf.k] || 0) - 1) }))}
-                          className="grid h-6 w-6 place-items-center rounded border border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde">−</button>
-                        <span className="w-5 text-center text-[13px] font-bold text-[#EAF4F7]">{equipo[pf.k] || 0}</span>
-                        <button type="button" aria-label={`Añadir ${pf.label}`} disabled={!cabeMas(equipo)}
-                          onClick={() => setEquipo((e) => (cabeMas(e) ? { ...e, [pf.k]: (e[pf.k] || 0) + 1 } : e))}
-                          className="grid h-6 w-6 place-items-center rounded border border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde disabled:opacity-30">+</button>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-[11px] leading-snug text-[#7FA7B4]">
-                    {totalEquipo(equipo)
-                      ? <>Tarifa aplicada: <b className="text-brand-verdeTexto">{describirEquipo(equipo)}</b></>
-                      : 'Sin definir: se usa la tarifa del nivel de cada norma.'}
-                  </p>
-                </div>
               </div>
 
               {/* ── Reparto de la carga por nivel ──
@@ -752,6 +736,23 @@ export default function GeneradorOfertas({ publico = false }) {
                       <p className={`mt-1.5 text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-red-300'}`}>
                         {ok ? 'Suma 100 %: el precio ya usa este reparto.' : `Suma ${Math.round(suma * 10) / 10} %: tiene que sumar 100 para aplicarse (mientras tanto, reparto automático).`}
                       </p>
+                    );
+                  })()}
+
+                  {/* Rentabilidad en tiempo real, junto a lo que la cambia: cada
+                      porcentaje que se toca recalcula precio, coste y margen al
+                      instante. El detalle completo va en el lateral. */}
+                  {(() => {
+                    const r = res.rentabilidad;
+                    const T = { si: 'bg-emerald-500/15 text-emerald-200', justo: 'bg-amber-400/15 text-amber-100', no: 'bg-red-500/15 text-red-200' }[r.encaja] || 'bg-white/10 text-white/70';
+                    const E = { si: 'Encaja', justo: 'Justo', no: 'Por debajo' }[r.encaja] || '—';
+                    return (
+                      <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-2.5 py-1.5 text-[11.5px] ${T}`}>
+                        <span className="font-extrabold">{E}{r.margenReal != null ? ` · margen ${Math.round(r.margenReal * 100)} %` : ''}</span>
+                        <span>{fmtEUR(r.precio)}{esMes ? '/mes' : ''} cobrado · {fmtEUR(r.debido)}{esMes ? '/mes' : ''} debido por la carga</span>
+                        <span>{r.precioHora != null ? `${fmtEUR(r.precioHora)}/h` : '—'} frente a {r.precioHoraDebido != null ? `${fmtEUR(r.precioHoraDebido)}/h` : '—'}</span>
+                        <span className="text-[10.5px] opacity-80">equipo previsto: {equipoTexto(equipo)}</span>
+                      </div>
                     );
                   })()}
                 </div>
@@ -1060,7 +1061,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 {/* Plan de pagos según modelo */}
                 <div className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-relaxed text-white/85">
                   <p className="font-extrabold text-white/90 mb-1">Forma de pago</p>
-                  {esApoyo && <p>Pago único prepagado al 100 % (bolsa de horas). Acompañamiento a auditoría aparte (600 €/jornada).</p>}
+                  {esApoyo && <p>Bolsa de horas para la recta final: solo con {res.maxMeses} meses o menos hasta la certificación. Pago único o dos cuotas. Acompañamiento a auditoría aparte (600 €/jornada).</p>}
                   {/* Las tres cuotas desaparecieron en la v99: la implantación
                       solo admite pago único o dos cuotas, y eso ya lo enseña el
                       bloque de arriba. Repetirlo aquí con otro reparto era decir
@@ -1130,7 +1131,7 @@ export default function GeneradorOfertas({ publico = false }) {
                     title={!publico && !aprobador ? 'Elige quién aprueba el precio' : ''}
                     className="flex-1 rounded-xl bg-[#10394A] py-3 text-sm font-extrabold text-[#EAF4F7] transition hover:bg-white/90 disabled:opacity-50">
                     {estado === 'gen' ? 'Generando…'
-                      : plazoMal ? `El plazo no llega al mínimo del modelo (${res.minMeses} meses)`
+                      : plazoMal ? (res.plazoLargo ? `Apoyo: más de ${res.maxMeses} meses hasta la certificación` : `El plazo no llega al mínimo del modelo (${res.minMeses} meses)`)
                       : (!publico && !aprobador) ? 'Falta quién aprueba el precio'
                       : (publico ? 'Recibir mi propuesta' : 'Generar oferta')}
                   </button>

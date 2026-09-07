@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { insertRow, listTable, explicarErrorBd } from '../../lib/data.js';
-import { NORMA_BY_ID , modeloCanonico } from '../../lib/calcEngine.js';
+import { NORMA_BY_ID , modeloCanonico, repartoDesdeEquipo } from '../../lib/calcEngine.js';
 import { asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 import { ofertasParaProyecto, datosDeOferta, etiquetaOferta, contratoDe } from '../../lib/ofertasAceptadas.js';
 import { normalizarCif } from '../../lib/crm.js';
@@ -104,7 +104,7 @@ export default function AltaProyecto({
         }
       }
 
-      const fila = await insertRow('proyectos_cliente', {
+      const base = {
         cliente_id: idCliente,
         nombre: form.nombre.trim(),
         // Volcados de la oferta, sin tocar.
@@ -120,7 +120,16 @@ export default function AltaProyecto({
         // Trazabilidad: proyecto → contrato → oferta.
         oferta_id: form.oferta_id,
         contrato_id: form.contrato_id,
-      });
+      };
+      // El reparto por nivel de la oferta viaja al proyecto (v120). Si la
+      // columna aún no existe, el proyecto se crea igual sin él.
+      const reparto = form.reparto_niveles || (form.equipo_previsto ? repartoDesdeEquipo(form.equipo_previsto) : null);
+      let fila;
+      try { fila = await insertRow('proyectos_cliente', { ...base, reparto_niveles: reparto }); }
+      catch (e) {
+        if (reparto && /reparto_niveles/i.test(String(e?.message || e))) fila = await insertRow('proyectos_cliente', base);
+        else throw e;
+      }
       onCreado?.(fila);
     } catch (e) {
       setError(explicarErrorBd(e, 'proyectos_cliente'));

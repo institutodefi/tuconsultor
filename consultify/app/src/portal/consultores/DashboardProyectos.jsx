@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
 import {
   semaforo, TONO_SEMAFORO, necesitaRenovacion, resumen as resumenVencimiento,
   DIAS_AVISO_AMARILLO, DIAS_AVISO_ROJO, fmtFecha as fmtFechaLarga,
 } from '../../lib/proyectos.js';
+import { planCartera } from '../../lib/planHoras.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PANEL DE PROYECTOS
@@ -36,8 +37,11 @@ export default function DashboardProyectos() {
   const [clientes, setClientes] = useState([]);
   const [tareas, setTareas] = useState([]);
   const [consultores, setConsultores] = useState([]);
+  const [sesiones, setSesiones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState('activos');
+  const [vistaPlan, setVistaPlan] = useState('proyectos');   // proyectos | meses
+  const [abiertoPlan, setAbiertoPlan] = useState(null);      // proyecto desplegado con su prorrateo
 
   useEffect(() => {
     Promise.all([
@@ -45,8 +49,9 @@ export default function DashboardProyectos() {
       listTable('clientes').catch(() => []),
       listTable('cliente_tareas').catch(() => []),
       listTable('consultores').catch(() => []),
-    ]).then(([p, c, t, co]) => {
-      setProyectos(p || []); setClientes(c || []); setTareas(t || []); setConsultores(co || []);
+      listTable('tarea_sesiones').catch(() => []),
+    ]).then(([p, c, t, co, se]) => {
+      setProyectos(p || []); setClientes(c || []); setTareas(t || []); setConsultores(co || []); setSesiones(se || []);
     }).finally(() => setCargando(false));
   }, []);
 
@@ -112,6 +117,14 @@ export default function DashboardProyectos() {
     .sort((a, b) => a.sem.orden - b.sem.orden || String(a.fecha_fin || '9999').localeCompare(String(b.fecha_fin || '9999'))),
   [conDatos]);
 
+  // ── Horas por planificar hasta la certificación ──
+  // Lo comprometido menos lo hecho y lo ya en agenda, prorrateado entre hoy y
+  // la fecha estimada de certificación de cada proyecto.
+  const hoyISO = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  const plan = useMemo(() => planCartera(proyectos, tareas, sesiones, hoyISO), [proyectos, tareas, sesiones, hoyISO]);
+  const nombreDe = (p) => p.nombre || p.codigo || clientes.find((c) => String(c.id) === String(p.cliente_id))?.empresa || '—';
+  const h1 = (n) => (Math.round((Number(n) || 0) * 10) / 10).toLocaleString('es-ES');
+
   if (cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando proyectos…</p>;
 
   return (
@@ -143,6 +156,129 @@ export default function DashboardProyectos() {
           </button>
         ))}
       </div>
+
+      {/* ── Horas por planificar hasta la certificación ── */}
+      <section className={`card ${plan.filas.some((f) => f.retraso) ? 'border-l-4 border-l-red-400' : ''}`}>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#EAF4F7]">Horas por planificar hasta la certificación</h2>
+            <p className="mt-0.5 text-[11px] text-[#7FA7B4]">
+              Comprometidas en las tareas, menos las hechas y las que ya están en agenda. Lo que queda tiene que caber antes de la fecha estimada de certificación: se prorratea por meses según los días que quedan de cada uno.
+            </p>
+          </div>
+          <div className="flex gap-1 rounded-lg bg-[#0D3242] p-0.5 text-[11.5px] font-bold">
+            {[['proyectos', 'Por proyecto'], ['meses', 'Por meses']].map(([k, etq]) => (
+              <button key={k} onClick={() => setVistaPlan(k)}
+                className={`rounded-md px-2.5 py-1 transition ${vistaPlan === k ? 'bg-brand-orange text-[#0B2A38]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>{etq}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {[
+            ['Comprometidas', plan.total.comprometidas, 'text-[#EAF4F7]'],
+            ['Hechas', plan.total.ejecutadas, 'text-brand-verdeTexto'],
+            ['En agenda', plan.total.programadas, 'text-[#CFE3E9]'],
+            ['Sin planificar', plan.total.sinPlanificar, plan.total.sinPlanificar > 0 ? 'text-brand-orange' : 'text-[#EAF4F7]'],
+            ['Ritmo necesario', plan.total.porMes, 'text-[#EAF4F7]', '/mes'],
+          ].map(([etq, n, color, suf]) => (
+            <div key={etq} className="rounded-xl border border-[#1E5468] bg-[#0D3242] px-3 py-2.5">
+              <span className={`block text-2xl font-extrabold leading-none ${color}`}>{h1(n)}<span className="text-[11px] font-bold text-[#7FA7B4]"> h{suf || ''}</span></span>
+              <span className="mt-1 block text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{etq}</span>
+            </div>
+          ))}
+        </div>
+
+        {vistaPlan === 'meses' ? (
+          plan.meses.length === 0 ? (
+            <p className="py-4 text-center text-[12.5px] text-[#7FA7B4]">Nada que prorratear: sin horas por planificar o sin fechas de certificación.</p>
+          ) : (
+            <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+              {plan.meses.map((m) => {
+                const max = Math.max(...plan.meses.map((x) => x.horas + x.programadas), 1);
+                return (
+                  <div key={m.mes} className="rounded-xl border border-[#1E5468] bg-[#0D3242] px-3 py-2.5">
+                    <p className="flex items-baseline justify-between text-[10.5px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
+                      <span>{m.etq}</span><span className="text-[#5E8494]">{m.proyectos} proy.</span>
+                    </p>
+                    <p className="mt-1 text-xl font-extrabold leading-none text-brand-orange">{h1(m.horas)}<span className="text-[11px] font-bold text-[#7FA7B4]"> h</span></p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#7FA7B4]">a planificar</p>
+                    <p className="mt-0.5 text-[11px] text-[#9FC0CB]">{h1(m.programadas)} h en agenda · {h1(m.horas + m.programadas)} h total</p>
+                    <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <span className="block h-full rounded-full bg-brand-orange" style={{ width: `${Math.round(((m.horas + m.programadas) / max) * 100)}%` }} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : plan.filas.length === 0 ? (
+          <p className="py-4 text-center text-[12.5px] text-[#7FA7B4]">No hay proyectos vivos.</p>
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[820px] text-[12px]">
+              <thead>
+                <tr className="text-left text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
+                  <th className="py-1.5 pr-2">Proyecto</th>
+                  <th className="py-1.5 pr-2">Certificación</th>
+                  <th className="py-1.5 pr-2 text-right">Comprometidas</th>
+                  <th className="py-1.5 pr-2 text-right">Hechas</th>
+                  <th className="py-1.5 pr-2 text-right">En agenda</th>
+                  <th className="py-1.5 pr-2 text-right">Sin planificar</th>
+                  <th className="py-1.5 pr-2 text-right">Meses</th>
+                  <th className="py-1.5 text-right">Ritmo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#153F52]">
+                {plan.filas.map((f) => {
+                  const p = f.proyecto;
+                  const abierto = abiertoPlan === f.proyectoId;
+                  const tono = f.retraso ? 'text-red-300' : f.sinFecha ? 'text-[#7FA7B4]' : f.sinPlanificar > 0 ? 'text-brand-orange' : 'text-brand-verdeTexto';
+                  return (
+                    <Fragment key={f.proyectoId}>
+                      <tr className="cursor-pointer hover:bg-white/[0.03]" onClick={() => setAbiertoPlan(abierto ? null : f.proyectoId)}>
+                        <td className="py-2 pr-2">
+                          <span className="block truncate font-bold text-[#EAF4F7]" title={nombreDe(p)}>{abierto ? '▾ ' : '▸ '}{nombreDe(p)}</span>
+                          <span className="block text-[10.5px] text-[#7FA7B4]">{p.modelo || ''}{f.avancePct != null ? ` · ${f.avancePct} % hecho` : ''}</span>
+                        </td>
+                        <td className="py-2 pr-2 text-[#CFE3E9]">
+                          {f.objetivo ? fmtFecha(f.objetivo) : <span className="text-[#7FA7B4]">sin fecha</span>}
+                          {f.dias != null && <span className={`block text-[10.5px] ${f.dias < 0 ? 'text-red-300' : 'text-[#7FA7B4]'}`}>{f.dias < 0 ? `${-f.dias} d de retraso` : `en ${f.dias} d`}</span>}
+                        </td>
+                        <td className="py-2 pr-2 text-right text-[#CFE3E9]">{h1(f.comprometidas)} h</td>
+                        <td className="py-2 pr-2 text-right text-brand-verdeTexto">{h1(f.ejecutadas)} h</td>
+                        <td className="py-2 pr-2 text-right text-[#CFE3E9]">{h1(f.programadas)} h</td>
+                        <td className={`py-2 pr-2 text-right font-extrabold ${tono}`}>{h1(f.sinPlanificar)} h</td>
+                        <td className="py-2 pr-2 text-right text-[#CFE3E9]">{f.sinFecha ? '—' : f.dias <= 0 ? '0' : (Math.round((f.dias / 30.4375) * 10) / 10).toLocaleString('es-ES')}</td>
+                        <td className={`py-2 text-right font-extrabold ${tono}`}>{f.porMes == null ? '—' : `${h1(f.porMes)} h/mes`}</td>
+                      </tr>
+                      {abierto && (
+                        <tr>
+                          <td colSpan={8} className="pb-3 pt-1">
+                            {f.meses.length === 0 ? (
+                              <p className="text-[11.5px] text-[#7FA7B4]">Sin fecha de certificación no hay meses que prorratear: ponla en la ficha del proyecto.</p>
+                            ) : (
+                              <div className="grid gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
+                                {f.meses.map((m) => (
+                                  <div key={m.mes} className={`rounded-lg border px-2 py-1.5 ${m.retraso ? 'border-red-400/50 bg-red-500/10' : 'border-[#1E5468] bg-[#0D3242]'}`}>
+                                    <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{m.etq}{m.retraso ? ' · ya' : ''}</p>
+                                    <p className="text-[13px] font-extrabold text-brand-orange">{h1(m.horas)} h</p>
+                                    {m.programadas > 0 && <p className="text-[10px] text-[#9FC0CB]">+ {h1(m.programadas)} h en agenda</p>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* ── Vencimientos de contrato ──
           Sección propia y con el semáforo delante: es lo único de este panel

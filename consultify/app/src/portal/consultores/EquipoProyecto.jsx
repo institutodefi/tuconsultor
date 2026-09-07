@@ -24,7 +24,7 @@ const PAPELES = [
 ];
 const ETQ = Object.fromEntries(PAPELES.map(([k, v]) => [k, v]));
 
-export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
+export default function EquipoProyecto({ proyectoId, horasComprometidas = 0, repartoPrevisto = null }) {
   const { role } = useAuth();
   const puedeAsignar = ['superadmin', 'admin', 'director'].includes(role);
 
@@ -113,6 +113,16 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0 }) {
           <span className="text-[11.5px] text-[#7FA7B4]">{horasComprometidas} h comprometidas en el proyecto</span>
         )}
       </div>
+
+      {/* Lo que se previó al ofertar: qué parte del trabajo hace cada nivel.
+          Es la guía para asignar; no obliga. */}
+      {repartoPrevisto && Object.values(repartoPrevisto).some((v) => Number(v) > 0) && (
+        <p className="rounded-lg border border-brand-orange/30 bg-brand-orange/[0.06] px-3 py-2 text-[11.5px] text-[#DFF1F5]">
+          <b className="text-brand-orange">Previsto en la oferta:</b>{' '}
+          {['Senior', 'J3', 'J2', 'J1'].filter((k) => Number(repartoPrevisto[k]) > 0).map((k) => `${k} ${repartoPrevisto[k]} %`).join(' · ')}
+          {' '}de la carga. Asigna personas de esos niveles para que el coste cuadre con el precio.
+        </p>
+      )}
 
       {equipo.length === 0 ? (
         <p className="rounded-lg border border-dashed border-[#1E5468] px-3 py-2.5 text-[12px] text-[#7FA7B4]">

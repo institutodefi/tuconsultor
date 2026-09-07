@@ -891,6 +891,7 @@ export default function Proyectos() {
             <EquipoProyecto
               proyectoId={proyecto.id}
               horasComprometidas={tareasProyecto.reduce((a, t) => a + (Number(t.horas) || 0), 0)}
+              repartoPrevisto={proyecto.reparto_niveles || null}
             />
           </div>
 

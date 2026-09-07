@@ -202,15 +202,15 @@ export default function Proyectos() {
             )}
           </div>
 
-          {form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) < 60 && (
-            <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">⚠ Apoyo no es contratable a menos de 60 días de la auditoría externa ({diasHasta(form.fecha_auditoria)} días). Cambia el modelo o la fecha.</p>
+          {form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) > 92 && (
+            <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">⚠ Apoyo solo se contrata con tres meses o menos hasta la auditoría externa (aquí {diasHasta(form.fecha_auditoria)} días). Elige Implantación o un modelo de cuota.</p>
           )}
 
           <div><label className="label" htmlFor="p-notas">Notas</label><textarea id="p-notas" rows="2" className="input" value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
 
           {err && <p className="text-sm font-bold text-red-300">{err}</p>}
           <div className="flex gap-3">
-            <button className="btn-primary" disabled={form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) < 60}>Guardar</button>
+            <button className="btn-primary" disabled={form.modelo === 'Apoyo' && form.fecha_auditoria && diasHasta(form.fecha_auditoria) > 92}>Guardar</button>
             <button type="button" onClick={() => setForm(null)} className="btn-ghost">Cancelar</button>
           </div>
         </form>

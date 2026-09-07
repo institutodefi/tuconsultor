@@ -6,7 +6,7 @@
 // ============================================================
 
 import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.js';
-import { tarifaEquipo, perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
+import { perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
 import { FASES as FASES_PLAN, TARIFA_PROYECTO } from './fases.js';
 import { eurES } from './formato.js';
 
@@ -88,7 +88,7 @@ export const MODELOS = {
     factorFondo: 0.6,
     titulo: 'Apoyo',
     claim: 'Bolsa de horas · 60 % de lo planificado',
-    leyenda: 'Pago único prepagado al 100 %. No contratable a menos de 60 días de una auditoría externa. Acompañamiento a auditoría aparte (600 €/jornada).',
+    leyenda: 'Solo con tres meses o menos hasta la certificación. Pago único o dos cuotas. Acompañamiento a auditoría aparte (600 €/jornada).',
   },
   Relación: {
     id: 'Relación', tipo: 'mes', hSist: 2, hPres: 0, paso: 25, suelo: 350,
@@ -282,10 +282,15 @@ export const MESES_MODELO = {
   Compromiso: 12,
 };
 
+// Apoyo es el modelo de la recta final: solo se contrata cuando quedan tres
+// meses o menos hasta la certificación. Con más plazo, lo que toca es una
+// implantación o un modelo de cuota. Antes tenía un MÍNIMO de tres meses
+// (cuatro con más de dos sistemas), justo al revés.
+export const MAX_MESES_APOYO = 3;
+
 // Duración mínima según modelo y nº de sistemas.
-// Apoyo: 2 sistemas → 3 meses; más de 2 → mínimo 4 meses.
-export function mesesPorModelo(modelo, nSistemas = 1) {
-  if (modelo === 'Apoyo') return nSistemas > 2 ? 4 : 3;
+export function mesesPorModelo(modelo, nSistemas = 1) {   // eslint-disable-line no-unused-vars
+  if (modelo === 'Apoyo') return 1;
   return MESES_MODELO[modelo] || 3;
 }
 
@@ -328,7 +333,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
   //     bloqueaba la emisión, porque MESES_MODELO.Implantación vale 12 y el
   //     plazo se comprobaba igual para todos los modelos.
   const plazoCorto = mesesProyecto < minMeses;
-  const plazoOk = modeloId === 'Implantación' ? true : !plazoCorto;
+  // Apoyo: al revés que los demás, lo que bloquea es el plazo LARGO.
+  const plazoLargo = modeloId === 'Apoyo' && mesesProyecto > MAX_MESES_APOYO;
+  const plazoOk = modeloId === 'Implantación' ? true : modeloId === 'Apoyo' ? !plazoLargo : !plazoCorto;
 
   // ── Reglas comerciales vigentes y aplicables a esta oferta ──
   const ctx = {
@@ -487,10 +494,11 @@ export function calcular(normaIds, modeloId, opts = {}) {
 
   // ── Regla 2 · PRECIO/HORA: sustituye la tarifa de catálogo ──
   const tarifa = { ...TARIFA };
-  // Si se ha estimado el equipo, el coste sale de ESE equipo, no del nivel
-  // teórico de cada norma. No es una decisión comercial: es aritmética.
-  const tEquipo = tarifaEquipo(opts.equipo || {});
-  if (tEquipo) for (const k of Object.keys(tarifa)) tarifa[k] = tEquipo;
+  // El «equipo estimado» ya no sustituye la tarifa: lo que dice quién hace el
+  // trabajo es el reparto de la carga por nivel (manual o automático), y de
+  // ahí salen las horas de cada tarifa. Sustituir todas las tarifas por una
+  // media era más basto y contradecía al reparto. El equipo se conserva como
+  // dato interno (se deriva del reparto y pasa al proyecto al abrirlo).
   for (const r of reglas.filter((x) => x.tipo === 'precio_hora')) {
     const v = Number(r.valor);
     if (!Number.isFinite(v) || v <= 0) continue;
@@ -670,7 +678,10 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // oferta: quien decide es el cliente, y verlas al lado hace la decisión fácil.
   let fraccionado = null;
   let formasPago = null;
-  if (modeloId === 'Implantación') {
+  // Apoyo se paga igual que la implantación: único o dos cuotas. Es una bolsa
+  // de horas para la recta final, no una cuota.
+  const esApoyoPago = modeloId === 'Apoyo';
+  if (modeloId === 'Implantación' || esApoyoPago) {
     const r2 = (x) => Math.round(x * 100) / 100;
     const base = precioCatalogo;                       // proyecto completo, sin IVA
 
@@ -686,7 +697,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
         id: 'unico', titulo: 'Pago único',
         sinIva: unicoSinIva, iva: r2(unicoSinIva * IVA), total: r2(unicoSinIva * (1 + IVA)),
         ahorro: r2(base - unicoSinIva),
-        condicion: `Un solo pago al inicio del proyecto, con un ${Math.round(DTO_PAGO_UNICO * 100)} % de descuento sobre el importe del proyecto.`,
+        condicion: `Un solo pago al inicio${esApoyoPago ? '' : ' del proyecto'}, con un ${Math.round(DTO_PAGO_UNICO * 100)} % de descuento sobre el importe${esApoyoPago ? ' de la bolsa' : ' del proyecto'}.`,
       },
       dos: {
         id: 'dos', titulo: 'Dos cuotas',
@@ -697,14 +708,21 @@ export function calcular(normaIds, modeloId, opts = {}) {
         // El impuesto se determina al facturar según el domicilio fiscal.
         cuota1SinIva: cuota,
         cuota2SinIva: r2(dosSinIva - cuota),
-        condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
+        condicion: esApoyoPago
+          ? '50 % a la firma, para arrancar, y 50 % antes del inicio de las auditorías.'
+          : '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
       },
-      nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
+      nota: esApoyoPago
+        ? 'El apoyo a certificación no admite cuota mensual: se abona en pago único o en dos cuotas.'
+        : 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
+      intro: esApoyoPago
+        ? 'El apoyo a certificación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:'
+        : 'La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:',
     };
 
     // Se mantiene `fraccionado` con la opción de dos cuotas para no romper lo
     // que ya lo lee (documentos y presupuestos anteriores).
-    fraccionado = {
+    if (!esApoyoPago) fraccionado = {
       meses: mesesProyecto,
       totalSinIva: dosSinIva,
       totalConIva: r2(dosSinIva * (1 + IVA)),
@@ -741,6 +759,8 @@ export function calcular(normaIds, modeloId, opts = {}) {
     adelantado: m.tipo === 'mes' ? pagoAdelantado(precioCatalogo) : null,
     pagoAdelantado: opts.pagoAdelantado === true && m.tipo === 'mes',
     plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
+    plazoLargo,   // Apoyo: más de tres meses hasta la certificación
+    maxMeses: modeloId === 'Apoyo' ? MAX_MESES_APOYO : null,
     tiene9001,
     horas: h,
     hTotal,             // lo comprometido con el cliente (en cuota: horas del modelo × sistemas + presenciales)
@@ -761,7 +781,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
     complejidad: ctx.complejidad,
     sedes: ctx.sedes,
     equipo: opts.equipo || null,
-    tarifaEquipo: tEquipo,
+    tarifaEquipo: null,              // el equipo ya no sustituye la tarifa: manda el reparto por nivel
     repartoNiveles: repartoManual,   // null si se usa el reparto automático
     rentabilidad,
     debidoCarga,
@@ -788,6 +808,28 @@ export function normalizarReparto(r) {
   for (const nv of NIVELES) { const v = Number(r[nv]) || 0; if (v < 0) return null; out[nv] = v; suma += v; }
   if (Math.abs(suma - 100) > 0.5) return null;
   return out;
+}
+
+/**
+ * Equipo interno que se deduce del reparto por nivel: una persona por cada
+ * nivel con carga, hasta tres (las de más peso). Es lo que se guarda en la
+ * oferta y se traslada al proyecto al abrirlo, para saber qué perfiles hay
+ * que asignar.
+ */
+export function equipoDesdeReparto(reparto, max = 3) {
+  const r = normalizarReparto(reparto) || {};
+  const eq = { Senior: 0, J3: 0, J2: 0, J1: 0 };
+  NIVELES.filter((n) => (r[n] || 0) > 0).sort((a, b) => r[b] - r[a]).slice(0, max).forEach((n) => { eq[n] = 1; });
+  return eq;
+}
+
+/** Reparto en % a partir de un equipo {J1:1, Senior:1}: a partes iguales por persona. */
+export function repartoDesdeEquipo(equipo) {
+  const n = NIVELES.reduce((a, k) => a + (Number(equipo?.[k]) || 0), 0);
+  if (!n) return null;
+  const r = {};
+  for (const k of NIVELES) r[k] = Math.round(((Number(equipo?.[k]) || 0) / n) * 1000) / 10;
+  return normalizarReparto(r);
 }
 
 /** Porcentaje de horas por nivel a partir de horas absolutas. */

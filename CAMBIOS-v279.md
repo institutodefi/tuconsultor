@@ -21,7 +21,7 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql` y `migracion-v119-reparto-niveles.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql`, `migracion-v119-reparto-niveles.sql` y `migracion-v120-reparto-niveles-proyecto.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
 
 ## Normas · ISO 27701 (privacidad de la información)
@@ -77,3 +77,17 @@
 - **Formato de importes** · `lib/formato.js` (nuevo): punto de miles siempre y coma decimal («1.325,00 €»). `Intl` en es-ES no agrupa los números de cuatro cifras y salía «1325,00 €». Aplicado a `fmtEUR` del motor y a todos los formateadores de euros de la app y de los documentos.
 - **Pago anual por adelantado en el generador** (`pages/GeneradorOfertas.jsx`) · en Relación, Implicación y Compromiso se elige «Cuota mensual» o «Pago único al inicio» (12 meses de servicio por 11 mensualidades). El cuadro de precio enseña el importe anual, el ahorro y la equivalencia mensual; se guarda `pago_adelantado` y el PDF sale con la portada, la caja y el cuadro de facturación de un solo cargo.
 - **Regenerar en bloque** (`portal/consultores/Ofertas.jsx`) · botón «↻ Regenerar documentos de las vivas»: vuelve a generar PDF y PPT de todas las ofertas en borrador, emitidas o aceptadas, cada una con su precio y su número, sin enviar nada. La regeneración individual también reenvía el reparto por nivel guardado.
+
+## Apoyo · solo en la recta final
+- `lib/calcEngine.js` · **Apoyo solo se contrata con tres meses o menos hasta la certificación** (`MAX_MESES_APOYO`); antes tenía un mínimo de tres (justo al revés). Con más plazo el motor lo bloquea (`plazoLargo`) y el generador lo deja deshabilitado con el motivo. Se paga como la implantación: **pago único (5 % de descuento) o dos cuotas** (50 % a la firma, 50 % antes de las auditorías); PDF y PPT enseñan las dos tarjetas y el cuadro de facturación las recoge (`lib/facturacion.js`).
+- `lib/planificacion.js`, `pages/GeneradorOfertas.jsx` (fin por defecto de Apoyo = inicio + 3 meses; el plazo se mide hasta la certificación), `pages/Calculadora.jsx` y `portal/consultores/Proyectos.jsx` (la vieja regla de «no a menos de 60 días» se sustituye por la nueva). Pruebas `scripts/test-plazos-modelo.mjs` y `test-fin-por-modelo.mjs` actualizadas.
+
+## Panel de proyectos («Cómo van») · horas por planificar hasta la certificación
+- `lib/planHoras.js` · **nuevo**, puro (`scripts/test-plan-horas.mjs`, 25 comprobaciones): por proyecto vivo, horas comprometidas (tareas), hechas, en agenda y **sin planificar**; la fecha objetivo es la certificación prevista (o el límite, o el fin); ritmo necesario = sin planificar ÷ meses que quedan; **prorrateo mensual** en proporción a los días de cada mes hasta la certificación, con lo ya programado al lado.
+- `portal/consultores/DashboardProyectos.jsx` · sección «Horas por planificar hasta la certificación»: cifras de la cartera, tabla por proyecto (se despliega para ver el prorrateo de sus meses) y vista «Por meses» con la carga sumada de todos los proyectos.
+
+## Generador · carga por nivel como único dato de equipo, rentabilidad en vivo
+- Se quita el bloque **«Equipo consultor estimado»**: el reparto de la carga por nivel es lo que dice quién hace el trabajo. El motor ya no sustituye la tarifa por la media del equipo (`tarifaEquipo`): las horas de cada nivel van a su tarifa. Ojo: una oferta antigua guardada con equipo puede dar hoy otro precio de catálogo (el aviso de Ofertas lo enseña; el documento se regenera con su precio).
+- El equipo se **deduce del reparto** (`equipoDesdeReparto`: una persona por nivel con carga, hasta tres) y se guarda como dato interno en el presupuesto.
+- **Al abrir el proyecto** desde la oferta (`AltaProyecto.jsx`, `lib/ofertasAceptadas.js`) el reparto viaja a `proyectos_cliente.reparto_niveles` (`migracion-v120-reparto-niveles-proyecto.sql`, **pendiente de aplicar**; si falta, el proyecto se crea igual) y la ficha del equipo (`EquipoProyecto.jsx`) enseña «Previsto en la oferta: J1 70 % · Senior 30 %» como guía para asignar.
+- Rentabilidad **en tiempo real**: debajo del reparto, una línea que se recalcula con cada porcentaje (encaja/justo/por debajo, margen, cobrado frente a debido, €/h, equipo previsto); el cuadro completo sigue en el lateral. El informe de rentabilidad de Ofertas se abre desplegado.

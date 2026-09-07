@@ -90,9 +90,10 @@ export function cuadroFacturacion({
     for (let i = 0; i < n; i++) {
       anotar(sumarMeses(inicio, i), `Cuota mensual ${i + 1} de ${n}`, base);
     }
-  } else if (tipo === 'bolsa') {
+  } else if (tipo === 'bolsa' && formaPago !== 'dos') {
     anotar(inicio, 'Fondo de horas · pago al inicio', base);
   } else {
+    // Proyecto, y la bolsa de Apoyo cuando se paga en dos cuotas.
     // Proyecto.
     if (formaPago === 'dos') {
       anotar(inicio, '50 % a la firma', base / 2);

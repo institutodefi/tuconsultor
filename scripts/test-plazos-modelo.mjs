@@ -23,9 +23,9 @@ for (const m of [12, 8, 6, 3, 2]) {
     c.avisos.length ? ` · aviso: ${c.avisos[0].slice(0,52)}…` : '');
 }
 
-console.log('\n── APOYO · sí aplica el criterio (mín. 3, o 4 con >2 sistemas) ──');
+console.log('\n── APOYO · solo con 3 meses o menos hasta la certificación (bloquea con más) ──');
 console.log(' mínimo 1 sistema :', mesesPorModelo('Apoyo',1), '· 3 sistemas:', mesesPorModelo('Apoyo',3));
-for (const [m,n,esp] of [[6,1,false],[3,1,false],[2,1,true],[4,3,false],[3,3,true]]) {
+for (const [m,n,esp] of [[6,1,true],[3,1,false],[2,1,false],[4,3,true],[3,3,false]]) {
   const c = caso('Apoyo', m, Array(n).fill('9001').map((_,i)=>['9001','14001','45001'][i]));
   console.log(` fin a ${m} meses, ${n} sistema(s) → bloquea: ${c.bloquea ? 'SÍ' : 'no '}`, ok(c.bloquea===esp),
     c.errores.length ? ` · ${c.errores[0].slice(0,50)}…` : '');

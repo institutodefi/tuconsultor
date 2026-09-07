@@ -44,7 +44,7 @@ export function rentabilidadDeOferta(o) {
 
 export default function InformeRentabilidad({ ofertas = [] }) {
   const [soloVivas, setSoloVivas] = useState(true);
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(true);   // abierto: se ve al entrar, recalculado con las ofertas cargadas
 
   const filas = useMemo(() => ofertas
     .filter((o) => !soloVivas || VIVAS.has(String(o.estado || 'emitida')))

@@ -50,7 +50,7 @@ for (const f of ['2027-04-01','2027-01-01','2026-12-01']) {
 }
 
 console.log('\n── Apoyo: fin manual respetado, criterios sí aplican ──');
-for (const [f,esp] of [['2027-04-01',false],['2027-01-01',false],['2026-11-15',true]]) {
+for (const [f,esp] of [['2027-04-01',true],['2027-01-01',false],['2026-11-15',false]]) {   // Apoyo: bloquea con más de 3 meses
   const s = simular({ modelo:'Apoyo', inicio:ini, finManualPuesto:f });
   console.log(` fin ${f} → bloquea: ${s.bloquea?'SÍ':'no '}`, ok(s.bloquea===esp),
     s.errores.length ? `· ${s.errores[0].slice(0,44)}…` : '');

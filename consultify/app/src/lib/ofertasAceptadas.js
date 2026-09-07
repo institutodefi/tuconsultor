@@ -78,6 +78,10 @@ export function datosDeOferta(oferta, contratos = []) {
     precio_total: oferta.tipo !== 'mes' ? oferta.precio : null,
     cif: oferta.cif || null,
     empresa: oferta.empresa || null,
+    // Dato interno de la oferta: con qué reparto por nivel se valoró (y el
+    // equipo que se dedujo de él). Pasa al proyecto para asignar perfiles.
+    reparto_niveles: oferta.reparto_niveles || null,
+    equipo_previsto: oferta.equipo || null,
   };
 }
 
