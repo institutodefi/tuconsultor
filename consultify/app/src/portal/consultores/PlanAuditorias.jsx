@@ -199,7 +199,7 @@ export default function PlanAuditorias() {
                     <td className="py-2 pr-2">
                       <Link to={enlaceCliente(f)} className="font-extrabold text-[#EAF4F7] hover:text-brand-orange hover:underline">{f.nombre}</Link>
                       {f.proyecto && (
-                        <Link to={`/consultores/proyectos?proyecto=${f.proyecto.id}`} className="block truncate text-[10.5px] text-[#7FA7B4] hover:text-brand-orange" title={f.proyecto.nombre}>
+                        <Link to={`/consultores/proyectos/${f.proyecto.id}`} className="block truncate text-[10.5px] text-[#7FA7B4] hover:text-brand-orange" title={f.proyecto.nombre}>
                           {f.proyecto.codigo || f.proyecto.nombre}
                         </Link>
                       )}

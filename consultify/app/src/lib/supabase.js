@@ -64,7 +64,7 @@ export const demoDB = {
   // Lo justo para que Control de horas y las agendas enseñen algo sin base
   // de datos: dos proyectos vivos, Carlota en los dos, Irene en uno.
   proyectos_cliente: [
-    { id: 'pc1', cliente_id: 'cl1', codigo: 'INOR-2026-REL-9-14', nombre: 'Industrias Norte · 9001 + 14001 · Relación', normas: ['9001','14001'], modelo: 'Relación', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', meses_estimados: 12 },
+    { id: 'pc1', cliente_id: 'cl1', codigo: 'INOR-2026-REL-9-14', nombre: 'Industrias Norte · 9001 + 14001 · Relación', normas: ['9001','14001'], modelo: 'Relación', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', fecha_limite: '2026-11-15', meses_estimados: 12, funciones: { pm_tool: true, datos_cliente: true, procesos: ['PE1'] } },
     { id: 'pc2', cliente_id: 'cl2', codigo: 'TSEC-2026-IMP-27', nombre: 'TechSecure · 27001 · Implicación', normas: ['27001'], modelo: 'Implicación', estado: 'activo', fecha_inicio: '2026-04-01', fecha_fin: '2027-03-31', meses_estimados: 12 },
   ],
   proyecto_equipo: [
@@ -72,6 +72,13 @@ export const demoDB = {
     { id: 'pe2', proyecto_id: 'pc1', perfil_id: 'c2', papel: 'responsable' },
     { id: 'pe3', proyecto_id: 'pc2', perfil_id: 'c1', papel: 'consultor' },
     { id: 'pe4', proyecto_id: 'pc2', perfil_id: 'c2', papel: 'consultor' },
+  ],
+  // Vista equipo_visible_proyecto (v124): nombres del equipo que ve el cliente.
+  equipo_visible_proyecto: [
+    { proyecto_id: 'pc1', perfil_id: 'c1', papel: 'consultor', nombre: 'Carlota', apellidos: '', nivel: 'J3' },
+    { proyecto_id: 'pc1', perfil_id: 'c2', papel: 'responsable', nombre: 'Irene', apellidos: '', nivel: 'J2' },
+    { proyecto_id: 'pc2', perfil_id: 'c1', papel: 'consultor', nombre: 'Carlota', apellidos: '', nivel: 'J3' },
+    { proyecto_id: 'pc2', perfil_id: 'c2', papel: 'consultor', nombre: 'Irene', apellidos: '', nivel: 'J2' },
   ],
   cliente_tareas: [
     { id: 'ct1', cliente_id: 'cl1', proyecto_id: 'pc1', norma_id: '9001', modelo: 'Relación', titulo: 'Contexto de la organización', codigo: 'INOR-9001-01', horas: 40, tipo: 'produccion', subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO Y GI', definicion: 'Identificar las cuestiones internas y externas y las partes interesadas, y dejar el análisis documentado y revisado por la dirección.', subtareas: [{ texto: 'Entrevista con dirección sobre contexto', hecha: true, fecha: '2026-09-02' }, { texto: 'Matriz de partes interesadas', hecha: false, fecha: null }, { texto: 'DAFO revisado y aprobado', hecha: false, fecha: null }] },

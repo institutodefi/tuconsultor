@@ -289,7 +289,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
                   <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${t.punto}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1">
-                      <Link to={`/consultores/proyectos?proyecto=${p.id}`} className={ENLACE}
+                      <Link to={`/consultores/proyectos/${p.id}`} className={ENLACE}
                         title="Abrir el proyecto">
                         {p.nombre || (p.normas || []).join(' + ') || 'Sin nombre'}
                       </Link>

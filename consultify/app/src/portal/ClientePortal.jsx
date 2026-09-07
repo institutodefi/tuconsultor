@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import ClienteSinProyectos from './cliente/SinProyectos.jsx';
 import MisDatosPagina from './cliente/MisDatosPagina.jsx';
 import MisOfertas from './cliente/MisOfertas.jsx';
+import ProyectoCliente from './cliente/ProyectoCliente.jsx';
+import { funcionesDe } from '../lib/zonaCliente.js';
 import { misProyectos, misPresupuestos, listTable } from '../lib/data.js';
 import { NORMA_BY_ID, MODELOS, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 import DocumentosCliente from '../components/DocumentosCliente.jsx';
@@ -13,8 +15,42 @@ const ESTADOS = { activo: 'bg-green-100 text-green-800', 'implantación': 'bg-br
 function Servicios() {
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
-  useEffect(() => { misProyectos(user).then(setRows).catch(() => setRows([])); }, [user]);
+  const [proyectosCliente, setProyectosCliente] = useState([]);
+  useEffect(() => {
+    misProyectos(user).then(setRows).catch(() => setRows([]));
+    // Los proyectos de verdad (proyectos_cliente): la política deja al
+    // cliente ver solo los suyos. Cada uno abre su panel.
+    listTable('proyectos_cliente').then((ps) => setProyectosCliente((ps || []).filter((p) => !['cerrado', 'cancelado'].includes(String(p.estado || '').toLowerCase())))).catch(() => setProyectosCliente([]));
+  }, [user]);
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
+  if (proyectosCliente.length) {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {proyectosCliente.map((p) => {
+            const f = funcionesDe(p);
+            const activas = [f.pm_tool && 'Planificación y tareas', f.datos_cliente && 'Datos y documentos', f.procesos.length && `${f.procesos.length} procesos`].filter(Boolean);
+            return (
+              <Link key={p.id} to={`proyectos/${p.id}`} className="card block transition hover:border-brand-orange">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-extrabold">{(p.normas || []).map((id) => NORMA_BY_ID[id]?.nombre || id).join(' + ') || p.nombre}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-[#F9A83A]">Modelo {p.modelo}</p>
+                  </div>
+                  <span className={`chip ${ESTADOS[p.estado] || ESTADOS.pausado}`}>{p.estado}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div><p className="label !mb-0">Inicio</p><p className="font-bold">{p.fecha_inicio || '—'}</p></div>
+                  <div><p className="label !mb-0">Certificación prevista</p><p className="font-bold">{p.fecha_limite || 'Por fijar'}</p></div>
+                </div>
+                <p className="mt-3 text-xs font-medium text-[#9FC0CB]">{activas.length ? activas.join(' · ') : 'Tu consultor está preparando el espacio'} · <span className="font-bold text-brand-orange">Abrir →</span></p>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
   // Sin proyectos todavía no significa «pantalla vacía»: quien acaba de darse de
   // alta tiene sus datos y los de su empresa, y lo que necesita es poder pedir
   // una oferta. Enseñarle solo un cartel es dejarle sin nada que hacer.
@@ -138,6 +174,7 @@ export default function ClientePortal() {
       <div className="mt-8">
         <Routes>
           <Route index element={<Servicios />} />
+          <Route path="proyectos/:id" element={<ProyectoCliente />} />
           <Route path="presupuestos" element={<Presupuestos />} />
           <Route path="documentos" element={<MisDocumentos />} />
           <Route path="soporte" element={<Soporte />} />

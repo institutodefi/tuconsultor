@@ -630,7 +630,7 @@ export default function Clientes() {
                         {(p.normas || []).join(', ') || 'sin normas'} · {p.modelo || 'sin modelo'} · <span className={p.estado === 'activo' ? 'text-green-600' : 'text-[#9FC0CB]'}>{p.estado}</span>
                       </p>
                     </div>
-                    <button type="button" onClick={() => navigate(`/consultores/proyectos?proyecto=${p.id}`)} className="btn-ghost !px-3 !py-1.5 text-xs">Abrir →</button>
+                    <button type="button" onClick={() => navigate(`/consultores/proyectos/${p.id}`)} className="btn-ghost !px-3 !py-1.5 text-xs">Abrir →</button>
                   </div>
                 ))}
               </div>

@@ -165,7 +165,7 @@ export default function MisProyectos({ perfilId = null, titulo = 'Mis proyectos'
           return (
             <li key={p.id} className="py-2.5">
               <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                <Link to={`/consultores/proyectos?proyecto=${p.id}`}
+                <Link to={`/consultores/proyectos/${p.id}`}
                   className="min-w-0 flex-1 hover:text-brand-orange">
                   <span className="block truncate text-[13px] font-bold text-[#EAF4F7]">{p.cliente}</span>
                   <span className="block truncate text-[11.5px] text-[#7FA7B4]">

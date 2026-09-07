@@ -170,6 +170,9 @@ export const can = {
 
   // Entrar a la zona interna
   esEquipo: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
+  // Todos los proyectos, con todos los permisos, estén o no en su equipo:
+  // programar a cualquiera, asignar, cerrar. Administración y dirección.
+  todoProyecto: (rol) => ['superadmin', 'admin', 'director'].includes(rol),
 };
 
 /** Roles que un usuario puede ASIGNAR a otros. */

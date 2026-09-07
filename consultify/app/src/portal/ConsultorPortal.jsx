@@ -5,6 +5,7 @@ import Equipo from './consultores/Equipo.jsx';
 import Empresas from './consultores/Empresas.jsx';
 import Contactos from './consultores/Contactos.jsx';
 import Ofertas from './consultores/Ofertas.jsx';
+import ProyectoCliente from './cliente/ProyectoCliente.jsx';
 import ProyectosConfig from './consultores/ProyectosConfig.jsx';
 import Agenda from './consultores/Agenda.jsx';
 import MiAgenda from './consultores/MiAgenda.jsx';
@@ -178,6 +179,8 @@ export default function ConsultorPortal() {
                   mano llegaba igual. */}
               <Route path="panel" element={<Guard ok={verEconomico}><Dashboard /></Guard>} />
               <Route path="proyectos" element={<Guard ok={verClientes}><ProyectosConfig /></Guard>} />
+              <Route path="proyectos/:id" element={<Guard ok={verClientes}><ProyectosConfig /></Guard>} />
+              <Route path="proyectos/:id/cliente" element={<Guard ok={verClientes}><ProyectoCliente previsualizacion /></Guard>} />
               <Route path="agenda" element={<Guard ok={verPlanAgendaSist}><AgendaTareas /></Guard>} />
               <Route path="mi-agenda" element={<Guard ok={verPlanAgendaSist}><MiAgenda /></Guard>} />
               {/* Horas por consultor y capacidad: quien reparte trabajo ve a

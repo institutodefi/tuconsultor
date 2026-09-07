@@ -3,6 +3,8 @@ import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ChecklistTarea from '../../components/ChecklistTarea.jsx';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../../lib/data.js';
 import { horasEntre, balanceTarea, sesionesTrasCertificacion, solapes } from '../../lib/sesionesTarea.js';
+import { useAuth } from '../../lib/auth.jsx';
+import { can } from '../../lib/permisos.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PROGRAMAR UNA TAREA · EN UNA O VARIAS SESIONES
@@ -56,6 +58,10 @@ export default function SesionesTarea({
   onChecklist = null,
 }) {
   const esInterna = campoTarea === 'tarea_interna_id';
+  // Administración y dirección programan a cualquiera del equipo, esté o no
+  // asignado al proyecto: tienen todos los proyectos con todos los permisos.
+  const { role } = useAuth();
+  const sinLimiteEquipo = can.todoProyecto(role);
   const [sesiones, setSesiones] = useState(null);
   const [todas, setTodas] = useState([]);       // de todo el mundo, para ver solapes
   const [equipo, setEquipo] = useState([]);
@@ -88,7 +94,7 @@ export default function SesionesTarea({
       listTable('perfiles').catch(() => []),
       proyectoId ? listTable('proyecto_equipo').catch(() => []) : Promise.resolve([]),
     ]);
-    const delProyecto = proyectoId
+    const delProyecto = proyectoId && !sinLimiteEquipo
       ? new Set((eq || [])
           .filter((x) => String(x.proyecto_id) === String(proyectoId))
           .map((x) => String(x.perfil_id)))

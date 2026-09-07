@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import AltaProyecto from './AltaProyecto.jsx';
 import { tareasDeCliente, repartirFechas, anidarTareas, codigoTareaIntegrada, horasCoordinacion, bloquesEjecucion, trocearEnBloques, codigoTarea } from '../../lib/planCliente.js';
@@ -10,6 +11,7 @@ import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 import DashboardProyectos from './DashboardProyectos.jsx';
 import PlanAuditorias from './PlanAuditorias.jsx';
+import ZonaClienteConfig from '../../components/ZonaClienteConfig.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
@@ -158,11 +160,13 @@ export default function Proyectos() {
   // la vista hasta él, pulsar «Abrir» no parecía hacer nada y la gente volvía
   // a pulsar.
   const detalleRef = useRef(null);
-  const abrirProyecto = (id) => {
-    setSel(String(id));
-    requestAnimationFrame(() =>
-      detalleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
+  // Cada proyecto se abre en su propia página (/consultores/proyectos/:id),
+  // no debajo de la lista: la ficha tiene entidad para ocupar la pantalla.
+  const navigate = useNavigate();
+  const { id: idRuta } = useParams();
+  const modoFicha = !!idRuta;
+  const abrirProyecto = (id) => navigate(`/consultores/proyectos/${id}`);
+  useEffect(() => { if (idRuta) setSel(String(idRuta)); }, [idRuta]);
 
   // Llegada desde otra pantalla:
   //   ?proyecto=ID  abre ese proyecto
@@ -174,12 +178,12 @@ export default function Proyectos() {
     const q = new URLSearchParams(window.location.search);
     const id = q.get('proyecto');
     const cli = q.get('cliente');
-    if (id) setSel(id);
+    if (id) { navigate(`/consultores/proyectos/${id}`, { replace: true }); }
     else if (cli) {
       const suyos = proyectos.filter((p) => String(p.cliente_id) === String(cli));
       // El activo primero: es el que se quiere ver al venir de una ficha.
       const elegido = suyos.find((p) => p.estado === 'activo') || suyos[0];
-      if (elegido) setSel(elegido.id);
+      if (elegido) navigate(`/consultores/proyectos/${elegido.id}`, { replace: true });
     }
     setUrlAplicada(true);
   }, [proyectos, urlAplicada]);
@@ -732,15 +736,26 @@ export default function Proyectos() {
   return (
     <div className="space-y-6">
       <div className="mb-2">
-        <p className="eyebrow">Proyectos</p>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Proyectos</h1>
+        {modoFicha ? (
+          <>
+            <Link to="/consultores/proyectos" className="block text-[12.5px] font-bold text-[#9FC0CB] hover:text-brand-orange">← Volver a proyectos</Link>
+            <p className="eyebrow mt-2">Proyecto</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{proyecto?.nombre || proyecto?.codigo || 'Proyecto'}</h1>
+            {proyecto && <p className="mt-1 text-sm text-[#9FC0CB]">{cliente?.empresa || ''}{proyecto.codigo ? ` · ${proyecto.codigo}` : ''}{proyecto.modelo ? ` · ${proyecto.modelo}` : ''}</p>}
+          </>
+        ) : (
+          <>
+            <p className="eyebrow">Proyectos</p>
+            <h1 className="mt-1 text-3xl font-extrabold tracking-tight">Proyectos</h1>
+          </>
+        )}
       </div>
 
       {/* Cartera y panel eran dos pantallas sobre los mismos proyectos: una con
           la tabla, otra con las cifras. Se entra a mirar «cómo va esto» y había
           que acordarse de en cuál estaba cada cosa. Ahora es una, con dos
           vistas y sin perder el proyecto seleccionado al cambiar. */}
-      <div className="flex gap-1.5 border-b border-[#1E5468]">
+      {!modoFicha && <div className="flex gap-1.5 border-b border-[#1E5468]">
         {[['cartera', 'Cartera y configuración'], ['panel', 'Cómo van'], ['auditorias', 'Auditorías externas']].map(([k, etq]) => (
           <button key={k} onClick={() => setVista(k)}
             className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-bold transition ${
@@ -750,12 +765,12 @@ export default function Proyectos() {
             {etq}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {vista === 'panel' && <DashboardProyectos />}
-      {vista === 'auditorias' && <PlanAuditorias />}
+      {!modoFicha && vista === 'panel' && <DashboardProyectos />}
+      {!modoFicha && vista === 'auditorias' && <PlanAuditorias />}
 
-      <div className={vista === 'cartera' ? 'space-y-6' : 'hidden'}>
+      <div className={modoFicha || vista === 'cartera' ? 'space-y-6' : 'hidden'}>
 
       {/* Alta de proyecto.
           El desplegable «Selecciona un proyecto activo» se ha quitado: duplicaba
@@ -785,6 +800,7 @@ export default function Proyectos() {
         />
       )}
 
+      {!modoFicha && (<>
       {alta ? (
         <AltaProyecto empresas={empresas} clientes={clientes}
           onCerrar={() => setAlta(false)}
@@ -890,11 +906,13 @@ export default function Proyectos() {
         )}
       </div>
 
+      </>)}
+
       {/* Ancla del detalle: hasta aquí desplaza «Abrir». */}
       <div ref={detalleRef} className="scroll-mt-4" />
 
       {!proyecto ? (
-        <p className="card text-sm font-medium text-[#9FC0CB]">Abre un proyecto de la tabla para configurar sus normas, su modelo y sus tareas.</p>
+        <p className="card text-sm font-medium text-[#9FC0CB]">{modoFicha ? 'Cargando el proyecto…' : 'Abre un proyecto de la tabla para configurar sus normas, su modelo y sus tareas.'}</p>
       ) : (
         <>
           {/* Cabecera */}
@@ -930,6 +948,10 @@ export default function Proyectos() {
               repartoPrevisto={proyecto.reparto_niveles || null}
             />
           </div>
+
+          {/* Qué ve el cliente de este proyecto: se activa por funciones. */}
+          <ZonaClienteConfig key={proyecto.id} proyecto={proyecto} tareas={tareasProyecto}
+            onGuardado={(funciones) => setProyectos((ps) => ps.map((x) => (x.id === proyecto.id ? { ...x, funciones } : x)))} />
 
           {/* Cómo va este proyecto, desglosado por norma. */}
           <CuadroTareas proyectoId={proyecto.id} titulo="Cómo van las horas" />

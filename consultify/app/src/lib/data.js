@@ -8,7 +8,7 @@ function demo() {
     consultores: demoClone('consultores'), perfiles: demoClone('perfiles'), clientes: demoClone('clientes'),
     presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
-    proyectos_cliente: demoClone('proyectos_cliente'), proyecto_equipo: demoClone('proyecto_equipo'),
+    proyectos_cliente: demoClone('proyectos_cliente'), proyecto_equipo: demoClone('proyecto_equipo'), equipo_visible_proyecto: demoClone('equipo_visible_proyecto'),
     cliente_tareas: demoClone('cliente_tareas'), tarea_sesiones: demoClone('tarea_sesiones'),
     // Certificados (v118) con dos de muestra; documentos vacíos pero con la
     // clave presente para que un alta no reviente.

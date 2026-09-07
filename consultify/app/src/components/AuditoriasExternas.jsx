@@ -93,7 +93,7 @@ export default function AuditoriasExternas({ compacto = false, soloAvisos = fals
               <li key={f.p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: T.punto }} title={T.etq} />
                 <span className="min-w-0 flex-1">
-                  <Link to={`/consultores/proyectos?proyecto=${f.p.id}`} className="block truncate text-[13px] font-bold text-[#EAF4F7] hover:text-brand-orange hover:underline">
+                  <Link to={`/consultores/proyectos/${f.p.id}`} className="block truncate text-[13px] font-bold text-[#EAF4F7] hover:text-brand-orange hover:underline">
                     {f.cliente} <span className="font-medium text-[#9FC0CB]">· {(f.p.normas || []).map((n) => NORMA_BY_ID[n]?.nombre || n).join(', ')}</span>
                   </Link>
                   <span className={`block text-[11.5px] ${f.color === 'rojo' ? 'text-red-200' : f.color === 'ambar' ? 'text-amber-100' : 'text-[#9FC0CB]'}`}>{f.texto}</span>
