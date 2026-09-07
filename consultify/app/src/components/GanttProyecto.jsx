@@ -27,7 +27,7 @@ export default function GanttProyecto({ filas = [], proyecto = null, nombreDe = 
 
   if (!rango || !filas.length) return <p className="text-[12.5px] text-[#7FA7B4]">Todavía no hay tareas con fechas que pintar.</p>;
 
-  const ANCHO_ETQ = compacto ? 180 : 260;
+  const ANCHO_ETQ = compacto ? 200 : 300;
 
   return (
     <div className="overflow-x-auto">
@@ -81,6 +81,8 @@ export default function GanttProyecto({ filas = [], proyecto = null, nombreDe = 
                   <div style={{ width: ANCHO_ETQ }} className="shrink-0 px-2 py-1">
                     <button onClick={() => onAbrir?.(t)} className={`block w-full truncate text-left text-[11.5px] ${onAbrir ? 'hover:text-brand-orange' : ''} text-[#DFF1F5]`} title={`${t.codigo ? `${t.codigo} · ` : ''}${t.titulo}`}>
                       <span className="mr-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: E.color }} />
+                      {t.codigo && <code className="mr-1 text-[10.5px] font-bold text-brand-verdeTexto">{t.codigo}</code>}
+                      {t.subproceso && !t.titulo.toUpperCase().startsWith(t.subproceso.replace(' ', '')) && !t.titulo.toUpperCase().startsWith(t.subproceso) && <span className="mr-1 text-[10px] font-bold text-[#9FC0CB]">{t.subproceso}</span>}
                       {t.titulo}
                     </button>
                     {!compacto && <span className="block truncate pl-3 text-[10px] text-[#7FA7B4]">{resp || 'sin responsable'}{t.horas ? ` · ${t.horas} h` : ''}</span>}

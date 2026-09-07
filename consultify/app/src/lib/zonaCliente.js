@@ -36,13 +36,30 @@ export function funcionesDe(proyecto) {
 }
 
 /** Código corto del proceso de una tarea: «PE1», «PA4», «PM»… */
+// Nombres de los procesos del mapa, para cuando una tarea trae el subproceso
+// («S1 PE1 …») pero no el proceso: se saca el código y se pone su nombre.
+export const NOMBRES_PROCESO = {
+  PE1: 'PLANIFICACIÓN ESTRATÉGICA', PE2: 'EVALUACIÓN DEL DESEMPEÑO', PE3: 'MEJORA CONTINUA', PE4: 'GESTIÓN DE LA CARTERA DE INNOVACIÓN',
+  PE5: 'GESTIÓN DE POLÍTICAS Y GOBERNANZA DE IA', PE6: 'GESTIÓN DEL ÉXITO SOSTENIDO', PE7: 'AUTOEVALUACIÓN Y MADUREZ', PE8: 'RESPONSABILIDAD SOCIAL EDUCATIVA',
+  PA1: 'GESTIÓN DE PERSONAS', PA2: 'GESTIÓN MEDIOAMBIENTAL', PA3: 'GESTIÓN DEL CONOCIMIENTO', PA4: 'GESTIÓN DE INFRAESTRUCTURAS', PA5: 'GESTIÓN DE SEGURIDAD',
+  PA6: 'GESTIÓN DE PARTES SUBCONTRATADAS', PA7: 'GESTIÓN ECONÓMICA ADMINISTRATIVA', PA8: 'GESTIÓN DE PROPIEDAD INTELECTUAL Y VIGILANCIA', PA9: 'GESTIÓN DE ALIANZAS Y COLABORACIONES',
+  PA10: 'GESTIÓN DE DATOS PARA IA', PA11: 'INFORMACIÓN A PARTES INTERESADAS', PA12: 'USO RESPONSABLE DE SISTEMAS DE IA', PA13: 'RELACIONES CON TERCEROS Y CLIENTES',
+  PA14: 'GESTIÓN DE RECURSOS', PA15: 'GESTIÓN DE PARTES INTERESADAS', PA16: 'NECESIDADES DE EDUCANDOS Y BENEFICIARIOS', PA17: 'ACCESIBILIDAD Y EQUIDAD',
+  PA18: 'PROTECCIÓN DE DATOS DE EDUCANDOS', PA19: 'GESTIÓN DE LA PRIVACIDAD', PI1: 'PROCESO DE INNOVACIÓN', PI2: 'GESTIÓN DE INICIATIVAS DE INNOVACIÓN',
+  PI3: 'CICLO DE VIDA DEL SISTEMA DE IA', PI4: 'INNOVACIÓN, APRENDIZAJE Y MEJORA', PO1: 'PROCESOS EDUCATIVOS', PR1: 'DIAGNÓSTICO Y PLANIFICACIÓN',
+  PR2: 'SISTEMA DE GESTIÓN', PR3: 'INCORPORACIÓN DE USUARIOS', PR4: 'ATENCIÓN AL USUARIO', PR5: 'BAJA EN EL SERVICIO', PR6: 'CERTIFICACIÓN', PM: 'COORDINACIÓN',
+};
+const RE_PROC = /^(P[EAOMCIR]\d*|PM)\b/;
 export function codigoProceso(t) {
-  const m = S(t?.proceso).toUpperCase().match(/^(P[EAOMC]\d*|PM)\b/);
+  const m = S(t?.proceso).toUpperCase().match(RE_PROC);
   if (m) return m[1];
+  // Sin proceso: del código del subproceso («S1 PE1 …» → PE1).
+  const ms = S(t?.subproceso || t?.titulo_origen || t?.titulo).toUpperCase().match(/^S\d+\s?(P[EAOIR]\d+)/);
+  if (ms) return ms[1];
   const b = S(t?.bloque).toUpperCase();
   return b || 'OTROS';
 }
-export const nombreProceso = (t) => S(t?.proceso).replace(/^(P[EAOMC]\d*|PM)\s*/i, '').trim() || codigoProceso(t);
+export const nombreProceso = (t) => S(t?.proceso).replace(RE_PROC, '').replace(/^\s*[·\-–]?\s*/, '').trim() || NOMBRES_PROCESO[codigoProceso(t)] || codigoProceso(t);
 
 export const ESTADOS_TAREA = {
   hecha: { etq: 'Hecha', color: '#22C55E' },
@@ -88,6 +105,9 @@ export function filasGantt(tareas = [], sesiones = [], proyecto = null, hoy = aI
     const pct = t.hecha ? 100 : check.total ? check.pct : num(t.horas) > 0 ? Math.min(100, Math.round((horasHechas / num(t.horas)) * 100)) : 0;
     return {
       id: t.id, codigo: t.codigo || '', titulo: t.titulo || t.subproceso || '', proceso: codigoProceso(t), procesoNombre: nombreProceso(t),
+      // Código del subproceso («S1 PE1») y su nombre sin el código, para que
+      // el Gantt y el mapa de procesos se lean por códigos.
+      subproceso: codigoSubproceso(t), subprocesoNombre: nombreSubproceso(t),
       norma: t.norma_id || null, responsableId: t.consultor_id || (ss.find((s) => s.consultor_id)?.consultor_id) || null,
       inicio, fin, horas: num(t.horas), horasHechas, horasProgramadas: horasProg, sesiones: ss.length,
       estado, pct, checklist: check, definicion: t.definicion || null, subtareas: t.subtareas || [],
@@ -137,6 +157,17 @@ export function procesosDe(filas = []) {
 }
 
 /** Resumen del proyecto para la cabecera del cliente. */
+/** «S1 PE1 GESTIÓN DEL CONTEXTO…» → «S1 PE1». */
+export function codigoSubproceso(t) {
+  const m = S(t?.subproceso || t?.titulo_origen || t?.titulo).toUpperCase().match(/^(S\d+)\s?(P[EAIOR]\d+)/);
+  return m ? `${m[1]} ${m[2]}` : '';
+}
+/** El nombre del subproceso sin su código. */
+export function nombreSubproceso(t) {
+  const txt = S(t?.subproceso || t?.titulo_origen || '');
+  return txt.replace(/^S\d+\s?P[EAIOR]\d+\s*[·\-–]?\s*/i, '').trim();
+}
+
 export function resumenProyecto(filas = []) {
   const n = filas.length;
   const hechas = filas.filter((f) => f.estado === 'hecha').length;

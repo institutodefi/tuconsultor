@@ -730,8 +730,13 @@ export const codigoSubproceso = (subproceso) => {
 /** Subtareas base para un subproceso y una norma: [{texto}]. */
 export function subtareasBasePara(subproceso, normaId) {
   const cod = codigoSubproceso(subproceso);
-  const lista = cod ? SUBTAREAS_BASE[cod] : null;
-  if (!lista) return [];
+  // El Excel base escribe unos códigos con espacio («S1 PA7») y otros sin él
+  // («S2PA7»): se prueban las dos grafías.
+  const variantes = cod ? [cod, cod.replace(/\s+/g, ''), cod.replace(/^(S\d)(P)/, '$1 $2')] : [];
+  const lista = [...new Set(variantes)].flatMap((k) => SUBTAREAS_BASE[k] || []);
+  const vistos = new Set();
+  const unicos = lista.filter((x) => { const k = S(x.texto).toLowerCase(); if (vistos.has(k)) return false; vistos.add(k); return true; });
+  if (!unicos.length) return [];
   const n = S(normaId);
-  return lista.filter((x) => !x.normas || !n || x.normas.includes(n)).map((x) => ({ texto: x.texto }));
+  return unicos.filter((x) => !x.normas || !n || x.normas.includes(n)).map((x) => ({ texto: x.texto }));
 }

@@ -63,5 +63,13 @@ ok(pend.some((x) => /correo/.test(x.texto) && !/CIF/.test(x.texto)), 'datos inco
 ok(pend.some((x) => /Sin documentos/.test(x.texto)), 'sin documentos → aviso gris');
 ok(pend.filter((x) => x.interno).length === 1 && /sin responsable/.test(pend.find((x) => x.interno).texto), 'sin responsable se marca como interno (no se enseña al cliente)');
 
+
+console.log('\n── Códigos de subproceso ──');
+ok(Z.codigoSubproceso({ subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS' }) === 'S1 PE1' && Z.codigoSubproceso({ subproceso: 'S2PA7 GESTIÓN ADMINISTRATIVA' }) === 'S2 PA7', 'código con y sin espacio → «S1 PE1» / «S2 PA7»');
+ok(Z.nombreSubproceso({ subproceso: 'S3 PE1 GESTIÓN DE ESTRATEGIA, POLÍTICA Y OBJETIVOS' }) === 'GESTIÓN DE ESTRATEGIA, POLÍTICA Y OBJETIVOS', 'nombre sin el código');
+ok(Z.codigoSubproceso({ titulo: 'Contexto' }) === '' && Z.nombreSubproceso({}) === '', 'sin subproceso → vacío');
+const fs = Z.filasGantt([{ id: 'x', proyecto_id: 'p1', proceso: 'PE1 PLANIFICACIÓN', subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO', titulo: 'S1 PE1 GESTIÓN DEL CONTEXTO', horas: '3.00' }], [], proyecto, hoy);
+ok(fs[0].subproceso === 'S1 PE1' && fs[0].subprocesoNombre === 'GESTIÓN DEL CONTEXTO' && fs[0].horas === 3, `fila con código de subproceso y horas numéricas (${fs[0].subproceso}, ${fs[0].horas})`);
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

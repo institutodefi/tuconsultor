@@ -12,6 +12,8 @@ import DatosEmpresaCliente from './DatosEmpresaCliente.jsx';
 import ResumenEmpresa from './ResumenEmpresa.jsx';
 import { rolCuenta } from '../../lib/cuentaClientePuro.js';
 import { normalizarSubtareas } from '../../lib/subtareas.js';
+import { numeroES as nES } from '../../lib/formato.js';
+const numeroES = (v) => nES(v, null);   // horas sin ceros de relleno: «4 h», «2,5 h»
 
 // ════════════════════════════════════════════════════════════════════════════
 // EL PROYECTO, VISTO POR EL CLIENTE
@@ -158,7 +160,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
 
         {funciones.pm_tool && filas.length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {[['Avance', `${resumen.pct} %`, 'text-brand-verdeTexto'], ['Tareas', resumen.n, 'text-[#EAF4F7]'], ['Hechas', resumen.hechas, 'text-emerald-300'], ['En curso', resumen.enCurso, 'text-amber-200'], ['Con retraso', resumen.retrasadas, resumen.retrasadas ? 'text-red-300' : 'text-[#EAF4F7]']].map(([k, v, c]) => (
+            {[['Avance', `${resumen.pct} %`, 'text-brand-verdeTexto'], ['Tareas', resumen.n, 'text-[#EAF4F7]'], ['Hechas', resumen.hechas, 'text-emerald-300'], ['En curso', resumen.enCurso, 'text-amber-200'], ['Con retraso', resumen.retrasadas, resumen.retrasadas ? 'text-red-300' : 'text-[#EAF4F7]'], ['Horas', `${numeroES(resumen.horasHechas)} / ${numeroES(resumen.horas)} h`, 'text-[#EAF4F7]']].map(([k, v, c]) => (
               <div key={k} className="rounded-xl bg-[#0D3242] px-3 py-2">
                 <p className={`text-xl font-extrabold leading-none ${c}`}>{v}</p>
                 <p className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">{k}</p>
@@ -212,13 +214,14 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
                         const E = ESTADOS_TAREA[f.estado];
                         return (
                           <tr key={f.id} className="cursor-pointer hover:bg-white/[0.03]" onClick={() => setTareaAbierta(f)}>
-                            <td className="py-2 pr-2"><span className="block font-bold text-[#EAF4F7]">{f.titulo}</span>{f.codigo && <span className="text-[10.5px] text-[#7FA7B4]">{f.codigo}</span>}</td>
+                            <td className="py-2 pr-2">{f.codigo && <code className="block text-[10.5px] font-bold text-brand-verdeTexto">{f.codigo}</code>}<span className="block font-bold text-[#EAF4F7]">{f.subproceso && !f.titulo.toUpperCase().startsWith(f.subproceso) ? `${f.subproceso} · ` : ''}{f.titulo}</span></td>
                             <td className="py-2 pr-2 text-[#CFE3E9]">{f.proceso}<span className="block truncate text-[10.5px] text-[#7FA7B4]" title={f.procesoNombre}>{f.procesoNombre}</span></td>
                             <td className="py-2 pr-2 text-[#CFE3E9]">{nombreDe(f.responsableId) || <span className="text-[#7FA7B4]">por asignar</span>}</td>
                             <td className="py-2 pr-2 text-[#CFE3E9]">{f.inicio ? `${fmt(f.inicio)}${f.fin && f.fin !== f.inicio ? ` → ${fmt(f.fin)}` : ''}` : <span className="text-[#7FA7B4]">sin fecha</span>}</td>
                             <td className="py-2 pr-2"><span className="chip !px-2 !py-0.5 text-[10.5px] font-extrabold" style={{ background: `${E.color}33`, color: E.color }}>{E.etq}</span></td>
                             <td className="py-2 text-right">
                               <span className="text-[#EAF4F7]">{f.pct} %</span>
+                              {f.horas > 0 && <span className="block text-[10px] text-[#7FA7B4]">{numeroES(f.horasHechas)} / {numeroES(f.horas)} h</span>}
                               {f.checklist.total > 0 && <span className="block text-[10px] text-[#7FA7B4]">{f.checklist.hechas}/{f.checklist.total} pasos</span>}
                             </td>
                           </tr>
@@ -265,8 +268,12 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
                         <li key={t.id}>
                           <button onClick={() => setTareaAbierta(t)} className="flex w-full items-center gap-2 text-left text-[12px] text-[#DFF1F5] hover:text-brand-orange">
                             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: E.color }} />
-                            <span className="min-w-0 flex-1 truncate">{t.titulo}</span>
-                            <span className="shrink-0 text-[10.5px] text-[#7FA7B4]">{t.checklist.total ? `${t.checklist.hechas}/${t.checklist.total}` : `${t.pct} %`}</span>
+                            <span className="min-w-0 flex-1 truncate">
+                              {t.codigo && <code className="mr-1 text-[10.5px] font-bold text-brand-verdeTexto">{t.codigo}</code>}
+                              {t.subproceso && <span className="mr-1 text-[10.5px] font-bold text-[#9FC0CB]">{t.subproceso}</span>}
+                              {t.subprocesoNombre || t.titulo}
+                            </span>
+                            <span className="shrink-0 text-[10.5px] text-[#7FA7B4]">{t.horas ? `${numeroES(t.horas)} h · ` : ''}{t.checklist.total ? `${t.checklist.hechas}/${t.checklist.total}` : `${t.pct} %`}</span>
                           </button>
                         </li>
                       ); })}
@@ -306,7 +313,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
                 ))}
               </ul>
             )}
-            <p className="mt-3 text-[10.5px] text-[#5E8494]">{tareaAbierta.horas} h previstas · {tareaAbierta.horasHechas} h hechas · {tareaAbierta.sesiones} sesión{tareaAbierta.sesiones === 1 ? '' : 'es'}</p>
+            <p className="mt-3 text-[10.5px] text-[#5E8494]">{numeroES(tareaAbierta.horas)} h previstas · {numeroES(tareaAbierta.horasHechas)} h hechas · {tareaAbierta.sesiones} sesión{tareaAbierta.sesiones === 1 ? '' : 'es'}</p>
           </div>
         </div>
       )}
