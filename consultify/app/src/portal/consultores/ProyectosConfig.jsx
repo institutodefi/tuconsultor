@@ -16,6 +16,7 @@ import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
 import PlanificadorArrastre from '../../components/PlanificadorArrastre.jsx';
+import { tituloTarea } from '../../lib/zonaCliente.js';
 import { etiquetaChecklist, progresoChecklist, subtareasNuevas } from '../../lib/subtareas.js';
 import { subtareasBasePara } from '../../lib/subtareasBase.js';
 // La sigla del cliente: la misma que usan los códigos de proyecto, para que
@@ -783,7 +784,7 @@ export default function Proyectos() {
       {abierta && (
         <SesionesTarea
           tarea={{
-            id: abierta.id, titulo: abierta.titulo, consultor_id: abierta.consultor_id || null,
+            id: abierta.id, titulo: tituloTarea(abierta), consultor_id: abierta.consultor_id || null,
             codigo: `${abierta.norma_id}-${String(abierta.num_tarea || 0).padStart(2, '0')}`,
             // Del catálogo, no de la copia: es el tope real contra el que se
             // planifica.
@@ -1183,7 +1184,7 @@ export default function Proyectos() {
                               GESTIÓN REL LABORAL, SEGURIDAD Y SALUD» en tres
                               líneas sin necesidad. */}
                           <div className="min-w-[240px] whitespace-normal break-words px-1 font-medium leading-snug text-[#EAF4F7]">
-                            {t.titulo}
+                            {tituloTarea(t)}
                           </div>
                           {/* La referencia al catálogo, siempre visible: es lo
                               que garantiza que las horas se comparan contra la

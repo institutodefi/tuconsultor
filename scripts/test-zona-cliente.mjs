@@ -68,6 +68,9 @@ console.log('\n── Códigos de subproceso ──');
 ok(Z.codigoSubproceso({ subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS' }) === 'S1 PE1' && Z.codigoSubproceso({ subproceso: 'S2PA7 GESTIÓN ADMINISTRATIVA' }) === 'S2 PA7', 'código con y sin espacio → «S1 PE1» / «S2 PA7»');
 ok(Z.nombreSubproceso({ subproceso: 'S3 PE1 GESTIÓN DE ESTRATEGIA, POLÍTICA Y OBJETIVOS' }) === 'GESTIÓN DE ESTRATEGIA, POLÍTICA Y OBJETIVOS', 'nombre sin el código');
 ok(Z.codigoSubproceso({ titulo: 'Contexto' }) === '' && Z.nombreSubproceso({}) === '', 'sin subproceso → vacío');
+ok(Z.tituloTarea({ titulo: 'CONFEDERACIÓN ESPAÑOLA DE CENTROS DE ENSEÑANZA (CECE) - 9001 - PE1 PLANIFICACIÓN ESTRATÉGICA - S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS', subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS' }) === 'S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS', 'título largo antiguo → solo el subproceso');
+ok(Z.tituloTarea({ titulo: 'Auditoría interna - plan', subproceso: 'S2 PE2 AUDITORÍA INTERNA' }) === 'Auditoría interna - plan', 'título editado a mano se respeta');
+ok(Z.tituloTarea({ titulo: '', subproceso: 'S2 PE2 AUDITORÍA INTERNA' }) === 'S2 PE2 AUDITORÍA INTERNA', 'sin título → subproceso');
 const fs = Z.filasGantt([{ id: 'x', proyecto_id: 'p1', proceso: 'PE1 PLANIFICACIÓN', subproceso: 'S1 PE1 GESTIÓN DEL CONTEXTO', titulo: 'S1 PE1 GESTIÓN DEL CONTEXTO', horas: '3.00' }], [], proyecto, hoy);
 ok(fs[0].subproceso === 'S1 PE1' && fs[0].subprocesoNombre === 'GESTIÓN DEL CONTEXTO' && fs[0].horas === 3, `fila con código de subproceso y horas numéricas (${fs[0].subproceso}, ${fs[0].horas})`);
 

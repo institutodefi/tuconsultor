@@ -3,6 +3,7 @@ import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../
 import { balanceTarea } from '../lib/sesionesTarea.js';
 import { esLaborable, FESTIVOS_2026 } from '../lib/agenda.js';
 import { NORMAS, NORMA_BY_ID } from '../lib/calcEngine.js';
+import { tituloTarea } from '../lib/zonaCliente.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR ARRASTRE · calendario del proyecto + tareas sin programar
@@ -121,7 +122,7 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
         await insertRow('tarea_sesiones', fila);
         // La tarea queda con responsable si no lo tenía.
         if (!t.consultor_id) await updateRow('cliente_tareas', t.id, { consultor_id: consultor }).catch(() => {});
-        setMsg({ err: false, t: `${etiqueta(t)} · ${t.titulo}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}.` });
+        setMsg({ err: false, t: `${etiqueta(t)} · ${tituloTarea(t)}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}.` });
       } else if (a.tipo === 'sesion') {
         const s = sesionesProyecto.find((x) => S(x.id) === a.id); if (!s || S(s.fecha).slice(0, 10) === iso) return;
         await updateRow('tarea_sesiones', s.id, { fecha: iso });
@@ -185,7 +186,7 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
                     className={`mt-1 cursor-grab rounded-lg border px-2 py-1.5 active:cursor-grabbing ${arrastrando?.id === S(t.id) ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-orange/60'}`}
                     title="Arrastra al calendario">
                     <p className="text-[10.5px] font-bold text-brand-verdeTexto"><code>{etiqueta(t)}</code>{t.subproceso ? <span className="ml-1.5 font-normal text-[#7FA7B4]">{S(t.subproceso).split(' ').slice(0, 2).join(' ')}</span> : null}</p>
-                    <p className="mt-0.5 whitespace-normal text-[12px] font-bold leading-snug text-[#EAF4F7]">{t.titulo || t.subproceso || 'Tarea sin nombre'}</p>
+                    <p className="mt-0.5 whitespace-normal text-[12px] font-bold leading-snug text-[#EAF4F7]">{tituloTarea(t) || 'Tarea sin nombre'}</p>
                     <p className="mt-0.5 flex items-center justify-between gap-2 text-[10.5px] text-[#9FC0CB]">
                       <span className={`truncate ${resp ? '' : 'text-amber-200'}`}>{resp || 'sin responsable'}</span>
                       <span className="shrink-0">{b.planificadas ? `${fmtH(b.planificadas)} de ` : ''}{fmtH(b.teoricas)} · faltan <b className="text-brand-orange">{fmtH(faltan)}</b></span>
@@ -232,10 +233,10 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
                           onDragStart={(e) => { e.stopPropagation(); setArrastrando({ tipo: 'sesion', id: S(s.id) }); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', S(s.id)); } catch { /* Safari */ } }}
                           onDragEnd={() => { setArrastrando(null); setSobre(null); }}
                           className={`group rounded border px-1 py-0.5 text-[10px] leading-tight ${ESTADO[s.estado] || ESTADO.programada} ${s.estado !== 'hecha' ? 'cursor-grab' : ''}`}
-                          title={`${etiqueta(t)} · ${t?.titulo || ''} · ${S(s.hora_inicio).slice(0, 5)}–${S(s.hora_fin).slice(0, 5)} · ${nombreDe(s.consultor_id) || 'sin persona'}${s.estado === 'hecha' ? ' · hecha' : ''}`}>
+                          title={`${etiqueta(t)} · ${tituloTarea(t)} · ${S(s.hora_inicio).slice(0, 5)}–${S(s.hora_fin).slice(0, 5)} · ${nombreDe(s.consultor_id) || 'sin persona'}${s.estado === 'hecha' ? ' · hecha' : ''}`}>
                           <button type="button" onClick={() => onAbrirTarea?.(t)} className="block w-full text-left hover:underline">
                             <span className="block truncate font-bold">{t?.codigo || 'Tarea'} · {fmtH(s.horas)}</span>
-                            {t?.titulo && <span className="block truncate text-[9.5px] font-normal opacity-90">{t.titulo}</span>}
+                            {t && <span className="block truncate text-[9.5px] font-normal opacity-90">{tituloTarea(t)}</span>}
                           </button>
                           <div className="flex items-center justify-between gap-1">
                             <select className="max-w-[80%] truncate bg-transparent text-[9.5px] text-current outline-none" value={S(s.consultor_id || '')} onChange={(e) => cambiarPersona(s, e.target.value)} onClick={(e) => e.stopPropagation()} title="Quién la hace (gente del proyecto)">

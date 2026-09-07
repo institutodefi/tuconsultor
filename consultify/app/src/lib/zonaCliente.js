@@ -104,7 +104,7 @@ export function filasGantt(tareas = [], sesiones = [], proyecto = null, hoy = aI
     else estado = 'pendiente';
     const pct = t.hecha ? 100 : check.total ? check.pct : num(t.horas) > 0 ? Math.min(100, Math.round((horasHechas / num(t.horas)) * 100)) : 0;
     return {
-      id: t.id, codigo: t.codigo || '', titulo: t.titulo || t.subproceso || '', proceso: codigoProceso(t), procesoNombre: nombreProceso(t),
+      id: t.id, codigo: t.codigo || '', titulo: tituloTarea(t) || '', proceso: codigoProceso(t), procesoNombre: nombreProceso(t),
       // Código del subproceso («S1 PE1») y su nombre sin el código, para que
       // el Gantt y el mapa de procesos se lean por códigos.
       subproceso: codigoSubproceso(t), subprocesoNombre: nombreSubproceso(t),
@@ -163,6 +163,21 @@ export function codigoSubproceso(t) {
   return m ? `${m[1]} ${m[2]}` : '';
 }
 /** El nombre del subproceso sin su código. */
+/**
+ * Nombre de una tarea sin la razón social delante. Los volcados antiguos
+ * titulaban «RAZÓN SOCIAL - 9001 - PE1 PROCESO - S1 PE1 SUBPROCESO»; el
+ * cliente y la norma ya van en el código (CECE-9001-03), así que el nombre es
+ * el subproceso. La migración v133 lo deja así en la base; esto cubre lo que
+ * llegue todavía con el formato largo.
+ */
+export function tituloTarea(t) {
+  const tit = S(t?.titulo).trim();
+  const sub = S(t?.subproceso).trim();
+  if (sub && tit !== sub && tit.includes(' - ') && tit.toUpperCase().endsWith(sub.toUpperCase())) return sub;
+  if (!sub && /\s-\s.*\s-\s/.test(tit)) { const partes = tit.split(/\s-\s/); if (/^S\d+\s?P[EAIOR]\d+/i.test(partes[partes.length - 1])) return partes[partes.length - 1].trim(); }
+  return tit || sub;
+}
+
 export function nombreSubproceso(t) {
   const txt = S(t?.subproceso || t?.titulo_origen || '');
   return txt.replace(/^S\d+\s?P[EAIOR]\d+\s*[·\-–]?\s*/i, '').trim();

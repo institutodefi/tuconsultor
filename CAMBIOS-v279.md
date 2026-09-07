@@ -211,3 +211,9 @@
 - **Ordenadas por sistema de gestión**: agrupadas por norma, en el orden del catálogo (ISO 9001, 14001, 45001, 27001…), con una cabecera por grupo que dice cuántas tareas quedan y las horas por meter; dentro de cada grupo, por código (con orden numérico: …-09, …-10). El filtro también busca por el nombre de la norma.
 - En el calendario, cada sesión enseña el código y las horas y, debajo, el nombre de la tarea (recortado; completo al pasar el ratón). El aviso al soltar dice «cliente · código · nombre».
 - El nombre comercial llega desde la ficha del proyecto (`resolverProyectos`, `nombreCliente`) y desde la zona de cliente (`d.nombreCliente`), el mismo que se ve en la cabecera.
+
+## Nombre de las tareas de CECE · sin la razón social delante
+- Las 65 tareas de CECE se volcaron con el título antiguo «CONFEDERACIÓN ESPAÑOLA DE CENTROS DE ENSEÑANZA (CECE) - 9001 - PE1 PLANIFICACIÓN ESTRATÉGICA - S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS» (razón social - norma - proceso - subproceso). DICS y FGUP, y todo lo que se vuelca ahora, llevan solo el subproceso.
+- **Migración `migracion-v133-titulos-tareas-cece.sql`**: deja esos títulos en el subproceso («S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS»). Solo toca títulos con el formato largo que terminan en su propio subproceso; los editados a mano no se tocan.
+- En pantalla el cliente va siempre delante por su **nombre comercial** y el código (CECE · CECE-9001-03), en el planificador, la lista de tareas de la ficha del proyecto y el Gantt del cliente. `tituloTarea(t)` (`lib/zonaCliente.js`) limpia el formato largo si todavía llega alguno.
+- Pruebas: `scripts/test-zona-cliente.mjs` (+3).
