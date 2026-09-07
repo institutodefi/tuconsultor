@@ -21,7 +21,8 @@ export function numeroES(v, dec = 2) {
   const fijos = dec == null ? (Math.round(n * 100) / 100 % 1 ? 2 : 0) : dec;
   const p = 10 ** fijos;
   n = Math.round(n * p) / p;   // evita el redondeo binario de toFixed (1.005 → 1.00)
-  const [ent, frac = ''] = Math.abs(n).toFixed(fijos).split('.');
+  let [ent, frac = ''] = Math.abs(n).toFixed(fijos).split('.');
+  if (dec == null) frac = frac.replace(/0+$/, '');   // sin ceros de relleno: 13,3 y no 13,30
   const entG = ent.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return (n < 0 ? '-' : '') + entG + (frac ? `,${frac}` : '');
 }

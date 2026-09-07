@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto } from '../lib/calcEngine.js';
+import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto, catalogoHorasDesdeFilas } from '../lib/calcEngine.js';
 import RentabilidadOferta from '../components/RentabilidadOferta.jsx';
 import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
@@ -131,6 +131,13 @@ export default function GeneradorOfertas({ publico = false }) {
   // Modelos de cuota: cada mes, o el año por adelantado (12 meses de servicio
   // por 11 mensualidades). Cambia lo que se factura, no lo que se hace.
   const [pagoMes, setPagoMes] = useState('mensual');        // 'mensual' | 'adelantado'
+  // Horas planificadas por norma y modelo (tabla de Sistemas de gestión), para
+  // la rentabilidad: lo que hay que echar de verdad. Solo en el generador interno.
+  const [catalogoHoras, setCatalogoHoras] = useState(null);
+  useEffect(() => {
+    if (publico) return;
+    listTable('tareas_catalogo').then((f) => setCatalogoHoras(catalogoHorasDesdeFilas(f || []))).catch(() => {});
+  }, [publico]);
   const [fasesPlan, setFasesPlan] = useState({});           // fases elegidas de cada plan
   const [ajustes, setAjustes] = useState([]);               // trato particular de ESTA oferta
   const [notas, setNotas] = useState('');                   // salen en el PDF y el PPT
@@ -205,9 +212,10 @@ export default function GeneradorOfertas({ publico = false }) {
       preciosSistema: clienteAntiguo ? preciosSistema : null,
       repartoNiveles: publico ? null : reparto,
       pagoAdelantado: pagoMes === 'adelantado',
+      catalogoHoras,
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
-     fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes],
+     fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes, catalogoHoras],
   );
   // Equipo interno: se deduce del reparto por nivel (una persona por nivel
   // con carga). No se enseña ni cambia el precio; se guarda con la oferta y
@@ -749,8 +757,8 @@ export default function GeneradorOfertas({ publico = false }) {
                     return (
                       <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-2.5 py-1.5 text-[11.5px] ${T}`}>
                         <span className="font-extrabold">{E}{r.margenReal != null ? ` · margen ${Math.round(r.margenReal * 100)} %` : ''}</span>
-                        <span>{fmtEUR(r.precio)}{esMes ? '/mes' : ''} cobrado · {fmtEUR(r.debido)}{esMes ? '/mes' : ''} debido por la carga</span>
-                        <span>{r.precioHora != null ? `${fmtEUR(r.precioHora)}/h` : '—'} frente a {r.precioHoraDebido != null ? `${fmtEUR(r.precioHoraDebido)}/h` : '—'}</span>
+                        <span>{r.horasDetalle.mes} h{esMes ? '/mes' : ''} a echar{r.contrato ? ` (${r.contrato.mes} contrato${r.horasDetalle.extraMes > 0 ? ` + ${r.horasDetalle.extraMes} tareas` : ''})` : ''}</span>
+                        <span>{fmtEUR(r.mensual.cobrado)}/mes cobrado · {fmtEUR(r.mensual.coste)}/mes coste · {r.mensual.resultado >= 0 ? '+' : '−'}{fmtEUR(Math.abs(r.mensual.resultado))}/mes · {r.anual.resultado >= 0 ? '+' : '−'}{fmtEUR(Math.abs(r.anual.resultado))}/año</span>
                         <span className="text-[10.5px] opacity-80">equipo previsto: {equipoTexto(equipo)}</span>
                       </div>
                     );

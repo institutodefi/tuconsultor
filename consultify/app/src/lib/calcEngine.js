@@ -9,6 +9,7 @@ import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.
 import { perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
 import { FASES as FASES_PLAN, TARIFA_PROYECTO } from './fases.js';
 import { eurES } from './formato.js';
+import { CATALOGO_TAREAS } from './catalogoTareas.js';
 
 export const NORMAS = [
   { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
@@ -104,9 +105,11 @@ export const MODELOS = {
     destacado: true,
   },
   Compromiso: {
-    id: 'Compromiso', tipo: 'mes', hSist: 6, hPres: 2, paso: 25, suelo: 350,
+    // 4 h online por sistema y 3 presenciales al mes (antes 6 + 2): es lo que
+    // dice la web y lo que se compromete en la oferta.
+    id: 'Compromiso', tipo: 'mes', hSist: 4, hPres: 3, paso: 25, suelo: 350,
     titulo: 'Compromiso',
-    claim: '6 h online / sistema + 2 h presenciales / mes',
+    claim: '4 h online / sistema + 3 h presenciales / mes',
     leyenda: 'Cuota mensual recurrente. Permanencia mínima 12 meses.',
   },
   Implantación: {
@@ -666,7 +669,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // las tarifas de la casa. Todo en la misma unidad que el precio: al mes en
   // los recurrentes, total en bolsa e implantación.
   const rentabilidad = calcularRentabilidad({
-    precio: precioCatalogo, horas: h, horasPlanes, tarifa, margen, coste, costeCatalogo, debidoCarga,
+    modeloId, tipo: m.tipo, precio: precioCatalogo, normaIds, dedicacion,
+    meses: mesesProyecto, catalogoHoras: opts.catalogoHoras || null,
+    factorFondo: m.factorFondo ?? 1, horasPlanes, tarifa, margen,
     repartoAuto, repartoManual,
   });
 
@@ -843,41 +848,132 @@ export function repartoDesdeHoras(h) {
 export const precioHoraObjetivo = (nivel, margen = MARGEN) => Math.round(TARIFA[nivel] * (1 + margen) * 100) / 100;
 
 /**
- * Compara el precio ofertado con lo que exige la carga de trabajo.
+ * Horas planificadas de un proyecto «según sistemas de gestión»: la suma de
+ * las tareas del catálogo de cada norma para el modelo. Es la carga real del
+ * año (o del proyecto): lo que hay que hacer para cerrar las tareas.
  *
- *   precioHora        lo que se cobra por hora, en media (precio ÷ horas)
- *   precioHoraDebido  lo que habría que cobrar por hora según el reparto por
- *                     nivel (coste de catálogo × (1 + margen) ÷ horas)
- *   margenReal        (precio − coste) ÷ coste, con la tarifa que se aplica
- *   encaja            'si' si el margen real llega al objetivo, 'justo' si se
- *                     queda entre la mitad y el objetivo, 'no' por debajo (o
- *                     sin cubrir el coste)
+ * @param catalogo  opcional, {norma: {modelo: horas}} sacado de la tabla
+ *                  tareas_catalogo (la que se edita en Sistemas de gestión);
+ *                  sin él se usa el catálogo estático embebido.
  */
-export function calcularRentabilidad({ precio, horas, horasPlanes = 0, tarifa = TARIFA, margen = MARGEN, coste, costeCatalogo, debidoCarga, repartoAuto, repartoManual }) {
-  const hTotal = NIVELES.reduce((a, nv) => a + (horas?.[nv] || 0), 0) + (horasPlanes || 0);
+export function horasPlanificadas(normaIds = [], modeloId, catalogo = null) {
+  const modelo = MODELOS[modeloId] ? modeloId : modeloCanonico(modeloId) || modeloId;
+  const porNorma = [];
+  for (const id of normaIds) {
+    const n = NORMA_BY_ID[id];
+    if (!n || FASES_PLAN[id]) continue;   // los planes van por fases, aparte
+    let horas = null, origen = 'catálogo';
+    const deBd = catalogo?.[id]?.[modelo];
+    if (Number.isFinite(Number(deBd)) && Number(deBd) > 0) { horas = Number(deBd); origen = 'sistemas de gestión'; }
+    else {
+      const filas = CATALOGO_TAREAS[id]?.[modelo] || CATALOGO_TAREAS[id]?.Relación || [];
+      horas = filas.reduce((a, t) => a + (Number(t.horas) || 0), 0);
+    }
+    porNorma.push({ id, nombre: n.nombre, horas: Math.round(horas * 10) / 10, origen });
+  }
+  return { total: Math.round(porNorma.reduce((a, x) => a + x.horas, 0) * 10) / 10, porNorma };
+}
+
+/** Catálogo {norma: {modelo: horas}} a partir de las filas de tareas_catalogo. */
+export function catalogoHorasDesdeFilas(filas = []) {
+  const out = {};
+  for (const f of filas) {
+    const n = String(f.norma_id || f.norma || ''); const m = modeloCanonico(f.modelo) || f.modelo;
+    if (!n || !m) continue;
+    const h = Number(f.horas_base ?? f.horas) || 0;
+    out[n] = out[n] || {}; out[n][m] = Math.round(((out[n][m] || 0) + h) * 10) / 10;
+  }
+  return out;
+}
+
+/**
+ * Rentabilidad de la oferta: las horas que hay que ECHAR frente a lo que se
+ * cobra, al mes y al año.
+ *
+ * En los modelos de cuota hay dos cifras de horas y las dos cuentan:
+ *   · las del CONTRATO: horas del modelo por sistema (Relación 2 online,
+ *     Implicación 4 online + 2 presenciales, Compromiso 4 online + 3
+ *     presenciales) — es la disponibilidad que se vende;
+ *   · las de la PLANIFICACIÓN: las tareas del catálogo de cada sistema para
+ *     ese modelo (dos sistemas en Relación, 160 h/año, por ejemplo),
+ *     prorrateadas hasta el fin del proyecto (o a 12 meses si no hay fin).
+ * Si la planificación pide más de lo que da el contrato, la diferencia son
+ * horas «por tareas a terminar»: se echan igual, y la rentabilidad baja. Las
+ * presenciales se suman aparte. Las horas a echar se reparten por nivel
+ * según el reparto (manual o automático) y de ahí sale el coste.
+ *
+ * En bolsa e implantación no hay contrato mensual: la carga es el total
+ * planificado (la bolsa, al 60 %) y se da el total y su equivalente al mes.
+ */
+export function calcularRentabilidad({
+  modeloId, tipo, precio, normaIds = [], dedicacion = null, meses, catalogoHoras = null,
+  factorFondo = 1, horasPlanes = 0, tarifa = TARIFA, margen = MARGEN, repartoAuto, repartoManual,
+}) {
   const r2 = (x) => Math.round(x * 100) / 100;
-  const porNivel = NIVELES.map((nv) => ({
-    nivel: nv, horas: horas?.[nv] || 0,
-    tarifa: TARIFA[nv], tarifaAplicada: tarifa[nv],
-    precioHora: precioHoraObjetivo(nv, margen),
-    debido: r2((horas?.[nv] || 0) * precioHoraObjetivo(nv, margen)),
-    coste: r2((horas?.[nv] || 0) * tarifa[nv]),
-  }));
-  const margenReal = coste > 0 ? (precio - coste) / coste : null;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const esMes = tipo === 'mes';
+  const plan = horasPlanificadas(normaIds, modeloId, catalogoHoras);
+  const planTotal = r1(plan.total * (esMes ? 1 : factorFondo) + (horasPlanes || 0));
+  const mesesProrrata = Math.max(1, Number(meses) || 12);
+
+  // ── Horas a echar ──
+  let contratoMes = 0, presencialesMes = 0, planMes = 0, extraMes = 0, horasMes = 0, horasAnual = 0, horasTotal = 0;
+  if (esMes) {
+    contratoMes = dedicacion?.online || 0;
+    presencialesMes = dedicacion?.presenciales || 0;
+    planMes = r1(planTotal / mesesProrrata);
+    extraMes = r1(Math.max(0, planMes - contratoMes));
+    horasMes = r1(Math.max(contratoMes, planMes) + presencialesMes);
+    horasAnual = r1(horasMes * 12);
+    horasTotal = horasAnual;
+  } else {
+    horasTotal = planTotal;
+    horasMes = r1(planTotal / mesesProrrata);
+    planMes = horasMes;
+  }
+
+  // ── Reparto por nivel y coste ──
+  const reparto = repartoManual || repartoDesdeHoras(repartoAuto);
+  const base = esMes ? horasMes : horasTotal;
+  const porNivel = NIVELES.map((nv) => {
+    const pct = Number(reparto?.[nv]) || 0;
+    const h = r1(base * (pct / 100));
+    return {
+      nivel: nv, pct, horas: h, horasMes: esMes ? h : r1(h / mesesProrrata), horasAnual: esMes ? r1(h * 12) : h,
+      tarifa: TARIFA[nv], tarifaAplicada: tarifa[nv],
+      precioHora: precioHoraObjetivo(nv, margen),
+      coste: r2(h * tarifa[nv]),
+      debido: r2(h * precioHoraObjetivo(nv, margen)),
+    };
+  });
+  const coste = r2(porNivel.reduce((a, x) => a + x.coste, 0));           // por unidad (mes o total)
+  const debido = r2(coste * (1 + margen));
+  const cobrado = r2(precio);
+  const margenReal = coste > 0 ? (cobrado - coste) / coste : null;
   const encaja = margenReal == null ? null : margenReal >= margen - 0.005 ? 'si' : margenReal >= margen / 2 ? 'justo' : 'no';
+
+  const mensual = esMes
+    ? { cobrado, coste, resultado: r2(cobrado - coste), horas: horasMes }
+    : { cobrado: r2(cobrado / mesesProrrata), coste: r2(coste / mesesProrrata), resultado: r2((cobrado - coste) / mesesProrrata), horas: horasMes };
+  const anual = esMes
+    ? { meses: 12, cobrado: r2(cobrado * 12), coste: r2(coste * 12), resultado: r2((cobrado - coste) * 12), horas: horasAnual }
+    : { meses: mesesProrrata, cobrado, coste, resultado: r2(cobrado - coste), horas: horasTotal };
+  const tarifaPonderada = base > 0 ? r2(coste / base) : null;
+
   return {
-    precio: r2(precio), horas: r2(hTotal),
-    precioHora: hTotal ? r2(precio / hTotal) : null,
-    precioHoraDebido: hTotal ? r2(debidoCarga / hTotal) : null,
-    coste: r2(coste), costeCatalogo: r2(costeCatalogo),
-    debido: r2(debidoCarga),
-    diferencia: r2(precio - debidoCarga),            // + cobramos de más · − de menos
-    margenObjetivo: margen, margenReal: margenReal == null ? null : r2(margenReal),
-    encaja,
-    porNivel,
-    reparto: repartoManual || repartoDesdeHoras(repartoAuto),
-    repartoAuto: repartoDesdeHoras(repartoAuto),
-    manual: !!repartoManual,
+    unidad: esMes ? 'mes' : 'total',
+    mesesProrrata,
+    contrato: esMes ? { porSistema: dedicacion?.porSistema || 0, sistemas: dedicacion?.sistemas || 0, online: contratoMes, presenciales: presencialesMes, mes: contratoMes + presencialesMes } : null,
+    plan: { anual: planTotal, porNorma: plan.porNorma, mes: planMes, prorrata: mesesProrrata, factor: esMes ? 1 : factorFondo },
+    horasDetalle: { contratoMes, extraMes, presencialesMes, mes: horasMes, anual: horasAnual, total: horasTotal },
+    mensual, anual,
+    // Compatibilidad con lo que ya lee el resultado: cifras por unidad.
+    precio: cobrado, horas: base,
+    precioHora: base ? r2(cobrado / base) : null,
+    precioHoraDebido: tarifaPonderada != null ? r2(tarifaPonderada * (1 + margen)) : null,
+    coste, debido, diferencia: r2(cobrado - debido),
+    margenObjetivo: margen, margenReal: margenReal == null ? null : r2(margenReal), encaja,
+    porNivel, reparto, repartoAuto: repartoDesdeHoras(repartoAuto), manual: !!repartoManual,
   };
 }
 

@@ -13,6 +13,8 @@ import PlanAuditorias from './PlanAuditorias.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
+import { etiquetaChecklist, progresoChecklist, subtareasNuevas } from '../../lib/subtareas.js';
+import { subtareasBasePara } from '../../lib/subtareasBase.js';
 // La sigla del cliente: la misma que usan los códigos de proyecto, para que
 // «CECE» signifique lo mismo en el proyecto y en cada una de sus tareas.
 import { siglaCliente } from '../../lib/codigos.js';
@@ -430,6 +432,34 @@ export default function Proyectos() {
     })();
   }, [proyecto?.id, configPara, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Primera sincronización de la checklist ──
+  // Los proyectos volcados antes de que existieran las subtareas (v121) tienen
+  // sus tareas sin checklist. Al abrir el proyecto, una sola vez, cada tarea
+  // sin subtareas y sin hacer recibe las de su fila del catálogo (o las de la
+  // estructura base del subproceso). Como en un Jira: la tarea nace con sus
+  // subtareas. Lo que ya tenga checklist no se toca.
+  const sincroChecklistRef = useRef(new Set());
+  useEffect(() => {
+    if (!proyecto || !catalogo || !tareasProyecto.length) return;
+    if (configPara !== String(proyecto.id) || sincroChecklistRef.current.has(String(proyecto.id))) return;
+    const sinChecklist = tareasProyecto.filter((t) => !t.hecha && !(Array.isArray(t.subtareas) && t.subtareas.length) && !t.definicion);
+    if (!sinChecklist.length) return;
+    sincroChecklistRef.current.add(String(proyecto.id));
+    (async () => {
+      let n = 0;
+      for (const t of sinChecklist) {
+        const fila = catalogo.find((c) => String(c.id) === String(t.catalogo_id))
+          || catalogo.find((c) => c.norma_id === t.norma_id && (c.subproceso || '') === (t.subproceso || '') && mismoModelo(c.modelo, t.modelo))
+          || catalogo.find((c) => c.norma_id === t.norma_id && (c.subproceso || '') === (t.subproceso || ''));
+        const subs = subtareasNuevas(fila && Array.isArray(fila.subtareas) && fila.subtareas.length ? fila.subtareas : subtareasBasePara(t.subproceso || fila?.subproceso, t.norma_id));
+        const definicion = fila?.definicion || null;
+        if (!subs.length && !definicion) continue;
+        try { await updateRow('cliente_tareas', t.id, { subtareas: subs, definicion }); n++; } catch { /* sin la v121 no hay columna: se deja */ }
+      }
+      if (n > 0) { setTareas((ts) => ts.map((x) => { const s = sinChecklist.find((y) => y.id === x.id); if (!s) return x; const fila = catalogo.find((c) => String(c.id) === String(x.catalogo_id)) || catalogo.find((c) => c.norma_id === x.norma_id && (c.subproceso || '') === (x.subproceso || '')); return { ...x, subtareas: subtareasNuevas(fila && Array.isArray(fila.subtareas) && fila.subtareas.length ? fila.subtareas : subtareasBasePara(x.subproceso || fila?.subproceso, x.norma_id)), definicion: fila?.definicion || null }; })); setMsg(`Checklist volcada a ${n} tarea(s) desde el catálogo.`); }
+    })();
+  }, [proyecto?.id, configPara, catalogo, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   function toggleNorma(id) {
     if (id === '9001') return; // base obligatoria
     setNormasSel(s => {
@@ -587,6 +617,8 @@ export default function Proyectos() {
           fecha_estimada: null, consultor_id: null,
           bloques_ejecucion: [], seguimientos: [],
           fecha_real: null, hecha: false,
+          // Definición y checklist del catálogo (v121).
+          definicion: c.definicion || null, subtareas: c.subtareas || [],
         });
         n += 1;
       } catch { /* una que falle no debe cortar el resto */ }
@@ -626,6 +658,7 @@ export default function Proyectos() {
         horas: c.horas, bloque: c.bloque, tipo: tipoTarea(c),
         integrada: false, normas_integradas: [c.norma_id],
         consultor_id: proyecto.consultor_1_id || null, orden: i, num_tarea: i + 1,
+        definicion: c.definicion || null, subtareas: c.subtareas || [],
       }));
 
       // Distribuir fechas respetando el tope de fecha_inicio + meses.
@@ -739,6 +772,8 @@ export default function Proyectos() {
             // planifica.
             horas_teoricas: horasTeoricas(abierta),
             subproceso: abierta.subproceso,
+            // Para la checklist del diálogo.
+            definicion: abierta.definicion || null, subtareas: abierta.subtareas || [],
           }}
           contexto={{ norma: abierta.norma_id }}
           fechaCertificacion={fechas?.certificacion || proyecto?.fecha_limite || null}
@@ -746,6 +781,7 @@ export default function Proyectos() {
           campoTarea="cliente_tarea_id" editable
           onCerrar={() => setAbierta(null)}
           onGuardado={() => listTable('tarea_sesiones').then(setSesiones).catch(() => {})}
+          onChecklist={(cambio) => setTareas((ts) => ts.map((x) => (String(x.id) === String(abierta.id) ? { ...x, ...cambio } : x)))}
         />
       )}
 
@@ -1178,9 +1214,13 @@ export default function Proyectos() {
                         <td className="w-px py-1.5 pl-3 text-right align-top">
                           <button type="button" onClick={() => setAbierta(t)}
                             className="btn-ghost whitespace-nowrap !px-3 !py-1 !text-xs"
-                            title="Ver y programar las sesiones de esta tarea">
+                            title="Ver y programar las sesiones de esta tarea, y su checklist">
                             Calendario
                           </button>
+                          {etiquetaChecklist(t.subtareas) && (
+                            <span className={`mt-1 block text-[10.5px] font-bold ${progresoChecklist(t.subtareas).completa ? 'text-emerald-300' : 'text-[#9FC0CB]'}`}
+                              title="Subtareas hechas de esta tarea">☑ {etiquetaChecklist(t.subtareas)}</span>
+                          )}
                         </td>
                       </tr>
                       </>

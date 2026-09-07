@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import ChecklistTarea from '../../components/ChecklistTarea.jsx';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../../lib/data.js';
 import { horasEntre, balanceTarea, sesionesTrasCertificacion, solapes } from '../../lib/sesionesTarea.js';
 
@@ -51,6 +52,8 @@ export default function SesionesTarea({
   // Responsable que se propone al añadir una sesión. Para las tareas internas
   // es quien las crea: programarse a uno mismo no debería exigir elegirse.
   consultorPorDefecto = null,
+  // Avisa al panel cuando cambia la checklist, para que la lista refleje el avance.
+  onChecklist = null,
 }) {
   const esInterna = campoTarea === 'tarea_interna_id';
   const [sesiones, setSesiones] = useState(null);
@@ -201,6 +204,13 @@ export default function SesionesTarea({
       pie={<button onClick={onCerrar} className="btn-orange !px-4 !py-1.5 text-[13px]">Cerrar</button>}
     >
       <div className="space-y-3">
+        {/* ── Qué hay que hacer: definición y checklist de la tarea ──
+            Va arriba, antes de las sesiones: primero qué es, luego cuándo. */}
+        {campoTarea === 'cliente_tarea_id' && tarea?.id && (
+          <ChecklistTarea tareaId={tarea.id} tarea={tarea.subtareas !== undefined ? { id: tarea.id, definicion: tarea.definicion, subtareas: tarea.subtareas } : null}
+            editable onCambio={onChecklist} />
+        )}
+
         {/* ── Código y nombre ──
             Se editan aquí porque quien abre el calendario es quien planifica.
             Renombrar no toca la referencia al catálogo: las horas teóricas

@@ -128,7 +128,7 @@ export default function ControlHoras() {
           <p className="eyebrow">Agendas</p>
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">Control de horas</h1>
           <p className="mt-1 max-w-3xl text-sm text-[#9FC0CB]">
-            Por consultor: sus proyectos, las horas comprometidas, programadas, ejecutadas y pendientes, y si le cabe otro proyecto.
+            Por consultor: sus proyectos, las horas comprometidas, programadas, ejecutadas y pendientes, y su disponibilidad (alta, media o baja) para asumir más proyectos.
             La jornada se reparte {Math.round(rp.produccion * 100)} % a proyectos, {Math.round(rp.gestion * 100)} % a gestión y coordinación
             y {Math.round(rp.proceso_interno * 100)} % a procesos internos.
           </p>
@@ -149,8 +149,8 @@ export default function ControlHoras() {
           <Cifra etq="Carga mensual exigida" v={h1(resumen.carga)} sub="pendientes ÷ meses que quedan"
             tono={resumen.carga > resumen.capacidad ? 'text-red-300' : 'text-[#EAF4F7]'} />
           <Cifra etq="Pendiente total" v={h1(resumen.pendientes)} sub="comprometido y aún no hecho" />
-          <Cifra etq="Les entra otro proyecto" v={`${resumen.entran} / ${resumen.n}`}
-            sub={resumen.llenos ? `${resumen.llenos} sin capacidad` : 'nadie saturado'}
+          <Cifra etq="Disponibilidad alta" v={`${resumen.entran} / ${resumen.n}`}
+            sub={resumen.llenos ? `${resumen.llenos} con disponibilidad baja` : 'nadie con disponibilidad baja'}
             tono={resumen.entran ? 'text-emerald-300' : 'text-amber-200'} />
         </div>
       )}

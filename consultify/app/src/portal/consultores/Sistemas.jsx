@@ -1,3 +1,6 @@
+import DefinicionTarea from '../../components/DefinicionTarea.jsx';
+import { normalizarSubtareas, mezclarSubtareas } from '../../lib/subtareas.js';
+import { subtareasBasePara } from '../../lib/subtareasBase.js';
 import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { sincronizarTareaAgenda } from '../../lib/sincroAgenda.js';
@@ -122,6 +125,42 @@ export default function Sistemas() {
 
   function descartar() { setEdits({}); setManual(new Set()); setMsg(null); }
 
+  // ── Definición y subtareas (checklist) de cada tarea ──
+  // La definición es de la tarea, no del modelo: se guarda en todas las filas
+  // de modelo del subproceso. Se lee de la primera que la tenga.
+  const [defAbierta, setDefAbierta] = useState(null);   // grupo con el popup abierto
+  const definicionDe = (g) => {
+    const filas = MODELOS_COL.map((m) => g.porModelo[m]?.id).map((id) => catalogo.find((t) => t.id === id)).filter(Boolean);
+    const con = filas.find((t) => t.definicion || (Array.isArray(t.subtareas) && t.subtareas.length)) || filas[0] || {};
+    const propias = normalizarSubtareas(con.subtareas);
+    // Sin subtareas propias, la estructura base del subproceso (propuesta):
+    // se ve, se puede retocar y al guardar queda fijada en el catálogo.
+    const base = propias.length ? [] : normalizarSubtareas(subtareasBasePara(g.subproceso, normaSel));
+    return { definicion: con.definicion || '', subtareas: propias.length ? propias : base, esBase: !propias.length && base.length > 0 };
+  };
+  async function guardarDefinicion(g, { definicion, subtareas, llevar }) {
+    const ids = MODELOS_COL.map((m) => g.porModelo[m]?.id).filter(Boolean);
+    for (const id of ids) await updateRow('tareas_catalogo', id, { definicion, subtareas });
+    setCatalogo((cs) => cs.map((x) => (ids.includes(x.id) ? { ...x, definicion, subtareas } : x)));
+    if (!llevar) return { mensaje: 'Definición guardada en el catálogo.' };
+
+    // A los proyectos abiertos: las tareas que nacen de esta fila (por enlace
+    // al catálogo o por norma + subproceso), no hechas. La checklist se mezcla:
+    // lo marcado sigue marcado.
+    const [todas, proyectos] = await Promise.all([listTable('cliente_tareas'), listTable('proyectos_cliente').catch(() => [])]);
+    const abiertos = new Set(proyectos.filter((p) => !['cerrado', 'cancelado', 'finalizado'].includes(String(p.estado || '').toLowerCase())).map((p) => String(p.id)));
+    const afectadas = todas.filter((ct) => ct.proyecto_id && abiertos.has(String(ct.proyecto_id)) && !ct.hecha
+      && (ids.includes(String(ct.catalogo_id || '')) || (ct.norma_id === normaSel && (ct.subproceso || '') === (g.subproceso || ''))));
+    let n = 0; const proys = new Set();
+    for (const ct of afectadas) {
+      await updateRow('cliente_tareas', ct.id, { definicion, subtareas: mezclarSubtareas(ct.subtareas, subtareas) });
+      n++; proys.add(String(ct.proyecto_id));
+    }
+    const mensaje = `Definición guardada · ${n} tarea(s) actualizadas en ${proys.size} proyecto(s) abierto(s).`;
+    setMsg(mensaje);
+    return { mensaje };
+  }
+
   // Edita el texto del subproceso/proceso en TODAS las filas de modelo de ese grupo.
   // Esto sí va directo a la base: es un nombre, no una hora que mueva precios.
   async function editarTextoGrupo(grupo, campo, valor) {
@@ -226,6 +265,11 @@ export default function Sistemas() {
 
   return (
     <div className="space-y-6">
+      {defAbierta && (
+        <DefinicionTarea grupo={defAbierta} norma={normaSel} editable={puedeEditar}
+          definicion={definicionDe(defAbierta).definicion} subtareas={definicionDe(defAbierta).subtareas} esBase={definicionDe(defAbierta).esBase}
+          onGuardar={(datos) => guardarDefinicion(defAbierta, datos)} onCerrar={() => setDefAbierta(null)} />
+      )}
       <div>
         <p className="eyebrow">Configuración</p>
         <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight">Sistemas de gestión</h1>
@@ -283,6 +327,7 @@ export default function Sistemas() {
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Proceso</th>
                 <th className="py-2">Subproceso</th>
+                <th className="py-2 text-center" title="Definición y subtareas (checklist) de la tarea">Definición</th>
                 {MODELOS_COL.map(m => <th key={m} className="py-2 text-right px-1">{m}</th>)}
                 <th className="py-2"></th>
               </tr>
@@ -295,6 +340,19 @@ export default function Sistemas() {
                       consulta para saber qué toca hacer. */}
                   <td className="py-1.5 pr-2"><input className={`input !py-1 !text-xs ${!puedeEditar ? 'bg-[#0A2634] text-[#B9D2DA]' : ''}`} readOnly={!puedeEditar} value={g.proceso || ''} onChange={e => puedeEditar && editarTextoGrupo(g, 'proceso', e.target.value)} /></td>
                   <td className="py-1.5 pr-2"><input className={`input !py-1 !text-xs ${!puedeEditar ? 'bg-[#0A2634] text-[#B9D2DA]' : ''}`} readOnly={!puedeEditar} value={g.subproceso || ''} onChange={e => puedeEditar && editarTextoGrupo(g, 'subproceso', e.target.value)} /></td>
+                  <td className="py-1.5 px-1 text-center">
+                    {(() => {
+                      const d = definicionDe(g);
+                      const n = d.subtareas.length;
+                      return (
+                        <button type="button" onClick={() => setDefAbierta(g)}
+                          className={`whitespace-nowrap rounded-lg border px-2 py-1 text-[11px] font-bold transition ${n || d.definicion ? 'border-brand-verde/50 bg-brand-verde/10 text-brand-verdeTexto hover:border-brand-verde' : 'border-[#1E5468] text-[#7FA7B4] hover:border-brand-orange hover:text-brand-orange'}`}
+                          title={d.definicion ? d.definicion.slice(0, 160) : 'Sin definición todavía'}>
+                          ☰ {n ? `${n} subtarea${n === 1 ? '' : 's'}${d.esBase ? ' · base' : ''}` : puedeEditar ? 'Definir' : '—'}
+                        </button>
+                      );
+                    })()}
+                  </td>
                   {MODELOS_COL.map(m => {
                     const editada = kDe(g, m) in edits;
                     const v = horasDe(g, m);
@@ -320,7 +378,7 @@ export default function Sistemas() {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-[#1E5468] font-bold text-[#EAF4F7]">
-                <td className="py-2" colSpan={2}>Total</td>
+                <td className="py-2" colSpan={3}>Total</td>
                 {MODELOS_COL.map(m => <td key={m} className="py-2 px-1 text-right">{fmtH(totales[m])} h</td>)}
                 <td></td>
               </tr>

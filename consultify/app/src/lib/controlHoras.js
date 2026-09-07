@@ -289,8 +289,10 @@ export function controlHoras(d) {
   };
 }
 
+// Se lee como disponibilidad, no como «le entra un proyecto»: alta (le cabe
+// otro proyecto como los actuales), media (va justo) o baja (sin capacidad).
 export const VEREDICTO = {
-  entra: { etq: 'Le entra otro proyecto', tono: 'text-emerald-300', fondo: 'bg-emerald-500/15 border-emerald-400/40' },
-  justo: { etq: 'Va justo', tono: 'text-amber-200', fondo: 'bg-amber-400/15 border-amber-300/40' },
-  lleno: { etq: 'Sin capacidad', tono: 'text-red-300', fondo: 'bg-red-500/15 border-red-400/40' },
+  entra: { etq: 'Disponibilidad alta', corto: 'alta', tono: 'text-emerald-300', fondo: 'bg-emerald-500/15 border-emerald-400/40' },
+  justo: { etq: 'Disponibilidad media', corto: 'media', tono: 'text-amber-200', fondo: 'bg-amber-400/15 border-amber-300/40' },
+  lleno: { etq: 'Disponibilidad baja', corto: 'baja', tono: 'text-red-300', fondo: 'bg-red-500/15 border-red-400/40' },
 };

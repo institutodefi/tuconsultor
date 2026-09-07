@@ -60,6 +60,10 @@ export function tareasDeCliente(catalogo, normaIds, modelo) {
       horas: horasNetas(t),
       bloque: bloqueDeProceso(t.proceso),
       orden: t.orden ?? 0,
+      // Definición y checklist del catálogo (v121): nacen sin marcar.
+      definicion: t.definicion || null,
+      // Del catálogo; si esa fila no tiene, la estructura base del subproceso.
+      subtareas: subtareasNuevas(Array.isArray(t.subtareas) && t.subtareas.length ? t.subtareas : subtareasBasePara(t.subproceso, t.norma_id)),
     }))
     .sort((a, b) =>
       rankBloque(a.bloque) - rankBloque(b.bloque) ||
@@ -73,6 +77,8 @@ export function tareasDeCliente(catalogo, normaIds, modelo) {
  * tareas de ese bloque comparten la fecha de inicio de su ventana.
  * @returns el mismo array con `fecha_estimada` (YYYY-MM-DD) añadido.
  */
+import { subtareasNuevas } from './subtareas.js';
+import { subtareasBasePara } from './subtareasBase.js';
 import { esLaborable, FESTIVOS_2026, toISO } from './agenda.js';
 import { mismoModelo } from './calcEngine.js';
 
