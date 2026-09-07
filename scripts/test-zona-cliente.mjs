@@ -53,5 +53,15 @@ ok(pr[1].n === 2 && pr[1].hechas === 1 && pr[1].pct === 50, `PA4: 2 tareas, 1 he
 const res = Z.resumenProyecto(filas);
 ok(res.n === 4 && res.hechas === 1 && res.retrasadas === 1 && res.enCurso === 1 && res.horas === 30, `resumen: ${JSON.stringify(res)}`);
 
+console.log('\n── Pendientes ──');
+const pend = Z.pendientesProyecto({ proyecto: { ...proyecto, normas: ['9001', '14001'] }, filas, cliente: { cif: 'B1', email: '', telefono: '6', contacto: 'Ana' }, certificados: [{ cliente_id: undefined, norma: '9001' }], documentos: [], auditoria: { color: 'gris', sinProgramar: true, texto: 'Sin programar · sin certificado registrado' } });
+ok(pend[0].nivel === 'rojo' && /retraso/.test(pend[0].texto), `lo rojo primero: ${pend[0].texto}`);
+ok(pend.some((x) => /certificación prevista/.test(x.texto)), 'sin fecha de certificación → aviso');
+ok(pend.some((x) => /Sin programar/.test(x.texto)), 'auditoría sin programar → aviso');
+ok(pend.some((x) => /Sin certificado registrado de 14001/.test(x.texto)), 'norma sin certificado → aviso (solo la que falta)');
+ok(pend.some((x) => /correo/.test(x.texto) && !/CIF/.test(x.texto)), 'datos incompletos: solo lo que falta');
+ok(pend.some((x) => /Sin documentos/.test(x.texto)), 'sin documentos → aviso gris');
+ok(pend.filter((x) => x.interno).length === 1 && /sin responsable/.test(pend.find((x) => x.interno).texto), 'sin responsable se marca como interno (no se enseña al cliente)');
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

@@ -29,7 +29,7 @@ function Servicios() {
         <div className="grid gap-4 md:grid-cols-2">
           {proyectosCliente.map((p) => {
             const f = funcionesDe(p);
-            const activas = [f.pm_tool && 'Planificación y tareas', f.datos_cliente && 'Datos y documentos', f.procesos.length && `${f.procesos.length} procesos`].filter(Boolean);
+            const activas = [f.pm_tool && 'Planificación y tareas', f.datos_cliente && 'Empresa y documentos', f.procesos.length && `${f.procesos.length} procesos`].filter(Boolean);
             return (
               <Link key={p.id} to={`proyectos/${p.id}`} className="card block transition hover:border-brand-orange">
                 <div className="flex items-start justify-between gap-2">
@@ -160,7 +160,7 @@ export default function ClientePortal() {
     { to: 'presupuestos', label: 'Mis presupuestos' },
     { to: 'documentos', label: 'Mis documentos' },
     { to: 'soporte', label: 'Soporte' },
-    { to: 'mis-datos', label: 'Mis datos' },
+    { to: 'mis-datos', label: 'Mi empresa' },
   ];
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">

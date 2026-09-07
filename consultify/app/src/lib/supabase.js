@@ -29,7 +29,7 @@ export const demoDB = {
     { id: 'c3', nombre: 'Daniela', apellidos: '', rol: 'consultor', email: 'daniela@tuconsultor.com', nivel: 'J1', activo: false, feed_token: null },
   ],
   clientes: [
-    { id: 'cl1', codigo: 'CL-0001', empresa: 'Industrias Norte S.L.', cif: 'B12345678', contacto: 'María López', email: 'maria@industriasnorte.es', telefono: '+34 600 111 222' },
+    { id: 'cl1', codigo: 'CL-0001', empresa: 'Industrias Norte S.L.', cif: 'B12345678', contacto: 'María López', email: 'maria@industriasnorte.es', telefono: '+34 600 111 222', poblacion: 'Madrid', provincia: 'Madrid', pais: 'España', actividad: 'Fabricación de estructuras metálicas' },
     { id: 'cl2', codigo: 'CL-0002', empresa: 'TechSecure S.A.',       cif: 'A87654321', contacto: 'Jorge Ruiz',  email: 'jorge@techsecure.es',      telefono: '+34 600 333 444' },
   ],
   proyectos: [
@@ -90,6 +90,10 @@ export const demoDB = {
   cliente_documentos: [
     { id: 'doc1', cliente_id: 'cl1', proyecto_id: 'pc1', titulo: 'Certificado ISO 45001 · Bureau Veritas', tipo: 'certificado', nombre_fichero: 'cert-45001-bv.pdf', mime: 'application/pdf', creado: '2026-08-20T10:00:00Z' },
     { id: 'doc2', cliente_id: 'cl1', proyecto_id: 'pc1', titulo: 'Escritura de constitución', tipo: 'escritura', nombre_fichero: 'escritura.pdf', mime: 'application/pdf', creado: '2026-08-20T10:05:00Z' },
+  ],
+  // Sedes del cliente (v125): una de muestra, la otra la propone la IA.
+  cliente_sedes: [
+    { id: 'cs1', cliente_id: 'cl1', nombre: 'Sede central', direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid', pais: 'España', actividad: 'Oficinas y diseño', principal: true, origen: 'manual', documento_id: null, notas: null, creado: '2026-08-01T10:00:00Z' },
   ],
   cliente_certificados: [
     { id: 'cc1', cliente_id: 'cl1', proyecto_id: 'pc1', norma: '9001', entidad: 'AENOR', numero: 'ER-0412/2024', alcance: 'Diseño y fabricación de estructuras metálicas', fecha_certificacion: '2024-10-15', fecha_validez: '2027-10-14', documento_id: null, notas: null },

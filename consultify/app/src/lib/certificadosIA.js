@@ -110,3 +110,79 @@ export function validarPropuesta(p) {
   if (p.fecha_certificacion && p.fecha_validez && p.fecha_validez < p.fecha_certificacion) e.push('la validez es anterior a la certificación');
   return e;
 }
+
+// ── Propuestas de empresa y sedes a partir de todos los documentos ──────────
+
+const limpio = (v) => S(v).replace(/\s+/g, ' ');
+const clave = (v) => limpio(v).toLowerCase().replace(/[.,;:]/g, '');
+
+/** Una sede (objeto o texto suelto) → fila normalizada. */
+export function sedeDesde(x, doc = null) {
+  if (!x) return null;
+  const o = typeof x === 'string' ? { direccion: x } : x;
+  const direccion = limpio(o.direccion || o.calle || '');
+  const poblacion = limpio(o.poblacion || o.localidad || o.ciudad || '');
+  if (!direccion && !poblacion && !limpio(o.nombre)) return null;
+  return {
+    nombre: limpio(o.nombre) || null, direccion: direccion || null, cp: limpio(o.cp) || null,
+    poblacion: poblacion || null, provincia: limpio(o.provincia) || null, pais: limpio(o.pais) || null,
+    actividad: limpio(o.actividad) || null, documento_id: doc?.id || null, origen: 'ia',
+  };
+}
+const claveSede = (s) => clave(`${s.direccion || ''} ${s.poblacion || ''}` || s.nombre || '');
+
+/**
+ * Junta lo leído en todos los documentos de un cliente:
+ *   empresa   · campos con su valor más repetido (o el de mayor confianza)
+ *   sedes     · sin duplicados, marcando las que ya existen
+ *   certificados · una propuesta por documento que sea certificado
+ *
+ * @param lecturas  [{documento, datos, confianza}] (respuesta de `proponer`)
+ * @param actual    { cliente, sedes, certificados } lo que ya hay guardado
+ */
+export function propuestasDesdeLecturas(lecturas = [], actual = {}) {
+  const peso = { alta: 3, media: 2, baja: 1 };
+  const votos = {};   // campo → { valor: {peso, fuentes[]} }
+  const votar = (campo, valor, conf, doc) => {
+    const v = limpio(valor); if (!v) return;
+    const k = clave(v);
+    votos[campo] = votos[campo] || {};
+    const w = peso[conf] || 1;
+    // Misma clave ("Industrias Norte, S.L." e "INDUSTRIAS NORTE SL") suman votos;
+    // la grafía que se enseña es la del documento de más confianza.
+    votos[campo][k] = votos[campo][k] || { valor: v, peso: 0, mejorPeso: 0, fuentes: [] };
+    const e = votos[campo][k];
+    if (w > e.mejorPeso) { e.valor = v; e.mejorPeso = w; }
+    e.peso += w; e.fuentes.push(doc?.titulo || '');
+  };
+  const sedes = [];
+  const certificados = [];
+  for (const l of lecturas) {
+    const d = l?.datos; if (!d) continue;
+    const conf = l.confianza || d.confianza || 'media';
+    const doc = l.documento;
+    votar('empresa', d.razon_social, conf, doc);
+    votar('cif', d.cif, conf, doc);
+    votar('actividad', d.actividad, conf, doc);
+    votar('representante', d.representante, conf, doc);
+    votar('telefono', d.telefono, conf, doc); votar('email', d.email, conf, doc); votar('web', d.web, conf, doc);
+    if (d.empleados != null && Number(d.empleados) > 0) votar('empleados', String(Math.round(Number(d.empleados))), conf, doc);
+    const dom = d.domicilio && typeof d.domicilio === 'object' ? d.domicilio : (typeof d.domicilio === 'string' ? { direccion: d.domicilio } : null);
+    if (dom) { votar('direccion', dom.direccion, conf, doc); votar('cp', dom.cp, conf, doc); votar('poblacion', dom.poblacion, conf, doc); votar('provincia', dom.provincia, conf, doc); votar('pais', dom.pais, conf, doc); }
+    for (const x of Array.isArray(d.sedes) ? d.sedes : []) {
+      const sd = sedeDesde(x, doc); if (!sd) continue;
+      const k = claveSede(sd);
+      if (!k || sedes.some((y) => claveSede(y) === k)) continue;
+      sedes.push({ ...sd, yaExiste: (actual.sedes || []).some((y) => claveSede(y) === k), fuente: doc?.titulo || '' });
+    }
+    const cert = propuestaDesdeNota({ id: doc?.id, cliente_id: actual.cliente?.id || null }, d);
+    if (cert && (cert.norma || cert.fecha_validez)) certificados.push({ ...cert, fuente: doc?.titulo || '', existente: certificadoExistente(cert, actual.certificados || []) });
+  }
+  const empresa = {};
+  for (const [campo, m] of Object.entries(votos)) {
+    const mejor = Object.values(m).sort((a, b) => b.peso - a.peso)[0];
+    const actualV = limpio(actual.cliente?.[campo]);
+    empresa[campo] = { valor: mejor.valor, fuentes: [...new Set(mejor.fuentes)], actual: actualV || null, cambia: clave(actualV) !== clave(mejor.valor), peso: mejor.peso };
+  }
+  return { empresa, sedes, certificados };
+}

@@ -146,3 +146,56 @@ export function resumenProyecto(filas = []) {
   const horasHechas = filas.reduce((a, f) => a + f.horasHechas, 0);
   return { n, hechas, retrasadas, enCurso, pendientes: n - hechas, horas, horasHechas, pct: n ? Math.round(filas.reduce((a, f) => a + f.pct, 0) / n) : 0 };
 }
+
+/**
+ * Lo que tiene pendiente el proyecto de cara al cliente: la señal que se
+ * enseña en su panel y en la tarjeta de zona cliente del equipo.
+ *
+ * @param p.proyecto, p.filas (de filasGantt), p.cliente, p.certificados,
+ *        p.documentos, p.auditoria (de estadoAuditoriaProyecto), p.hoy
+ * @returns [{ nivel: 'rojo'|'ambar'|'gris', texto, seccion }] ordenado por gravedad
+ */
+export function pendientesProyecto({ proyecto, filas = [], cliente = null, certificados = [], documentos = [], auditoria = null } = {}) {
+  const out = [];
+  const p = proyecto || {};
+  const normas = (p.normas || []).map(S);
+
+  // Certificación y auditoría externa.
+  if (!p.fecha_limite && !p.fecha_certificacion) out.push({ nivel: 'ambar', texto: 'Fecha de certificación prevista sin fijar', seccion: 'panel' });
+  if (auditoria) {
+    const t = `Auditoría externa · ${auditoria.texto}`;
+    if (auditoria.color === 'rojo') out.push({ nivel: 'rojo', texto: t, seccion: 'panel' });
+    else if (auditoria.sinProgramar) out.push({ nivel: 'ambar', texto: t, seccion: 'panel' });
+    else if (auditoria.color === 'ambar') out.push({ nivel: 'ambar', texto: t, seccion: 'panel' });
+  }
+
+  // Tareas.
+  const retrasadas = filas.filter((f) => f.estado === 'retrasada').length;
+  if (retrasadas) out.push({ nivel: 'rojo', texto: `${retrasadas} tarea${retrasadas === 1 ? '' : 's'} con retraso`, seccion: 'panel' });
+  const sinResp = filas.filter((f) => !f.responsableId && f.estado !== 'hecha').length;
+  if (sinResp) out.push({ nivel: 'gris', texto: `${sinResp} tarea${sinResp === 1 ? '' : 's'} sin responsable`, seccion: 'panel', interno: true });
+  const sinFecha = filas.filter((f) => !f.inicio && f.estado !== 'hecha').length;
+  if (sinFecha) out.push({ nivel: 'gris', texto: `${sinFecha} tarea${sinFecha === 1 ? '' : 's'} sin fecha`, seccion: 'panel', interno: true });
+
+  // Certificados y documentos del cliente.
+  const certsCliente = certificados.filter((c) => S(c.cliente_id) === S(p.cliente_id));
+  const normasSinCert = normas.filter((n) => !certsCliente.some((c) => S(c.norma) === n));
+  if (normas.length && normasSinCert.length) out.push({ nivel: 'ambar', texto: `Sin certificado registrado de ${normasSinCert.join(', ')}`, seccion: 'datos' });
+  const docsCliente = documentos.filter((d) => S(d.cliente_id) === S(p.cliente_id));
+  if (!docsCliente.length) out.push({ nivel: 'gris', texto: 'Sin documentos subidos', seccion: 'datos' });
+
+  // Datos del cliente.
+  if (cliente) {
+    const faltan = [['cif', 'CIF'], ['email', 'correo'], ['telefono', 'teléfono'], ['contacto', 'persona de contacto']].filter(([k]) => !S(cliente[k])).map(([, etq]) => etq);
+    if (faltan.length) out.push({ nivel: 'ambar', texto: `Datos del cliente incompletos: ${faltan.join(', ')}`, seccion: 'datos' });
+  }
+
+  const orden = { rojo: 0, ambar: 1, gris: 2 };
+  return out.sort((a, b) => orden[a.nivel] - orden[b.nivel]);
+}
+
+export const TONO_PENDIENTE = {
+  rojo: { chip: 'bg-red-500/20 text-red-200 border-red-400/50', punto: '#EF4444' },
+  ambar: { chip: 'bg-amber-400/20 text-amber-100 border-amber-300/50', punto: '#F5A623' },
+  gris: { chip: 'bg-[#123F52] text-[#9FC0CB] border-[#1E5468]', punto: '#5E8494' },
+};

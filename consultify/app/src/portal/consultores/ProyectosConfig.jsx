@@ -950,7 +950,7 @@ export default function Proyectos() {
           </div>
 
           {/* Qué ve el cliente de este proyecto: se activa por funciones. */}
-          <ZonaClienteConfig key={proyecto.id} proyecto={proyecto} tareas={tareasProyecto}
+          <ZonaClienteConfig key={proyecto.id} proyecto={proyecto} tareas={tareasProyecto} sesiones={sesiones} cliente={cliente}
             onGuardado={(funciones) => setProyectos((ps) => ps.map((x) => (x.id === proyecto.id ? { ...x, funciones } : x)))} />
 
           {/* Cómo va este proyecto, desglosado por norma. */}

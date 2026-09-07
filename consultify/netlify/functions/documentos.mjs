@@ -76,6 +76,14 @@ async function quienLlama(req) {
 
 const ES_EQUIPO = (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol);
 
+// ¿Este usuario es el cliente de esa ficha?
+async function esSuCliente(quien, clienteId) {
+  if (!clienteId) return false;
+  const c = await sb(`/rest/v1/clientes?id=eq.${clienteId}&select=user_id`);
+  const cli = c.ok ? (await c.json())?.[0] : null;
+  return !!cli && String(cli.user_id) === String(quien.id);
+}
+
 // ── Lo que se le pide a la IA ───────────────────────────────────────────────
 //
 // El objetivo NO es describir el documento, es sacar los datos que cuesta
@@ -96,7 +104,12 @@ Devuelve EXCLUSIVAMENTE un objeto JSON, sin texto alrededor ni bloques de códig
   "razon_social": "la razón social tal y como figura, o null",
   "cif": "el CIF/NIF que aparece, o null",
   "alcance": "el alcance CERTIFICADO, literal, o null",
-  "sedes": ["direcciones o centros que se citen"],
+  "sedes": [{"nombre": "nombre del centro o null", "direccion": "calle y número", "cp": "código postal o null", "poblacion": "localidad o null", "provincia": "provincia o null", "actividad": "qué se hace ahí, si se dice, o null"}],
+  "domicilio": {"direccion": "domicilio social o fiscal", "cp": null, "poblacion": null, "provincia": null, "pais": null} o null,
+  "actividad": "actividad u objeto social de la empresa, o null",
+  "empleados": número de personas en plantilla si figura, o null,
+  "representante": "representante legal o firmante, o null",
+  "telefono": "o null", "email": "o null", "web": "o null",
   "valido_desde": "AAAA-MM-DD o null",
   "valido_hasta": "AAAA-MM-DD o null",
   "numero": "número de certificado o expediente, o null",
@@ -243,13 +256,15 @@ export default async (req) => {
 
   // ── ANALIZAR ─────────────────────────────────────────────────────────────
   if (action === 'analizar') {
-    // La nota es interna: solo el equipo la pide y solo el equipo la ve.
-    if (!ES_EQUIPO(quien.rol)) return json({ ok: false, error: 'Solo el equipo puede analizar documentos.' }, 403);
-
     const { documento_id } = body;
     const q = await sb(`/rest/v1/cliente_documentos?id=eq.${documento_id}&select=*`);
     const doc = q.ok ? (await q.json())?.[0] : null;
     if (!doc) return json({ ok: false, error: 'Documento no encontrado.' }, 404);
+    // El equipo analiza cualquiera; el cliente, solo los suyos (la nota se
+    // guarda igual, pero él recibe los datos en la respuesta, no de la tabla).
+    if (!ES_EQUIPO(quien.rol) && !(await esSuCliente(quien, doc.cliente_id))) {
+      return json({ ok: false, error: 'Ese documento no es tuyo.' }, 403);
+    }
 
     const d = await sb(`/storage/v1/object/${DEPOSITO}/${doc.ruta}`);
     if (!d.ok) return json({ ok: false, error: 'No se pudo leer el archivo.' }, 502);
@@ -286,6 +301,46 @@ export default async (req) => {
     }
 
     return json({ ok: true, nota: (await ins.json())?.[0], propuestas });
+  }
+
+  // ── PROPONER ─────────────────────────────────────────────────────────────
+  // Lee TODOS los documentos de un cliente (reutilizando las notas que ya
+  // existan) y devuelve lo que la IA ha encontrado, documento a documento:
+  // datos de empresa, sedes y certificados. Quien lo pide decide qué aplicar.
+  if (action === 'proponer') {
+    const { cliente_id, solo_nuevos = false } = body;
+    if (!cliente_id) return json({ ok: false, error: 'Falta el cliente.' }, 400);
+    if (!ES_EQUIPO(quien.rol) && !(await esSuCliente(quien, cliente_id))) {
+      return json({ ok: false, error: 'Esa ficha no es tuya.' }, 403);
+    }
+    const qd = await sb(`/rest/v1/cliente_documentos?cliente_id=eq.${cliente_id}&select=*&order=creado`);
+    const docs = qd.ok ? await qd.json() : [];
+    const qn = await sb(`/rest/v1/documento_notas?select=documento_id,datos,confianza,modelo`);
+    const notas = qn.ok ? await qn.json() : [];
+    const notaDe = Object.fromEntries((notas || []).map((n) => [String(n.documento_id), n]));
+
+    const resultados = [];
+    let leidos = 0;
+    for (const doc of docs) {
+      let nota = notaDe[String(doc.id)] || null;
+      if (!nota && !solo_nuevos && (doc.mime === 'application/pdf' || String(doc.mime || '').startsWith('image/'))) {
+        // Sin nota: se lee ahora (cuesta una llamada por documento).
+        const d = await sb(`/storage/v1/object/${DEPOSITO}/${doc.ruta}`);
+        if (d.ok) {
+          const base64 = Buffer.from(await d.arrayBuffer()).toString('base64');
+          const r = await analizarConIA(base64, doc.mime, doc.nombre_fichero || doc.titulo);
+          if (!r.error) {
+            const datos = r.datos || {};
+            nota = { documento_id: doc.id, datos, modelo: r.modelo, confianza: ['alta', 'media', 'baja'].includes(datos.confianza) ? datos.confianza : 'media' };
+            await sb(`/rest/v1/documento_notas?documento_id=eq.${doc.id}`, { method: 'DELETE' });
+            await sb('/rest/v1/documento_notas', { method: 'POST', body: { ...nota, resumen: datos.resumen || null, revisada: false } });
+            leidos++;
+          }
+        }
+      }
+      resultados.push({ documento: { id: doc.id, titulo: doc.titulo, tipo: doc.tipo, nombre_fichero: doc.nombre_fichero, creado: doc.creado }, datos: nota?.datos || null, confianza: nota?.confianza || null });
+    }
+    return json({ ok: true, documentos: resultados, leidos });
   }
 
   return json({ ok: false, error: 'Acción no reconocida.' }, 400);

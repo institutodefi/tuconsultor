@@ -3,11 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { NORMA_BY_ID, MODELOS } from '../../lib/calcEngine.js';
-import { funcionesDe, filasGantt, procesosDe, resumenProyecto, ESTADOS_TAREA } from '../../lib/zonaCliente.js';
+import { funcionesDe, filasGantt, procesosDe, resumenProyecto, ESTADOS_TAREA, pendientesProyecto, TONO_PENDIENTE } from '../../lib/zonaCliente.js';
+import { estadoAuditoriaProyecto } from '../../lib/auditorias.js';
 import GanttProyecto from '../../components/GanttProyecto.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
-import CertificadosCliente from '../../components/CertificadosCliente.jsx';
 import MisDatosCliente from './MisDatosCliente.jsx';
+import DatosEmpresaCliente from './DatosEmpresaCliente.jsx';
 import { normalizarSubtareas } from '../../lib/subtareas.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -17,8 +18,9 @@ import { normalizarSubtareas } from '../../lib/subtareas.js';
 //   1. PM tool · Gantt y gestión de tareas con responsables, fechas, estado y
 //      checklist. Solo lectura para el cliente: lo que hay que hacer, quién y
 //      cuándo, tal como lo lleva su consultor.
-//   2. Sus datos como cliente: la ficha (editable) y sus documentos y
-//      certificados, enlazados a su ficha de cliente.
+//   2. Su empresa: datos de empresa, sedes y normas certificadas con su
+//      alcance (editables, con propuestas leídas de sus documentos por IA),
+//      más sus documentos. Todo enlazado a su ficha de cliente.
 //   3. Mapa de procesos: los procesos que se le van activando, con sus tareas
 //      y su avance.
 //
@@ -42,20 +44,26 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const [proyectos, tareas, sesiones, equipo, clientes, contactos] = await Promise.all([
+      const [proyectos, tareas, sesiones, equipo, clientes, contactos, certificados, documentos, empresas] = await Promise.all([
         listTable('proyectos_cliente').catch(() => []),
         listTable('cliente_tareas').catch(() => []),
         listTable('tarea_sesiones').catch(() => []),
         listTable('equipo_visible_proyecto').catch(() => []),
         listTable('clientes').catch(() => []),
         listTable('contactos').catch(() => []),
+        listTable('cliente_certificados').catch(() => []),
+        listTable('cliente_documentos').catch(() => []),
+        listTable('empresas').catch(() => []),
       ]);
       if (!vivo) return;
       const p = proyectos.find((x) => String(x.id) === String(proyectoId)) || null;
       const cliente = p ? clientes.find((c) => String(c.id) === String(p.cliente_id)) || null : null;
       const correo = (user?.email || '').toLowerCase();
       const contacto = contactos.find((c) => (c.email || '').toLowerCase() === correo) || null;
-      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto });
+      // Nombre comercial de la empresa (CRM) si lo hay; si no, el de la ficha de cliente.
+      const cif = (x) => String(x || '').toUpperCase().replace(/[\s.-]/g, '');
+      const empresa = cliente?.cif ? empresas.find((e) => cif(e.cif) === cif(cliente.cif)) : null;
+      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto, certificados, documentos, nombreCliente: empresa?.nombre_comercial || empresa?.nombre || cliente?.empresa || null });
     })();
     return () => { vivo = false; };
   }, [proyectoId, user?.email, recarga]);
@@ -65,6 +73,14 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
   const funciones = useMemo(() => funcionesDe(d?.p), [d]);
   const procesos = useMemo(() => procesosDe(filas), [filas]);
   const resumen = useMemo(() => resumenProyecto(filas), [filas]);
+  // Lo que tiene pendiente: certificación, auditoría externa, tareas con
+  // retraso, certificados y documentos que faltan, datos incompletos.
+  const pendientes = useMemo(() => {
+    if (!d?.p) return [];
+    const auditoria = estadoAuditoriaProyecto(d.p, d.certificados || [], hoy);
+    return pendientesProyecto({ proyecto: d.p, filas, cliente: d.cliente, certificados: d.certificados || [], documentos: d.documentos || [], auditoria })
+      .filter((x) => previsualizacion || !x.interno);   // lo interno solo lo ve el equipo
+  }, [d, filas, hoy, previsualizacion]);
   const nombreDe = (id) => { const e = (d?.equipo || []).find((x) => String(x.perfil_id) === String(id)); return e ? `${e.nombre || ''} ${e.apellidos || ''}`.trim() : null; };
 
   if (!d) return <p className="font-semibold text-[#9FC0CB]">Cargando tu proyecto…</p>;
@@ -79,7 +95,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
 
   const secciones = [
     funciones.pm_tool && ['panel', 'Panel y tareas'],
-    funciones.datos_cliente && ['datos', 'Mis datos y documentos'],
+    funciones.datos_cliente && ['datos', 'Mi empresa y documentos'],
     procesosActivos.length > 0 && ['procesos', `Mapa de procesos (${procesosActivos.length})`],
   ].filter(Boolean);
   const seccionActiva = secciones.some(([k]) => k === seccion) ? seccion : (secciones[0]?.[0] || null);
@@ -88,7 +104,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
     <div className="space-y-4">
       {previsualizacion && (
         <p className="rounded-xl border border-brand-orange/50 bg-brand-orange/10 px-3 py-2 text-[12.5px] font-bold text-brand-orange">
-          Vista previa: esto es lo que ve el cliente con las funciones activadas ahora. <Link to={`/consultores/proyectos/${p.id}`} className="underline">Volver a la ficha</Link>
+          Vista previa de lo que ve <b>{d.nombreCliente || 'el cliente'}</b> con las funciones activadas ahora. <Link to={`/consultores/proyectos/${p.id}`} className="underline">Volver a la ficha</Link>
         </p>
       )}
 
@@ -97,7 +113,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <Link to={previsualizacion ? `/consultores/proyectos/${p.id}` : '/cliente'} className="block text-[12px] font-bold text-[#9FC0CB] hover:text-brand-orange">← {previsualizacion ? 'Ficha del proyecto' : 'Mis servicios'}</Link>
-            <p className="eyebrow mt-2">Tu proyecto</p>
+            <p className="eyebrow mt-2">{d.nombreCliente ? `${d.nombreCliente} · tu proyecto` : 'Tu proyecto'}</p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">{normas || p.nombre}</h1>
             <p className="mt-1 text-sm text-[#9FC0CB]">
               Modelo {p.modelo}{MODELOS[p.modelo]?.claim ? ` · ${MODELOS[p.modelo].claim}` : ''}{p.codigo ? ` · ${p.codigo}` : ''}
@@ -111,6 +127,20 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Señal de lo pendiente: lo rojo primero. Sin nada, se dice. */}
+        <div className={`mt-4 rounded-xl border px-3 py-2 ${pendientes.some((x) => x.nivel === 'rojo') ? 'border-red-400/40 bg-red-500/[0.06]' : pendientes.length ? 'border-amber-300/40 bg-amber-400/[0.06]' : 'border-emerald-400/30 bg-emerald-500/[0.06]'}`}>
+          <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">{pendientes.length ? `Pendiente · ${pendientes.length}` : 'Al día'}</p>
+          {pendientes.length ? (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {pendientes.map((x, i) => (
+                <button key={i} onClick={() => setSeccion(x.seccion)} className={`chip border !px-2 !py-0.5 text-left text-[11px] font-bold ${TONO_PENDIENTE[x.nivel].chip}`} title="Ir a la sección">
+                  {x.texto}{x.interno ? ' · interno' : ''}
+                </button>
+              ))}
+            </div>
+          ) : <p className="mt-1 text-[12px] text-emerald-200">Nada pendiente: certificación, auditoría, tareas y documentación en orden.</p>}
         </div>
 
         {funciones.pm_tool && filas.length > 0 && (
@@ -189,20 +219,16 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
             </>
           )}
 
-          {/* 2 · Datos y documentos del cliente */}
+          {/* 2 · Su empresa: datos, sedes, normas certificadas y documentos */}
           {seccionActiva === 'datos' && funciones.datos_cliente && (
             <div className="space-y-4">
-              <section className="card">
-                <h2 className="text-sm font-extrabold text-[#EAF4F7]">Mis datos</h2>
-                <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Los de tu ficha de cliente. Puedes corregirlos aquí; tu consultor los ve al momento.</p>
+              <DatosEmpresaCliente cliente={d.cliente} proyectoId={p.id} onGuardado={() => setRecarga((n) => n + 1)} />
+              {d.cliente && <section className="card"><DocumentosCliente clienteId={d.cliente.id} titulo="Mis documentos" /></section>}
+              <details className="card">
+                <summary className="cursor-pointer text-sm font-extrabold text-[#EAF4F7]">Mis datos personales y contraseña</summary>
+                <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Tu nombre, cargo y teléfonos como persona de contacto, y la contraseña de tu acceso.</p>
                 <MisDatosCliente contacto={d.contacto} empresa={d.cliente} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
-              </section>
-              {d.cliente && (
-                <>
-                  <section className="card"><CertificadosCliente clienteId={d.cliente.id} proyectoId={p.id} titulo="Mis certificados" /></section>
-                  <section className="card"><DocumentosCliente clienteId={d.cliente.id} titulo="Mis documentos" /></section>
-                </>
-              )}
+              </details>
             </div>
           )}
 

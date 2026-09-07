@@ -33,5 +33,22 @@ ok(C.certificadoExistente({ ...p, norma: '14001' }, existentes) === null, 'otra 
 const fila = C.filaCertificado(p);
 ok(fila.norma === '9001' && fila.documento_id === 'd1' && /IA/.test(fila.notas), 'fila lista para cliente_certificados');
 
+console.log('\n── Propuestas de empresa y sedes ──');
+const lecturas = [
+  { documento: { id: 'd1', titulo: 'Cert 9001' }, confianza: 'alta', datos: { tipo: 'certificado', norma: 'ISO 9001:2015', emisor: 'AENOR', razon_social: 'Industrias Norte, S.L.', cif: 'B12345678', alcance: 'Fabricación', valido_desde: '2024-10-15', valido_hasta: '2027-10-14', sedes: [{ direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid' }, { direccion: 'Pol. Sur 5', poblacion: 'Getafe' }] } },
+  { documento: { id: 'd2', titulo: 'Escritura' }, confianza: 'media', datos: { tipo: 'escritura', razon_social: 'INDUSTRIAS NORTE SL', cif: 'B-12345678', domicilio: { direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid' }, actividad: 'Fabricación de estructuras metálicas', representante: 'María López', empleados: 42, sedes: ['C/ Mayor 1, Madrid'] } },
+  { documento: { id: 'd3', titulo: 'Sin nota' }, confianza: null, datos: null },
+];
+const actual = { cliente: { id: 'cl1', empresa: 'Industrias Norte S.L.', cif: '', poblacion: 'Madrid' }, sedes: [{ direccion: 'Pol. Sur 5', poblacion: 'Getafe' }], certificados: [] };
+const pr = C.propuestasDesdeLecturas(lecturas, actual);
+ok(pr.empresa.cif.valor === 'B12345678' && pr.empresa.cif.cambia, `CIF propuesto (${pr.empresa.cif.valor}), cambia porque no había`);
+ok(pr.empresa.poblacion && !pr.empresa.poblacion.cambia, 'población igual a la actual: no cambia');
+ok(pr.empresa.empleados.valor === '42' && pr.empresa.representante.valor === 'María López', 'plantilla y representante desde la escritura');
+ok(pr.empresa.empresa.valor === 'Industrias Norte, S.L.' && pr.empresa.empresa.fuentes.length === 2 && !pr.empresa.empresa.cambia, 'razón social: misma empresa en dos grafías → 2 fuentes, se enseña la de más confianza, no cambia');
+ok(pr.sedes.length === 2, `sedes sin duplicar (${pr.sedes.length}): la de Madrid aparece en dos documentos`);
+ok(pr.sedes.find((s) => /Getafe/.test(s.poblacion)).yaExiste && !pr.sedes.find((s) => /Madrid/.test(s.poblacion)).yaExiste, 'marca la sede que ya existe');
+ok(pr.certificados.length === 1 && pr.certificados[0].norma === '9001' && !pr.certificados[0].existente, 'un certificado propuesto, nuevo');
+ok(C.sedeDesde('  ') === null && C.sedeDesde({ nombre: 'Almacén' }).nombre === 'Almacén', 'sede vacía → null; solo nombre vale');
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

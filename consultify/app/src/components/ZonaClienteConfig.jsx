@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { updateRow } from '../lib/data.js';
-import { funcionesDe, filasGantt, procesosDe } from '../lib/zonaCliente.js';
+import { updateRow, listTable } from '../lib/data.js';
+import { funcionesDe, filasGantt, procesosDe, pendientesProyecto, TONO_PENDIENTE } from '../lib/zonaCliente.js';
+import { estadoAuditoriaProyecto, aISO } from '../lib/auditorias.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ZONA CLIENTE · qué ve el cliente de este proyecto
@@ -14,11 +15,22 @@ import { funcionesDe, filasGantt, procesosDe } from '../lib/zonaCliente.js';
 // Se guarda en proyectos_cliente.funciones (v124) y se puede previsualizar.
 // ════════════════════════════════════════════════════════════════════════════
 
-export default function ZonaClienteConfig({ proyecto, tareas = [], onGuardado }) {
+export default function ZonaClienteConfig({ proyecto, tareas = [], sesiones = [], cliente = null, onGuardado }) {
   const [f, setF] = useState(() => funcionesDe(proyecto));
   const [ocupado, setOcupado] = useState(false);
   const [msg, setMsg] = useState(null);
   const procesos = useMemo(() => procesosDe(filasGantt(tareas, [], proyecto)), [tareas, proyecto]);
+  // Lo que el cliente tiene pendiente, tal como lo verá él (más lo interno).
+  const [extra, setExtra] = useState({ certificados: [], documentos: [] });
+  useEffect(() => {
+    Promise.all([listTable('cliente_certificados').catch(() => []), listTable('cliente_documentos').catch(() => [])])
+      .then(([c, dd]) => setExtra({ certificados: c || [], documentos: dd || [] }));
+  }, [proyecto?.id]);
+  const pendientes = useMemo(() => {
+    const hoy = aISO(new Date());
+    const filas = filasGantt(tareas, sesiones, proyecto, hoy);
+    return pendientesProyecto({ proyecto, filas, cliente, certificados: extra.certificados, documentos: extra.documentos, auditoria: estadoAuditoriaProyecto(proyecto, extra.certificados, hoy) });
+  }, [tareas, sesiones, proyecto, cliente, extra]);
 
   async function guardar(next) {
     setF(next); setOcupado(true); setMsg(null);
@@ -41,10 +53,19 @@ export default function ZonaClienteConfig({ proyecto, tareas = [], onGuardado })
         <Link to={`/consultores/proyectos/${proyecto.id}/cliente`} className="btn-ghost !px-3 !py-1 text-[12px]">Previsualizar como cliente →</Link>
       </div>
 
+      <div className={`mt-3 rounded-xl border px-3 py-2 ${pendientes.some((x) => x.nivel === 'rojo') ? 'border-red-400/40 bg-red-500/[0.06]' : pendientes.length ? 'border-amber-300/40 bg-amber-400/[0.06]' : 'border-emerald-400/30 bg-emerald-500/[0.06]'}`}>
+        <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">{pendientes.length ? `Pendiente para el cliente · ${pendientes.length}` : 'Al día'}</p>
+        {pendientes.length ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {pendientes.map((x, i) => <span key={i} className={`chip border !px-2 !py-0.5 text-[11px] font-bold ${TONO_PENDIENTE[x.nivel].chip}`}>{x.texto}{x.interno ? ' · interno' : ''}</span>)}
+          </div>
+        ) : <p className="mt-1 text-[12px] text-emerald-200">Nada pendiente.</p>}
+      </div>
+
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {[
           ['pm_tool', 'PM tool · Gantt y tareas', 'Planificación con el Gantt, tareas con responsable, fechas, estado y checklist. Solo lectura para el cliente.'],
-          ['datos_cliente', 'Sus datos y documentos', 'Su ficha de cliente (editable), certificados y documentos, enlazados a la ficha.'],
+          ['datos_cliente', 'Su empresa y documentos', 'Datos de empresa, sedes y normas certificadas con su alcance (editables, con propuestas de la IA desde sus documentos), más sus documentos. Todo enlazado a su ficha de cliente.'],
         ].map(([k, etq, desc]) => (
           <button key={k} type="button" onClick={() => toggle(k)} disabled={ocupado}
             className={`rounded-xl border p-3 text-left transition ${f[k] ? 'border-brand-verde/60 bg-brand-verde/10' : 'border-[#1E5468] bg-[#0B2E3D] hover:border-brand-orange/50'}`}>
