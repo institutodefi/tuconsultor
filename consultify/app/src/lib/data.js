@@ -97,7 +97,7 @@ function demo() {
       { id: 'p1', nombre: 'ISO 9001 · ACADEMIA AXON', empresa_id: 'e1', consultor_id: 'c1' },
       { id: 'p2', nombre: 'ISO 14001 · GRUPO MERIDIA', empresa_id: 'e2', consultor_id: 'c1' },
       { id: 'p3', nombre: 'ENS · AYUNTAMIENTO DE ALCORCÓN', empresa_id: 'e3', consultor_id: 'c1' },
-    ], cliente_contactos: [], vacaciones: [], festivos: [],
+    ], cliente_contactos: demoClone('cliente_contactos'), vacaciones: [], festivos: [],
   };
   return demoState;
 }

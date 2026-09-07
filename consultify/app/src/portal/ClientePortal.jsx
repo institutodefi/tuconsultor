@@ -16,11 +16,23 @@ function Servicios() {
   const { user } = useAuth();
   const [rows, setRows] = useState(null);
   const [proyectosCliente, setProyectosCliente] = useState([]);
+  const [nombres, setNombres] = useState({});   // cliente_id → nombre que se enseña
   useEffect(() => {
     misProyectos(user).then(setRows).catch(() => setRows([]));
     // Los proyectos de verdad (proyectos_cliente): la política deja al
     // cliente ver solo los suyos. Cada uno abre su panel.
     listTable('proyectos_cliente').then((ps) => setProyectosCliente((ps || []).filter((p) => !['cerrado', 'cancelado'].includes(String(p.estado || '').toLowerCase())))).catch(() => setProyectosCliente([]));
+    // De quién es cada proyecto: nombre comercial del CRM si lo hay, si no el
+    // de la ficha de cliente. Sin esto las tarjetas no dicen de qué empresa son.
+    Promise.all([listTable('clientes').catch(() => []), listTable('empresas').catch(() => [])]).then(([cl, em]) => {
+      const cif = (x) => String(x || '').toUpperCase().replace(/[\s.-]/g, '');
+      const m = {};
+      for (const c of cl || []) {
+        const e = c.cif ? (em || []).find((x) => cif(x.cif) === cif(c.cif)) : null;
+        m[String(c.id)] = e?.nombre_comercial || e?.nombre || c.nombre_comercial || c.empresa || null;
+      }
+      setNombres(m);
+    });
   }, [user]);
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando…</p>;
   if (proyectosCliente.length) {
@@ -33,8 +45,9 @@ function Servicios() {
             return (
               <Link key={p.id} to={`proyectos/${p.id}`} className="card block transition hover:border-brand-orange">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-extrabold">{(p.normas || []).map((id) => NORMA_BY_ID[id]?.nombre || id).join(' + ') || p.nombre}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]" title={nombres[String(p.cliente_id)] || ''}>{nombres[String(p.cliente_id)] || 'Cliente sin ficha'}{p.codigo ? ` · ${p.codigo}` : ''}</p>
+                    <p className="mt-0.5 font-extrabold">{(p.normas || []).map((id) => NORMA_BY_ID[id]?.nombre || id).join(' + ') || p.nombre}</p>
                     <p className="mt-0.5 text-sm font-semibold text-[#F9A83A]">Modelo {p.modelo}</p>
                   </div>
                   <span className={`chip ${ESTADOS[p.estado] || ESTADOS.pausado}`}>{p.estado}</span>

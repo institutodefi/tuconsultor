@@ -222,7 +222,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
           {/* 2 · Su empresa: datos, sedes, normas certificadas y documentos */}
           {seccionActiva === 'datos' && funciones.datos_cliente && (
             <div className="space-y-4">
-              <DatosEmpresaCliente cliente={d.cliente} proyectoId={p.id} onGuardado={() => setRecarga((n) => n + 1)} />
+              <DatosEmpresaCliente cliente={d.cliente} proyectoId={p.id} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
               {d.cliente && <section className="card"><DocumentosCliente clienteId={d.cliente.id} titulo="Mis documentos" /></section>}
               <details className="card">
                 <summary className="cursor-pointer text-sm font-extrabold text-[#EAF4F7]">Mis datos personales y contraseña</summary>

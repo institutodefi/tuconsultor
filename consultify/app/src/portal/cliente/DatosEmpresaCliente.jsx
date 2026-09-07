@@ -23,11 +23,11 @@ import { aISO } from '../../lib/auditorias.js';
 
 // Fuera del componente, a propósito: dentro, React lo trataría como un tipo
 // nuevo en cada renderizado y el campo perdería el foco al escribir.
-function Campo({ id, etq, tipo = 'text', v, set, ancho = '', disabled = false, placeholder = '' }) {
+function Campo({ id, etq, tipo = 'text', v, set, ancho = '', disabled = false, placeholder = '', ia = false }) {
   return (
     <div className={ancho}>
       <label className="label" htmlFor={id}>{etq}</label>
-      <input id={id} type={tipo} className={`input !py-1.5 !text-[13px] ${disabled ? 'opacity-60' : ''}`} placeholder={placeholder}
+      <input id={id} type={tipo} className={`input !py-1.5 !text-[13px] ${disabled ? 'opacity-60' : ''} ${ia ? '!border-brand-orange/70 !bg-brand-orange/[0.07]' : ''}`} placeholder={placeholder}
         value={v ?? ''} disabled={disabled} onChange={(e) => set(e.target.value)} />
     </div>
   );
@@ -43,6 +43,7 @@ const ETQ = {
   representante: 'Representante legal', telefono: 'Teléfono', email: 'Correo de la empresa', web: 'Web',
   direccion: 'Dirección (domicilio social)', cp: 'Código postal', poblacion: 'Población', provincia: 'Provincia', pais: 'País',
 };
+const T = (v) => String(v ?? '').trim();   // trim que no revienta con null (sedes/certificados guardados con campos vacíos)
 const desdeCliente = (c) => Object.fromEntries(CAMPOS_EMPRESA.map((k) => [k, c?.[k] == null ? '' : String(c[k])]));
 const SEDE_VACIA = () => ({ nombre: '', direccion: '', cp: '', poblacion: '', provincia: '', pais: 'España', actividad: '', principal: false, notas: '' });
 const CERT_VACIO = () => ({ norma: '9001', entidad: '', numero: '', alcance: '', fecha_certificacion: '', fecha_validez: '', documento_id: '' });
@@ -50,7 +51,16 @@ const validezDesde = (iso) => { if (!iso) return ''; const d = new Date(`${iso}T
 const fmt = (iso) => (iso ? new Date(`${String(iso).slice(0, 10)}T12:00:00`).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 const nombreNorma = (id) => NORMA_BY_ID[id]?.nombre || id || '—';
 const CONF = { alta: 'bg-emerald-500/20 text-emerald-200', media: 'bg-amber-400/20 text-amber-100', baja: 'bg-red-500/20 text-red-200' };
-const errorMigracion = (e) => (/cliente_sedes|nombre_comercial|representante|could not find the '(direccion|cp|poblacion|provincia|pais|web|actividad|empleados|sector)'/i.test(String(e?.message || e)) ? ' Falta aplicar la migración v125 (datos de empresa y sedes).' : '');
+const errorMigracion = (e) => {
+  const m = String(e?.message || e);
+  if (/rgpd_|cliente_contactos.*(apellidos|movil|origen)|could not find the '(apellidos|movil|notas|origen)'/i.test(m)) return ' Falta aplicar la migración v126 (contactos del cliente y RGPD).';
+  if (/cliente_sedes|nombre_comercial|representante|could not find the '(direccion|cp|poblacion|provincia|pais|web|actividad|empleados|sector)'/i.test(m)) return ' Falta aplicar la migración v125 (datos de empresa y sedes).';
+  return '';
+};
+const CONTACTO_VACIO = () => ({ nombre: '', apellidos: '', cargo: '', email: '', telefono: '', movil: '', principal: false, notas: '', rgpd_aceptado: false });
+const fmtFechaHora = (iso) => (iso ? new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+export const TEXTO_RGPD_EMPRESA = 'He leído la política de privacidad y acepto, en nombre de la empresa, que TuConsultor trate estos datos y los de las personas de contacto que registre para la prestación del servicio contratado (RGPD y LOPDGDD).';
+export const TEXTO_RGPD_CONTACTO = 'Esta persona ha sido informada y acepta que sus datos se traten para la gestión del servicio (RGPD).';
 
 async function llamar(payload) {
   const { data } = await supabase.auth.getSession();
@@ -69,7 +79,7 @@ function lecturasDemo(docs) {
     : { documento: d, confianza: 'media', datos: { tipo: 'escritura', razon_social: 'INDUSTRIAS NORTE SL', cif: 'B12345678', domicilio: { direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid', pais: 'España' }, actividad: 'Fabricación de estructuras metálicas', representante: 'María López', empleados: 42, sedes: ['Avda. de la Industria 12, 28923 Alcorcón (Madrid)'], confianza: 'media', avisos: ['Modo demo: datos de ejemplo'] } }));
 }
 
-export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuardado }) {
+export default function DatosEmpresaCliente({ cliente, proyectoId = null, email = '', onGuardado }) {
   const clienteId = cliente?.id;
   const [f, setF] = useState(() => desdeCliente(cliente));
   useEffect(() => { setF(desdeCliente(cliente)); }, [cliente?.id]);
@@ -77,6 +87,11 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
   const [guardando, setGuardando] = useState(false);
 
   const [sedes, setSedes] = useState([]);
+  const [contactos, setContactos] = useState([]);
+  const [formContacto, setFormContacto] = useState(null);
+  const [msgContacto, setMsgContacto] = useState(null);
+  const [rgpd, setRgpd] = useState(!!cliente?.rgpd_aceptado);
+  useEffect(() => { setRgpd(!!cliente?.rgpd_aceptado); }, [cliente?.id, cliente?.rgpd_aceptado]);
   const [certs, setCerts] = useState([]);
   const [docs, setDocs] = useState([]);
   const [sinSedes, setSinSedes] = useState(false);
@@ -93,11 +108,13 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
 
   const cargar = async () => {
     if (!clienteId) return;
-    const [s, c, d] = await Promise.all([
+    const [s, c, d, ct] = await Promise.all([
       listTable('cliente_sedes').catch(() => null),
       listTable('cliente_certificados').catch(() => []),
       listTable('cliente_documentos').catch(() => []),
+      listTable('cliente_contactos').catch(() => []),
     ]);
+    setContactos((ct || []).filter((x) => String(x.cliente_id) === String(clienteId)).sort((a, b) => Number(b.principal) - Number(a.principal) || T(a.nombre).localeCompare(T(b.nombre))));
     setSinSedes(s === null);
     const mio = (x) => String(x.cliente_id) === String(clienteId);
     setSedes((s || []).filter(mio).sort((a, b) => Number(b.principal) - Number(a.principal) || String(a.creado || '').localeCompare(String(b.creado || ''))));
@@ -110,12 +127,14 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
 
   // ── 1 · Datos de empresa ────────────────────────────────────────────────
   async function guardarEmpresa() {
-    if (!f.empresa.trim()) { setMsg({ err: true, t: 'La razón social no puede quedar vacía.' }); return; }
+    if (!T(f.empresa)) { setMsg({ err: true, t: 'La razón social no puede quedar vacía.' }); return; }
+    if (!rgpd) { setMsg({ err: true, t: 'Para guardar hace falta aceptar el tratamiento de datos (RGPD).' }); return; }
     setGuardando(true); setMsg(null);
     try {
       const patch = {};
+      if (!cliente?.rgpd_aceptado) { patch.rgpd_aceptado = true; patch.rgpd_fecha = new Date().toISOString(); patch.rgpd_por = email || null; }
       for (const k of CAMPOS_EMPRESA) {
-        const v = f[k].trim();
+        const v = T(f[k]);
         patch[k] = k === 'empleados' ? (v ? Math.max(0, Math.round(Number(v.replace(',', '.')) || 0)) : null) : (v || null);
       }
       await updateRow('clientes', clienteId, patch);
@@ -128,10 +147,10 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
   // ── 2 · Sedes ───────────────────────────────────────────────────────────
   async function guardarSede() {
     const s = formSede;
-    if (!s.direccion.trim() && !s.nombre.trim() && !s.poblacion.trim()) { setMsgSede({ err: true, t: 'Pon al menos el nombre, la dirección o la población.' }); return; }
+    if (!T(s.direccion) && !T(s.nombre) && !T(s.poblacion)) { setMsgSede({ err: true, t: 'Pon al menos el nombre, la dirección o la población.' }); return; }
     setMsgSede(null);
     try {
-      const fila = { cliente_id: clienteId, nombre: s.nombre.trim() || null, direccion: s.direccion.trim() || null, cp: s.cp.trim() || null, poblacion: s.poblacion.trim() || null, provincia: s.provincia.trim() || null, pais: s.pais.trim() || 'España', actividad: s.actividad.trim() || null, principal: !!s.principal, notas: s.notas?.trim() || null, origen: s.origen || 'manual', documento_id: s.documento_id || null };
+      const fila = { cliente_id: clienteId, nombre: T(s.nombre) || null, direccion: T(s.direccion) || null, cp: T(s.cp) || null, poblacion: T(s.poblacion) || null, provincia: T(s.provincia) || null, pais: T(s.pais) || 'España', actividad: T(s.actividad) || null, principal: !!s.principal, notas: T(s.notas) || null, origen: s.origen || 'manual', documento_id: s.documento_id || null };
       if (s.id) await updateRow('cliente_sedes', s.id, fila); else await insertRow('cliente_sedes', fila);
       if (fila.principal) for (const o of sedes) if (o.principal && String(o.id) !== String(s.id)) await updateRow('cliente_sedes', o.id, { principal: false }).catch(() => {});
       setFormSede(null); await cargar(); onGuardado?.();
@@ -150,7 +169,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
     if (c.fecha_certificacion && c.fecha_validez && c.fecha_validez < c.fecha_certificacion) { setMsgCert({ err: true, t: 'La validez no puede ser anterior a la certificación.' }); return; }
     setMsgCert(null);
     try {
-      const fila = { cliente_id: clienteId, proyecto_id: proyectoId || null, norma: c.norma, entidad: c.entidad.trim() || null, numero: c.numero.trim() || null, alcance: c.alcance.trim() || null, fecha_certificacion: c.fecha_certificacion || null, fecha_validez: c.fecha_validez || null, documento_id: c.documento_id || null };
+      const fila = { cliente_id: clienteId, proyecto_id: proyectoId || null, norma: c.norma, entidad: T(c.entidad) || null, numero: T(c.numero) || null, alcance: T(c.alcance) || null, fecha_certificacion: c.fecha_certificacion || null, fecha_validez: c.fecha_validez || null, documento_id: c.documento_id || null };
       if (c.id) await updateRow('cliente_certificados', c.id, fila); else await insertRow('cliente_certificados', fila);
       setFormCert(null); await cargar(); onGuardado?.();
     } catch (e) { setMsgCert({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'cliente_certificados')}` }); }
@@ -160,6 +179,27 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
     try { await deleteRow('cliente_certificados', c.id); await cargar(); onGuardado?.(); }
     catch (e) { setMsgCert({ err: true, t: `No se pudo quitar: ${e?.message || e}` }); }
   }
+
+  // ── 2b · Personas de contacto de la empresa ─────────────────────────────
+  async function guardarContacto() {
+    const c = formContacto;
+    if (!T(c.nombre)) { setMsgContacto({ err: true, t: 'El nombre no puede quedar vacío.' }); return; }
+    if (T(c.email) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(T(c.email))) { setMsgContacto({ err: true, t: 'Ese correo no parece válido.' }); return; }
+    if (!c.rgpd_aceptado) { setMsgContacto({ err: true, t: 'Hace falta confirmar que la persona está informada y acepta el tratamiento de sus datos (RGPD).' }); return; }
+    setMsgContacto(null);
+    try {
+      const fila = { cliente_id: clienteId, nombre: T(c.nombre), apellidos: T(c.apellidos) || null, cargo: T(c.cargo) || null, email: T(c.email).toLowerCase() || null, telefono: T(c.telefono) || null, movil: T(c.movil) || null, principal: !!c.principal, notas: T(c.notas) || null, rgpd_aceptado: true, rgpd_fecha: c.rgpd_fecha || new Date().toISOString(), origen: c.origen || 'cliente', updated_at: new Date().toISOString() };
+      if (c.id) await updateRow('cliente_contactos', c.id, fila); else await insertRow('cliente_contactos', fila);
+      if (fila.principal) for (const o of contactos) if (o.principal && String(o.id) !== String(c.id)) await updateRow('cliente_contactos', o.id, { principal: false }).catch(() => {});
+      setFormContacto(null); await cargar(); onGuardado?.();
+    } catch (e) { setMsgContacto({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'cliente_contactos')}${errorMigracion(e)}` }); }
+  }
+  async function borrarContacto(c) {
+    if (!window.confirm(`¿Quitar a ${c.nombre}${c.apellidos ? ` ${c.apellidos}` : ''} de los contactos?`)) return;
+    try { await deleteRow('cliente_contactos', c.id); await cargar(); onGuardado?.(); }
+    catch (e) { setMsgContacto({ err: true, t: `No se pudo quitar: ${e?.message || e}` }); }
+  }
+  const editarContacto = (c) => setFormContacto({ ...CONTACTO_VACIO(), ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v == null && !['principal', 'rgpd_aceptado'].includes(k) ? '' : v])) });
 
   // ── Conector IA: proponer desde los documentos ──────────────────────────
   async function proponer() {
@@ -224,6 +264,39 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
       setMsgIA({ err: errores.length > 0, t: `${hecho.length ? `Aplicado: ${hecho.join(', ')}.` : 'Nada aplicado.'}${errores.length ? ` Con errores: ${errores.join(' · ')}` : ''}` });
     } finally { setAplicando(false); }
   }
+
+  // «Traer datos con IA» dentro de Datos de empresa: lee los documentos y
+  // rellena el formulario (lo vacío se rellena; lo que difiere se ofrece como
+  // sugerencia). No se guarda hasta pulsar «Guardar datos de empresa».
+  const [trayendo, setTrayendo] = useState(false);
+  const [traidos, setTraidos] = useState(new Set());     // campos rellenados por la IA
+  const [sugerencias, setSugerencias] = useState([]);    // [{campo, valor, fuentes}] que difieren de lo que hay
+  async function traerDatosEmpresa() {
+    if (!docs.length) { setMsg({ err: true, t: 'Aún no has subido documentos. Sube el CIF, la escritura, certificados o una memoria en «Mis documentos» y vuelve a probar.' }); return; }
+    setTrayendo(true); setMsg(null); setSugerencias([]);
+    try {
+      let lecturas;
+      if (DEMO) { await new Promise((r) => setTimeout(r, 400)); lecturas = lecturasDemo(docs); }
+      else {
+        const j = await llamar({ action: 'proponer', cliente_id: clienteId });
+        if (!j?.ok) throw new Error(j?.error || 'Sin respuesta del lector de documentos.');
+        lecturas = j.documentos || [];
+      }
+      const pr = propuestasDesdeLecturas(lecturas, { cliente: { ...cliente, ...f }, sedes, certificados: certs });
+      const rellenos = []; const difieren = []; const next = { ...f };
+      for (const [campo, x] of Object.entries(pr.empresa)) {
+        if (!CAMPOS_EMPRESA.includes(campo)) continue;
+        if (!T(f[campo])) { next[campo] = String(x.valor); rellenos.push(campo); }
+        else if (x.cambia) difieren.push({ campo, valor: String(x.valor), fuentes: x.fuentes.filter(Boolean) });
+      }
+      setF(next); setTraidos(new Set(rellenos)); setSugerencias(difieren);
+      const leidas = lecturas.filter((l) => l.datos).length;
+      setMsg({ err: !leidas, t: !leidas ? 'No se ha podido leer ningún documento (solo se leen PDF e imágenes).'
+        : `${rellenos.length ? `Rellenados ${rellenos.length} campo${rellenos.length === 1 ? '' : 's'} desde tus documentos (${leidas} leído${leidas === 1 ? '' : 's'}).` : `Nada nuevo que rellenar (${leidas} documento${leidas === 1 ? '' : 's'} leído${leidas === 1 ? '' : 's'}).`}${difieren.length ? ` ${difieren.length} dato${difieren.length === 1 ? '' : 's'} difieren: revísalos abajo.` : ''}${rellenos.length ? ' Revisa y pulsa «Guardar datos de empresa».' : ''}` });
+    } catch (e) { setMsg({ err: true, t: `No se pudo leer: ${e?.message || e}` }); }
+    finally { setTrayendo(false); }
+  }
+  const usarSugerencia = (sg) => { setF((prev) => ({ ...prev, [sg.campo]: sg.valor })); setTraidos((t) => new Set([...t, sg.campo])); setSugerencias((l) => l.filter((x) => x.campo !== sg.campo)); };
 
   const sedePrincipalTexto = useMemo(() => [f.direccion, f.cp, f.poblacion].filter(Boolean).join(', '), [f]);
 
@@ -338,24 +411,54 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
 
       {/* ── 1 · Datos de empresa ── */}
       <section className="card">
-        <h2 className="text-sm font-extrabold text-[#EAF4F7]">Datos de empresa</h2>
-        <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Los de tu ficha de cliente. Puedes corregirlos aquí; tu consultor los ve al momento.</p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#EAF4F7]">Datos de empresa</h2>
+            <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Los de tu ficha de cliente. Puedes corregirlos aquí; tu consultor los ve al momento.</p>
+          </div>
+          <button type="button" onClick={traerDatosEmpresa} disabled={trayendo} className="btn-ghost !px-3 !py-1 text-[12px] disabled:opacity-50" title="Lee tus documentos y rellena lo que falte">
+            {trayendo ? 'Leyendo documentos…' : '✦ Traer datos con IA'}
+          </button>
+        </div>
+        {traidos.size > 0 && <p className="mt-2 text-[11px] font-bold text-brand-orange">Los campos marcados en naranja los ha rellenado la IA desde tus documentos: revísalos antes de guardar.</p>}
+        {sugerencias.length > 0 && (
+          <div className="mt-2 rounded-lg border border-amber-300/40 bg-amber-400/[0.06] px-3 py-2">
+            <p className="text-[11px] font-extrabold uppercase tracking-wide text-amber-100">Difieren de lo que tienes</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {sugerencias.map((sg) => (
+                <button key={sg.campo} type="button" onClick={() => usarSugerencia(sg)} className="rounded-lg border border-amber-300/40 px-2 py-1 text-left text-[11.5px] text-[#EAF4F7] hover:border-brand-orange" title={`Según ${sg.fuentes.join(', ') || 'tus documentos'}. Pulsa para usar este valor.`}>
+                  <span className="font-bold">{ETQ[sg.campo]}:</span> {sg.valor} <span className="text-[#9FC0CB]">· usar</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Campo id="de-empresa" etq={ETQ.empresa} v={f.empresa} set={(x) => setF({ ...f, empresa: x })} />
-          <Campo id="de-nc" etq={ETQ.nombre_comercial} v={f.nombre_comercial} set={(x) => setF({ ...f, nombre_comercial: x })} />
-          <Campo id="de-cif" etq={ETQ.cif} v={f.cif} set={(x) => setF({ ...f, cif: x })} />
-          <Campo id="de-act" etq={ETQ.actividad} v={f.actividad} set={(x) => setF({ ...f, actividad: x })} ancho="sm:col-span-2" />
-          <Campo id="de-sector" etq={ETQ.sector} v={f.sector} set={(x) => setF({ ...f, sector: x })} />
-          <Campo id="de-emp" etq={ETQ.empleados} tipo="number" v={f.empleados} set={(x) => setF({ ...f, empleados: x })} />
-          <Campo id="de-rep" etq={ETQ.representante} v={f.representante} set={(x) => setF({ ...f, representante: x })} />
-          <Campo id="de-tel" etq={ETQ.telefono} tipo="tel" v={f.telefono} set={(x) => setF({ ...f, telefono: x })} />
-          <Campo id="de-email" etq={ETQ.email} tipo="email" v={f.email} set={(x) => setF({ ...f, email: x })} />
-          <Campo id="de-web" etq={ETQ.web} v={f.web} set={(x) => setF({ ...f, web: x })} placeholder="https://" />
-          <Campo id="de-dir" etq={ETQ.direccion} v={f.direccion} set={(x) => setF({ ...f, direccion: x })} ancho="sm:col-span-2 lg:col-span-3" />
-          <Campo id="de-cp" etq={ETQ.cp} v={f.cp} set={(x) => setF({ ...f, cp: x })} />
-          <Campo id="de-pob" etq={ETQ.poblacion} v={f.poblacion} set={(x) => setF({ ...f, poblacion: x })} />
-          <Campo id="de-prov" etq={ETQ.provincia} v={f.provincia} set={(x) => setF({ ...f, provincia: x })} />
-          <Campo id="de-pais" etq={ETQ.pais} v={f.pais} set={(x) => setF({ ...f, pais: x })} placeholder="España" />
+          <Campo id="de-empresa" etq={ETQ.empresa} v={f.empresa} set={(x) => setF({ ...f, empresa: x })} ia={traidos.has('empresa')} />
+          <Campo id="de-nc" etq={ETQ.nombre_comercial} v={f.nombre_comercial} set={(x) => setF({ ...f, nombre_comercial: x })} ia={traidos.has('nombre_comercial')} />
+          <Campo id="de-cif" etq={ETQ.cif} v={f.cif} set={(x) => setF({ ...f, cif: x })} ia={traidos.has('cif')} />
+          <Campo id="de-act" etq={ETQ.actividad} v={f.actividad} set={(x) => setF({ ...f, actividad: x })} ia={traidos.has('actividad')} ancho="sm:col-span-2" />
+          <Campo id="de-sector" etq={ETQ.sector} v={f.sector} set={(x) => setF({ ...f, sector: x })} ia={traidos.has('sector')} />
+          <Campo id="de-emp" etq={ETQ.empleados} tipo="number" v={f.empleados} set={(x) => setF({ ...f, empleados: x })} ia={traidos.has('empleados')} />
+          <Campo id="de-rep" etq={ETQ.representante} v={f.representante} set={(x) => setF({ ...f, representante: x })} ia={traidos.has('representante')} />
+          <Campo id="de-tel" etq={ETQ.telefono} tipo="tel" v={f.telefono} set={(x) => setF({ ...f, telefono: x })} ia={traidos.has('telefono')} />
+          <Campo id="de-email" etq={ETQ.email} tipo="email" v={f.email} set={(x) => setF({ ...f, email: x })} ia={traidos.has('email')} />
+          <Campo id="de-web" etq={ETQ.web} v={f.web} set={(x) => setF({ ...f, web: x })} ia={traidos.has('web')} placeholder="https://" />
+          <Campo id="de-dir" etq={ETQ.direccion} v={f.direccion} set={(x) => setF({ ...f, direccion: x })} ia={traidos.has('direccion')} ancho="sm:col-span-2 lg:col-span-3" />
+          <Campo id="de-cp" etq={ETQ.cp} v={f.cp} set={(x) => setF({ ...f, cp: x })} ia={traidos.has('cp')} />
+          <Campo id="de-pob" etq={ETQ.poblacion} v={f.poblacion} set={(x) => setF({ ...f, poblacion: x })} ia={traidos.has('poblacion')} />
+          <Campo id="de-prov" etq={ETQ.provincia} v={f.provincia} set={(x) => setF({ ...f, provincia: x })} ia={traidos.has('provincia')} />
+          <Campo id="de-pais" etq={ETQ.pais} v={f.pais} set={(x) => setF({ ...f, pais: x })} ia={traidos.has('pais')} placeholder="España" />
+        </div>
+        <div className="mt-3 rounded-lg border border-[#1E5468] bg-[#0B2E3D] px-3 py-2">
+          {cliente?.rgpd_aceptado ? (
+            <p className="text-[11.5px] text-[#9FC0CB]">✓ Tratamiento de datos (RGPD) aceptado{cliente.rgpd_fecha ? ` el ${fmtFechaHora(cliente.rgpd_fecha)}` : ''}{cliente.rgpd_por ? ` por ${cliente.rgpd_por}` : ''}. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-bold text-brand-orange hover:underline">Política de privacidad</a></p>
+          ) : (
+            <label className="flex items-start gap-2 text-[12px] text-[#EAF4F7]">
+              <input type="checkbox" className="mt-0.5" checked={rgpd} onChange={(e) => setRgpd(e.target.checked)} />
+              <span>{TEXTO_RGPD_EMPRESA} <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-bold text-brand-orange hover:underline">Leer la política</a></span>
+            </label>
+          )}
         </div>
         <Aviso msg={msg} />
         <button onClick={guardarEmpresa} disabled={guardando} className="btn-orange mt-3 !px-4 !py-1.5 text-xs disabled:opacity-50">{guardando ? 'Guardando…' : 'Guardar datos de empresa'}</button>
@@ -380,7 +483,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
                   <p className="text-[11.5px] text-[#9FC0CB]">{[s.nombre ? s.direccion : null, s.cp, s.poblacion, s.provincia, s.pais && s.pais !== 'España' ? s.pais : null].filter(Boolean).join(', ')}{s.actividad ? ` · ${s.actividad}` : ''}</p>
                 </div>
                 <div className="flex gap-2 text-[11.5px] font-bold">
-                  <button type="button" onClick={() => setFormSede({ ...SEDE_VACIA(), ...s })} className="text-brand-orange hover:underline">Editar</button>
+                  <button type="button" onClick={() => setFormSede({ ...SEDE_VACIA(), ...Object.fromEntries(Object.entries(s).map(([k, v]) => [k, v == null && k !== 'principal' ? '' : v])) })} className="text-brand-orange hover:underline">Editar</button>
                   <button type="button" onClick={() => borrarSede(s)} className="text-[#7FA7B4] hover:text-red-300">Quitar</button>
                 </div>
               </li>
@@ -411,6 +514,61 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
           </div>
         )}
         {!formSede && <Aviso msg={msgSede} />}
+      </section>
+
+      {/* ── 2b · Personas de contacto ── */}
+      <section className="card">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-extrabold text-[#EAF4F7]">Personas de contacto · {contactos.length}</h2>
+            <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Quién es quién en tu empresa para el servicio: dirección, responsable del sistema, administración… Tu consultor las ve en tu ficha.</p>
+          </div>
+          {!formContacto && <button type="button" onClick={() => setFormContacto({ ...CONTACTO_VACIO(), principal: contactos.length === 0 })} className="btn-ghost !px-3 !py-1 text-[12px]">+ Añadir persona</button>}
+        </div>
+        {contactos.length > 0 && (
+          <ul className="mt-3 divide-y divide-[#1E5468]/60">
+            {contactos.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-[#EAF4F7]">{c.nombre}{c.apellidos ? ` ${c.apellidos}` : ''}{c.cargo && <span className="font-medium text-[#9FC0CB]"> · {c.cargo}</span>}{c.principal && <span className="chip ml-2 bg-brand-verde/20 !px-2 !py-0 text-[10px] text-brand-verdeTexto">principal</span>}</p>
+                  <p className="text-[11.5px] text-[#9FC0CB]">{[c.email, c.movil || c.telefono].filter(Boolean).join(' · ') || 'Sin datos de contacto'}{c.rgpd_aceptado ? <span className="ml-2 text-[10.5px] text-emerald-200">✓ RGPD</span> : <span className="ml-2 text-[10.5px] text-amber-100">RGPD pendiente</span>}</p>
+                </div>
+                <div className="flex gap-2 text-[11.5px] font-bold">
+                  <button type="button" onClick={() => editarContacto(c)} className="text-brand-orange hover:underline">Editar</button>
+                  <button type="button" onClick={() => borrarContacto(c)} className="text-[#7FA7B4] hover:text-red-300">Quitar</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!contactos.length && !formContacto && <p className="mt-2 text-[12px] text-[#9FC0CB]">Sin personas de contacto registradas.</p>}
+        {formContacto && (
+          <div className="mt-3 rounded-xl border border-[#1E5468] bg-[#0B2E3D] p-3">
+            <p className="text-[12px] font-extrabold text-[#EAF4F7]">{formContacto.id ? 'Editar persona' : 'Nueva persona de contacto'}</p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              <Campo id="pc-nombre" etq="Nombre" v={formContacto.nombre} set={(x) => setFormContacto({ ...formContacto, nombre: x })} />
+              <Campo id="pc-apellidos" etq="Apellidos" v={formContacto.apellidos} set={(x) => setFormContacto({ ...formContacto, apellidos: x })} />
+              <Campo id="pc-cargo" etq="Cargo" v={formContacto.cargo} set={(x) => setFormContacto({ ...formContacto, cargo: x })} placeholder="Responsable de calidad, Gerente…" />
+              <Campo id="pc-email" etq="Correo" tipo="email" v={formContacto.email} set={(x) => setFormContacto({ ...formContacto, email: x })} />
+              <Campo id="pc-tel" etq="Teléfono" tipo="tel" v={formContacto.telefono} set={(x) => setFormContacto({ ...formContacto, telefono: x })} />
+              <Campo id="pc-movil" etq="Móvil" tipo="tel" v={formContacto.movil} set={(x) => setFormContacto({ ...formContacto, movil: x })} />
+              <Campo id="pc-notas" etq="Notas" v={formContacto.notas} set={(x) => setFormContacto({ ...formContacto, notas: x })} ancho="sm:col-span-3" />
+              <label className="flex items-center gap-2 text-[12.5px] font-bold text-[#EAF4F7] sm:col-span-3">
+                <input type="checkbox" checked={!!formContacto.principal} onChange={(e) => setFormContacto({ ...formContacto, principal: e.target.checked })} /> Es la persona de contacto principal
+              </label>
+              <label className="flex items-start gap-2 text-[12px] text-[#EAF4F7] sm:col-span-3">
+                <input type="checkbox" className="mt-0.5" checked={!!formContacto.rgpd_aceptado} onChange={(e) => setFormContacto({ ...formContacto, rgpd_aceptado: e.target.checked })} />
+                <span>{TEXTO_RGPD_CONTACTO}{formContacto.rgpd_fecha ? <span className="text-[#9FC0CB]"> Aceptado el {fmtFechaHora(formContacto.rgpd_fecha)}.</span> : null}</span>
+              </label>
+            </div>
+            <Aviso msg={msgContacto} />
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={guardarContacto} className="btn-orange !px-4 !py-1.5 text-xs">Guardar persona</button>
+              <button type="button" onClick={() => { setFormContacto(null); setMsgContacto(null); }} className="btn-ghost !px-3 !py-1.5 text-xs">Cancelar</button>
+            </div>
+          </div>
+        )}
+        {!formContacto && <Aviso msg={msgContacto} />}
       </section>
 
       {/* ── 3 · Normas certificadas y alcances ── */}

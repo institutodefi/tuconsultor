@@ -40,6 +40,9 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
   });
   const [msg, setMsg] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  // RGPD: quien guarda sus datos acepta el tratamiento. Si ya lo aceptó, se
+  // enseña la fecha y no se vuelve a pedir.
+  const [rgpd, setRgpd] = useState(!!contacto?.rgpd_aceptado);
 
   // Contraseña, aparte
   const [pw, setPw] = useState({ nueva: '', repetir: '' });
@@ -48,6 +51,7 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
 
   async function guardar() {
     if (!f.nombre.trim()) { setMsg({ err: true, t: 'El nombre no puede quedar vacío.' }); return; }
+    if (!rgpd) { setMsg({ err: true, t: 'Para guardar hace falta aceptar el tratamiento de tus datos (RGPD).' }); return; }
     setGuardando(true); setMsg(null);
     try {
       const datos = {
@@ -55,6 +59,7 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
         cargo: f.cargo.trim() || null,
         telefono: f.telefono.trim() || null, movil: f.movil.trim() || null,
       };
+      if (!contacto?.rgpd_aceptado) { datos.rgpd_aceptado = true; datos.rgpd_fecha = new Date().toISOString(); }
       if (contacto?.id) await updateRow('contactos', contacto.id, datos);
       else await insertRow('contactos', { ...datos, email });
 
@@ -77,7 +82,8 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
         : 'Datos guardados.' });
       onGuardado && onGuardado();
     } catch (e) {
-      setMsg({ err: true, t: `No se pudo guardar: ${e?.message || e}` });
+      const m = String(e?.message || e);
+      setMsg({ err: true, t: `No se pudo guardar: ${m}${/rgpd_/i.test(m) ? ' Falta aplicar la migración v126 (contactos del cliente y RGPD).' : /row-level security|policy/i.test(m) ? ' Falta aplicar la migración v126, que permite al cliente corregir su propia ficha.' : ''}` });
     } finally { setGuardando(false); }
   }
 
@@ -116,6 +122,16 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
           <Campo id="md-movil" etq="Móvil" tipo="tel" v={f.movil} set={(x) => setF({ ...f, movil: x })} />
         </div>
 
+        <div className="mt-3 rounded-lg border border-[#1E5468] bg-[#0B2E3D] px-3 py-2">
+          {contacto?.rgpd_aceptado ? (
+            <p className="text-[11.5px] text-[#9FC0CB]">✓ Tratamiento de datos (RGPD) aceptado{contacto.rgpd_fecha ? ` el ${new Date(contacto.rgpd_fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}` : ''}. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-bold text-brand-orange hover:underline">Política de privacidad</a></p>
+          ) : (
+            <label className="flex items-start gap-2 text-[12px] text-[#EAF4F7]">
+              <input type="checkbox" className="mt-0.5" checked={rgpd} onChange={(e) => setRgpd(e.target.checked)} />
+              <span>He leído la política de privacidad y acepto que TuConsultor trate mis datos de contacto para la prestación del servicio (RGPD y LOPDGDD). <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-bold text-brand-orange hover:underline">Leer la política</a></span>
+            </label>
+          )}
+        </div>
         {msg && (
           <p role={msg.err ? 'alert' : 'status'}
             className={`mt-3 rounded-lg px-3 py-2 text-[12.5px] font-bold ${msg.err ? 'bg-red-500/12 text-red-200' : 'bg-emerald-500/12 text-emerald-200'}`}>

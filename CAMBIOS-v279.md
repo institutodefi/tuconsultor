@@ -21,7 +21,7 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql`, `migracion-v119-reparto-niveles.sql`, `migracion-v120-reparto-niveles-proyecto.sql`, `migracion-v121-definicion-y-subtareas.sql`, `migracion-v122-subtareas-base.sql`, `migracion-v123-convocatorias-y-feed.sql`, `migracion-v124-zona-cliente.sql` y `migracion-v125-datos-empresa-y-sedes.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql`, `migracion-v119-reparto-niveles.sql`, `migracion-v120-reparto-niveles-proyecto.sql`, `migracion-v121-definicion-y-subtareas.sql`, `migracion-v122-subtareas-base.sql`, `migracion-v123-convocatorias-y-feed.sql`, `migracion-v124-zona-cliente.sql`, `migracion-v125-datos-empresa-y-sedes.sql` y `migracion-v126-contactos-cliente-y-rgpd.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
 
 ## Normas · ISO 27701 (privacidad de la información)
@@ -145,3 +145,11 @@
 - El cliente puede lanzar el lector sobre sus propios documentos (`analizar` y `proponer` comprueban que la ficha sea suya). Textos de la tarjeta «Zona cliente» y del resumen de servicios actualizados («Su empresa y documentos»).
 - Pruebas: `scripts/test-certificados-ia.mjs` (12 comprobaciones nuevas de propuestas).
 - **Direcciones bien volcadas** · el lector recibe la instrucción de separar siempre vía y número / CP / población / provincia / país (nunca meter el CP o la población en «dirección»), y la app trocea igualmente lo que venga junto (`trocearDireccion` en `lib/certificadosIA.js`: «C/ Mayor 1, 28001 Madrid (Madrid)», «… 28906 Getafe, Madrid, España», CP portugués, población con CP pegado). Lo que ya venga en su campo manda. En las propuestas de sede se pueden corregir también país y actividad. 9 comprobaciones más en `scripts/test-certificados-ia.mjs`.
+- `portal/ClientePortal.jsx` · las tarjetas de **Mis servicios** dicen de qué cliente es cada proyecto (nombre comercial del CRM o el de la ficha) y su código, encima de las normas.
+
+## Zona cliente · botón de IA en datos de empresa, personas de contacto y aceptación RGPD
+- **Corregido** «Cannot read properties of null (reading 'trim')» al editar una sede o un certificado guardado con campos vacíos.
+- **✦ Traer datos con IA** dentro de *Datos de empresa*: lee los documentos y rellena el formulario. Lo vacío se rellena (campos en naranja para revisarlos); lo que difiere de lo que ya hay se ofrece aparte con un botón «usar». No se guarda hasta pulsar «Guardar datos de empresa».
+- **Personas de contacto** (`cliente_contactos`): el cliente da de alta, corrige y quita a las personas de su empresa (nombre, apellidos, cargo, correo, teléfono, móvil, principal, notas). Salen en su ficha para el equipo.
+- **RGPD**: para guardar los datos de empresa hay que aceptar el tratamiento (queda fecha y correo de quien aceptó, y ya no se vuelve a pedir); cada persona de contacto lleva su casilla «ha sido informada y acepta» (obligatoria); los datos personales del propio usuario también la piden. Enlace a la política de privacidad en los tres sitios.
+- **Migración `migracion-v126-contactos-cliente-y-rgpd.sql`**: columnas RGPD en `clientes`, `cliente_contactos` (más apellidos, móvil, notas, origen) y `contactos`; política para que el cliente escriba sus `cliente_contactos`; y políticas `contactos_self_update` / `contactos_self_insert` para que el cliente pueda corregir SU propia ficha del CRM (hasta ahora la RLS no lo dejaba, así que «Guardar mis datos» fallaba en producción para clientes).

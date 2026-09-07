@@ -35,7 +35,7 @@ export default function MisDatosPagina() {
 
   return (
     <div className="space-y-4">
-      <DatosEmpresaCliente cliente={empresa} onGuardado={() => setRecarga((n) => n + 1)} />
+      <DatosEmpresaCliente cliente={empresa} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
       <details className="card">
         <summary className="cursor-pointer text-sm font-extrabold text-[#EAF4F7]">Mis datos personales y contraseña</summary>
         <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Tu nombre, cargo y teléfonos como persona de contacto, y la contraseña de tu acceso.</p>
