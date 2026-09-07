@@ -320,14 +320,17 @@
     padding: 38px 34px;
     position: relative;
     display: flex; flex-direction: column;
-    transition: transform 0.25s;
+    transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 30px -18px rgba(0,0,0,0.6);
   }
-  .model-card:hover { transform: translateY(-3px); }
+  .model-card:hover { transform: translateY(-3px); border-color: rgba(249,144,1,0.55); box-shadow: 0 18px 40px -20px rgba(0,0,0,0.7); }
   .model-card.featured {
     background: var(--navy-900);
     border-color: var(--ink);
     color: #FFFFFF;
+    box-shadow: 0 0 0 1px rgba(249,144,1,0.25), 0 24px 50px -24px rgba(249,144,1,0.35);
   }
+  @media (prefers-reduced-motion: reduce) { .model-card, .model-card:hover { transition: none; transform: none; } }
   .model-card.featured .badge {
     position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
     background: var(--orange);
@@ -337,6 +340,7 @@
     font-size:11px; font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
   .model-name {
     font-size:27px; font-weight: 800;
@@ -402,6 +406,22 @@
     color: var(--ink); font-weight: 500;
   }
   .model-card.featured .model-features li { color: rgba(255,255,255,0.9); }
+
+  /* ── Propuesta de valor de cada modelo: horas y «hacemos todas las tareas» ──
+     Van las primeras de la lista y con otro tono: son lo que diferencia un
+     modelo de otro, no una característica más. `display:block`: la lista es
+     flex y partía el texto en columnas. */
+  .model-features li.model-horas {
+    display: block; font-size: 13.5px; font-weight: 700; line-height: 1.35;
+    color: var(--ink); padding: 9px 12px; margin-bottom: 6px;
+    border-radius: 10px; background: rgba(249,144,1,0.10);
+    border: 1px solid rgba(249,144,1,0.40);
+  }
+  .model-features li.model-horas::before { display: none; }
+  .model-features li.model-horas b { color: var(--acento-texto); font-weight: 800; white-space: nowrap; }
+  .model-card.featured .model-features li.model-horas { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.28); }
+  .model-features li.model-hacemos { font-weight: 700; color: var(--ink); }
+  .model-features li.model-hacemos::before { background: var(--verde-texto); }
   .model-features li::before {
     content: ''; flex-shrink: 0;
     width: 8px; height: 8px;

@@ -689,6 +689,22 @@
     color: var(--ink); font-weight: 500;
   }
   .model-card.featured .model-features li { color: rgba(255,255,255,0.9); }
+
+  /* ── Propuesta de valor de cada modelo: horas y «hacemos todas las tareas» ──
+     Van las primeras de la lista y con otro tono: son lo que diferencia un
+     modelo de otro, no una característica más. `display:block`: la lista es
+     flex y partía el texto en columnas. */
+  .model-features li.model-horas {
+    display: block; font-size: 13.5px; font-weight: 700; line-height: 1.35;
+    color: var(--ink); padding: 9px 12px; margin-bottom: 6px;
+    border-radius: 10px; background: rgba(249,144,1,0.10);
+    border: 1px solid rgba(249,144,1,0.40);
+  }
+  .model-features li.model-horas::before { display: none; }
+  .model-features li.model-horas b { color: var(--acento-texto); font-weight: 800; white-space: nowrap; }
+  .model-card.featured .model-features li.model-horas { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.28); }
+  .model-features li.model-hacemos { font-weight: 700; color: var(--ink); }
+  .model-features li.model-hacemos::before { background: var(--verde-texto); }
   .model-features li::before {
     content: ''; flex-shrink: 0;
     width: 8px; height: 8px;
@@ -1281,6 +1297,8 @@
           <span class="price-per" data-i18n="m1.per">/mes</span>
         </div>
         <ul class="model-features">
+          <li class="model-horas" data-i18n="m1.h">2 h online por sistema al mes</li>
+          <li class="model-hacemos" data-i18n="m1.todo">Hacemos todas las tareas del sistema</li>
           <li data-i18n="m1.f1">Orbita.PMTools incluido</li>
           <li data-i18n="m1.f2">1 consultor especializado</li>
           <li data-i18n="m1.f3">Sesiones bajo demanda</li>
@@ -1301,9 +1319,10 @@
           <span class="price-per" data-i18n="m2.per">/mes</span>
         </div>
         <ul class="model-features">
+          <li class="model-horas" data-i18n="m2.h">4 h online por sistema + 2 h onsite al mes</li>
+          <li class="model-hacemos" data-i18n="m2.todo">Hacemos todas las tareas del sistema</li>
           <li data-i18n="m2.f1">Todo lo de Relación, +</li>
           <li data-i18n="m2.f2">2 consultores dedicados</li>
-          <li data-i18n="m2.f3">6 h/mes de consultoría</li>
           <li data-i18n="m2.f4">Roadmap personalizado</li>
           <li data-i18n="m2.f5">Templates premium</li>
           <li data-i18n="m2.f6">Revisión mensual</li>
@@ -1322,9 +1341,10 @@
           <span class="price-per" data-i18n="m3.per">/mes</span>
         </div>
         <ul class="model-features">
+          <li class="model-horas" data-i18n="m3.h">4 h online por sistema + 3 h onsite al mes</li>
+          <li class="model-hacemos" data-i18n="m3.todo">Hacemos todas las tareas del sistema</li>
           <li data-i18n="m3.f1">Todo lo de Implicación, +</li>
           <li data-i18n="m3.f2">Equipo multidisciplinar</li>
-          <li data-i18n="m3.f3">7 h/mes de consultoría</li>
           <li data-i18n="m3.f4">KPIs co-definidos</li>
           <li data-i18n="m3.f5">Implementación acompañada</li>
           <li data-i18n="m3.f6">Expertos sectoriales</li>
@@ -1912,14 +1932,17 @@ const i18n = {
     'models.title.3': 'tú decides la intensidad.',
 
     'm1.name': 'Relación', 'm1.ia': 'Impulsada por IA', 'm1.tag': 'Para empezar a explorar', 'm1.from': 'Desde', 'm1.per': '/mes',
+    'm1.h': '2 h online por sistema al mes', 'm1.todo': 'Hacemos todas las tareas del sistema',
     'm1.f1': 'Orbita.PMTools incluido', 'm1.f2': '1 consultor especializado', 'm1.f3': 'Sesiones bajo demanda',
     'm1.f4': 'Diagnóstico inicial gratis', 'm1.f5': 'Soporte chat 24/7',
 
     'm2.name': 'Implicación', 'm2.ia': 'Impulsada por IA', 'm2.tag': 'Para avanzar con foco', 'm2.from': 'Desde', 'm2.per': '/mes', 'm2.badge': 'Más elegido',
+    'm2.h': '4 h online por sistema + 2 h onsite al mes', 'm2.todo': 'Hacemos todas las tareas del sistema',
     'm2.f1': 'Todo lo de Relación, +', 'm2.f2': '2 consultores dedicados', 'm2.f3': '6 h/mes de consultoría',
     'm2.f4': 'Roadmap personalizado', 'm2.f5': 'Templates premium', 'm2.f6': 'Revisión mensual', 'm2.f7': 'Teams y SharePoint',
 
     'm3.name': 'Compromiso', 'm3.ia': 'Impulsado por IA', 'm3.tag': 'Para transformar de verdad', 'm3.from': 'Desde', 'm3.per': '/mes',
+    'm3.h': '4 h online por sistema + 3 h onsite al mes', 'm3.todo': 'Hacemos todas las tareas del sistema',
     'm3.f1': 'Todo lo de Implicación, +', 'm3.f2': 'Equipo multidisciplinar', 'm3.f3': '7 h/mes de consultoría',
     'm3.f4': 'KPIs co-definidos', 'm3.f5': 'Implementación acompañada', 'm3.f6': 'Expertos sectoriales',
     'm3.f7': 'Revisión ejecutiva', 'm3.f8': 'Asistencia en auditorías externas',
@@ -2106,14 +2129,17 @@ const i18n = {
     'models.title.3': 'you choose the intensity.',
 
     'm1.name': 'Connect', 'm1.ia': 'AI-powered', 'm1.tag': 'To start exploring', 'm1.from': 'From', 'm1.per': '/month',
+    'm1.h': '2 h online per system per month', 'm1.todo': 'We do every task of the system',
     'm1.f1': 'Orbita.PMTools included', 'm1.f2': '1 specialised consultant', 'm1.f3': 'On-demand sessions',
     'm1.f4': 'Free initial diagnosis', 'm1.f5': '24/7 chat support',
 
     'm2.name': 'Engage', 'm2.ia': 'AI-powered', 'm2.tag': 'To move forward with focus', 'm2.from': 'From', 'm2.per': '/month', 'm2.badge': 'Most chosen',
+    'm2.h': '4 h online per system + 2 h onsite per month', 'm2.todo': 'We do every task of the system',
     'm2.f1': 'Everything in Connect, +', 'm2.f2': '2 dedicated consultants', 'm2.f3': '6 consulting hours/month',
     'm2.f4': 'Personalised roadmap', 'm2.f5': 'Premium templates', 'm2.f6': 'Monthly review', 'm2.f7': 'Teams & SharePoint',
 
     'm3.name': 'Commit', 'm3.ia': 'AI-powered', 'm3.tag': 'To truly transform', 'm3.from': 'From', 'm3.per': '/month',
+    'm3.h': '4 h online per system + 3 h onsite per month', 'm3.todo': 'We do every task of the system',
     'm3.f1': 'Everything in Engage, +', 'm3.f2': 'Multidisciplinary team', 'm3.f3': '7 consulting hours/month',
     'm3.f4': 'Co-defined KPIs', 'm3.f5': 'Hands-on implementation', 'm3.f6': 'Sector experts',
     'm3.f7': 'Executive review', 'm3.f8': 'Support during external audits',
@@ -2302,14 +2328,17 @@ const i18n = {
     'models.title.3': 'أنت تختار الكثافة.',
 
     'm1.name': 'تواصل', 'm1.ia': 'مدعومة بالذكاء الاصطناعي', 'm1.tag': 'للبدء في الاستكشاف', 'm1.from': 'ابتداءً من', 'm1.per': '/شهر',
+    'm1.h': 'ساعتان عبر الإنترنت لكل نظام شهريًا', 'm1.todo': 'ننفّذ جميع مهام النظام',
     'm1.f1': 'منصة TuConsultor للذكاء الاصطناعي', 'm1.f2': 'مستشار متخصص واحد', 'm1.f3': 'جلسات عند الطلب',
     'm1.f4': 'تشخيص أولي مجاني', 'm1.f5': 'دعم محادثة على مدار الساعة',
 
     'm2.name': 'مشاركة', 'm2.ia': 'مدعومة بالذكاء الاصطناعي', 'm2.tag': 'للتقدم بتركيز', 'm2.from': 'ابتداءً من', 'm2.per': '/شهر', 'm2.badge': 'الأكثر اختيارًا',
+    'm2.h': '4 ساعات عبر الإنترنت لكل نظام + ساعتان حضوريًا شهريًا', 'm2.todo': 'ننفّذ جميع مهام النظام',
     'm2.f1': 'كل ميزات تواصل، +', 'm2.f2': 'مستشاران مكرّسان', 'm2.f3': '6 ساعات استشارة/شهر',
     'm2.f4': 'خارطة طريق مخصصة', 'm2.f5': 'قوالب متميزة', 'm2.f6': 'مراجعة شهرية', 'm2.f7': 'Teams و SharePoint',
 
     'm3.name': 'التزام', 'm3.ia': 'مدعوم بالذكاء الاصطناعي', 'm3.tag': 'لتحول حقيقي', 'm3.from': 'ابتداءً من', 'm3.per': '/شهر',
+    'm3.h': '4 ساعات عبر الإنترنت لكل نظام + 3 ساعات حضوريًا شهريًا', 'm3.todo': 'ننفّذ جميع مهام النظام',
     'm3.f1': 'كل ميزات مشاركة، +', 'm3.f2': 'فريق متعدد التخصصات', 'm3.f3': '7 ساعات استشارة/شهر',
     'm3.f4': 'مؤشرات أداء محدّدة بشكل مشترك', 'm3.f5': 'تنفيذ مرافق', 'm3.f6': 'خبراء قطاعيون',
     'm3.f7': 'مراجعة تنفيذية', 'm3.f8': 'دعم خلال عمليات التدقيق الخارجي',

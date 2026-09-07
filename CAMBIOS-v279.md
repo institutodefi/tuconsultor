@@ -26,7 +26,7 @@
 
 ## Normas · ISO 27701 (privacidad de la información)
 - `consultify/app/src/lib/calcEngine.js` · nueva norma `27701` (ISO 27701, J2, 55 h de apoyo), complementaria de la 27001: contratada con ella cuesta el 70 %.
-- `consultify/app/src/lib/catalogoTareas.js` · 20 tareas por modelo (92 / 92 / 116 / 148 / 55,2 h). Las del mapa común llevan lo que la 27701 añade al SGSI; las cinco de **PA19 Gestión de la privacidad** son las propias: registro de tratamientos, EIPD, derechos, brechas y transferencias.
+- `consultify/app/src/lib/catalogoTareas.js` · 20 tareas por modelo (92 / 92 / 116 / 148 / 69,6 h; Implantación = 60 % de Implicación al decimal por arriba). Las del mapa común llevan lo que la 27701 añade al SGSI; las cinco de **PA19 Gestión de la privacidad** son las propias: registro de tratamientos, EIPD, derechos, brechas y transferencias.
 - `consultify/app/src/lib/codigos.js` · abreviatura `277` en el código de proyecto.
 - `consultify/netlify/functions/catalogo-anexo.mjs`, `generar-oferta.mjs` · el anexo de la oferta incluye las tareas de la 27701 (bloque «Gestión de la privacidad»). `brevo-lead.mjs` · atributo `ISO_27701`.
 - `consultify/supabase/migracion-v117-iso-27701.sql` · **pendiente de aplicar** (tras la v116): `normas_catalogo`, 100 filas en `tareas_catalogo` y `codigo_proyecto` con `277`. Probada en seco contra producción.
@@ -37,3 +37,15 @@
 
 ## CRM · documentos sin esperar al primer proyecto
 - `portal/consultores/FichaEmpresa.jsx`, `portal/consultores/CarteraEmpresa.jsx` · la ficha de `clientes` (de la que cuelgan documentos y proyectos) se crea en cuanto hace falta si la empresa está dada de alta como cliente en el CRM: al abrir la pestaña Documentos, o al pulsar «+ Nuevo proyecto». Por CIF (o nombre), sin duplicar (`asegurarCliente`). Si la empresa no es cliente, lo dice y pide marcarla.
+
+## Sistemas de gestión · guardar y replanificar
+- `portal/consultores/Sistemas.jsx` · las horas ya no se escriben en la base a cada tecla: las celdas editadas se marcan y el botón **Guardar y replanificar** escribe el catálogo y actualiza las tareas de los proyectos abiertos (misma norma, modelo y subproceso, no hechas ni ajustadas a mano), con su agenda. Botón «Descartar».
+- **Implantación = 60 % de Implicación**, redondeado al alza al primer decimal (4,25 → 2,6): se recalcula sola al cambiar Implicación, salvo que se haya tocado a mano en esa misma tanda; botón «Implantación = 60 % Implicación» para recalcular toda la norma. La ISO 27701 sale ya con esta regla (69,6 h).
+
+## Web · propuesta de valor de los modelos
+- `web/index.html`, `web/en/index.html`, `web/consultoria-como-servicio.html`, `web/en/consultoria-como-servicio.html`, `web/servicios/consultify.html` (es/en/ar) · cada modelo dice sus horas y que hacemos todas las tareas del sistema: Relación **2 h online** por sistema al mes · Implicación **4 h online + 2 h onsite** · Compromiso **4 h online + 3 h onsite**. Sustituye «6 h/mes» y «7 h/mes de consultoría».
+- `web/estilo-base.css` · línea de horas destacada (`.model-horas`), «hacemos todas las tareas» en verde, tarjetas con sombra y realce al pasar, badge «Más elegido» en una línea.
+- **Pendiente de decidir**: el motor de precios sigue calculando Compromiso con 6 h online + 2 presenciales. Si pasa a 4 + 3, Compromiso 9001 baja de 825 a 725 €/mes y 9001+14001 de 1.377 a 1.116 (por debajo del «desde 800 €» de la web).
+
+## CRM · estructura del grupo
+- `components/OrganigramaGrupo.jsx` · cajas más pequeñas (150×44), a tamaño natural (no se estiran al ancho de la ficha), conectores redondeados, banda de color para la matriz y la ficha abierta, degradado suave y nombre completo al pasar el ratón.

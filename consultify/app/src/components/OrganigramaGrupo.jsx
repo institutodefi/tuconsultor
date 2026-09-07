@@ -8,7 +8,10 @@ import { arbolGrupo, raizDelGrupo, tamanoGrupo } from '../lib/crm.js';
 // centra sobre sus hijos.
 // ════════════════════════════════════════════════════════════════════════════
 
-const ANCHO = 196, ALTO = 58, HUECO_X = 22, HUECO_Y = 74, MARGEN = 16;
+// Cajas pequeñas: un grupo de seis empresas tiene que caber en la ficha sin
+// convertirse en un póster. El SVG se pinta a su tamaño natural (no se estira
+// al ancho de la tarjeta) y, si no cabe, se desplaza en horizontal.
+const ANCHO = 150, ALTO = 44, HUECO_X = 14, HUECO_Y = 80, MARGEN = 10;
 
 function medir(nodo) {
   if (!nodo.hijos?.length) return { ...nodo, ancho: ANCHO };
@@ -59,36 +62,46 @@ export default function OrganigramaGrupo({ empresas, empresaId, onSeleccionar, d
 
   return (
     <div className={desnudo ? '' : 'card'}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-extrabold uppercase tracking-wide text-[#9FC0CB]">Estructura del grupo</h4>
-          <p className="mt-0.5 text-xs text-[#7FA7B4]">
-            Cabecera: <strong className="text-[#EAF4F7]">{datos.raiz.nombre}</strong> · {datos.total} empresas
-          </p>
-        </div>
-        <span className="chip bg-brand-verde/15 text-brand-verdeTexto">Matriz → filiales</span>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
+          Estructura del grupo
+          <span className="ml-2 font-bold normal-case tracking-normal text-[#9FC0CB]">{datos.raiz.nombre} · {datos.total} empresas</span>
+        </p>
+        <span className="text-[10.5px] text-[#5E8494]">Pulsa una caja para abrir su ficha</span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-[#153F52] bg-[#0A2634] p-2">
         <svg
           viewBox={`0 0 ${vbW} ${vbH}`}
-          width="100%"
-          style={{ minWidth: Math.min(vbW, 620), maxHeight: 520 }}
+          width={vbW}
+          height={vbH}
+          style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }}
           role="img"
           aria-label={`Organigrama del grupo ${datos.raiz.nombre}`}
         >
-          {/* Conectores: salida vertical del padre, tramo horizontal, entrada al hijo */}
-          <g stroke="#1E5468" strokeWidth="1.5" fill="none">
+          <defs>
+            <linearGradient id="og-caja" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#123C4D" />
+              <stop offset="1" stopColor="#0D3242" />
+            </linearGradient>
+            <linearGradient id="og-actual" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#15505A" />
+              <stop offset="1" stopColor="#10424A" />
+            </linearGradient>
+          </defs>
+
+          {/* Conectores con esquinas suaves: del padre baja, gira y entra al hijo */}
+          <g stroke="#2B6478" strokeWidth="1.25" fill="none" strokeLinecap="round">
             {datos.nodos.filter((n) => n.padre).map((n) => {
-              const y0 = n.padre.cy + MARGEN;
-              const y1 = n.y + MARGEN;
+              const x0 = n.padre.cx + MARGEN, y0 = n.padre.cy + MARGEN;
+              const x1 = n.cx + MARGEN, y1 = n.y + MARGEN;
               const medio = y0 + (y1 - y0) / 2;
-              return (
-                <path
-                  key={`l-${n.id}`}
-                  d={`M ${n.padre.cx + MARGEN} ${y0} V ${medio} H ${n.cx + MARGEN} V ${y1}`}
-                />
-              );
+              const r = Math.min(8, Math.abs(x1 - x0) / 2);
+              const dir = x1 > x0 ? 1 : -1;
+              const d = Math.abs(x1 - x0) < 1
+                ? `M ${x0} ${y0} V ${y1}`
+                : `M ${x0} ${y0} V ${medio - r} Q ${x0} ${medio} ${x0 + dir * r} ${medio} H ${x1 - dir * r} Q ${x1} ${medio} ${x1} ${medio + r} V ${y1}`;
+              return <path key={`l-${n.id}`} d={d} />;
             })}
           </g>
 
@@ -103,35 +116,33 @@ export default function OrganigramaGrupo({ empresas, empresaId, onSeleccionar, d
                 onClick={() => onSeleccionar && !actual && onSeleccionar(n.id)}
                 style={{ cursor: actual ? 'default' : 'pointer' }}
               >
+                <title>{`${n.nombre}${n.cif ? ` · ${n.cif}` : ''}${esRaiz ? ' · matriz' : ''}`}</title>
                 <rect
-                  width={ANCHO} height={ALTO} rx="12"
-                  fill={actual ? '#12454A' : '#0D3242'}
-                  stroke={actual ? '#1FA1A6' : esRaiz ? '#F99001' : '#1E5468'}
-                  strokeWidth={actual ? 2 : 1.5}
+                  width={ANCHO} height={ALTO} rx="9"
+                  fill={actual ? 'url(#og-actual)' : 'url(#og-caja)'}
+                  stroke={actual ? '#4FD9DE' : esRaiz ? '#F99001' : '#22566A'}
+                  strokeWidth={actual ? 1.5 : 1}
                 />
-                <text x="14" y="23" fontSize="12.5" fontWeight="700" fill="#EAF4F7">
-                  {recortar(n.nombre, 24)}
-                </text>
-                <text x="14" y="41" fontSize="10.5" fill="#7FA7B4">
-                  {n.cif || 'sin CIF'}
-                  {n.es_proveedor ? ' · proveedor' : ''}
-                </text>
-                {esRaiz && (
-                  <text x={ANCHO - 12} y="16" fontSize="8.5" fontWeight="800" fill="#F99001" textAnchor="end">
-                    MATRIZ
-                  </text>
+                {/* Banda de color a la izquierda: naranja la matriz, verde la ficha abierta */}
+                {(esRaiz || actual) && (
+                  <rect x="0" y="0" width="4" height={ALTO} rx="2" fill={actual ? '#4FD9DE' : '#F99001'} />
                 )}
+                <text x="12" y="18" fontSize="11" fontWeight="700" fill="#EAF4F7">
+                  {recortar(n.nombre, 19)}
+                </text>
+                <text x="12" y="33" fontSize="9" fill="#7FA7B4">
+                  {esRaiz ? 'Matriz' : 'Filial'}{n.cif ? ` · ${n.cif}` : ''}{n.es_proveedor ? ' · proveedor' : ''}
+                </text>
                 {actual && (
-                  <text x={ANCHO - 12} y={ALTO - 10} fontSize="8.5" fontWeight="800" fill="#4FD9DE" textAnchor="end">
-                    ESTA FICHA
-                  </text>
+                  <circle cx={ANCHO - 11} cy="11" r="3.5" fill="#4FD9DE">
+                    <title>Esta ficha</title>
+                  </circle>
                 )}
               </g>
             );
           })}
         </svg>
       </div>
-      <p className="mt-2 text-[11px] text-[#7FA7B4]">Pulsa cualquier caja para abrir esa ficha.</p>
     </div>
   );
 }
