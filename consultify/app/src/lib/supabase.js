@@ -64,7 +64,7 @@ export const demoDB = {
   // Lo justo para que Control de horas y las agendas enseñen algo sin base
   // de datos: dos proyectos vivos, Carlota en los dos, Irene en uno.
   proyectos_cliente: [
-    { id: 'pc1', cliente_id: 'cl1', codigo: 'INOR-2026-REL-9-14', nombre: 'Industrias Norte · 9001 + 14001 · Relación', normas: ['9001','14001'], modelo: 'Relación', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', fecha_limite: '2026-11-15', meses_estimados: 12, funciones: { pm_tool: true, datos_cliente: true, procesos: ['PE1'] } },
+    { id: 'pc1', cliente_id: 'cl1', codigo: 'INOR-2026-REL-9-14', nombre: 'Industrias Norte · 9001 + 14001 · Relación', normas: ['9001','14001'], modelo: 'Relación', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', fecha_limite: '2026-11-15', meses_estimados: 12, funciones: { pm_tool: true, datos_cliente: true, procesos: ['PE1'] }, reparto_niveles: { J1: 0, J2: 20, J3: 80, Senior: 0 }, fecha_auditoria_externa: '2026-11-20' },
     { id: 'pc2', cliente_id: 'cl2', codigo: 'TSEC-2026-IMP-27', nombre: 'TechSecure · 27001 · Implicación', normas: ['27001'], modelo: 'Implicación', estado: 'activo', fecha_inicio: '2026-04-01', fecha_fin: '2027-03-31', meses_estimados: 12 },
   ],
   proyecto_equipo: [

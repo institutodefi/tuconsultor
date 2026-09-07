@@ -38,6 +38,7 @@ export default function DashboardProyectos() {
   const [tareas, setTareas] = useState([]);
   const [consultores, setConsultores] = useState([]);
   const [sesiones, setSesiones] = useState([]);
+  const [equipo, setEquipo] = useState([]);       // proyecto_equipo: para repartir lo que falta por persona
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState('activos');
   const [vistaPlan, setVistaPlan] = useState('proyectos');   // proyectos | meses
@@ -50,8 +51,9 @@ export default function DashboardProyectos() {
       listTable('cliente_tareas').catch(() => []),
       listTable('consultores').catch(() => []),
       listTable('tarea_sesiones').catch(() => []),
-    ]).then(([p, c, t, co, se]) => {
-      setProyectos(p || []); setClientes(c || []); setTareas(t || []); setConsultores(co || []); setSesiones(se || []);
+      listTable('proyecto_equipo').catch(() => []),
+    ]).then(([p, c, t, co, se, eq]) => {
+      setProyectos(p || []); setClientes(c || []); setTareas(t || []); setConsultores(co || []); setSesiones(se || []); setEquipo(eq || []);
     }).finally(() => setCargando(false));
   }, []);
 
@@ -121,7 +123,9 @@ export default function DashboardProyectos() {
   // Lo comprometido menos lo hecho y lo ya en agenda, prorrateado entre hoy y
   // la fecha estimada de certificación de cada proyecto.
   const hoyISO = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
-  const plan = useMemo(() => planCartera(proyectos, tareas, sesiones, hoyISO), [proyectos, tareas, sesiones, hoyISO]);
+  // Por persona: según sus horas asignadas en el equipo o, si no, el reparto
+  // por nivel de la oferta (J1 80 % · Senior 20 %…). `consultores` trae el nivel.
+  const plan = useMemo(() => planCartera(proyectos, tareas, sesiones, hoyISO, equipo, consultores), [proyectos, tareas, sesiones, hoyISO, equipo, consultores]);
   const nombreDe = (p) => p.nombre || p.codigo || clientes.find((c) => String(c.id) === String(p.cliente_id))?.empresa || '—';
   const h1 = (n) => (Math.round((Number(n) || 0) * 10) / 10).toLocaleString('es-ES');
 
@@ -255,6 +259,14 @@ export default function DashboardProyectos() {
                       {abierto && (
                         <tr>
                           <td colSpan={8} className="pb-3 pt-1">
+                            {f.porPersona && f.porPersona.length > 0 && (
+                              <p className="mb-1.5 text-[11.5px] text-[#CFE3E9]">
+                                <b className="text-[#9FC0CB]">Por persona:</b>{' '}
+                                {f.porPersona.map((x) => `${x.nombre}${x.nivel ? ` (${x.nivel})` : ''} ${h1(x.horas)} h${x.porMes != null ? ` · ${h1(x.porMes)} h/mes` : ''}`).join(' · ')}
+                                {!p.reparto_niveles && !equipo.some((e) => String(e.proyecto_id) === String(p.id) && Number(e.horas_asignadas) > 0) && <span className="text-[#7FA7B4]"> · a partes iguales (sin reparto en la oferta ni horas asignadas)</span>}
+                              </p>
+                            )}
+                            {f.porPersona && f.porPersona.length === 0 && <p className="mb-1.5 text-[11.5px] text-amber-200">Sin equipo asignado: nadie tiene estas horas.</p>}
                             {f.meses.length === 0 ? (
                               <p className="text-[11.5px] text-[#7FA7B4]">Sin fecha de certificación no hay meses que prorratear: ponla en la ficha del proyecto.</p>
                             ) : (

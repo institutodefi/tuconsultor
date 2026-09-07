@@ -62,5 +62,21 @@ ok(c.total.sinPlanificar === 42 + 49, `total sin planificar 42 + 49 = ${c.total.
 ok(c.meses.length === 4 && c.meses[0].mes === '2026-09', `meses de la cartera sep–dic: ${c.meses.map((x) => x.etq).join(', ')}`);
 ok(suma(c.meses, 'horas') === 91, `la suma mensual de la cartera cuadra (${suma(c.meses, 'horas')})`);
 
+
+console.log('\n── Por persona (equipo + reparto de la oferta) ──');
+{
+  const P = await import(L + 'planHoras.js');
+  const pr = { id: 'cece', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2027-01-02', fecha_limite: '2026-12-10', reparto_niveles: { J1: 90, Senior: 10 } };
+  const tareas = [{ id: 't1', proyecto_id: 'cece', horas: 400 }, { id: 't2', proyecto_id: 'cece', horas: 72 }];
+  const equipo = [{ proyecto_id: 'cece', perfil_id: 'laura', papel: 'consultor' }, { proyecto_id: 'cece', perfil_id: 'fatima', papel: 'responsable' }];
+  const perfiles = [{ id: 'laura', nombre: 'Laura', apellidos: 'Vargas', nivel: 'J1' }, { id: 'fatima', nombre: 'Fátima', nivel: 'Senior' }];
+  const r = P.planHastaCertificacion(pr, tareas, [], '2026-09-07', equipo, perfiles);
+  ok(r.porPersona.length === 2 && r.porPersona[0].nombre === 'Laura Vargas' && r.porPersona[0].horas === 424.8 && r.porPersona[1].horas === 47.2, `sin planificar por persona según la oferta: ${r.porPersona.map((x) => `${x.nombre} ${x.horas} h`).join(' · ')}`);
+  ok(r.porPersona[0].porMes > 0 && Math.abs(r.porPersona[0].porMes + r.porPersona[1].porMes - r.porMes) < 0.3, `el ritmo por persona suma el del proyecto (${r.porPersona[0].porMes} + ${r.porPersona[1].porMes} ≈ ${r.porMes})`);
+  const r2 = P.planHastaCertificacion(pr, tareas, [], '2026-09-07', [{ ...equipo[0], horas_asignadas: 300 }, { ...equipo[1], horas_asignadas: 100 }], perfiles);
+  ok(r2.porPersona[0].pct === 75 && r2.porPersona[1].pct === 25, 'las horas asignadas en el equipo mandan sobre el reparto');
+  ok(P.planHastaCertificacion(pr, tareas, [], '2026-09-07').porPersona === null, 'sin equipo cargado no se inventa nada (null)');
+}
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

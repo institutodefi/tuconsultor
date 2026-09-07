@@ -7,7 +7,7 @@ import path from 'node:path';
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const L = path.join(AQUI, '..', 'consultify', 'app', 'src', 'lib') + '/';
 const J = await import(L + 'jornada.js');
-const { controlHoras, cuotasEquipo, finProyecto, mesesEntre } = await import(L + 'controlHoras.js');
+const { controlHoras, cuotasEquipo, finProyecto, mesesEntre, horasSugeridasEquipo } = await import(L + 'controlHoras.js');
 
 let fallos = 0;
 const ok = (c, msg) => { console.log(`${c ? '✓' : '✗ FALLO'} ${msg}`); if (!c) fallos += 1; };
@@ -126,6 +126,45 @@ console.log('── 6 · Proyecto sin equipo ──');
   const r2 = controlHoras({ consultores, proyectos: [{ id: 'PX', codigo: 'X', nombre: 'Sin nadie', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31' }], equipo: [], tareas: [{ id: 'q', proyecto_id: 'PX', horas: 40 }], sesiones: [], internas: [], festivos: [], vacaciones: [], hoy: '2026-09-04' });
   ok(r2.sinEquipo.length === 1 && r2.sinEquipo[0].horas === 40, 'un proyecto sin equipo se avisa aparte con sus horas');
   ok(r2.consultores.every((c) => c.proyectos.length === 0), 'y no cuenta en nadie');
+}
+
+
+console.log('\n── 7 · Reparto por nivel (el caso CECE: Laura J1 consultora + Fátima Senior responsable) ──');
+{
+  const eq = [{ perfil_id: 'laura', papel: 'consultor', horas_asignadas: 0, nivel: 'J1' }, { perfil_id: 'fatima', papel: 'responsable', horas_asignadas: 0, nivel: 'Senior' }];
+  const sin = cuotasEquipo(eq);
+  ok(cerca(sin.laura, 1, 0.001) && !sin.fatima, 'sin reparto: la consultora se lleva el 100 % (lo de antes)');
+  const con = cuotasEquipo(eq, { J1: 90, Senior: 10 });
+  ok(cerca(con.laura, 0.9, 0.001) && cerca(con.fatima, 0.1, 0.001), `con J1 90 / Senior 10: Laura 90 %, Fátima 10 % (${con.laura}, ${con.fatima})`);
+  const h = horasSugeridasEquipo(472, { J1: 90, Senior: 10 }, eq);
+  ok(h.horas.laura === 424.8 && h.horas.fatima === 47.2 && h.sinCubrir.length === 0, `472 h → Laura 424,8 h y Fátima 47,2 h (${h.horas.laura}, ${h.horas.fatima})`);
+  // Nivel previsto sin nadie: J2 80 / Senior 20 con equipo J1 + Senior → todo al Senior? No: la parte del J2 se
+  // reparte entre los niveles con gente en proporción; aquí solo hay Senior con pct → Senior 100 %.
+  const h2 = horasSugeridasEquipo(100, { J2: 80, Senior: 20 }, eq);
+  ok(h2.horas.fatima === 100 && !h2.horas.laura && h2.sinCubrir.join() === 'J2', `nivel previsto sin persona: su parte va a los niveles cubiertos (${JSON.stringify(h2.horas)}, sin cubrir ${h2.sinCubrir})`);
+  // Dos personas del mismo nivel se reparten la parte del nivel.
+  const eq3 = [...eq, { perfil_id: 'pablo', papel: 'consultor', horas_asignadas: 0, nivel: 'J1' }];
+  const h3 = horasSugeridasEquipo(100, { J1: 80, Senior: 20 }, eq3);
+  ok(h3.horas.laura === 40 && h3.horas.pablo === 40 && h3.horas.fatima === 20, `dos J1 se parten el 80 % (${JSON.stringify(h3.horas)})`);
+  // Nadie del equipo tiene nivel previsto → partes iguales entre ejecutores y todos los niveles sin cubrir.
+  const h4 = horasSugeridasEquipo(100, { J3: 80, Senior: 20 }, [{ perfil_id: 'a', papel: 'consultor', horas_asignadas: 0, nivel: 'J1' }, { perfil_id: 'b', papel: 'consultor', horas_asignadas: 0, nivel: 'J2' }]);
+  ok(h4.horas.a === 50 && h4.horas.b === 50 && h4.sinCubrir.join() === 'J3,Senior', 'sin nadie de los niveles previstos: a partes iguales y se avisa');
+  // horas_asignadas manda sobre el reparto por nivel.
+  const q = cuotasEquipo([{ perfil_id: 'a', papel: 'consultor', horas_asignadas: 30, nivel: 'J1' }, { perfil_id: 'b', papel: 'responsable', horas_asignadas: 10, nivel: 'Senior' }], { J1: 90, Senior: 10 });
+  ok(cerca(q.a, 0.75, 0.001) && cerca(q.b, 0.25, 0.001), 'horas asignadas mandan sobre el reparto por nivel');
+  // Y en controlHoras completo: el reparto viene en proyectos_cliente.reparto_niveles y el nivel de perfiles.
+  const r = controlHoras({
+    hoy: '2026-09-07',
+    consultores: [{ id: 'laura', nombre: 'Laura', nivel: 'J1', activo: true, pct_jornada: 100 }, { id: 'fatima', nombre: 'Fátima', nivel: 'Senior', activo: true, pct_jornada: 100 }],
+    proyectos: [{ id: 'cece', codigo: 'CECE', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2027-01-02', normas: ['9001', '14001', '27001'], reparto_niveles: { J1: 90, Senior: 10 }, fecha_limite: '2026-12-10' }],
+    equipo: [{ proyecto_id: 'cece', perfil_id: 'laura', papel: 'consultor' }, { proyecto_id: 'cece', perfil_id: 'fatima', papel: 'responsable' }],
+    tareas: [{ id: 't1', proyecto_id: 'cece', horas: 259 }, { id: 't2', proyecto_id: 'cece', horas: 78 }, { id: 't3', proyecto_id: 'cece', horas: 135 }],
+    sesiones: [], internas: [], clientes: [], empresas: [], festivos: [], vacaciones: [],
+  });
+  const laura = r.consultores.find((f) => f.id === 'laura').proyectos[0];
+  const fatima = r.consultores.find((f) => f.id === 'fatima').proyectos[0];
+  ok(laura.comprometidas === 424.8 && fatima.comprometidas === 47.2, `en el control de horas: Laura ${laura.comprometidas} h, Fátima ${fatima.comprometidas} h`);
+  ok(/por nivel \(J1\)/.test(laura.reparto) && laura.auditoria === '2026-12-10', `se explica el reparto (${laura.reparto}) y sale la auditoría prevista (${laura.auditoria})`);
 }
 
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');

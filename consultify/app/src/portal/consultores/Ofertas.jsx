@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listAll, updateRow, deleteRow , explicarErrorBd } from '../../lib/data.js';
 import { LEYENDA_IMPUESTOS } from '../../lib/impuestos.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR , pagoAdelantado } from '../../lib/calcEngine.js';
+import { NORMA_BY_ID, NORMAS, MODELO_IDS, calcular, fmtEUR , pagoAdelantado, repartoPorDefecto } from '../../lib/calcEngine.js';
 import { precioClienteAntiguo } from '../../lib/reglasComerciales.js';
 import { COMPLEJIDADES } from '../../lib/proyecto.js';
 import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
@@ -155,7 +155,8 @@ export default function Ofertas() {
           pago_adelantado: !!r.pago_adelantado,
           // Reparto manual de la carga por nivel (v119): el servidor calcula
           // con el mismo reparto que se guardó.
-          reparto_niveles: r.reparto_niveles || null,
+          // Las antiguas sin reparto toman el de su dificultad (la web sigue en automático).
+          reparto_niveles: r.reparto_niveles || (r.canal === 'web' ? null : repartoPorDefecto(r.complejidad || 'media')),
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),

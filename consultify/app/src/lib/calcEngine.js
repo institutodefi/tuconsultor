@@ -802,6 +802,30 @@ export function calcular(normaIds, modeloId, opts = {}) {
 
 export const NIVELES = ['J1', 'J2', 'J3', 'Senior'];
 
+// ── Dedicación estimada por dificultad ──
+// Toda oferta lleva un reparto de la carga por nivel. Si nadie lo ajusta a
+// mano, sale de la dificultad del proyecto: quien ejecuta (80 %) y un Senior
+// que supervisa (20 %). La dificultad se sugiere por las normas (la de mayor
+// nivel manda) y se puede cambiar. Este reparto viaja al proyecto y de ahí a
+// las horas de cada persona del equipo (control de horas y programación).
+export const DIFICULTADES = ['baja', 'media', 'alta'];
+export const DIFICULTAD_ETQ = { baja: 'Baja · J1 80 % + Senior 20 %', media: 'Media · J2 80 % + Senior 20 %', alta: 'Alta · J3 80 % + Senior 20 %' };
+export const REPARTO_POR_DIFICULTAD = {
+  baja:  { J1: 80, J2: 0,  J3: 0,  Senior: 20 },
+  media: { J1: 0,  J2: 80, J3: 0,  Senior: 20 },
+  alta:  { J1: 0,  J2: 0,  J3: 80, Senior: 20 },
+};
+export const repartoPorDefecto = (dificultad) => ({ ...(REPARTO_POR_DIFICULTAD[dificultad] || REPARTO_POR_DIFICULTAD.media) });
+/** Dificultad sugerida por las normas: manda la de mayor nivel (J1 → baja, J2 → media, J3/Senior → alta). */
+export function dificultadSugerida(normaIds = []) {
+  const niveles = (normaIds || []).map((id) => NORMA_BY_ID[id]?.nivel).filter(Boolean);
+  if (niveles.some((n) => n === 'J3' || n === 'Senior')) return 'alta';
+  if (niveles.some((n) => n === 'J2')) return 'media';
+  return niveles.length ? 'baja' : 'media';
+}
+/** El reparto que se aplica: el manual si es válido; si no, el de la dificultad. */
+export const repartoEfectivo = (repartoManual, dificultad) => normalizarReparto(repartoManual) || repartoPorDefecto(dificultad);
+
 /**
  * Normaliza un reparto {J1, J2, J3, Senior} en porcentajes. Devuelve null si
  * no hay reparto o no suma 100 (con un margen de medio punto): un reparto que

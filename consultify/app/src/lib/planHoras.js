@@ -11,6 +11,8 @@
 // Funciones puras: se prueban desde Node (scripts/test-plan-horas.mjs).
 // ════════════════════════════════════════════════════════════════════════════
 
+import { horasSugeridasEquipo, equipoDe } from './controlHoras.js';
+
 const S = (v) => String(v ?? '');
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -69,7 +71,7 @@ export function prorratearPorMeses(horas, desde, hasta) {
  * @param sesiones  tarea_sesiones (todas: se filtran por las tareas del proyecto)
  * @param hoy       ISO
  */
-export function planHastaCertificacion(proyecto, tareas = [], sesiones = [], hoy) {
+export function planHastaCertificacion(proyecto, tareas = [], sesiones = [], hoy, equipo = null, perfiles = []) {
   const pid = S(proyecto?.id);
   const mias = tareas.filter((t) => S(t.proyecto_id) === pid && !['cancelada', 'descartada'].includes(S(t.estado).toLowerCase()));
   const idsTareas = new Set(mias.map((t) => S(t.id)));
@@ -106,12 +108,31 @@ export function planHastaCertificacion(proyecto, tareas = [], sesiones = [], hoy
     retraso: dias != null && dias < 0 && sinPlanificar > 0,
     sinFecha: !objetivo,
     avancePct: comprometidas > 0 ? Math.min(100, Math.round((ejecutadas / comprometidas) * 100)) : null,
+    // Lo que queda por planificar, por persona del equipo: según sus horas
+    // asignadas o, si no las tiene, el reparto por nivel de la oferta.
+    porPersona: porPersonaDe(proyecto, equipo, perfiles, sinPlanificar, dias, mesesFrac),
   };
 }
 
+function porPersonaDe(proyecto, equipo, perfiles, horas, dias, mesesFrac) {
+  if (!Array.isArray(equipo)) return null;
+  const miembros = equipoDe(proyecto, equipo, perfiles);
+  if (!miembros.length) return [];
+  const totalAsig = miembros.reduce((a, m) => a + num(m.horas_asignadas), 0);
+  let fracciones;
+  if (totalAsig > 0) fracciones = Object.fromEntries(miembros.filter((m) => m.horas_asignadas > 0).map((m) => [m.perfil_id, m.horas_asignadas / totalAsig]));
+  else fracciones = horasSugeridasEquipo(1, proyecto?.reparto_niveles, miembros).fracciones;
+  return miembros.filter((m) => fracciones[m.perfil_id] > 0).map((m) => {
+    const p = perfiles.find((x) => S(x.id) === m.perfil_id);
+    const h = r1(horas * fracciones[m.perfil_id]);
+    return { perfil_id: m.perfil_id, nombre: p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() : m.perfil_id, nivel: m.nivel || null, papel: m.papel, pct: Math.round(fracciones[m.perfil_id] * 100), horas: h,
+      porMes: dias == null ? null : dias <= 0 ? h : r1(h / Math.max(mesesFrac, 0.5)) };
+  }).sort((a, b) => b.horas - a.horas);
+}
+
 /** Todos los proyectos vivos, con totales y el prorrateo mensual sumado. */
-export function planCartera(proyectos = [], tareas = [], sesiones = [], hoy) {
-  const filas = proyectos.filter(proyectoVivo).map((p) => ({ proyecto: p, ...planHastaCertificacion(p, tareas, sesiones, hoy) }))
+export function planCartera(proyectos = [], tareas = [], sesiones = [], hoy, equipo = null, perfiles = []) {
+  const filas = proyectos.filter(proyectoVivo).map((p) => ({ proyecto: p, ...planHastaCertificacion(p, tareas, sesiones, hoy, equipo, perfiles) }))
     .sort((a, b) => (b.porMes || 0) - (a.porMes || 0));
   const total = filas.reduce((a, f) => ({
     comprometidas: r1(a.comprometidas + f.comprometidas), ejecutadas: r1(a.ejecutadas + f.ejecutadas),

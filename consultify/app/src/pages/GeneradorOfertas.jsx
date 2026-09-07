@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto, catalogoHorasDesdeFilas } from '../lib/calcEngine.js';
+import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto, catalogoHorasDesdeFilas, repartoPorDefecto, REPARTO_POR_DIFICULTAD } from '../lib/calcEngine.js';
 import RentabilidadOferta from '../components/RentabilidadOferta.jsx';
 import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
@@ -124,9 +124,13 @@ export default function GeneradorOfertas({ publico = false }) {
   const [complejidad, setComplejidad] = useState('media');
   const [sedes, setSedes] = useState(1);
   // Reparto de la carga por nivel (% de las horas para J1, J2, J3 y Senior).
-  // null = automático: cada norma carga en su nivel. Con reparto manual el
-  // precio sale de quién va a hacer el trabajo de verdad.
+  // null = el de la dificultad (baja J1 80 % + Senior 20 %, media J2 80 % +
+  // Senior 20 %, alta J3 80 % + Senior 20 %): toda oferta interna lleva una
+  // dedicación estimada que viaja al proyecto y a la programación. Con
+  // reparto manual se afina quién hará el trabajo. En la web (público) se
+  // mantiene el automático por norma para no mover la tarifa publicada.
   const [reparto, setReparto] = useState(null);
+  const repartoAplicado = useMemo(() => reparto || (publico ? null : repartoPorDefecto(complejidad)), [reparto, publico, complejidad]);
   const [formaPago, setFormaPago] = useState('unico');      // 'unico' | 'dos'
   // Modelos de cuota: cada mes, o el año por adelantado (12 meses de servicio
   // por 11 mensualidades). Cambia lo que se factura, no lo que se hace.
@@ -210,17 +214,17 @@ export default function GeneradorOfertas({ publico = false }) {
       aprobada_en: publico || !aprobador ? null : new Date().toISOString(),
       aprobada_nota: publico ? null : (notaAprobacion.trim() || null),
       preciosSistema: clienteAntiguo ? preciosSistema : null,
-      repartoNiveles: publico ? null : reparto,
+      repartoNiveles: repartoAplicado,
       pagoAdelantado: pagoMes === 'adelantado',
       catalogoHoras,
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
-     fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes, catalogoHoras],
+     fasesPlan, ajustes, clienteAntiguo, preciosSistema, repartoAplicado, pagoMes, catalogoHoras],
   );
   // Equipo interno: se deduce del reparto por nivel (una persona por nivel
   // con carga). No se enseña ni cambia el precio; se guarda con la oferta y
   // pasa al proyecto al abrirlo, para saber qué perfiles asignar.
-  const equipo = useMemo(() => equipoDesdeReparto(reparto || res?.rentabilidad?.repartoAuto || null), [reparto, res]);
+  const equipo = useMemo(() => equipoDesdeReparto(repartoAplicado || res?.rentabilidad?.repartoAuto || null), [repartoAplicado, res]);
   const equipoTexto = (eq) => Object.entries(eq || {}).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(' + ') || 'sin definir';
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
@@ -286,7 +290,7 @@ export default function GeneradorOfertas({ publico = false }) {
         // Todo lo que define el encargo, para poder regenerar la oferta igual
         // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
         complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
-        reparto_niveles: normalizarReparto(reparto),
+        reparto_niveles: normalizarReparto(repartoAplicado),
         fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
         fecha_fin: fechaFin || null,
         fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
@@ -362,7 +366,7 @@ export default function GeneradorOfertas({ publico = false }) {
           fecha_fin: fechaFin || null,
           fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
-          repartoNiveles: normalizarReparto(reparto),
+          repartoNiveles: normalizarReparto(repartoAplicado),
           ajustes, fasesPlan, emisora_id: emisora,
           notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
@@ -700,22 +704,22 @@ export default function GeneradorOfertas({ publico = false }) {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">
                       Reparto de la carga por nivel
-                      <span className={`ml-2 chip !px-1.5 !py-0 text-[10px] ${reparto ? 'bg-brand-orange/15 text-brand-orange' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{reparto ? 'manual' : 'automático'}</span>
+                      <span className={`ml-2 chip !px-1.5 !py-0 text-[10px] ${reparto ? 'bg-brand-orange/15 text-brand-orange' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{reparto ? 'manual' : publico ? 'automático' : `por dificultad · ${complejidad}`}</span>
                     </p>
                     <div className="flex gap-2">
                       {!reparto && (
-                        <button type="button" onClick={() => setReparto({ ...res.rentabilidad.repartoAuto })}
+                        <button type="button" onClick={() => setReparto({ ...(repartoAplicado || res.rentabilidad.repartoAuto) })}
                           className="text-[11.5px] font-bold text-brand-orange hover:underline">Ajustar a mano</button>
                       )}
                       {reparto && (
                         <button type="button" onClick={() => setReparto(null)}
-                          className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Volver al automático</button>
+                          className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">{publico ? 'Volver al automático' : 'Volver al de la dificultad'}</button>
                       )}
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {NIVELES.map((nv) => {
-                      const pct = reparto ? (Number(reparto[nv]) || 0) : res.rentabilidad.repartoAuto[nv];
+                      const pct = reparto ? (Number(reparto[nv]) || 0) : (repartoAplicado ? (Number(repartoAplicado[nv]) || 0) : res.rentabilidad.repartoAuto[nv]);
                       const fila = res.rentabilidad.porNivel.find((x) => x.nivel === nv);
                       return (
                         <div key={nv} className="rounded-lg border border-[#153F52] bg-[#0D3242] px-2.5 py-2">
@@ -737,6 +741,11 @@ export default function GeneradorOfertas({ publico = false }) {
                       );
                     })}
                   </div>
+                  {!reparto && !publico && (
+                    <p className="mt-1.5 text-[11px] text-[#7FA7B4]">
+                      Dedicación estimada por la dificultad del proyecto ({['baja', 'media', 'alta'].map((k) => `${k}: ${Object.entries(REPARTO_POR_DIFICULTAD[k]).filter(([, v]) => v > 0).map(([nv, v]) => `${nv} ${v} %`).join(' + ')}`).join(' · ')}). Cambia la complejidad arriba o ajústalo a mano. Viaja al proyecto: de aquí salen las horas de cada persona del equipo.
+                    </p>
+                  )}
                   {reparto && (() => {
                     const suma = NIVELES.reduce((a, nv) => a + (Number(reparto[nv]) || 0), 0);
                     const ok = Math.abs(suma - 100) <= 0.5;

@@ -18,11 +18,16 @@
 //
 // ── Cómo se reparten las horas de un proyecto entre su equipo ──
 // Una tarea con `consultor_id` es de esa persona. Sin él —que es lo normal, el
-// reparto por tarea casi nunca se rellena— las horas se reparten entre quienes
-// EJECUTAN el proyecto: los miembros de `proyecto_equipo` que no son el
-// responsable (si solo hay responsable, entre todos). Si tienen
-// `horas_asignadas`, en proporción; si no, a partes iguales. Se anota en
-// `reparto` para que la pantalla diga de dónde sale la cifra.
+// reparto por tarea casi nunca se rellena— las horas se reparten así:
+//   1. si alguien del equipo tiene `horas_asignadas`, en proporción;
+//   2. si el proyecto trae reparto por nivel de la oferta («J1 80 % · Senior
+//      20 %», proyectos_cliente.reparto_niveles), cada nivel se lleva su
+//      parte, repartida entre las personas de ese nivel (el responsable
+//      incluido si su nivel está previsto);
+//   3. si no, a partes iguales entre quienes ejecutan (los que no son el
+//      responsable; si solo hay responsable, entre todos).
+// Antes solo existía la regla 3, y en un proyecto con un J1 y un Senior
+// responsable el J1 se llevaba el 100 % de las horas.
 //
 // Todo son funciones puras sobre las tablas ya cargadas: se prueban desde
 // Node sin Supabase (scripts/test-control-horas.mjs) y valen para el modo demo.
@@ -60,30 +65,81 @@ export const proyectoVivo = (p) => !ESTADOS_CERRADOS.includes(S(p?.estado).toLow
  * Equipo de un proyecto: filas de proyecto_equipo más, si no están, los
  * consultor_1_id / consultor_2_id antiguos de proyectos_cliente.
  */
-export function equipoDe(proyecto, equipo = []) {
+export function equipoDe(proyecto, equipo = [], perfiles = []) {
+  const nivelPerfil = (id) => perfiles.find((p) => S(p.id) === S(id))?.nivel || null;
   const filas = equipo.filter((e) => S(e.proyecto_id) === S(proyecto.id))
-    .map((e) => ({ perfil_id: S(e.perfil_id), papel: e.papel || 'consultor', horas_asignadas: num(e.horas_asignadas) }));
+    .map((e) => ({ perfil_id: S(e.perfil_id), papel: e.papel || 'consultor', horas_asignadas: num(e.horas_asignadas), nivel: e.nivel || nivelPerfil(e.perfil_id) }));
   for (const k of ['consultor_1_id', 'consultor_2_id']) {
     const id = proyecto[k];
-    if (id && !filas.some((f) => f.perfil_id === S(id))) filas.push({ perfil_id: S(id), papel: 'consultor', horas_asignadas: 0 });
+    if (id && !filas.some((f) => f.perfil_id === S(id))) filas.push({ perfil_id: S(id), papel: 'consultor', horas_asignadas: 0, nivel: nivelPerfil(id) });
   }
   return filas;
+}
+
+const NIVELES_ORDEN = ['J1', 'J2', 'J3', 'Senior'];
+const repartoValido = (r) => {
+  if (!r || typeof r !== 'object') return null;
+  const out = {}; let suma = 0;
+  for (const nv of NIVELES_ORDEN) { const v = Number(r[nv]) || 0; if (v < 0) return null; out[nv] = v; suma += v; }
+  return suma > 0 ? out : null;
+};
+
+/**
+ * Horas sugeridas para cada persona del equipo según el reparto por nivel
+ * de la oferta («J1 80 % · Senior 20 %»): las horas de cada nivel se reparten
+ * a partes iguales entre las personas de ese nivel. Un nivel previsto sin
+ * nadie de ese nivel en el equipo reparte su parte entre los demás niveles
+ * que sí tienen gente (en proporción) y se anota en `sinCubrir`. Si nadie
+ * del equipo tiene un nivel previsto, se reparte a partes iguales entre
+ * quienes ejecutan.
+ *
+ * @returns { fracciones: {perfil_id: 0..1}, horas: {perfil_id: h},
+ *            porNivel: {nivel: {pct, horas, personas}}, sinCubrir: [nivel] }
+ */
+export function horasSugeridasEquipo(totalHoras, reparto, miembros = []) {
+  const r = repartoValido(reparto);
+  const total = num(totalHoras);
+  const out = { fracciones: {}, horas: {}, porNivel: {}, sinCubrir: [] };
+  if (!miembros.length) return out;
+  const sumaR = r ? NIVELES_ORDEN.reduce((a, nv) => a + r[nv], 0) : 0;
+  const porNivel = {};
+  for (const m of miembros) if (m.nivel) (porNivel[m.nivel] = porNivel[m.nivel] || []).push(m.perfil_id);
+  const cubiertos = r ? NIVELES_ORDEN.filter((nv) => r[nv] > 0 && porNivel[nv]?.length) : [];
+  if (!r || !cubiertos.length) {
+    const ejecutores = miembros.filter((m) => m.papel !== 'responsable');
+    const base = ejecutores.length ? ejecutores : miembros;
+    for (const m of base) out.fracciones[m.perfil_id] = (out.fracciones[m.perfil_id] || 0) + 1 / base.length;
+    if (r) out.sinCubrir = NIVELES_ORDEN.filter((nv) => r[nv] > 0);
+  } else {
+    out.sinCubrir = NIVELES_ORDEN.filter((nv) => r[nv] > 0 && !porNivel[nv]?.length);
+    const sumaCubierta = cubiertos.reduce((a, nv) => a + r[nv], 0);
+    for (const nv of cubiertos) {
+      const frac = (r[nv] / sumaR) * (sumaR / sumaCubierta);   // su parte + la de los niveles sin gente, en proporción
+      const ids = porNivel[nv];
+      out.porNivel[nv] = { pct: Math.round(frac * 1000) / 10, horas: r1(total * frac), personas: ids.length };
+      for (const id of ids) out.fracciones[id] = (out.fracciones[id] || 0) + frac / ids.length;
+    }
+  }
+  for (const [id, f] of Object.entries(out.fracciones)) out.horas[id] = r1(total * f);
+  return out;
 }
 
 /**
  * Cuota de cada miembro sobre las horas de una tarea SIN consultor asignado.
  * Devuelve {perfil_id: fracción}. Suma 1 salvo que no haya nadie.
+ *   1. Si alguien tiene horas_asignadas, en proporción a ellas.
+ *   2. Si el proyecto tiene reparto por nivel (de la oferta), por niveles.
+ *   3. Si no, a partes iguales entre quienes ejecutan.
  */
-export function cuotasEquipo(miembros) {
+export function cuotasEquipo(miembros, reparto = null) {
   if (!miembros.length) return {};
-  const ejecutores = miembros.filter((m) => m.papel !== 'responsable');
-  const base = ejecutores.length ? ejecutores : miembros;
-  const totalAsig = base.reduce((a, m) => a + m.horas_asignadas, 0);
-  const out = {};
-  for (const m of base) {
-    out[m.perfil_id] = (out[m.perfil_id] || 0) + (totalAsig > 0 ? m.horas_asignadas / totalAsig : 1 / base.length);
+  const totalAsig = miembros.reduce((a, m) => a + m.horas_asignadas, 0);
+  if (totalAsig > 0) {
+    const out = {};
+    for (const m of miembros) if (m.horas_asignadas > 0) out[m.perfil_id] = (out[m.perfil_id] || 0) + m.horas_asignadas / totalAsig;
+    return out;
   }
-  return out;
+  return horasSugeridasEquipo(1, reparto, miembros).fracciones;
 }
 
 /**
@@ -129,8 +185,8 @@ export function controlHoras(d) {
   const equipoPorProyecto = {};
   const cuotasPorProyecto = {};
   for (const p of proyectos) {
-    equipoPorProyecto[S(p.id)] = equipoDe(p, d.equipo);
-    cuotasPorProyecto[S(p.id)] = cuotasEquipo(equipoPorProyecto[S(p.id)]);
+    equipoPorProyecto[S(p.id)] = equipoDe(p, d.equipo, d.consultores);
+    cuotasPorProyecto[S(p.id)] = cuotasEquipo(equipoPorProyecto[S(p.id)], p.reparto_niveles);
   }
   const tareasPorProyecto = {};
   for (const t of tareas) {
@@ -217,7 +273,10 @@ export function controlHoras(d) {
         ritmoPrevisto: r1(comprometidas / Math.max(1, mesesEntre(p.fecha_inicio, fin) || 1)),
         // De dónde sale la cifra de comprometidas.
         reparto: k.directas && k.directas === k.horas ? 'directo'
-          : cuota > 0 ? `${Math.round(cuota * 100)} % del proyecto` : 'sin reparto',
+          : cuota > 0 ? `${Math.round(cuota * 100)} % del proyecto${repartoValido(p.reparto_niveles) && !equipoPorProyecto[pid].some((m) => m.horas_asignadas > 0) ? ` · por nivel${miembro?.nivel ? ` (${miembro.nivel})` : ''}` : ''}` : 'sin reparto',
+        nivel: miembro?.nivel || null,
+        // Fecha prevista de la auditoría externa (certificación o renovación).
+        auditoria: p.fecha_auditoria_externa || p.fecha_certificacion || p.fecha_limite || null,
         avancePct: comprometidas > 0 ? Math.min(100, Math.round((ejecutadas / comprometidas) * 100)) : null,
       };
     }).filter(Boolean).sort((a, b) => b.cargaMensual - a.cargaMensual);

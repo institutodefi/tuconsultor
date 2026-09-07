@@ -244,6 +244,7 @@ export default function ControlHoras() {
                           <th className="py-1.5 pr-2 text-right">Pendientes</th>
                           <th className="py-1.5 pr-2 text-right">Sin programar</th>
                           <th className="py-1.5 pr-2 text-right">Fin</th>
+                          <th className="py-1.5 pr-2 text-right" title="Fecha prevista de la auditoría externa (certificación o renovación)">Auditoría</th>
                           <th className="py-1.5 pr-2 text-right">h/mes</th>
                           <th className="py-1.5 w-28">Avance</th>
                         </tr>
@@ -270,6 +271,10 @@ export default function ControlHoras() {
                               {fmtF(p.fechaFin)}
                               <span className="block text-[10px] text-[#5E8494]">{p.mesesRestantes} mes{p.mesesRestantes === 1 ? '' : 'es'}</span>
                             </td>
+                            <td className={`whitespace-nowrap py-1.5 pr-2 text-right ${p.auditoria ? 'text-[#9FC0CB]' : 'text-[#5E8494]'}`}>
+                              {p.auditoria ? fmtF(p.auditoria) : 'por fijar'}
+                              {p.auditoria && <span className="block text-[10px] text-[#5E8494]">auditoría externa</span>}
+                            </td>
                             <td className="py-1.5 pr-2 text-right">
                               <span className={`font-bold ${p.cargaMensual > p.ritmoPrevisto * 1.25 ? 'text-red-300' : 'text-[#EAF4F7]'}`}>{h1(p.cargaMensual)}</span>
                               <span className="block text-[10px] text-[#5E8494]" title="Ritmo previsto al vender: comprometidas ÷ duración">previsto {h1(p.ritmoPrevisto)}</span>
@@ -293,7 +298,7 @@ export default function ControlHoras() {
                           <td className="pt-2 pr-2 text-right text-emerald-300">{h1(c.total.ejecutadas)}</td>
                           <td className="pt-2 pr-2 text-right text-brand-orange">{h1(c.total.pendientes)}</td>
                           <td className="pt-2 pr-2 text-right">{h1(c.total.sinProgramar)}</td>
-                          <td className="pt-2 pr-2" />
+                          <td className="pt-2 pr-2" colSpan={2} />
                           <td className={`pt-2 pr-2 text-right ${c.total.cargaMensual > c.mes.produccion.capacidad ? 'text-red-300' : ''}`}>{h1(c.total.cargaMensual)}</td>
                           <td className="pt-2 text-[10.5px] font-bold text-[#9FC0CB]">de {h1(c.mes.produccion.capacidad)}</td>
                         </tr>
@@ -317,7 +322,7 @@ export default function ControlHoras() {
       })}
 
       <p className="text-[11px] text-[#5E8494]">
-        Comprometidas: horas del catálogo de las tareas del proyecto que le tocan (las de una tarea con consultor asignado son suyas; el resto se reparte entre quienes ejecutan el proyecto, en proporción a sus horas asignadas o a partes iguales).
+        Comprometidas: horas del catálogo de las tareas del proyecto que le tocan (las de una tarea con consultor asignado son suyas; el resto se reparte por las horas asignadas en el equipo, si las hay; si no, por el reparto por nivel previsto en la oferta —J1 80 %, Senior 20 %…— entre las personas de cada nivel; y si no, a partes iguales entre quienes ejecutan).
         Programadas: sesiones en agenda. Ejecutadas: sesiones cerradas. Pendientes: comprometidas − ejecutadas.
         Capacidad: días laborables del mes × horas de convenio × % de jornada, menos vacaciones.
       </p>
