@@ -69,6 +69,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/resumen-dia"
+  to = "/.netlify/functions/resumen-dia"
+  status = 200
+
+[[redirects]]
   from = "/api/generar-contrato"
   to = "/.netlify/functions/generar-contrato"
   status = 200
