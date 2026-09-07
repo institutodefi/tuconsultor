@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listTable } from '../lib/data.js';
 import { mismoModelo } from '../lib/calcEngine.js';
+import { eurES } from '../lib/formato.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PANEL DE GESTIÓN · el estado de la casa en una pantalla
@@ -18,7 +19,7 @@ import { mismoModelo } from '../lib/calcEngine.js';
 // recalcula.
 // ════════════════════════════════════════════════════════════════════════════
 
-const eur = (n) => `${Math.round(Number(n) || 0).toLocaleString('es-ES')} €`;
+const eur = (n) => eurES(n, 0);
 const h1 = (n) => `${Math.round((Number(n) || 0) * 10) / 10} h`;
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0);
 

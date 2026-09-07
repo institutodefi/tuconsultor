@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FASES, calcularFases, TARIFA_PROYECTO } from '../lib/fases.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
+import { eurES } from '../lib/formato.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CÁLCULO POR FASES · Planes de Igualdad y Diversidad
@@ -20,7 +21,7 @@ const PLAN_LABEL = {
   'diversidad-seg': 'Plan de Diversidad con seguimiento',
 };
 
-const eur = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+const eur = (n) => eurES(n, 0);
 
 export default function FasesPlanes({ planes, onTotal, onSeleccion }) {
   const activos = planes.filter((p) => FASES[p]);

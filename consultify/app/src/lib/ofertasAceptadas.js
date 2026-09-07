@@ -11,6 +11,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import { normalizarCif } from './crm.js';
+import { eurES } from './formato.js';
 
 /** Una oferta está aceptada si lo dice su estado o si ya tiene contrato firmado. */
 export function estaAceptada(oferta, contratos = []) {
@@ -83,7 +84,7 @@ export function datosDeOferta(oferta, contratos = []) {
 /** Etiqueta de una oferta en un desplegable. */
 export function etiquetaOferta(oferta, contratos = []) {
   const ct = contratoDe(oferta, contratos);
-  const eur = (n) => Number(n || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  const eur = (n) => eurES(n, 0);
   return [
     oferta.numero_oferta || 'sin número',
     oferta.empresa,

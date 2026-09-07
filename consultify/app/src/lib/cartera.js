@@ -28,6 +28,7 @@
 import { normalizarCif } from './crm.js';
 import { semaforo as semaforoProyecto, necesitaRenovacion } from './proyectos.js';
 import { etapaDe, GANADAS, PERDIDAS } from './ofertas.js';
+import { eurES } from './formato.js';
 
 /** Normaliza un nombre de empresa para comparar: sin forma jurídica ni ruido. */
 export function normalizarNombre(s) {
@@ -173,7 +174,7 @@ export function resumenCartera(r) {
 }
 
 export const fmtEur = (n) =>
-  Number(n || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  eurES(n, 0);
 
 export const fmtFecha = (f) => {
   if (!f) return '—';

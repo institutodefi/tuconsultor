@@ -25,11 +25,12 @@ import {
 } from './assets-oferta.mjs';
 // Mismos textos y misma paleta que el PPTX: fuente única.
 import {
-  RGB01, EMISOR, condiciones as condicionesComunes,
+  RGB01, EMISOR, condiciones as condicionesComunes, textoDedicacion,
   REQUISITOS_LEGALES as LEGAL_COMUN, clausulas as clausulasComunes, propuesta as propuestaComun,
   nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe,
 } from './contenido-oferta.mjs';
 import { cuadroFacturacion, mesLargo } from '../../app/src/lib/facturacion.js';
+import { eurES, numeroES } from '../../app/src/lib/formato.js';
 
 const b64 = (s) => Buffer.from(s, 'base64');
 
@@ -45,8 +46,9 @@ const A4 = [595.28, 841.89];
 const MG = U * 7;              // margen 56 pt
 const ANCHO = A4[0] - MG * 2;
 
-const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0) + ' €';
-const eur0 = (v) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v || 0) + ' €';
+// Punto de miles siempre («1.325,00 €»): Intl en es-ES no agrupa cuatro cifras.
+const eur = (v) => eurES(v, 2);
+const eur0 = (v) => eurES(v, 0);
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
 /**
@@ -148,13 +150,20 @@ export async function generarPDFOferta(r, cli, anexo) {
   // Importe protagonista, abajo
   const yImp = U * 19;
   const esWeb = r?.canal === 'web';
+  // Con pago anual por adelantado la cifra protagonista es la que se paga de
+  // una vez, no la cuota: es lo que el cliente va a ver en su banco.
+  const adelantadoPortada = esMes && r.pagoAdelantado && r.adelantado;
   cover.drawText(
-    (esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN') + (esWeb ? ' DESDE' : ''),
+    (adelantadoPortada ? 'PAGO ANUAL POR ADELANTADO' : esMes ? 'CUOTA MENSUAL' : 'INVERSIÓN') + (esWeb ? ' DESDE' : ''),
     { x: MG, y: yImp + U * 6.5, size: 8.5, font: med, color: TEAL, characterSpacing: 2 });
-  const importe = esImpl ? (r.formasPago?.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
+  const importe = adelantadoPortada ? r.adelantado.total : esImpl ? (r.formasPago?.unico?.sinIva ?? r.precioCatalogo) : r.precioCatalogo;
   cover.drawText(eur0(importe), { x: MG, y: yImp + U * 1.5, size: 44, font: bold, color: BLANCO });
   const anchoImp = bold.widthOfTextAtSize(eur0(importe), 44);
-  cover.drawText(esMes ? '/mes · sin impuestos' : 'sin impuestos', { x: MG + anchoImp + U, y: yImp + U * 1.9, size: 10, font: reg, color: rgb(0.55, 0.72, 0.78) });
+  cover.drawText(adelantadoPortada ? '/año · sin impuestos' : esMes ? '/mes · sin impuestos' : 'sin impuestos', { x: MG + anchoImp + U, y: yImp + U * 1.9, size: 10, font: reg, color: rgb(0.55, 0.72, 0.78) });
+  if (adelantadoPortada) {
+    cover.drawText(`${r.adelantado.mesesServicio} meses de servicio por ${r.adelantado.mesesCobrados} mensualidades de ${eur0(r.precioCatalogo)} · ahorro de ${eur0(r.adelantado.ahorro)}`,
+      { x: MG, y: yImp - U * 0.6, size: 9, font: reg, color: NARANJA });
+  }
   if (esImpl && r.formasPago) {
     cover.drawText(`con ${Math.round(r.formasPago.descuentoUnico * 100)} % de descuento por pago único`,
       { x: MG, y: yImp - U * 0.6, size: 9, font: reg, color: NARANJA });
@@ -253,7 +262,7 @@ export async function generarPDFOferta(r, cli, anexo) {
     ...(cli?.email && cli?.contacto ? [['Correo de contacto', cli.email]] : []),
     ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ` · ${r.meses} meses` : '')],
     ['Sistemas incluidos', String(nombresDeNormas(r).length)],
-    ['Dedicación estimada', `${r.hTotal} h`],
+    ['Dedicación comprometida', textoDedicacion(r)],
     ...(r.complejidad ? [['Complejidad', r.complejidad]] : []),
     ...(r.sedes && r.sedes > 1 ? [['Sedes o alcances', String(r.sedes)]] : []),
   ]);
@@ -520,8 +529,10 @@ export async function generarPDFOferta(r, cli, anexo) {
       p.drawText(venc, { x: MG + ANCHO - U * 2 - bold.widthOfTextAtSize(venc, 11), y: topCaja - U * 4,
         size: 11, font: bold, color: TINTA });
 
+      const hAnio = (Number(r.hTotal) || 0) * r.adelantado.mesesServicio;
       p.drawText(`Equivale a ${eur(r.precioCatalogo)}/mes durante ${r.adelantado.mesesServicio} meses`
-        + `  ·  ahorro de ${eur(r.adelantado.ahorro)} frente al pago mensual`,
+        + `  ·  ahorro de ${eur(r.adelantado.ahorro)} frente al pago mensual`
+        + (hAnio > 0 ? `  ·  ${numeroES(hAnio, null)} h comprometidas` : ''),
         { x: MG + U * 2, y: topCaja - U * 6, size: 8.5, font: reg, color: APAGADO });
 
       cursor = topCaja - altoCaja - U * 1.5;
@@ -541,7 +552,13 @@ export async function generarPDFOferta(r, cli, anexo) {
       // Antes la segunda columna era el importe CON IVA. En un presupuesto sin
       // impuestos eso no tiene sitio: se sustituye por el acumulado, que sí
       // aporta (cuánto llevas comprometido a esa fecha).
-      const hBase = 'IMPORTE', hTot = 'ACUMULADO';
+      // Horas comprometidas en cada cargo: en cuota, las del modelo cada mes;
+      // en un proyecto o una bolsa, el total repartido en proporción a lo que
+      // se factura en cada cargo. Así el cliente ve qué dedicación paga con
+      // cada factura, no solo cuánto.
+      const hBase = 'IMPORTE', hTot = 'ACUMULADO', hHoras = 'HORAS';
+      const xHoras = MG + ANCHO - U * 22;
+      p.drawText(hHoras, { x: xHoras - med.widthOfTextAtSize(hHoras, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       p.drawText(hBase, { x: MG + ANCHO - U * 13 - med.widthOfTextAtSize(hBase, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       p.drawText(hTot, { x: MG + ANCHO - med.widthOfTextAtSize(hTot, 7.5), y: cursor, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.2 });
       cursor -= U * 1.2;
@@ -552,14 +569,26 @@ export async function generarPDFOferta(r, cli, anexo) {
       // filas iguales», pero el cliente necesita ver el calendario completo:
       // qué mes empieza, qué mes acaba y cuánto lleva comprometido en cada uno.
       const filas = cuadro.filas;
+      const hComprometidas = Number(r.hTotal) || 0;
+      const horasDe = (f) => {
+        if (r.tipo === 'mes') return hComprometidas;
+        return cuadro.totalBase > 0 ? Math.round(hComprometidas * (Number(f.base || 0) / cuadro.totalBase) * 10) / 10 : 0;
+      };
+      const horasTotales = r.tipo === 'mes' ? hComprometidas * filas.length : hComprometidas;
       let acumulado = 0;
       for (const f of filas) {
         asegurar(3);
         acumulado = Math.round((acumulado + Number(f.base || 0)) * 100) / 100;
         p.drawText(mesLargo(f.mes), { x: MG, y: cursor, size: 9.5, font: reg, color: TINTA });
-        for (const l of partir(f.concepto, reg, 9.5, ANCHO - U * 27).slice(0, 1)) {
-          p.drawText(l, { x: MG + U * 13, y: cursor, size: 9.5, font: reg, color: APAGADO });
+        // El concepto cabe en su hueco: si es largo («50 % antes del inicio
+        // de las auditorías») baja un punto en vez de cortarse.
+        const anchoConcepto = xHoras - (MG + U * 13) - U * 6;
+        const tamConcepto = reg.widthOfTextAtSize(String(f.concepto || ''), 9.5) > anchoConcepto ? 8 : 9.5;
+        for (const l of partir(f.concepto, reg, tamConcepto, anchoConcepto).slice(0, 1)) {
+          p.drawText(l, { x: MG + U * 13, y: cursor, size: tamConcepto, font: reg, color: APAGADO });
         }
+        const hs = hComprometidas > 0 ? `${numeroES(horasDe(f), null)} h` : '—';
+        p.drawText(hs, { x: xHoras - reg.widthOfTextAtSize(hs, 9.5), y: cursor, size: 9.5, font: reg, color: APAGADO });
         const b = eur(f.base), t = eur(acumulado);
         p.drawText(b, { x: MG + ANCHO - U * 13 - reg.widthOfTextAtSize(b, 9.5), y: cursor, size: 9.5, font: reg, color: APAGADO });
         p.drawText(t, { x: MG + ANCHO - med.widthOfTextAtSize(t, 9.5), y: cursor, size: 9.5, font: med, color: TINTA });
@@ -568,7 +597,7 @@ export async function generarPDFOferta(r, cli, anexo) {
 
       p.drawLine({ start: { x: MG, y: cursor + U * 0.8 }, end: { x: MG + ANCHO, y: cursor + U * 0.8 }, thickness: 0.6, color: LINEA });
       cursor -= U * 0.4;
-      const tot = `${eur(cuadro.totalBase)} en total · impuestos indirectos no incluidos`;
+      const tot = `${hComprometidas > 0 ? `${numeroES(horasTotales, null)} h · ` : ''}${eur(cuadro.totalBase)} en total · impuestos indirectos no incluidos`;
       p.drawText(tot, { x: MG + ANCHO - bold.widthOfTextAtSize(tot, 10), y: cursor, size: 10, font: bold, color: TINTA });
       cursor -= U * 3;
     }

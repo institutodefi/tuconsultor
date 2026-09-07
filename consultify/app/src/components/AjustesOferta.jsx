@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { eurES } from '../lib/formato.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AJUSTES Y NOTAS DE ESTA OFERTA
@@ -24,7 +25,7 @@ const TIPOS = [
 
 const VACIO = () => ({ tipo: 'descuento', unidad: 'porcentaje', valor: '', lleva: 2, paga: 1, concepto: '', motivo: '' });
 
-const eur = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n || 0);
+const eur = (n) => eurES(n, 2);
 
 export default function AjustesOferta({ ajustes, setAjustes, notas, setNotas, notasInternas, setNotasInternas, res }) {
   const [form, setForm] = useState(VACIO());

@@ -12,6 +12,7 @@
 
 import { NORMA_BY_ID } from '../../app/src/lib/calcEngine.js';
 import { FASES } from '../../app/src/lib/fases.js';
+import { eurES } from '../../app/src/lib/formato.js';
 
 /** Paleta, en hexadecimal sin almohadilla (formato de pptxgenjs). */
 export const HEX = {
@@ -74,7 +75,7 @@ export const EMISOR = emisorDe(null);
 export function condiciones(r) {
   return [
     ...(r?.pagoAdelantado && r?.adelantado ? [
-      `Forma de pago: un único pago por adelantado de ${r.adelantado.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}, `
+      `Forma de pago: un único pago por adelantado de ${fmtEur(r.adelantado.total)}, `
       + `con vencimiento a la fecha del contrato. Cubre ${r.adelantado.mesesServicio} meses de servicio `
       + `(${r.adelantado.mesesCobrados} mensualidades).`,
     ] : []),
@@ -315,9 +316,22 @@ export function describirAjuste(a) {
   };
 }
 
-export const fmtEur = (v) =>
-  new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0) + ' €';
-export const fmtEur0 = (v) =>
-  new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v || 0) + ' €';
+// ── Dedicación comprometida, en palabras ──
+// En cuota son las horas del modelo por cada sistema más las presenciales
+// (Relación con dos sistemas: «4 h online al mes»). El total interno, con la
+// coordinación y los redondeos, no es lo que se promete al cliente.
+export function textoDedicacion(r) {
+  const d = r?.dedicacion;
+  if (d && d.mes > 0) {
+    const detalle = d.sistemas > 1 ? ` (${d.porSistema} h por sistema × ${d.sistemas})` : '';
+    return `${d.texto}${detalle}`;
+  }
+  const h = Number(r?.hTotal) || 0;
+  return r?.tipo === 'mes' ? `${h} h al mes` : `${h} h en total`;
+}
+
+// Punto de miles siempre («1.325,00 €»): Intl en es-ES no agrupa cuatro cifras.
+export const fmtEur = (v) => eurES(v, 2);
+export const fmtEur0 = (v) => eurES(v, 0);
 export const fechaLarga = () =>
   new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });

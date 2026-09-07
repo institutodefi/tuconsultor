@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../../lib/impuestos.js';
+import { eurES } from '../../lib/formato.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MIS PROPUESTAS · el cliente acepta o rechaza
@@ -13,7 +14,7 @@ import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../../lib/impuestos.js'
 // aceptar, la decisión deja de ser libre.
 // ════════════════════════════════════════════════════════════════════════════
 
-const eur = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
+const eur = (n) => eurES(n, 0);
 
 const ESTADO = {
   emitida:   { etq: 'Pendiente de tu respuesta', tono: 'bg-brand-orange/15 text-brand-orange' },
