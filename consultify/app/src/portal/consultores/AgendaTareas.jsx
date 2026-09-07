@@ -5,6 +5,8 @@ import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import SesionesTarea from './SesionesTarea.jsx';
 import { getTareasInternas, TIPO_BY_ID } from '../../lib/agenda.js';
+import { tituloTarea } from '../../lib/zonaCliente.js';
+import { empresaDeCliente } from '../../lib/cuentaClientePuro.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AGENDA · la otra cara del planificador
@@ -46,7 +48,7 @@ export default function AgendaTareas() {
   const [desplaz, setDesplaz] = useState(0);
 
   const cargar = useCallback(async () => {
-    const [t, c, p, eq, ses, ct, pf, ti] = await Promise.all([
+    const [t, c, p, eq, ses, ct, pf, ti, cls, emps] = await Promise.all([
       listTable('tareas_programadas').catch(() => []),
       listTable('proyecto_contextos').catch(() => []),
       listTable('proyectos_cliente').catch(() => []),
@@ -60,6 +62,10 @@ export default function AgendaTareas() {
       // Tareas internas (gestión, procesos internos): su tiempo es jornada
       // igual, y sin ellas la agenda del equipo enseña solo el 70 %.
       getTareasInternas().catch(() => []),
+      // Para decir de quién es cada tarea por su nombre comercial (CECE), no
+      // por la razón social entera.
+      listTable('clientes').catch(() => []),
+      listTable('empresas').catch(() => []),
     ]);
 
     // ── La agenda del equipo, acotada a lo propio ──
@@ -89,7 +95,14 @@ export default function AgendaTareas() {
     const idsCT = new Set((ct || [])
       .filter((x) => idsVisibles.has(String(x.proyecto_id)))
       .map((x) => String(x.id)));
-    const porTarea = Object.fromEntries((ct || []).map((x) => [String(x.id), x]));
+    const clientePorProyecto = Object.fromEntries((p || []).map((x) => [String(x.id), (cls || []).find((k) => String(k.id) === String(x.cliente_id)) || null]));
+    const nombreComercial = (pid) => {
+      const cl = clientePorProyecto[String(pid)]; if (!cl) return '';
+      const e = empresaDeCliente(cl, emps || []);
+      return e?.nombre_comercial?.trim() || cl.nombre_comercial?.trim() || cl.empresa || '';
+    };
+    // El título sin la razón social delante (volcados antiguos) y el cliente aparte.
+    const porTarea = Object.fromEntries((ct || []).map((x) => [String(x.id), { ...x, titulo: tituloTarea(x), cliente: nombreComercial(x.proyecto_id) }]));
     // Internas: dirección ve las de todo el mundo; consultoría, las suyas.
     const porInterna = Object.fromEntries((ti || [])
       .filter((x) => verTodo || String(x.consultor_id) === String(user?.id))
@@ -281,7 +294,7 @@ export default function AgendaTareas() {
       </span>
       <span className="whitespace-nowrap text-[10.5px] font-bold text-[#7FA7B4]">{s.horas} h</span>
       {s.tarea?.codigo && (
-        <code className="text-[11px] font-extrabold tracking-wide text-brand-verdeTexto">{s.tarea.codigo}</code>
+        <code className="whitespace-nowrap text-[11px] font-extrabold tracking-wide text-brand-verdeTexto">{s.tarea.cliente ? `${s.tarea.cliente} · ` : ''}{s.tarea.codigo}</code>
       )}
       <button onClick={() => s.tarea && setTareaAbierta(s.tarea)}
         disabled={!s.tarea}
@@ -424,7 +437,7 @@ export default function AgendaTareas() {
                             {String(s.hora_inicio).slice(0, 5)}–{String(s.hora_fin).slice(0, 5)}
                           </span>
                           <span className="block truncate text-[11.5px] text-[#EAF4F7]">
-                            {s.tarea?.codigo ? `${s.tarea.codigo} · ` : ''}{s.tarea?.titulo || 'Tarea'}
+                            {s.tarea?.cliente ? `${s.tarea.cliente} · ` : ''}{s.tarea?.codigo ? `${s.tarea.codigo} · ` : ''}{s.tarea?.titulo || 'Tarea'}
                           </span>
                         </button>
                       ))}
@@ -473,7 +486,7 @@ export default function AgendaTareas() {
                             {hs > 8 && <span className="mb-0.5 block text-center text-[9.5px] font-extrabold text-red-300">{hs} h</span>}
                             {ss.map((s) => (
                               <button key={s.id} onClick={() => s.tarea && setTareaAbierta(s.tarea)}
-                                title={`${s.tarea?.titulo || ''} · ${s.horas} h`}
+                                title={`${s.tarea?.cliente ? `${s.tarea.cliente} · ` : ''}${s.tarea?.codigo ? `${s.tarea.codigo} · ` : ''}${s.tarea?.titulo || ''} · ${s.horas} h`}
                                 className={`mb-1 block w-full rounded-md px-1.5 py-1 text-left transition hover:brightness-125 ${
                                   s.estado === 'hecha' ? 'bg-emerald-500/20' : 'bg-brand-orange/20'}`}>
                                 <span className="block text-[10px] font-extrabold text-[#EAF4F7]">{String(s.hora_inicio).slice(0, 5)}</span>
