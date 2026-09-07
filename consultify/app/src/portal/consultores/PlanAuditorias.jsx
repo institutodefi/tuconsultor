@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import { proximaAuditoriaDeCertificado, diasHasta, semaforoDias, fmt, TONO, aISO, DIAS_AMBAR, DIAS_ROJO } from '../../lib/auditorias.js';
 import { NORMA_BY_ID } from '../../lib/calcEngine.js';
+import ConectorIACertificados from '../../components/ConectorIACertificados.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICACIÓN DE AUDITORÍAS EXTERNAS
@@ -144,6 +145,14 @@ export default function PlanAuditorias() {
         <p className="rounded-xl border border-dashed border-amber-300/50 bg-amber-400/10 px-3 py-2 text-[12.5px] text-amber-100">
           Falta aplicar la migración v118 en la base de datos: sin la tabla de certificados solo se ven las fechas programadas en los proyectos.
         </p>
+      )}
+
+      {/* La IA lee los certificados de los documentos del cliente y propone las
+          filas; el equipo las revisa y guarda. */}
+      {puedeEditar && d.certs !== null && (
+        <ConectorIACertificados clientes={d.clientes || []}
+          nombreCliente={(c) => { const e = c?.cif ? (d.empresas || []).find((x) => S(x.cif).toUpperCase().replace(/[\s.-]/g, '') === S(c.cif).toUpperCase().replace(/[\s.-]/g, '')) : null; return e?.nombre_comercial || e?.nombre || c?.empresa || '—'; }}
+          onGuardado={cargar} />
       )}
 
       <div className="card">

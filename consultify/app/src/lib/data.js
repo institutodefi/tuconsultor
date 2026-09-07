@@ -12,7 +12,7 @@ function demo() {
     cliente_tareas: demoClone('cliente_tareas'), tarea_sesiones: demoClone('tarea_sesiones'),
     // Certificados (v118) con dos de muestra; documentos vacíos pero con la
     // clave presente para que un alta no reviente.
-    cliente_certificados: demoClone('cliente_certificados'), cliente_documentos: [],
+    cliente_certificados: demoClone('cliente_certificados'), cliente_documentos: demoClone('cliente_documentos'), documento_notas: [],
     reglas_comerciales: [],
     versiones: [],
     registro_accesos: [],
