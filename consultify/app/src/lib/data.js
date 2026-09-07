@@ -153,6 +153,13 @@ export async function listTable(table) {
 // pierde porque un campo secundario traiga algo que la tabla no conoce: se
 // normaliza a algo válido y el alta sale adelante.
 const NORMALIZAR = {
+  // En la base `horas` es una columna generada (hora_fin − hora_inicio) y no
+  // se envía; en demo no hay quien la calcule, así que se calcula aquí.
+  tarea_sesiones: (r) => {
+    if (!DEMO || r.horas != null || !r.hora_inicio || !r.hora_fin) return r;
+    const m = (t) => { const [h, mi] = String(t).split(':').map(Number); return h * 60 + (mi || 0); };
+    return { ...r, horas: Math.max(0, Math.round(((m(r.hora_fin) - m(r.hora_inicio)) / 60) * 100) / 100) };
+  },
   presupuestos: (r) => {
     const out = { ...r };
     const TIPOS = ['mes', 'bolsa', 'proyecto'];

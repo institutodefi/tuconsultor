@@ -15,6 +15,7 @@ import ZonaClienteConfig from '../../components/ZonaClienteConfig.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
+import PlanificadorArrastre from '../../components/PlanificadorArrastre.jsx';
 import { etiquetaChecklist, progresoChecklist, subtareasNuevas } from '../../lib/subtareas.js';
 import { subtareasBasePara } from '../../lib/subtareasBase.js';
 // La sigla del cliente: la misma que usan los códigos de proyecto, para que
@@ -90,7 +91,6 @@ export default function Proyectos() {
   const [tareas, setTareas] = useState([]);
   const [sel, setSel] = useState('');         // proyecto seleccionado
   const [arrastra, setArrastra] = useState(null);
-  const [selT, setSelT] = useState(new Set());
   const [distribuyendo, setDistribuyendo] = useState(false);
   const [expandida, setExpandida] = useState(null);
   const [buscaP, setBuscaP] = useState('');
@@ -508,23 +508,25 @@ export default function Proyectos() {
     return Math.round(segs.filter(s => s.hecho).reduce((a, s) => a + (Number(s.horas) || 0), 0) * 100) / 100;
   }
 
-  const toggleSelT = (id) => setSelT(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  // «Asignar consultor en lote» (reasignar) se retiró: asignaba sin decir
+  // cuándo. Ahora se programa arrastrando al calendario (PlanificadorArrastre)
+  // y el responsable se cambia en su columna, solo entre gente del proyecto.
 
-  // Asigna consultor a las tareas seleccionadas (lote).
-  async function asignarLote(consultorId) {
-    const ids = [...selT];
-    if (!ids.length) { setMsg('Selecciona tareas con el aspa primero.'); return; }
-    if (!confirm(`¿Asignar ${ids.length} tarea(s) a ${consultorId ? nombreConsultor(consultorId) : 'sin asignar'}?`)) return;
-    try {
-      for (const id of ids) {
-        const t = tareas.find(x => x.id === id); if (!t) continue;
-        await updateRow('cliente_tareas', id, { consultor_id: consultorId, editada_manual: true });
-        try { await sincronizarTareaAgenda(conCod({ ...t, consultor_id: consultorId }), proyecto?.consultor_1_id || null, equipo); } catch { /* noop */ }
-      }
-      setSelT(new Set()); cargar();
-      setMsg(`${ids.length} tarea(s) reasignada(s).`);
-    } catch (e) { setMsg(e.message); }
-  }
+  // Gente del proyecto (proyecto_equipo + perfiles): a la única a la que se
+  // puede poner de responsable de una tarea.
+  const [perfiles, setPerfiles] = useState([]);
+  const [equipoProyectoFilas, setEquipoProyectoFilas] = useState([]);
+  useEffect(() => {
+    listTable('perfiles').then((ps) => setPerfiles(ps || [])).catch(() => setPerfiles([]));
+    listTable('proyecto_equipo').then((eq) => setEquipoProyectoFilas(eq || [])).catch(() => setEquipoProyectoFilas([]));
+  }, [sel, tareas.length]);
+  const nombrePerfil = (id) => { const p = perfiles.find((x) => String(x.id) === String(id)); return p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email : (nombreConsultor?.(id) || 'desconocido'); };
+  const genteProyecto = useMemo(() => {
+    const ids = new Set(equipoProyectoFilas.filter((e) => String(e.proyecto_id) === String(proyecto?.id)).map((e) => String(e.perfil_id)));
+    return perfiles.filter((p) => ids.has(String(p.id)) && p.activo !== false)
+      .map((p) => ({ id: String(p.id), nombre: `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email, nivel: p.nivel || null }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [perfiles, equipoProyectoFilas, proyecto?.id]);
 
   // Vuelca a la agenda todas las tareas del proyecto (sin regenerar fechas).
   async function distribuirAgenda() {
@@ -1076,6 +1078,13 @@ export default function Proyectos() {
             </p>
           )}
 
+          {/* Calendario del proyecto + tareas sin programar, para arrastrar. */}
+          {tareasProyecto.length > 0 && (
+            <PlanificadorArrastre proyecto={proyecto} tareas={tareasProyecto} sesiones={sesiones} horasTeoricas={horasTeoricas}
+              onGuardado={() => { listTable('tarea_sesiones').then(setSesiones).catch(() => {}); listTable('cliente_tareas').then(setTareas).catch(() => {}); }}
+              onAbrirTarea={(t) => t && setAbierta(t)} />
+          )}
+
           {/* Las tareas del proyecto: código, nombre y programación */}
           {tareasProyecto.length > 0 && (
             <div className="card">
@@ -1098,20 +1107,6 @@ export default function Proyectos() {
                 Las horas comprometidas vienen del modelo y no se editan.
               </p>
 
-              {/* Acciones masivas */}
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#1E5468] bg-navy-50/40 px-3 py-2">
-                <span className="text-xs font-bold text-[#9FC0CB]">{selT.size ? `${selT.size} seleccionada(s)` : `${tareasProyecto.length} tareas`}</span>
-                <button onClick={() => setSelT(new Set(tareasProyecto.map(t => t.id)))} className="text-xs font-bold text-[#9FC0CB] hover:underline">Todas</button>
-                <button onClick={() => setSelT(new Set())} className="text-xs font-bold text-[#9FC0CB] hover:underline">Ninguna</button>
-                <span className="mx-1 h-4 w-px bg-navy-200" />
-                <label className="text-xs font-bold text-[#9FC0CB]">Asignar consultor en lote</label>
-                <select className="input !w-auto !py-1.5 !text-sm" value="__" onChange={e => { if (e.target.value !== '__') { asignarLote(e.target.value === '__none' ? null : e.target.value); e.target.value = '__'; } }}>
-                  <option value="__" disabled>Elegir…</option>
-                  <option value="__none">Sin asignar</option>
-                  {consultores.map(c => <option key={c.id} value={c.id}>{c.nombre} {c.apellidos || ''}</option>)}
-                </select>
-              </div>
-
               {/* Filtros de tareas distribuidas */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input className="input !w-56 !py-1.5 !text-sm" placeholder="Filtrar por tarea…" value={filtroT} onChange={e => setFiltroT(e.target.value)} />
@@ -1127,7 +1122,6 @@ export default function Proyectos() {
                 <table className="w-full min-w-[820px] text-sm">
                   <thead className="sticky top-0 bg-[#10394A] z-10">
                     <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
-                      <th className="py-2 w-8"><input type="checkbox" checked={selT.size === tareasProyecto.length && tareasProyecto.length > 0} onChange={e => e.target.checked ? setSelT(new Set(tareasProyecto.map(t => t.id))) : setSelT(new Set())} /></th>
                       {/* Solo lo que hace falta para planificar: qué tarea es,
                           cuánto vale y cómo va. El consultor y la fecha se ven
                           y se cambian en su calendario, que es donde de verdad
@@ -1139,6 +1133,7 @@ export default function Proyectos() {
                           es la frase larga. */}
                       <th className="w-36 cursor-pointer select-none py-2 pr-3 hover:text-[#9FC0CB]" onClick={() => ordenarPor('codigo')}>Código{flechaOrden('codigo')}</th>
                       <th className="cursor-pointer select-none py-2 pr-4 hover:text-[#9FC0CB]" onClick={() => ordenarPor('titulo')}>Tarea{flechaOrden('titulo')}</th>
+                      <th className="w-40 py-2 pl-3">Responsable</th>
                       <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Teóricas</th>
                       <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Programadas</th>
                       <th className="w-px whitespace-nowrap py-2 pl-3 text-right">Ejecutadas</th>
@@ -1156,8 +1151,7 @@ export default function Proyectos() {
                       const codigo = codigoDeTarea(t.norma_id, t.num_tarea || (idx + 1));
                       return (
                       <>
-                      <tr key={t.id} className={`${t.hecha ? 'opacity-60' : ''} ${selT.has(t.id) ? 'bg-brand-orange/5' : ''}`}>
-                        <td className="py-1.5 align-top"><input type="checkbox" className="mt-0.5" checked={selT.has(t.id)} onChange={() => toggleSelT(t.id)} /></td>
+                      <tr key={t.id} className={t.hecha ? 'opacity-60' : ''}>
                         {/* ── Código y nombre, editables ──
                             En un proyecto de 65 tareas hace falta un código
                             corto para hablar de ellas en la agenda —«S1 PE1»— y
@@ -1200,6 +1194,22 @@ export default function Proyectos() {
                               </span>
                             )}
                           </span>
+                        </td>
+
+                        {/* ── Responsable ──
+                            Quién lleva la tarea. Solo gente del proyecto: si
+                            alguien de fuera tiene que hacerla, primero se le
+                            mete en el equipo. */}
+                        <td className="py-1.5 pl-3 align-top">
+                          <select className="input !w-full !py-1 !text-[12px]" value={t.consultor_id || ''}
+                            onChange={(e) => patchTarea(t, { consultor_id: e.target.value || null })}
+                            title="Responsable de la tarea (gente del proyecto)">
+                            <option value="">— sin responsable —</option>
+                            {t.consultor_id && !genteProyecto.some((g) => String(g.id) === String(t.consultor_id)) && (
+                              <option value={t.consultor_id}>{nombrePerfil(t.consultor_id)} (fuera del proyecto)</option>
+                            )}
+                            {genteProyecto.map((g) => <option key={g.id} value={g.id}>{g.nombre}{g.nivel ? ` · ${g.nivel}` : ''}</option>)}
+                          </select>
                         </td>
 
                         {/* ── Las tres cifras ──

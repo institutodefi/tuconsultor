@@ -194,3 +194,9 @@
 - **Migración `migracion-v131-resumen-dia.sql`** (tabla `resumenes_dia`, lectura de lo propio; la escribe la función): **aplicada en la base**.
 - Pruebas: `scripts/test-resumen-dia.mjs` (11 comprobaciones).
 - Corregido el 404 del resumen: cada `/api/…` necesita su redirección en `netlify.toml` (`/api/resumen-dia` → función `resumen-dia`). Sin ella la función existe pero la ruta no.
+
+## Ficha del proyecto · programar arrastrando, responsable en la lista, fuera «asignar en lote»
+- **Fuera «Asignar consultor en lote»** (reasignar): asignaba sin decir cuándo y no servía. Fuera también las casillas de selección.
+- **Programar arrastrando** (`components/PlanificadorArrastre.jsx`, encima de la tabla): a la izquierda, las tareas a las que faltan horas por programar, con código, nombre, responsable y horas que faltan; a la derecha, el calendario mensual del proyecto con sus sesiones. Se arrastra una tarea a un día laborable y queda programada: una sesión de hasta 4 h (o lo que le falte) a las 09:00, detrás de las que esa persona ya tenga ese día, para el responsable de la tarea o, si no tiene, para la persona elegida arriba (y la tarea queda con ese responsable). Las sesiones también se arrastran de un día a otro; en cada sesión se puede cambiar la persona o quitarla; pulsar el código abre la tarea. Fines de semana y festivos no admiten sesiones.
+- **Responsable en la lista de tareas**: columna nueva con desplegable. **Solo gente del proyecto** (equipo asignado): si la tarea tenía a alguien de fuera, se enseña marcado «(fuera del proyecto)» hasta que se cambie. Lo mismo al programar arrastrando.
+- `insertRow` en demo calcula `horas` de las sesiones (en la base es una columna generada y no se envía).
