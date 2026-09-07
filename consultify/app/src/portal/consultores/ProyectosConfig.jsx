@@ -955,6 +955,23 @@ export default function Proyectos() {
                 </p>
               </div>
 
+              {/* ── Auditoría externa programada ──
+                  Esta sí se teclea: es la fecha que se pacta cada año con la
+                  certificadora, no viene de la oferta. Vacía = sin programar,
+                  y así lo dice el panel de auditorías. */}
+              <div>
+                <label className="label" htmlFor="pc-aud">Auditoría externa</label>
+                <input id="pc-aud" type="date" className="input !w-44" value={proyecto?.fecha_auditoria_externa || ''}
+                  onChange={async (e) => {
+                    const v = e.target.value || null;
+                    try { await updateRow('proyectos_cliente', proyecto.id, { fecha_auditoria_externa: v }); cargar(); setMsgCab(v ? 'Auditoría externa programada.' : 'Auditoría externa sin programar.'); }
+                    catch (err) { setMsgCab(`No se pudo guardar: ${err?.message || err}`); }
+                  }} />
+                <p className="mt-1 text-[11px] font-medium text-[#7FA7B4]">
+                  {proyecto?.fecha_auditoria_externa ? 'Fecha pactada con la certificadora.' : 'Sin programar. Se guarda al elegirla.'}
+                </p>
+              </div>
+
               <div>
                 <label className="label">Duración (meses)</label>
                 <div className="input !w-28 flex items-center bg-[#0A2634] text-[#B9D2DA]">{fechas?.meses ?? meses}</div>

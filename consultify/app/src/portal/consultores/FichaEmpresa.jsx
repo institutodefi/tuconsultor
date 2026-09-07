@@ -13,6 +13,7 @@ import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 import CarteraEmpresa from './CarteraEmpresa.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
+import CertificadosCliente from '../../components/CertificadosCliente.jsx';
 import { buscarCliente, asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -959,7 +960,7 @@ export default function FichaEmpresa({
 
       {/* ── Pestañas ── */}
       <div className="flex gap-1.5 border-b border-[#1E5468]">
-        {[['datos', 'Datos del cliente'], ['documentos', 'Documentos']].map(([k, etq]) => (
+        {[['datos', 'Datos del cliente'], ['documentos', 'Certificados y documentos']].map(([k, etq]) => (
           <button key={k} type="button" onClick={() => setPestanaFicha(k)}
             className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-bold transition ${
               pestanaFicha === k
@@ -972,7 +973,11 @@ export default function FichaEmpresa({
 
       {pestanaFicha === 'documentos' && (
         clienteOperativoId ? (
-          <DocumentosCliente clienteId={clienteOperativoId} titulo="Documentos del cliente" />
+          <div className="space-y-5">
+            {/* Los certificados primero: son el dato; el PDF es la prueba. */}
+            <CertificadosCliente clienteId={clienteOperativoId} titulo="Certificados" />
+            <DocumentosCliente clienteId={clienteOperativoId} titulo="Documentos del cliente" />
+          </div>
         ) : (
           <p className="rounded-xl border border-dashed border-[#1E5468] px-3 py-4 text-center text-[12.5px] text-[#7FA7B4]">
             {creandoFicha === 'creando' ? 'Preparando la ficha de cliente…'

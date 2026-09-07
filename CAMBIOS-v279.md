@@ -21,7 +21,7 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql` y `migracion-v117-iso-27701.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql` y `migracion-v118-certificados-y-auditoria-externa.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
 
 ## Normas · ISO 27701 (privacidad de la información)
@@ -49,3 +49,10 @@
 
 ## CRM · estructura del grupo
 - `components/OrganigramaGrupo.jsx` · cajas más pequeñas (150×44), a tamaño natural (no se estiran al ancho de la ficha), conectores redondeados, banda de color para la matriz y la ficha abierta, degradado suave y nombre completo al pasar el ratón.
+
+## Certificados del cliente y auditorías externas
+- `consultify/supabase/migracion-v118-certificados-y-auditoria-externa.sql` · **pendiente de aplicar** (tras la v117). Tabla `cliente_certificados` (norma, entidad, nº, alcance, fecha de certificación, fecha de validez, documento enlazado) y columna `proyectos_cliente.fecha_auditoria_externa`. Probada en seco contra producción.
+- `components/CertificadosCliente.jsx` · **nuevo**. En la ficha de empresa (pestaña «Certificados y documentos») y en la cartera: alta, edición y borrado de certificados, con la validez propuesta a tres años y el PDF enlazable desde Documentos. Cada uno enseña su próxima auditoría (seguimiento anual o renovación) con su semáforo.
+- `lib/auditorias.js` · la regla, en funciones puras (`scripts/test-auditorias.mjs`, 17 comprobaciones): próxima auditoría = siguiente aniversario de la certificación cada 365 días, sin pasar de la validez; **rojo a 30 días o pasada, ámbar a 90 (tres meses)**; validez vencida = rojo.
+- `components/AuditoriasExternas.jsx` · **nuevo**. En el Panel de gestión (completo, con la fecha editable en línea) y en Inicio (solo avisos: rojo, ámbar y sin programar). Si el proyecto tiene fecha programada manda esa; si no, «Sin programar · toca antes del …» estimado desde los certificados del cliente; sin certificado, «sin certificado registrado».
+- `portal/consultores/ProyectosConfig.jsx` · campo **Auditoría externa** en la ficha del proyecto (se guarda al elegir la fecha; vacío = sin programar).

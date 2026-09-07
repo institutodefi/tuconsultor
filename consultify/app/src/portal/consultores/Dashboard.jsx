@@ -8,6 +8,7 @@ import { NavLink } from 'react-router-dom';
 import { ROL_LABEL, ROL_CLIENTE_LABEL, can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
 import PanelGestion from '../../components/PanelGestion.jsx';
+import AuditoriasExternas from '../../components/AuditoriasExternas.jsx';
 import { getFestivos, getVacacionesTodas, getTareasInternas } from '../../lib/agenda.js';
 import { controlHoras, VEREDICTO } from '../../lib/controlHoras.js';
 
@@ -205,6 +206,10 @@ export default function Dashboard() {
       {/* El estado de la casa: cartera, proyectos, equipo y riesgos. Todo se
           recalcula al abrir, no hay cifras guardadas que envejezcan. */}
       <PanelGestion />
+
+      {/* Lo que no puede esperar: auditorías externas a menos de tres meses
+          o sin programar. */}
+      <AuditoriasExternas />
 
       <MisProyectos />
 

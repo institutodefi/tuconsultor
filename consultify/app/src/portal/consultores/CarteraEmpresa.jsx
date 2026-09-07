@@ -8,6 +8,7 @@ import { nombreVisible } from '../../lib/crm.js';
 import { pagoAdelantado } from '../../lib/calcEngine.js';
 import { estaAceptada } from '../../lib/ofertasAceptadas.js';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
+import CertificadosCliente from '../../components/CertificadosCliente.jsx';
 import { asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -344,7 +345,7 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
           {/* ── Documentos ── */}
           {pestana === 'documentos' && (
             clienteId
-              ? <DocumentosCliente clienteId={clienteId} titulo="Documentos del cliente" />
+              ? <div className="space-y-5"><CertificadosCliente clienteId={clienteId} titulo="Certificados" /><DocumentosCliente clienteId={clienteId} titulo="Documentos del cliente" /></div>
               : <Vacio>{creandoFicha === 'error' ? 'No se pudo crear la ficha de cliente.'
                   : empresa?.es_cliente ? 'Preparando la ficha de cliente…'
                   : 'Marca esta empresa como cliente para poder adjuntar documentos.'}</Vacio>

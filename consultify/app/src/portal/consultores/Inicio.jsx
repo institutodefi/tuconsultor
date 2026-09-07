@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
+import AuditoriasExternas from '../../components/AuditoriasExternas.jsx';
 import { getTareasInternas } from '../../lib/agenda.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -164,6 +165,10 @@ export default function Inicio() {
           Aquí y no en una pantalla interior: es lo primero que alguien necesita
           saber al entrar, y esconderlo en un menú es como no tenerlo. */}
       <MisProyectos />
+
+      {/* Auditorías externas que se acercan o siguen sin fecha: todo el
+          equipo tiene que verlo, no solo administración. */}
+      {can.esEquipo(role) && <AuditoriasExternas compacto soloAvisos />}
 
       {/* Cómo van las horas en conjunto. Debajo de los proyectos: primero qué
           llevo, luego si voy bien de tiempo. */}
