@@ -158,6 +158,12 @@ export default function SesionesTarea({
       for (const cid of personas) {
         await insertRow('tarea_sesiones', { ...base, consultor_id: cid, ...(convocatoria ? { convocatoria_id: convocatoria } : {}) });
       }
+      // La tarea sin responsable se queda con quien hace la primera sesión:
+      // así el responsable de la lista, el del calendario y el que ve el
+      // cliente en su Gantt son la misma persona.
+      if (!esInterna && nueva.consultor_id && !tarea.consultor_id) {
+        await updateRow('cliente_tareas', tarea.id, { consultor_id: nueva.consultor_id }).catch(() => {});
+      }
       setNueva(null);
       await cargar();
       onGuardado?.();

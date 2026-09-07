@@ -6,6 +6,7 @@ import { NORMA_BY_ID, MODELOS } from '../../lib/calcEngine.js';
 import { funcionesDe, filasGantt, procesosDe, resumenProyecto, ESTADOS_TAREA, pendientesProyecto, TONO_PENDIENTE } from '../../lib/zonaCliente.js';
 import { estadoAuditoriaProyecto } from '../../lib/auditorias.js';
 import GanttProyecto from '../../components/GanttProyecto.jsx';
+import PlanificadorArrastre from '../../components/PlanificadorArrastre.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
 import MisDatosCliente from './MisDatosCliente.jsx';
 import DatosEmpresaCliente from './DatosEmpresaCliente.jsx';
@@ -48,7 +49,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const [proyectos, tareas, sesiones, equipo, clientes, contactos, certificados, documentos, empresas, usuariosCuenta] = await Promise.all([
+      const [proyectos, tareas, sesiones, equipo, clientes, contactos, certificados, documentos, empresas, usuariosCuenta, perfiles] = await Promise.all([
         listTable('proyectos_cliente').catch(() => []),
         listTable('cliente_tareas').catch(() => []),
         listTable('tarea_sesiones').catch(() => []),
@@ -59,6 +60,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
         listTable('cliente_documentos').catch(() => []),
         listTable('empresas').catch(() => []),
         listTable('cliente_usuarios').catch(() => []),
+        previsualizacion ? listTable('perfiles').catch(() => []) : Promise.resolve([]),
       ]);
       if (!vivo) return;
       const p = proyectos.find((x) => String(x.id) === String(proyectoId)) || null;
@@ -68,7 +70,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
       // Nombre comercial de la empresa (CRM) si lo hay; si no, el de la ficha de cliente.
       const cif = (x) => String(x || '').toUpperCase().replace(/[\s.-]/g, '');
       const empresa = cliente?.cif ? empresas.find((e) => cif(e.cif) === cif(cliente.cif)) : null;
-      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto, certificados, documentos, usuariosCuenta, nombreCliente: empresa?.nombre_comercial || empresa?.nombre || cliente?.empresa || null });
+      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto, certificados, documentos, usuariosCuenta, perfiles, nombreCliente: empresa?.nombre_comercial || empresa?.nombre || cliente?.empresa || null });
     })();
     return () => { vivo = false; };
   }, [proyectoId, user?.email, recarga]);
@@ -96,7 +98,18 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
     return pendientesProyecto({ proyecto: d.p, filas, cliente: d.cliente, certificados: d.certificados || [], documentos: d.documentos || [], auditoria })
       .filter((x) => previsualizacion || !x.interno);   // lo interno solo lo ve el equipo
   }, [d, filas, hoy, previsualizacion]);
-  const nombreDe = (id) => { const e = (d?.equipo || []).find((x) => String(x.perfil_id) === String(id)); return e ? `${e.nombre || ''} ${e.apellidos || ''}`.trim() : null; };
+  // Nombre de quien lleva una tarea: del equipo visible del proyecto; si no
+  // está ahí (alguien de administración programó sin estar en el equipo), de
+  // perfiles cuando quien mira es del equipo, y «Equipo TuConsultor» para el
+  // cliente: nunca «por asignar» si hay alguien detrás.
+  const nombreDe = (id) => {
+    if (!id) return null;
+    const e = (d?.equipo || []).find((x) => String(x.perfil_id) === String(id));
+    if (e) return `${e.nombre || ''} ${e.apellidos || ''}`.trim();
+    const pf = (d?.perfiles || []).find((x) => String(x.id) === String(id));
+    if (pf) return `${pf.nombre || ''} ${pf.apellidos || ''}`.trim() || pf.email;
+    return 'Equipo TuConsultor';
+  };
 
   if (!d) return <p className="font-semibold text-[#9FC0CB]">Cargando tu proyecto…</p>;
   if (!d.p) return <div className="card"><p className="font-bold text-[#EAF4F7]">No encontramos este proyecto.</p><Link to={previsualizacion ? '/consultores/proyectos' : '/cliente'} className="mt-2 inline-block text-sm font-bold text-brand-orange">← Volver</Link></div>;
@@ -191,6 +204,14 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
                 <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Cada tarea entre su inicio y su fin, por proceso. La línea naranja es hoy.</p>
                 <GanttProyecto filas={filas} proyecto={p} nombreDe={nombreDe} hoy={hoy} onAbrir={setTareaAbierta} />
               </section>
+
+              {/* El equipo programa desde aquí igual que desde la ficha del
+                  proyecto: mismo planificador por arrastre, misma regla (solo
+                  gente del proyecto). El cliente no lo ve. */}
+              {previsualizacion && (
+                <PlanificadorArrastre proyecto={p} tareas={d.tareas.filter((t) => String(t.proyecto_id) === String(p.id))} sesiones={d.sesiones}
+                  onGuardado={() => setRecarga((n) => n + 1)} onAbrirTarea={(t) => t && setTareaAbierta(filas.find((f) => String(f.id) === String(t.id)) || null)} />
+              )}
 
               <section className="card">
                 <div className="flex flex-wrap items-center justify-between gap-2">

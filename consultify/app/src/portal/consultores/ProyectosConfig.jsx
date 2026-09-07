@@ -783,7 +783,7 @@ export default function Proyectos() {
       {abierta && (
         <SesionesTarea
           tarea={{
-            id: abierta.id, titulo: abierta.titulo,
+            id: abierta.id, titulo: abierta.titulo, consultor_id: abierta.consultor_id || null,
             codigo: `${abierta.norma_id}-${String(abierta.num_tarea || 0).padStart(2, '0')}`,
             // Del catálogo, no de la copia: es el tope real contra el que se
             // planifica.
@@ -796,8 +796,11 @@ export default function Proyectos() {
           fechaCertificacion={fechas?.certificacion || proyecto?.fecha_limite || null}
           proyectoId={proyecto?.id}
           campoTarea="cliente_tarea_id" editable
+          // La sesión nueva sale con el responsable de la tarea: es la misma
+          // persona en la lista, en el calendario y en la zona del cliente.
+          consultorPorDefecto={abierta.consultor_id || null}
           onCerrar={() => setAbierta(null)}
-          onGuardado={() => listTable('tarea_sesiones').then(setSesiones).catch(() => {})}
+          onGuardado={() => { listTable('tarea_sesiones').then(setSesiones).catch(() => {}); listTable('cliente_tareas').then(setTareas).catch(() => {}); }}
           onChecklist={(cambio) => setTareas((ts) => ts.map((x) => (String(x.id) === String(abierta.id) ? { ...x, ...cambio } : x)))}
         />
       )}
