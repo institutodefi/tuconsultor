@@ -14,6 +14,10 @@ export const NORMAS = [
   { id: '14001',    nombre: 'ISO 14001', desc: 'Gestión ambiental',              nivel: 'J3', hApoyo: 46 },
   { id: '45001',    nombre: 'ISO 45001', desc: 'Seguridad y salud laboral',      nivel: 'J2', hApoyo: 63 },
   { id: '27001',    nombre: 'ISO 27001', desc: 'Seguridad de la información',    nivel: 'J2', hApoyo: 81 },
+  // Extensión de privacidad de ISO 27001/27002 (SGIC). Exige un SGSI en el que
+  // apoyarse: contratada con la 27001 cuesta el 70 %, porque contexto, riesgos,
+  // auditoría y revisión se hacen una sola vez para las dos.
+  { id: '27701',    nombre: 'ISO 27701', desc: 'Privacidad de la información · extensión de ISO 27001', nivel: 'J2', hApoyo: 55, solapeCon: '27001', solapeFactor: 0.7 },
   { id: '42001',    nombre: 'ISO 42001', desc: 'Inteligencia artificial',        nivel: 'J3', hApoyo: 42 },
   { id: '56001',    nombre: 'ISO 56001', desc: 'Gestión de la innovación',       nivel: 'J3', hApoyo: 75 },
   { id: '21001',    nombre: 'ISO 21001', desc: 'Organizaciones educativas · complementaria a ISO 9001', nivel: 'J3', hApoyo: 19, solapeCon: '9001', solapeFactor: 0.5 },

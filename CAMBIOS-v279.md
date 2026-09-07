@@ -21,5 +21,16 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho) y `migracion-v116-control-horas-y-tareas-internas.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql` y `migracion-v117-iso-27701.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
+
+## Normas · ISO 27701 (privacidad de la información)
+- `consultify/app/src/lib/calcEngine.js` · nueva norma `27701` (ISO 27701, J2, 55 h de apoyo), complementaria de la 27001: contratada con ella cuesta el 70 %.
+- `consultify/app/src/lib/catalogoTareas.js` · 20 tareas por modelo (92 / 92 / 116 / 148 / 55,2 h). Las del mapa común llevan lo que la 27701 añade al SGSI; las cinco de **PA19 Gestión de la privacidad** son las propias: registro de tratamientos, EIPD, derechos, brechas y transferencias.
+- `consultify/app/src/lib/codigos.js` · abreviatura `277` en el código de proyecto.
+- `consultify/netlify/functions/catalogo-anexo.mjs`, `generar-oferta.mjs` · el anexo de la oferta incluye las tareas de la 27701 (bloque «Gestión de la privacidad»). `brevo-lead.mjs` · atributo `ISO_27701`.
+- `consultify/supabase/migracion-v117-iso-27701.sql` · **pendiente de aplicar** (tras la v116): `normas_catalogo`, 100 filas en `tareas_catalogo` y `codigo_proyecto` con `277`. Probada en seco contra producción.
+- La web ya tenía su página (`/areas/ciberseguridad/iso-27701.html`) y su imagen social; no se toca.
+
+## Corrección · tareas de otro proyecto al cambiar de proyecto
+- `consultify/app/src/portal/consultores/ProyectosConfig.jsx` · al pasar de un proyecto a otro había un render en el que el proyecto ya era el nuevo pero las normas y el modelo en pantalla eran los del anterior; el volcado automático metió 24 tareas de Diversidad (Implantación) en CECE. Ahora el volcado espera a que la configuración cargada sea la de ese proyecto (`configPara`) y, además, filtra las candidatas contra las normas y el modelo del proyecto guardado (`candidatasDelProyecto`): nada de otra norma ni de otro modelo entra en un proyecto. Las 24 tareas erróneas de CECE se han borrado (no tenían sesiones).

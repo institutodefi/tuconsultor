@@ -26,7 +26,7 @@ const SERVICIO = {
 // Número corto de cada norma. Los planes y marcas no tienen número, así que
 // llevan una abreviatura: un código con «igualdad» dentro no se lee.
 const NORMA_CORTA = {
-  '9001': '9', '14001': '14', '27001': '27', '45001': '45',
+  '9001': '9', '14001': '14', '27001': '27', '27701': '277', '45001': '45',
   '42001': '42', '56001': '56', '21001': '21', '9004': '9004',
   '93200': '932', '158101': '158', '66181': '661',
   'igualdad': 'IG', 'igualdad-seg': 'IGS',

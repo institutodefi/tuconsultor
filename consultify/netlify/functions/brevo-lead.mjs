@@ -9,14 +9,14 @@
 //                         confirmar, lo pasa a la lista final. Tiene prioridad sobre BREVO_LIST_ID.
 
 const NORMA_ATTR = {
-  '9001': 'ISO_9001', '14001': 'ISO_14001', '45001': 'ISO_45001', '27001': 'ISO_27001',
+  '9001': 'ISO_9001', '14001': 'ISO_14001', '45001': 'ISO_45001', '27001': 'ISO_27001', '27701': 'ISO_27701',
   '42001': 'ISO_42001', '56001': 'ISO_56001', '21001': 'ISO_21001', '9004': 'ISO_9004',
   'une93200': 'UNE_93200', 'une158101': 'UNE_158101',
 };
 
 // Nombres legibles para construir el resumen del requerimiento (lo que verá el comercial)
 const NORMA_NOMBRE = {
-  '9001': 'ISO 9001', '14001': 'ISO 14001', '45001': 'ISO 45001', '27001': 'ISO 27001',
+  '9001': 'ISO 9001', '14001': 'ISO 14001', '45001': 'ISO 45001', '27001': 'ISO 27001', '27701': 'ISO 27701',
   '42001': 'ISO 42001', '56001': 'ISO 56001', '21001': 'ISO 21001', '9004': 'ISO 9004',
   'une93200': 'UNE 93200', 'une158101': 'UNE 158101',
 };

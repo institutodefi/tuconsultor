@@ -211,6 +211,13 @@ export default function Proyectos() {
   const [msgCab, setMsgCab] = useState(null);
   const [modelo, setModelo] = useState('Implicación');
   const [meses, setMeses] = useState(MESES_MODELO['Implicación']);
+  // A QUÉ proyecto pertenecen `normasSel` y `modelo`. Al cambiar de proyecto
+  // hay un render en el que `proyecto` ya es el nuevo pero las normas y el
+  // modelo son todavía los del anterior: en ese hueco el volcado automático
+  // metió 24 tareas de Diversidad (Implantación) en CECE, que es un Relación
+  // 9001-14001-27001. Con esto el volcado no arranca hasta que la
+  // configuración cargada es la de ESTE proyecto.
+  const [configPara, setConfigPara] = useState(null);
   useEffect(() => {
     if (proyecto) {
       // ── De dónde salen las normas y el modelo ──
@@ -230,6 +237,9 @@ export default function Proyectos() {
       setNombreProy(proyecto.nombre || '');
       setEstadoProy(proyecto.estado || 'activo');
       setMsgCab(null);
+      setConfigPara(String(proyecto.id));
+    } else {
+      setConfigPara(null);
     }
     // `presupuestos` y `contratos` en las dependencias: llegan por separado y
     // sin ellos la primera pasada resolvería sin oferta.
@@ -377,13 +387,38 @@ export default function Proyectos() {
 
   const volcandoRef = useRef(false);
 
+  /**
+   * Las candidatas que DE VERDAD son de este proyecto.
+   *
+   * Cada proyecto tiene sus tareas: las de sus normas y su modelo, según lo
+   * que diga su oferta. Nada de otro proyecto, de otra norma ni de otro
+   * modelo entra aquí, venga de donde venga el estado de la pantalla. Es la
+   * segunda barrera, por si `configPara` no bastara: se comprueba contra el
+   * proyecto guardado, no contra lo que haya en el formulario.
+   */
+  const candidatasDelProyecto = useCallback((lista, guardado = null) => {
+    if (!proyecto) return [];
+    const r = resolverProyecto(proyecto, { clientes, empresas, presupuestos, contratos });
+    // `guardado`: lo que se acaba de escribir en el proyecto con «Guardar»,
+    // antes de que la recarga lo traiga de vuelta. Solo lo usa guardarConfig.
+    const normasBase = guardado?.normas || (r?.normas?.length ? r.normas : proyecto.normas || []);
+    // Sin añadir la 9001 «de oficio»: si el proyecto no la tiene (un Plan de
+    // Diversidad, por ejemplo), sus tareas no pintan nada aquí.
+    const normasProy = new Set(normasBase.map(String));
+    const modeloProy = modeloCanonico(guardado?.modelo || r?.modelo || proyecto.modelo) || null;
+    return lista.filter((c) => normasProy.has(String(c.norma_id))
+      && (!modeloProy || !c.modelo || mismoModelo(c.modelo, modeloProy)));
+  }, [proyecto, clientes, empresas, presupuestos, contratos]);
+
   useEffect(() => {
     if (!proyecto || !cliente || volcandoRef.current) return;
+    // La configuración en pantalla tiene que ser la de este proyecto.
+    if (configPara !== String(proyecto.id)) return;
     if (!normasSel.length || !modelo || !candidatas.length) return;
     // Solo lo que falte: si ya están todas, no hay nada que hacer.
     const yaEstan = new Set();
     tareasProyecto.forEach((t) => registrar(yaEstan, t));
-    const faltan = candidatas.filter((c) => !yaRegistrada(yaEstan, c));
+    const faltan = candidatasDelProyecto(candidatas).filter((c) => !yaRegistrada(yaEstan, c));
     if (!faltan.length) return;
 
     volcandoRef.current = true;
@@ -392,7 +427,7 @@ export default function Proyectos() {
       volcandoRef.current = false;
       if (n > 0) { cargar(); setMsg(`${n} tarea(s) del modelo ${modelo} volcadas al proyecto.`); }
     })();
-  }, [proyecto?.id, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [proyecto?.id, configPara, modelo, normasSel.join('|'), candidatas.length, tareasProyecto.length]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleNorma(id) {
     if (id === '9001') return; // base obligatoria
@@ -497,8 +532,9 @@ export default function Proyectos() {
     await updateRow('proyectos_cliente', proyecto.id,
       { normas: normasSel, modelo: modeloCanonico(modelo) || modelo, meses_estimados: meses });
     // Las que ya existen no se tocan: volver a guardar completa, no duplica ni
-    // borra lo que alguien haya ajustado a mano.
-    const n = await volcarTareasQueFalten();
+    // borra lo que alguien haya ajustado a mano. Se pasa lo recién guardado
+    // para que el filtro por proyecto lo tenga en cuenta antes de la recarga.
+    const n = await volcarTareasQueFalten({ normas: normasSel, modelo });
     cargar();
     setMsg(n > 0
       ? `Configuración guardada y ${n} tarea(s) volcadas del modelo ${modelo}.`
@@ -506,7 +542,7 @@ export default function Proyectos() {
   }
 
   /** Inserta las tareas del modelo que aún no estén en el proyecto. Devuelve cuántas. */
-  async function volcarTareasQueFalten() {
+  async function volcarTareasQueFalten(guardado = null) {
     if (!proyecto || !cliente || !candidatas.length) return 0;
     const yaEstan = new Set();
     tareasProyecto.forEach((t) => registrar(yaEstan, t));
@@ -520,7 +556,8 @@ export default function Proyectos() {
       const k = t.norma_id || 'GEN';
       if (m) ultimoDe[k] = Math.max(ultimoDe[k] || 0, parseInt(m[1], 10));
     }
-    for (const [i, c] of candidatas.entries()) {
+    // Solo las de este proyecto (sus normas, su modelo): ver candidatasDelProyecto.
+    for (const [i, c] of candidatasDelProyecto(candidatas, guardado).entries()) {
       // Por identidad, no por título: el título cambia y la tarea es la misma.
       if (yaRegistrada(yaEstan, c)) continue;
       registrar(yaEstan, c);   // no repetir dentro del mismo volcado

@@ -32,6 +32,7 @@ const BLOQUES = {
   PA6: 'Gestión de partes subcontratadas', PA7: 'Gestión económica y administrativa',
   PA8: 'Gestión de PI y vigilancia', PA9: 'Gestión de alianzas', PA10: 'Gestión de datos para IA',
   PA11: 'Información a partes interesadas', PA12: 'Uso responsable de IA', PA13: 'Relaciones con terceros',
+  PA19: 'Gestión de la privacidad',
   PI1: 'Proceso de innovación', PI2: 'Gestión de iniciativas de innovación', PI3: 'Ciclo de vida del sistema de IA',
   PR1: 'Incorporación de usuarios', PR2: 'Atención al usuario', PR3: 'Baja y servicios generales',
 };
