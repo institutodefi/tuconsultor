@@ -8,6 +8,8 @@ import { NavLink } from 'react-router-dom';
 import { ROL_LABEL, ROL_CLIENTE_LABEL, can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
 import PanelGestion from '../../components/PanelGestion.jsx';
+import { getFestivos, getVacacionesTodas, getTareasInternas } from '../../lib/agenda.js';
+import { controlHoras, VEREDICTO } from '../../lib/controlHoras.js';
 
 const NAVY = '#0A2A6C', ORANGE = '#F5A623';
 const PIE_COLORS = ['#0A2A6C', '#2B4A93', '#4C6BB4', '#7E97CE', '#F5A623'];
@@ -21,6 +23,9 @@ export default function Dashboard() {
   const [contactos, setContactos] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [tareas, setTareas] = useState([]);
+  // Lo que necesita el control de horas además de lo anterior: equipo de
+  // cada proyecto, sesiones, festivos, vacaciones y tareas internas.
+  const [extra, setExtra] = useState(null);
   const [ready, setReady] = useState(false);
 
   const cargar = () => {
@@ -32,6 +37,15 @@ export default function Dashboard() {
     listTable('cliente_tareas').then(setTareas).catch(() => setTareas([]));
     if (demo) listTable('clientes').then(cs => setMiembros((cs || []).slice(0, 1).map(c => ({ id: 1, cliente_id: c.id, usuario_id: 'demo', rol_cliente: 'administrador' })))).catch(() => setMiembros([]));
     else listTable('miembros_cliente').then(setMiembros).catch(() => setMiembros([]));
+    const year = new Date().getFullYear();
+    Promise.all([
+      listTable('proyecto_equipo').catch(() => []),
+      listTable('tarea_sesiones').catch(() => []),
+      getFestivos(year).catch(() => []),
+      getVacacionesTodas(year).catch(() => []),
+      getTareasInternas().catch(() => []),
+    ]).then(([equipo, sesiones, festivos, vacaciones, internas]) => setExtra({ equipo, sesiones, festivos, vacaciones, internas }))
+      .catch(() => setExtra({ equipo: [], sesiones: [], festivos: [], vacaciones: [], internas: [] }));
     setReady(true);
   };
 
@@ -128,14 +142,20 @@ export default function Dashboard() {
   const equipoComercial = useMemo(() => consultores.filter(c => c.activo && c.tipo_equipo === 'gestion' && c.subtipo === 'comercial'), [consultores]);
   const equipoGestion = useMemo(() => consultores.filter(c => c.activo && c.tipo_equipo === 'gestion'), [consultores]);
 
-  const carga = useMemo(() => equipoConsultores.map(c => {
-    // Carga real: horas de las tareas de proyecto asignadas a este consultor.
-    const suyas = tareas.filter(t => String(t.consultor_id) === String(c.id));
-    const horas = suyas.reduce((s, t) => s + (Number(t.horas) || 0), 0);
-    const proyectosIds = new Set(suyas.map(t => t.proyecto_id).filter(Boolean));
-    const capProd = Math.round(150 * (c.pct_jornada ?? 100) / 100 * 0.7);
-    return { ...c, nProyectos: proyectosIds.size, horas, capProd, pct: capProd ? Math.min(100, Math.round(horas / capProd * 100)) : 0 };
-  }), [equipoConsultores, tareas]);
+  // Carga real, con las mismas reglas que la pantalla de Control de horas:
+  // comprometidas de sus proyectos repartidas entre el equipo, pendientes ÷
+  // meses que quedan, y capacidad = 70 % de la jornada del mes (festivos y
+  // vacaciones descontados). Antes se usaba un 150 h/mes fijo y solo contaban
+  // las tareas con consultor asignado, que casi nunca lo tienen.
+  const carga = useMemo(() => {
+    if (!extra) return [];
+    const r = controlHoras({ consultores: equipoConsultores, proyectos, equipo: extra.equipo, tareas, sesiones: extra.sesiones,
+      internas: extra.internas, clientes, empresas, festivos: extra.festivos, vacaciones: extra.vacaciones });
+    return r.consultores.map(c => ({
+      ...c, nProyectos: c.proyectos.length, horas: c.total.cargaMensual, capProd: c.mes.produccion.capacidad,
+      pct: c.mes.produccion.capacidad ? Math.min(100, Math.round(c.total.cargaMensual / c.mes.produccion.capacidad * 100)) : 0,
+    }));
+  }, [equipoConsultores, proyectos, tareas, clientes, empresas, extra]);
 
   // Selección flexible de qué consultores se ven en la carga.
   const [equipoCargaSel, setEquipoCargaSel] = useState(null);
@@ -266,12 +286,13 @@ export default function Dashboard() {
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-extrabold">Carga del equipo de consultoría</h3>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <NavLink to="../control-horas" className="text-[12px] font-bold text-brand-orange hover:underline">Control de horas →</NavLink>
             <button onClick={() => setEquipoCargaSel(new Set(equipoConsultores.map(c => String(c.id))))} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Todos</button>
             <button onClick={() => setEquipoCargaSel(new Set())} className="chip border border-[#1E5468] text-[11px] font-bold text-[#9FC0CB]">Ninguno</button>
           </div>
         </div>
-        <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Marca los consultores que quieres incluir en la vista de carga.</p>
+        <p className="mt-1 text-xs font-medium text-[#9FC0CB]">Carga mensual que exigen sus proyectos (pendientes ÷ meses que quedan) sobre el 70 % de su jornada. Marca a quién incluir.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {equipoConsultores.map(c => {
             const on = equipoCargaSel ? equipoCargaSel.has(String(c.id)) : true;
@@ -287,8 +308,9 @@ export default function Dashboard() {
           {cargaVisible.map(c => (
             <div key={c.id}>
               <div className="flex items-baseline justify-between text-sm">
-                <p className="font-bold">{c.nombre} <span className="chip ml-1 bg-[#0D3242] text-[#9FC0CB]">{c.nivel}</span></p>
-                <p className="font-semibold text-[#9FC0CB]">{c.nProyectos} proyectos · ~{c.horas}/{c.capProd} h productivas/mes</p>
+                <p className="font-bold">{c.nombre} <span className="chip ml-1 bg-[#0D3242] text-[#9FC0CB]">{c.nivel}</span>
+                  {c.veredicto && <span className={`ml-1 text-[11px] font-extrabold ${VEREDICTO[c.veredicto].tono}`}>{VEREDICTO[c.veredicto].etq}</span>}</p>
+                <p className="font-semibold text-[#9FC0CB]">{c.nProyectos} proyectos · {c.horas}/{c.capProd} h al mes en proyectos</p>
               </div>
               <div className="mt-1.5 h-2.5 rounded-full bg-[#0D3242]">
                 <div className="h-2.5 rounded-full transition-all" style={{ width: `${c.pct}%`, background: c.pct > 90 ? '#DC2626' : c.pct > 70 ? ORANGE : NAVY }} />

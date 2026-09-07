@@ -40,7 +40,7 @@ export default function Accesos() {
   const [msg, setMsg] = useState(null);
 
   // Formulario de invitación (incluye datos de agenda: nivel, normas, capacidad)
-  const [inv, setInv] = useState({ email: '', nombre: '', apellidos: '', rol: 'consultor', nivel: '', normas: [], capacidad_clientes: 12 });
+  const [inv, setInv] = useState({ email: '', nombre: '', apellidos: '', rol: 'consultor', nivel: '', normas: [], capacidad_clientes: 12, pct_jornada: 100 });
   const [invBusy, setInvBusy] = useState(false);
   const [clientes, setClientes] = useState([]);
   const [miembros, setMiembros] = useState([]);
@@ -99,10 +99,10 @@ export default function Accesos() {
       setInvBusy(false); return;
     }
     try {
-      const r = await adminUsuarios({ action: 'invite', email: inv.email.trim(), nombre: inv.nombre.trim(), apellidos: inv.apellidos.trim(), rol: inv.rol, nivel: inv.nivel || null, normas: inv.normas || [], capacidad_clientes: inv.capacidad_clientes ?? 12 });
+      const r = await adminUsuarios({ action: 'invite', email: inv.email.trim(), nombre: inv.nombre.trim(), apellidos: inv.apellidos.trim(), rol: inv.rol, nivel: inv.nivel || null, normas: inv.normas || [], capacidad_clientes: inv.capacidad_clientes ?? 12, pct_jornada: inv.pct_jornada ?? 100 });
       if (r.ok) {
         setMsg(`Invitación enviada a ${inv.email}. Recibirá un email para poner su contraseña.`);
-        setInv({ email: '', nombre: '', apellidos: '', rol: 'consultor', nivel: '', normas: [], capacidad_clientes: 12 });
+        setInv({ email: '', nombre: '', apellidos: '', rol: 'consultor', nivel: '', normas: [], capacidad_clientes: 12, pct_jornada: 100 });
         cargar();
       } else setError(r.error || 'No se pudo invitar.');
     } catch { setError('Error de conexión.'); }
@@ -202,6 +202,10 @@ export default function Accesos() {
                 <label className="label">Capacidad (clientes)</label>
                 <input type="number" min="1" max="40" className="input" value={inv.capacidad_clientes}
                   onChange={e => setInv({ ...inv, capacidad_clientes: Number(e.target.value) || 12 })} />
+                <label className="label mt-3">Jornada (%)</label>
+                <input type="number" min="10" max="100" step="5" className="input" value={inv.pct_jornada}
+                  onChange={e => setInv({ ...inv, pct_jornada: Math.min(100, Math.max(10, Number(e.target.value) || 100)) })} />
+                <p className="campo-nota">100 = jornada completa. Base de su capacidad en el control de horas.</p>
               </div>
             </>
           )}
@@ -303,7 +307,7 @@ export default function Accesos() {
                       <td className="px-3 py-3 text-[#9FC0CB]">{fecha(u.ultimo_acceso)}</td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => setEditando({ id: u.id, nombre: u.nombre || '', apellidos: u.apellidos || '', nivel: u.nivel || '', normas: u.normas || [], capacidad_clientes: u.capacidad_clientes ?? 12 })}
+                          <button onClick={() => setEditando({ id: u.id, nombre: u.nombre || '', apellidos: u.apellidos || '', nivel: u.nivel || '', normas: u.normas || [], capacidad_clientes: u.capacidad_clientes ?? 12, pct_jornada: u.pct_jornada ?? 100 })}
                             className="rounded-lg px-3 py-1.5 text-xs font-bold text-[#9FC0CB] hover:bg-[#0D3242]" title="Editar datos del perfil">
                             Editar
                           </button>
@@ -358,6 +362,8 @@ export default function Accesos() {
                 </select>
               </div>
               <div><label className="label">Capacidad (clientes)</label><input type="number" min="1" max="40" className="input" value={editando.capacidad_clientes} onChange={e => setEditando({ ...editando, capacidad_clientes: Number(e.target.value) || 12 })} /></div>
+              <div><label className="label">Jornada (%)</label><input type="number" min="10" max="100" step="5" className="input" value={editando.pct_jornada} onChange={e => setEditando({ ...editando, pct_jornada: Math.min(100, Math.max(10, Number(e.target.value) || 100)) })} />
+                <p className="campo-nota">100 = completa, 50 = media. Es la base de su capacidad mensual.</p></div>
               <div className="sm:col-span-2">
                 <label className="label">Normas que maneja</label>
                 <div className="flex flex-wrap gap-1.5">

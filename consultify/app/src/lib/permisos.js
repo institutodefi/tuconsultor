@@ -35,6 +35,9 @@ export const GRUPOS_PORTAL = [
       // La global reparte trabajo de otras personas, así que es de quien lo
       // reparte. Consultoría ve la suya y la de sus proyectos, no la de la casa.
       { to: 'agenda', label: 'Agenda del equipo', icon: 'calendar-days', roles: ['superadmin', 'admin', 'director'] },
+      // Horas comprometidas, programadas, ejecutadas y pendientes por
+      // consultor, y si le cabe otro proyecto. Consultoría ve su ficha.
+      { to: 'control-horas', label: 'Control de horas', icon: 'gauge', roles: ['superadmin', 'admin', 'director', 'consultor'] },
     ],
   },
   {

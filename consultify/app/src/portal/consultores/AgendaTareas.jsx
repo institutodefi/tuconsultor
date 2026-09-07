@@ -4,6 +4,7 @@ import { supabase, DEMO } from '../../lib/supabase.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import SesionesTarea from './SesionesTarea.jsx';
+import { getTareasInternas, TIPO_BY_ID } from '../../lib/agenda.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // AGENDA · la otra cara del planificador
@@ -45,7 +46,7 @@ export default function AgendaTareas() {
   const [desplaz, setDesplaz] = useState(0);
 
   const cargar = useCallback(async () => {
-    const [t, c, p, eq, ses, ct, pf] = await Promise.all([
+    const [t, c, p, eq, ses, ct, pf, ti] = await Promise.all([
       listTable('tareas_programadas').catch(() => []),
       listTable('proyecto_contextos').catch(() => []),
       listTable('proyectos_cliente').catch(() => []),
@@ -56,6 +57,9 @@ export default function AgendaTareas() {
       listTable('tarea_sesiones').catch(() => []),
       listTable('cliente_tareas').catch(() => []),
       listTable('perfiles').catch(() => []),
+      // Tareas internas (gestión, procesos internos): su tiempo es jornada
+      // igual, y sin ellas la agenda del equipo enseña solo el 70 %.
+      getTareasInternas().catch(() => []),
     ]);
 
     // ── La agenda del equipo, acotada a lo propio ──
@@ -86,9 +90,21 @@ export default function AgendaTareas() {
       .filter((x) => idsVisibles.has(String(x.proyecto_id)))
       .map((x) => String(x.id)));
     const porTarea = Object.fromEntries((ct || []).map((x) => [String(x.id), x]));
+    // Internas: dirección ve las de todo el mundo; consultoría, las suyas.
+    const porInterna = Object.fromEntries((ti || [])
+      .filter((x) => verTodo || String(x.consultor_id) === String(user?.id))
+      .map((x) => [String(x.id), x]));
     setSesiones((ses || [])
-      .filter((s) => s.estado !== 'anulada' && idsCT.has(String(s.cliente_tarea_id)))
-      .map((s) => ({ ...s, tarea: porTarea[String(s.cliente_tarea_id)] || null })));
+      .filter((s) => s.estado !== 'anulada' && (idsCT.has(String(s.cliente_tarea_id)) || (s.tarea_interna_id && porInterna[String(s.tarea_interna_id)])))
+      .map((s) => {
+        if (s.tarea_interna_id) {
+          const x = porInterna[String(s.tarea_interna_id)];
+          // Con la misma forma que una tarea de cliente, para que las vistas
+          // no tengan que distinguir: el código es la bolsa (G · PI).
+          return { ...s, tarea: { id: x.id, titulo: x.titulo, codigo: TIPO_BY_ID[x.tipo]?.corto || 'G', horas: x.horas, interna: true, tipo: x.tipo } };
+        }
+        return { ...s, tarea: porTarea[String(s.cliente_tarea_id)] || null };
+      }));
     // Reasignados a las variables que usa el resto de la función.
     const c2 = ctxVisibles, p2 = proyectosVisibles;
     // Los pendientes por horizonte: de la función de la base; si no llega
@@ -584,7 +600,7 @@ export default function AgendaTareas() {
           <ul className="space-y-1">{sinFecha.map((t) => <Fila key={t.id} t={t} />)}</ul>
         </section>
       )}
-      {tareaAbierta && (
+      {tareaAbierta && !tareaAbierta.interna && (
         <SesionesTarea
           tarea={{
             id: tareaAbierta.id, titulo: tareaAbierta.titulo, codigo: tareaAbierta.codigo,
@@ -594,6 +610,15 @@ export default function AgendaTareas() {
           proyectoId={tareaAbierta.proyecto_id}
           campoTarea="cliente_tarea_id"
           editable
+          onCerrar={() => setTareaAbierta(null)}
+          onGuardado={cargar}
+        />
+      )}
+      {tareaAbierta?.interna && (
+        <SesionesTarea
+          tarea={{ id: tareaAbierta.id, titulo: tareaAbierta.titulo, codigo: tareaAbierta.codigo, horas_teoricas: tareaAbierta.horas }}
+          contexto={{ norma: TIPO_BY_ID[tareaAbierta.tipo]?.nombre }}
+          campoTarea="tarea_interna_id"
           onCerrar={() => setTareaAbierta(null)}
           onGuardado={cargar}
         />

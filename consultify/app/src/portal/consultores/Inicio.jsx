@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
+import { getTareasInternas } from '../../lib/agenda.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // INICIO · lo primero que ve cualquiera al entrar
@@ -38,6 +39,8 @@ function accesosDe(role) {
       roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
     { to: 'agenda', etq: 'Agenda del equipo', nota: 'Mis proyectos, por semana', icono: '🗓️',
       roles: ['superadmin', 'admin', 'director', 'consultor'] },
+    { to: 'control-horas', etq: 'Control de horas', nota: 'Capacidad y horas por consultor', icono: '⏱️',
+      roles: ['superadmin', 'admin', 'director', 'consultor'] },
     { to: 'empresas', etq: 'Empresas', nota: 'Clientes y proveedores', icono: '🏢',
       roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
     { to: 'contactos', etq: 'Contactos', nota: 'Personas del CRM', icono: '👤',
@@ -68,8 +71,9 @@ export default function Inicio() {
       listTable('perfiles').catch(() => []),
       listTable('tarea_sesiones').catch(() => []),
       listTable('cliente_tareas').catch(() => []),
-    ]).then(([ps, ss, ts]) => vivo && setDatos({ ps, ss, ts }))
-      .catch(() => vivo && setDatos({ ps: [], ss: [], ts: [] }));
+      getTareasInternas().catch(() => []),
+    ]).then(([ps, ss, ts, ti]) => vivo && setDatos({ ps, ss, ts, ti }))
+      .catch(() => vivo && setDatos({ ps: [], ss: [], ts: [], ti: [] }));
     return () => { vivo = false; };
   }, []);
 
@@ -98,7 +102,8 @@ export default function Inicio() {
     };
   }, [datos, user?.id]);
 
-  const tituloDe = (s) => datos?.ts.find((t) => String(t.id) === String(s.cliente_tarea_id))?.titulo || 'Tarea';
+  const tituloDe = (s) => datos?.ts.find((t) => String(t.id) === String(s.cliente_tarea_id))?.titulo
+    || datos?.ti.find((t) => String(t.id) === String(s.tarea_interna_id))?.titulo || 'Tarea';
   const accesos = accesosDe(role);
 
   return (

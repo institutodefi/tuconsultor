@@ -53,6 +53,35 @@ export const demoDB = {
   presupuestos: [
     { id: 'pr1', email: 'maria@industriasnorte.es', normas: ['9001','14001','27001'], modelo: 'Implicación', precio: 1325, tipo: 'mes', creado: '2026-06-01T10:00:00Z' },
   ],
+  // ── Proyectos, equipo, tareas y sesiones (control de horas, v116) ──
+  // Lo justo para que Control de horas y las agendas enseñen algo sin base
+  // de datos: dos proyectos vivos, Carlota en los dos, Irene en uno.
+  proyectos_cliente: [
+    { id: 'pc1', cliente_id: 'cl1', codigo: 'INOR-2026-REL-9-14', nombre: 'Industrias Norte · 9001 + 14001 · Relación', normas: ['9001','14001'], modelo: 'Relación', estado: 'activo', fecha_inicio: '2026-01-01', fecha_fin: '2026-12-31', meses_estimados: 12 },
+    { id: 'pc2', cliente_id: 'cl2', codigo: 'TSEC-2026-IMP-27', nombre: 'TechSecure · 27001 · Implicación', normas: ['27001'], modelo: 'Implicación', estado: 'activo', fecha_inicio: '2026-04-01', fecha_fin: '2027-03-31', meses_estimados: 12 },
+  ],
+  proyecto_equipo: [
+    { id: 'pe1', proyecto_id: 'pc1', perfil_id: 'c1', papel: 'consultor' },
+    { id: 'pe2', proyecto_id: 'pc1', perfil_id: 'c2', papel: 'responsable' },
+    { id: 'pe3', proyecto_id: 'pc2', perfil_id: 'c1', papel: 'consultor' },
+    { id: 'pe4', proyecto_id: 'pc2', perfil_id: 'c2', papel: 'consultor' },
+  ],
+  cliente_tareas: [
+    { id: 'ct1', cliente_id: 'cl1', proyecto_id: 'pc1', norma_id: '9001', modelo: 'Relación', titulo: 'Contexto de la organización', codigo: 'INOR-9001-01', horas: 40, tipo: 'produccion' },
+    { id: 'ct2', cliente_id: 'cl1', proyecto_id: 'pc1', norma_id: '9001', modelo: 'Relación', titulo: 'Auditoría interna', codigo: 'INOR-9001-02', horas: 32, tipo: 'produccion' },
+    { id: 'ct3', cliente_id: 'cl1', proyecto_id: 'pc1', norma_id: '14001', modelo: 'Relación', titulo: 'Aspectos ambientales', codigo: 'INOR-14001-01', horas: 48, tipo: 'produccion' },
+    { id: 'ct4', cliente_id: 'cl2', proyecto_id: 'pc2', norma_id: '27001', modelo: 'Implicación', titulo: 'Análisis de riesgos', codigo: 'TSEC-27001-01', horas: 60, tipo: 'produccion' },
+    { id: 'ct5', cliente_id: 'cl2', proyecto_id: 'pc2', norma_id: '27001', modelo: 'Implicación', titulo: 'Declaración de aplicabilidad', codigo: 'TSEC-27001-02', horas: 36, tipo: 'produccion' },
+  ],
+  tarea_sesiones: [
+    { id: 'ts1', cliente_tarea_id: 'ct1', consultor_id: 'c1', fecha: '2026-09-02', hora_inicio: '09:00', hora_fin: '13:00', horas: 4, estado: 'hecha' },
+    { id: 'ts2', cliente_tarea_id: 'ct1', consultor_id: 'c1', fecha: '2026-09-09', hora_inicio: '09:00', hora_fin: '13:00', horas: 4, estado: 'programada' },
+    { id: 'ts3', cliente_tarea_id: 'ct3', consultor_id: 'c1', fecha: '2026-09-16', hora_inicio: '10:00', hora_fin: '14:00', horas: 4, estado: 'programada' },
+    { id: 'ts4', cliente_tarea_id: 'ct4', consultor_id: 'c2', fecha: '2026-09-10', hora_inicio: '09:00', hora_fin: '12:00', horas: 3, estado: 'programada' },
+    { id: 'ts5', cliente_tarea_id: 'ct4', consultor_id: 'c1', fecha: '2026-08-25', hora_inicio: '09:00', hora_fin: '14:00', horas: 5, estado: 'hecha' },
+    { id: 'ts6', tarea_interna_id: 'ti1', consultor_id: 'c1', fecha: '2026-09-07', hora_inicio: '09:00', hora_fin: '11:00', horas: 2, estado: 'hecha' },
+    { id: 'ts7', tarea_interna_id: 'ti2', consultor_id: 'c1', fecha: '2026-09-18', hora_inicio: '15:00', hora_fin: '18:00', horas: 3, estado: 'programada' },
+  ],
 };
 
 export function demoClone(table) {

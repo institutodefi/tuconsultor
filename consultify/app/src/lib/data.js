@@ -8,6 +8,8 @@ function demo() {
     consultores: demoClone('consultores'), clientes: demoClone('clientes'),
     presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
+    proyectos_cliente: demoClone('proyectos_cliente'), proyecto_equipo: demoClone('proyecto_equipo'),
+    cliente_tareas: demoClone('cliente_tareas'), tarea_sesiones: demoClone('tarea_sesiones'),
     reglas_comerciales: [],
     versiones: [],
     registro_accesos: [],
@@ -81,7 +83,9 @@ function demo() {
       { id: 'hom-2', empresa_id: 'emp-prov', concepto: 'Póliza de responsabilidad civil', estado: 'pendiente',
         obligatorio: true, orden: 20, creado: '2026-02-02T09:05:00Z' },
     ],
-    tareas_catalogo: catalogoFilas(), agenda_tareas: [], cliente_tareas: [], proyectos_cliente: [],
+    // `cliente_tareas` y `proyectos_cliente` vienen de demoDB (arriba): aquí
+    // ya no se vacían, que anulaba la definición anterior en silencio.
+    tareas_catalogo: catalogoFilas(), agenda_tareas: [],
     // Una sola definición de `proyectos`: antes había dos en el mismo objeto y
     // la segunda anulaba a la primera en silencio.
     proyectos: [

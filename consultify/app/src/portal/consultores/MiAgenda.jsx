@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listTable } from '../../lib/data.js';
-import { getTareasAgenda, TIPO_BY_ID } from '../../lib/agenda.js';
+import { getTareasAgenda, getFestivos, getVacaciones, capacidadMes, tipoBolsa, TIPO_BY_ID } from '../../lib/agenda.js';
+import TareasInternas from './TareasInternas.jsx';
 import { useAuth } from '../../lib/auth.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
 import ResumenAgenda from './ResumenAgenda.jsx';
@@ -60,10 +61,17 @@ export default function MiAgenda() {
     getTareasAgenda(yo.id, YEAR).then(setTareas).catch(() => setTareas([]));
   }, [yo]);
 
-  const capacidad = yo?.pct_jornada ?? 100;       // % de jornada → usamos como tope del reloj (h productivas/mes aprox.)
-  const capacidadH = Math.round((capacidad / 100) * 160 * 0.7); // 160 h/mes × 70% productivo, escalado a meses elegidos
-  const nMeses = Math.max(mesesSel.size, 1);
-  const topeJornada = capacidadH * nMeses;
+  const capacidad = yo?.pct_jornada ?? 100;       // % de jornada de la ficha
+  // Capacidad de producción de los meses elegidos: laborables × horas de
+  // convenio × % de jornada × 70 %, con festivos y vacaciones descontados.
+  // Antes era un 160 h/mes fijo que no sabía de agosto ni de puentes.
+  const [calendario, setCalendario] = useState({ festivos: new Set(), vacaciones: new Set() });
+  useEffect(() => {
+    if (!yo?.id) return;
+    Promise.all([getFestivos(YEAR).catch(() => []), getVacaciones(yo.id, YEAR).catch(() => [])])
+      .then(([f, v]) => setCalendario({ festivos: new Set(f.map((x) => String(x.fecha).slice(0, 10))), vacaciones: new Set(v.map((x) => String(x.fecha).slice(0, 10))) }));
+  }, [yo]);
+  const topeJornada = useMemo(() => [...mesesSel].reduce((a, m) => a + capacidadMes(YEAR, m, calendario.festivos, calendario.vacaciones, capacidad).produccion, 0), [mesesSel, calendario, capacidad]);
 
   const toggleMes = (m) => setMesesSel(s => { const n = new Set(s); n.has(m) ? n.delete(m) : n.add(m); return n; });
   const todos = () => setMesesSel(new Set(MESES.map((_, i) => i)));
@@ -78,11 +86,8 @@ export default function MiAgenda() {
       const pendientes = delMes.filter(t => (t.estado || 'pendiente') !== 'completada');
       const hPend = pendientes.reduce((s, t) => s + (Number(t.horas_previstas) || 0), 0);
       // Horas previstas desglosadas por tipo de jornada
-      const porTipo = { produccion: 0, gestion: 0, coordinacion: 0, proceso_interno: 0 };
-      for (const t of delMes) {
-        const tipo = t.tipo && porTipo.hasOwnProperty(t.tipo) ? t.tipo : 'produccion';
-        porTipo[tipo] += Number(t.horas_previstas) || 0;
-      }
+      const porTipo = { produccion: 0, gestion: 0, proceso_interno: 0 };
+      for (const t of delMes) porTipo[tipoBolsa(t.tipo)] += Number(t.horas_previstas) || 0;
       return { mes: m, prevista, efectiva, nPend: pendientes.length, hPend, total: delMes.length, porTipo };
     });
   }, [tareas, mesesSel]);
@@ -95,9 +100,8 @@ export default function MiAgenda() {
     prev: a.prev + f.prevista, efe: a.efe + f.efectiva, pend: a.pend + f.hPend,
     produccion: a.produccion + f.porTipo.produccion,
     gestion: a.gestion + f.porTipo.gestion,
-    coordinacion: a.coordinacion + f.porTipo.coordinacion,
     proceso_interno: a.proceso_interno + f.porTipo.proceso_interno,
-  }), { prev: 0, efe: 0, pend: 0, produccion: 0, gestion: 0, coordinacion: 0, proceso_interno: 0 });
+  }), { prev: 0, efe: 0, pend: 0, produccion: 0, gestion: 0, proceso_interno: 0 });
 
   return (
     <div className="space-y-6">
@@ -111,6 +115,10 @@ export default function MiAgenda() {
       {/* Las sesiones con su franja horaria: es la agenda de verdad. La lista
           de abajo son tareas con fecha, que es otra cosa. */}
       <MisSesiones />
+
+      {/* El 30 % que no es proyecto: gestión y coordinación, procesos internos.
+          Se programan aquí, en sesiones, y entran en la agenda como las demás. */}
+      <TareasInternas />
 
       <MisProyectos />
 
@@ -162,12 +170,11 @@ export default function MiAgenda() {
       </div>
 
       {/* Desglose de horas previstas por tipo de jornada */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         {[
-          { tipo: 'produccion', label: 'Producción', color: '#F5A623' },
-          { tipo: 'gestion', label: 'Gestión', color: '#061B45' },
-          { tipo: 'coordinacion', label: 'Coordinación', color: '#1E3A8A' },
-          { tipo: 'proceso_interno', label: 'Procesos internos', color: '#0e7490' },
+          { tipo: 'produccion', label: `${TIPO_BY_ID.produccion.nombre} · ${Math.round(TIPO_BY_ID.produccion.pct * 100)} %`, color: '#F5A623' },
+          { tipo: 'gestion', label: `${TIPO_BY_ID.gestion.nombre} · ${Math.round(TIPO_BY_ID.gestion.pct * 100)} %`, color: '#4C6BB4' },
+          { tipo: 'proceso_interno', label: `${TIPO_BY_ID.proceso_interno.nombre} · ${Math.round(TIPO_BY_ID.proceso_interno.pct * 100)} %`, color: '#0e7490' },
         ].map(({ tipo, label, color }) => (
           <div key={tipo} className="card !p-4">
             <div className="flex items-center gap-2">

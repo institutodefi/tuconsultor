@@ -120,7 +120,7 @@ export default async (req) => {
 
     // ── INVITAR por email (el usuario define su contraseña) ──
     if (action === 'invite') {
-      const { email, nombre = '', apellidos = '', rol = 'consultor', nivel = null, normas = [], capacidad_clientes = 12 } = body;
+      const { email, nombre = '', apellidos = '', rol = 'consultor', nivel = null, normas = [], capacidad_clientes = 12, pct_jornada = 100 } = body;
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'Email no válido' }, 400);
       if (!ROLES_VALIDOS.includes(rol)) return json({ ok: false, error: 'Rol no válido' }, 400);
       if (rol === 'superadmin' && caller.rol !== 'superadmin') {
@@ -144,7 +144,7 @@ export default async (req) => {
       if (inv?.id) {
         await sb(`/rest/v1/perfiles?id=eq.${inv.id}`, {
           method: 'PATCH', prefer: 'return=minimal',
-          body: { rol, nivel, nombre, apellidos, email, normas, capacidad_clientes, invitado_en: new Date().toISOString(), activo: true },
+          body: { rol, nivel, nombre, apellidos, email, normas, capacidad_clientes, pct_jornada: (Number(pct_jornada) >= 10 && Number(pct_jornada) <= 100) ? Number(pct_jornada) : 100, invitado_en: new Date().toISOString(), activo: true },
         });
       }
       return json({ ok: true, invited: email });
@@ -153,7 +153,7 @@ export default async (req) => {
     // ── CAMBIAR ROL ──
     // ── EDITAR PERFIL (nombre, apellidos, nivel, normas, capacidad) ──
     if (action === 'update_perfil') {
-      const { id, nombre, apellidos, nivel, normas, capacidad_clientes } = body;
+      const { id, nombre, apellidos, nivel, normas, capacidad_clientes, pct_jornada } = body;
       if (!id) return json({ ok: false, error: 'Falta id' }, 400);
       { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
       if (nivel && !NIVELES.includes(nivel)) return json({ ok: false, error: 'Nivel no válido' }, 400);
@@ -163,7 +163,21 @@ export default async (req) => {
       if (nivel !== undefined) campos.nivel = nivel || null;
       if (normas !== undefined) campos.normas = normas;
       if (capacidad_clientes !== undefined) campos.capacidad_clientes = capacidad_clientes;
-      const r = await sb(`/rest/v1/perfiles?id=eq.${id}`, { method: 'PATCH', prefer: 'return=minimal', body: campos });
+      // % de jornada (v116): entre 10 y 100. Fuera de rango se ignora, no se
+      // rechaza todo el guardado por un campo secundario.
+      if (pct_jornada !== undefined) { const j = Number(pct_jornada); if (Number.isFinite(j) && j >= 10 && j <= 100) campos.pct_jornada = j; }
+      let r = await sb(`/rest/v1/perfiles?id=eq.${id}`, { method: 'PATCH', prefer: 'return=minimal', body: campos });
+      if (!r.ok && 'pct_jornada' in campos) {
+        // La BD va un paso por detrás (v116 sin aplicar): se guarda el resto
+        // y se avisa, en vez de perder el cambio entero por una columna.
+        const e = await r.text();
+        if (/pct_jornada/.test(e)) {
+          delete campos.pct_jornada;
+          r = await sb(`/rest/v1/perfiles?id=eq.${id}`, { method: 'PATCH', prefer: 'return=minimal', body: campos });
+          if (r.ok) return json({ ok: true, aviso: 'Guardado sin el % de jornada: falta aplicar la migración v116.' });
+        }
+        return json({ ok: false, error: 'No se pudo actualizar el perfil: ' + e }, 502);
+      }
       if (!r.ok) { const e = await r.text(); return json({ ok: false, error: 'No se pudo actualizar el perfil: ' + e }, 502); }
       return json({ ok: true });
     }

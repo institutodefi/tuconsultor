@@ -22,6 +22,7 @@ import { listTable } from './data.js';
 // los de la base. La dirección importa: si fuera al revés, `calcEngine.js`
 // arrastraría el cliente de Supabase y dejaría de poder probarse suelto.
 import { aplicarParametros, sueloSistema, precioClienteAntiguo } from './calcEngine.js';
+import { aplicarReparto } from './jornada.js';
 
 let cache = null;
 let cargando = null;
@@ -57,6 +58,9 @@ export async function cargarReglas() {
       cache = m;
       // Desde aquí el motor calcula con lo que diga la base.
       aplicarParametros(m);
+      // El reparto de la jornada (70/10/20) viaja en la misma tabla, grupo
+      // `jornada` (v116). Si no está, la agenda se queda con sus valores.
+      aplicarReparto(m);
       return m;
     })
     .catch(() => {

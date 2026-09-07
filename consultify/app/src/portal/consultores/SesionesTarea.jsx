@@ -48,7 +48,11 @@ export default function SesionesTarea({
   // `cliente_tareas` son editables: las del planificador por contextos llevan
   // su código generado.
   editable = false,
+  // Responsable que se propone al añadir una sesión. Para las tareas internas
+  // es quien las crea: programarse a uno mismo no debería exigir elegirse.
+  consultorPorDefecto = null,
 }) {
+  const esInterna = campoTarea === 'tarea_interna_id';
   const [sesiones, setSesiones] = useState(null);
   const [todas, setTodas] = useState([]);       // de todo el mundo, para ver solapes
   const [equipo, setEquipo] = useState([]);
@@ -247,7 +251,7 @@ export default function SesionesTarea({
             Las teóricas se enseñan como dato, no como campo: no se editan. */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            ['Comprometidas', bal.teoricas, 'del modelo · no editable'],
+            [esInterna ? 'Previstas' : 'Comprometidas', bal.teoricas, esInterna ? 'el marco de la tarea' : 'del modelo · no editable'],
             ['Planificadas', bal.planificadas, `${bal.nSesiones} sesión${bal.nSesiones === 1 ? '' : 'es'}`],
             ['Ejecutadas', bal.ejecutadas, 'sesiones cerradas'],
           ].map(([etq, v, pie]) => (
@@ -287,7 +291,7 @@ export default function SesionesTarea({
           <div className="flex items-baseline justify-between gap-2">
             <p className="label !mb-0">Sesiones</p>
             {!nueva && (
-              <button onClick={() => setNueva(VACIA())} className="text-[12px] font-bold text-brand-orange hover:underline">
+              <button onClick={() => setNueva({ ...VACIA(), consultor_id: consultorPorDefecto || '' })} className="text-[12px] font-bold text-brand-orange hover:underline">
                 + añadir sesión
               </button>
             )}
@@ -462,7 +466,7 @@ export default function SesionesTarea({
             {bal.teoricas > 0 && (bal.planificadas + horasNueva) > bal.teoricas && (
               <p className="mt-2 rounded-lg bg-amber-400/10 px-2.5 py-2 text-[11.5px] font-bold text-amber-200">
                 Con esta sesión se llega a {Math.round((bal.planificadas + horasNueva) * 10) / 10} h,
-                por encima de las {bal.teoricas} h que el modelo asigna a esta tarea.
+                por encima de las {bal.teoricas} h {esInterna ? 'previstas para esta tarea' : 'que el modelo asigna a esta tarea'}.
               </p>
             )}
 

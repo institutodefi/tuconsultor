@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listTable } from '../lib/data.js';
 import { useAuth } from '../lib/auth.jsx';
 import SesionesTarea from '../portal/consultores/SesionesTarea.jsx';
+import { getTareasInternas, TIPO_BY_ID } from '../lib/agenda.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MIS SESIONES
@@ -26,24 +27,32 @@ export default function MisSesiones({ dias = 21 }) {
   const [abierta, setAbierta] = useState(null);
 
   const cargar = async () => {
-    const [ss, ct] = await Promise.all([
+    const [ss, ct, ti] = await Promise.all([
       listTable('tarea_sesiones').catch(() => []),
       listTable('cliente_tareas').catch(() => []),
+      // Las tareas internas (gestión, procesos internos): sus sesiones son
+      // jornada igual y van en la misma agenda.
+      getTareasInternas().catch(() => []),
     ]);
-    setDatos({ ss: ss || [], ct: ct || [] });
+    setDatos({ ss: ss || [], ct: ct || [], ti: ti || [] });
   };
   useEffect(() => { if (user?.id) cargar(); }, [user?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const { porDia, atrasadas } = useMemo(() => {
     if (!datos) return { porDia: {}, atrasadas: [] };
     const porTarea = Object.fromEntries(datos.ct.map((t) => [String(t.id), t]));
+    const porInterna = Object.fromEntries(datos.ti.map((t) => [String(t.id), t]));
     const hoy = hoyISO();
     const tope = new Date(); tope.setDate(tope.getDate() + dias);
     const limite = `${tope.getFullYear()}-${String(tope.getMonth() + 1).padStart(2, '0')}-${String(tope.getDate()).padStart(2, '0')}`;
 
     const mias = datos.ss
       .filter((s) => String(s.consultor_id) === String(user?.id) && s.estado !== 'anulada')
-      .map((s) => ({ ...s, tarea: porTarea[String(s.cliente_tarea_id)] || null }));
+      .map((s) => ({
+        ...s,
+        tarea: porTarea[String(s.cliente_tarea_id)] || null,
+        interna: s.tarea_interna_id ? (porInterna[String(s.tarea_interna_id)] || null) : null,
+      }));
 
     const m = {};
     for (const s of mias) {
@@ -75,10 +84,16 @@ export default function MisSesiones({ dias = 21 }) {
       {s.tarea?.codigo && (
         <code className="text-[11px] font-extrabold tracking-wide text-brand-verdeTexto">{s.tarea.codigo}</code>
       )}
-      <button onClick={() => s.tarea && setAbierta(s.tarea)} disabled={!s.tarea}
+      {s.interna && (
+        <span className={`rounded px-1.5 py-0.5 text-[9.5px] font-extrabold ${s.interna.tipo === 'proceso_interno' ? 'bg-cyan-700/40 text-cyan-100' : 'bg-indigo-600/40 text-indigo-100'}`}
+          title={TIPO_BY_ID[s.interna.tipo]?.nombre || 'Tarea interna'}>
+          {TIPO_BY_ID[s.interna.tipo]?.corto || 'G'}
+        </span>
+      )}
+      <button onClick={() => (s.tarea || s.interna) && setAbierta(s.tarea ? { tipo: 'cliente', t: s.tarea } : { tipo: 'interna', t: s.interna })} disabled={!s.tarea && !s.interna}
         className="min-w-0 flex-1 truncate text-left text-[12px] text-[#DFF1F5] hover:text-brand-orange hover:underline disabled:hover:text-[#DFF1F5]"
         title="Abrir la tarea">
-        {s.tarea?.titulo || 'Tarea'}
+        {s.tarea?.titulo || s.interna?.titulo || 'Tarea'}
       </button>
       {s.tarea?.norma_id && <span className="chip !px-1.5 !py-0 text-[9.5px]">{s.tarea.norma_id}</span>}
       {s.estado === 'hecha' && <span className="text-[10.5px] font-bold text-emerald-300">hecha</span>}
@@ -125,16 +140,26 @@ export default function MisSesiones({ dias = 21 }) {
         </div>
       ))}
 
-      {abierta && (
+      {abierta?.tipo === 'cliente' && (
         <SesionesTarea
           tarea={{
-            id: abierta.id, titulo: abierta.titulo, codigo: abierta.codigo,
-            horas_teoricas: abierta.horas, subproceso: abierta.subproceso,
+            id: abierta.t.id, titulo: abierta.t.titulo, codigo: abierta.t.codigo,
+            horas_teoricas: abierta.t.horas, subproceso: abierta.t.subproceso,
           }}
-          contexto={{ norma: abierta.norma_id }}
-          proyectoId={abierta.proyecto_id}
+          contexto={{ norma: abierta.t.norma_id }}
+          proyectoId={abierta.t.proyecto_id}
           campoTarea="cliente_tarea_id"
           editable
+          onCerrar={() => setAbierta(null)}
+          onGuardado={cargar}
+        />
+      )}
+      {abierta?.tipo === 'interna' && (
+        <SesionesTarea
+          tarea={{ id: abierta.t.id, titulo: abierta.t.titulo, codigo: TIPO_BY_ID[abierta.t.tipo]?.corto, horas_teoricas: abierta.t.horas }}
+          contexto={{ norma: TIPO_BY_ID[abierta.t.tipo]?.nombre }}
+          campoTarea="tarea_interna_id"
+          consultorPorDefecto={user?.id}
           onCerrar={() => setAbierta(null)}
           onGuardado={cargar}
         />
