@@ -7,6 +7,7 @@ import MisProyectos from '../../components/MisProyectos.jsx';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
 import AuditoriasExternas from '../../components/AuditoriasExternas.jsx';
 import { getTareasInternas } from '../../lib/agenda.js';
+import ResumenDelDia from '../../components/ResumenDelDia.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // INICIO · lo primero que ve cualquiera al entrar
@@ -109,12 +110,27 @@ export default function Inicio() {
 
   return (
     <div className="space-y-6">
+      {/* ── Accesos directos, arriba y pequeños ──
+          Son el menú de trabajo de cada rol: una fila de chips, no una
+          parrilla de tarjetas que empujaba lo importante fuera de la vista. */}
+      <div className="flex flex-wrap gap-1.5">
+        {accesos.map((a) => (
+          <Link key={a.to} to={a.to} title={a.nota}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2.5 py-1 text-[12px] font-bold text-[#CFE3E9] transition hover:border-brand-orange/60 hover:text-brand-orange">
+            <span aria-hidden="true" className="text-[13px]">{a.icono}</span>{a.etq}
+          </Link>
+        ))}
+      </div>
+
       <div>
         <p className="eyebrow">Inicio</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
           {saludo()}{nombre ? `, ${nombre}` : ''}
         </h1>
       </div>
+
+      {/* ── Lo que hay que hacer, contado por la IA (una vez al día) ── */}
+      <ResumenDelDia user={user} nombre={nombre} />
 
       {/* ── Lo de hoy ── */}
       {jornada && (
@@ -174,22 +190,6 @@ export default function Inicio() {
           llevo, luego si voy bien de tiempo. */}
       <CuadroTareas titulo="Cuadro de tareas" />
 
-      {/* ── Accesos directos ── */}
-      <div>
-        <h3 className="mb-2 text-[14px] font-extrabold text-[#EAF4F7]">Accesos directos</h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {accesos.map((a) => (
-            <Link key={a.to} to={a.to}
-              className="group flex items-center gap-3 rounded-xl border border-[#1E5468] bg-[#0D3242] px-3.5 py-3 transition hover:border-brand-orange/60 hover:bg-[#10394A]">
-              <span className="text-lg" aria-hidden="true">{a.icono}</span>
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-bold text-[#EAF4F7] group-hover:text-brand-orange">{a.etq}</span>
-                <span className="block truncate text-[11.5px] text-[#7FA7B4]">{a.nota}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

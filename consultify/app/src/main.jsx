@@ -38,10 +38,21 @@ function Protected({ allow, children }) {
   // pantalla de credenciales con su propio correo visible en la barra lateral,
   // y no había forma de salir de ahí.
   if (allow && !allow.includes(role)) {
-    const suyo = role === 'cliente' ? '/clientes' : '/consultores/mi-agenda';
+    const suyo = role === 'cliente' ? '/clientes' : '/consultores';
     return <Navigate to={suyo} replace />;
   }
   return children;
+}
+
+// Con sesión abierta, la raíz de la app lleva a la pantalla de inicio de cada
+// uno (equipo → Inicio de Órbita; cliente → su zona). Antes caía en la
+// calculadora pública, y quien entraba con la sesión guardada no veía su
+// inicio hasta pinchar en el menú.
+function Entrada() {
+  const { user, role, loading } = useAuth();
+  if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-[#9FC0CB] font-semibold">Cargando…</div>;
+  if (user && role) return <Navigate to={role === 'cliente' ? '/clientes' : '/consultores'} replace />;
+  return <Navigate to="/calculadora" replace />;
 }
 
 function App() {
@@ -53,7 +64,7 @@ function App() {
               menú: con la barrera aquí, se puede navegar a otra sin recargar. */}
           <BarreraErrores>
           <Routes>
-            <Route path="/" element={<Navigate to="/calculadora" replace />} />
+            <Route path="/" element={<Entrada />} />
             <Route path="/calculadora" element={<GeneradorOfertas publico />} />
             <Route path="/acceso" element={<Acceso />} />
             <Route path="/establecer-password" element={<EstablecerPassword />} />
