@@ -209,7 +209,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
                   proyecto: mismo planificador por arrastre, misma regla (solo
                   gente del proyecto). El cliente no lo ve. */}
               {previsualizacion && (
-                <PlanificadorArrastre proyecto={p} tareas={d.tareas.filter((t) => String(t.proyecto_id) === String(p.id))} sesiones={d.sesiones}
+                <PlanificadorArrastre proyecto={p} nombreCliente={d.nombreCliente || ''} tareas={d.tareas.filter((t) => String(t.proyecto_id) === String(p.id))} sesiones={d.sesiones}
                   onGuardado={() => setRecarga((n) => n + 1)} onAbrirTarea={(t) => t && setTareaAbierta(filas.find((f) => String(f.id) === String(t.id)) || null)} />
               )}
 

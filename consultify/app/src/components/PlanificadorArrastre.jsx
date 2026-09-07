@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../lib/data.js';
 import { balanceTarea } from '../lib/sesionesTarea.js';
 import { esLaborable, FESTIVOS_2026 } from '../lib/agenda.js';
+import { NORMAS, NORMA_BY_ID } from '../lib/calcEngine.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR ARRASTRE · calendario del proyecto + tareas sin programar
@@ -16,6 +17,10 @@ import { esLaborable, FESTIVOS_2026 } from '../lib/agenda.js';
 //
 // Solo se puede programar a gente del proyecto (proyecto_equipo). Sustituye
 // al «asignar consultor en lote», que asignaba sin decir cuándo.
+//
+// Las tareas de la lista van agrupadas por sistema de gestión (la norma), con
+// el nombre comercial del cliente delante del código y el nombre completo de
+// la tarea, para que se sepa qué se arrastra sin abrirla.
 // ════════════════════════════════════════════════════════════════════════════
 
 const S = (v) => String(v ?? '');
@@ -28,8 +33,11 @@ const sumaHoras = (hhmm, h) => { const [H, M] = hhmm.split(':').map(Number); con
 const fmtH = (n) => `${(Math.round(num(n) * 10) / 10).toLocaleString('es-ES')} h`;
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const ORDEN_NORMA = Object.fromEntries(NORMAS.map((n, i) => [n.id, i]));
+const nombreNorma = (id) => NORMA_BY_ID[S(id)]?.nombre || (id ? S(id) : 'Sin sistema de gestión');
+const ordenNorma = (id) => (id && ORDEN_NORMA[S(id)] !== undefined ? ORDEN_NORMA[S(id)] : 999);
 
-export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones = [], horasTeoricas = (t) => num(t.horas), onGuardado, onAbrirTarea }) {
+export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tareas = [], sesiones = [], horasTeoricas = (t) => num(t.horas), onGuardado, onAbrirTarea }) {
   const [perfiles, setPerfiles] = useState([]);
   const [equipoProyecto, setEquipoProyecto] = useState([]);
   const [festivos, setFestivos] = useState(new Set(FESTIVOS_2026.map((f) => f.fecha)));
@@ -74,8 +82,11 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
   const pendientes = useMemo(() => tareas.filter((t) => !t.hecha).map((t) => {
     const b = balanceTarea({ horas_teoricas: horasTeoricas(t) }, sesiones.filter((s) => S(s.cliente_tarea_id) === S(t.id)));
     return { t, b, faltan: Math.max(0, Math.round((b.teoricas - b.planificadas) * 10) / 10) };
-  }).filter((x) => x.faltan > 0.4 && (!filtro || `${x.t.codigo} ${x.t.titulo}`.toLowerCase().includes(filtro.toLowerCase())))
-    .sort((a, b) => S(a.t.codigo).localeCompare(S(b.t.codigo))), [tareas, sesiones, horasTeoricas, filtro]);
+  }).filter((x) => x.faltan > 0.4 && (!filtro || `${x.t.codigo} ${x.t.titulo} ${nombreNorma(x.t.norma_id)}`.toLowerCase().includes(filtro.toLowerCase())))
+    // Por sistema de gestión (el orden del catálogo de normas) y, dentro, por código.
+    .sort((a, b) => ordenNorma(a.t.norma_id) - ordenNorma(b.t.norma_id) || S(a.t.codigo).localeCompare(S(b.t.codigo), 'es', { numeric: true })), [tareas, sesiones, horasTeoricas, filtro]);
+  // Etiqueta con la que se ve una tarea: nombre comercial del cliente + código.
+  const etiqueta = (t) => `${nombreCliente ? `${nombreCliente} · ` : ''}${t?.codigo || 'Tarea'}`;
 
   // Rejilla del mes (semanas de lunes a domingo).
   const dias = useMemo(() => {
@@ -110,7 +121,7 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
         await insertRow('tarea_sesiones', fila);
         // La tarea queda con responsable si no lo tenía.
         if (!t.consultor_id) await updateRow('cliente_tareas', t.id, { consultor_id: consultor }).catch(() => {});
-        setMsg({ err: false, t: `${t.codigo || t.titulo}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}.` });
+        setMsg({ err: false, t: `${etiqueta(t)} · ${t.titulo}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}.` });
       } else if (a.tipo === 'sesion') {
         const s = sesionesProyecto.find((x) => S(x.id) === a.id); if (!s || S(s.fecha).slice(0, 10) === iso) return;
         await updateRow('tarea_sesiones', s.id, { fecha: iso });
@@ -148,7 +159,7 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
       </div>
       {msg && <p className={`mt-2 text-[12px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</p>}
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[300px_1fr]">
+      <div className="mt-3 grid gap-3 lg:grid-cols-[320px_1fr]">
         {/* ── Sin programar ── */}
         <div className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] p-2.5">
           <div className="flex items-baseline justify-between gap-2">
@@ -156,20 +167,30 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
             <span className="text-[11px] text-[#7FA7B4]">{fmtH(totalFaltan)} por meter</span>
           </div>
           <input className="input mt-2 !py-1 !text-[12px]" placeholder="Filtrar…" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
-          <ul className="mt-2 max-h-[30rem] space-y-1 overflow-y-auto pr-1">
-            {pendientes.map(({ t, b, faltan }) => {
+          <ul className="mt-2 max-h-[34rem] overflow-y-auto pr-1">
+            {pendientes.map(({ t, b, faltan }, i) => {
               const resp = nombreDe(t.consultor_id);
+              const nuevoGrupo = i === 0 || S(pendientes[i - 1].t.norma_id) !== S(t.norma_id);
+              const delGrupo = pendientes.filter((x) => S(x.t.norma_id) === S(t.norma_id));
               return (
-                <li key={t.id} draggable={!ocupado}
-                  onDragStart={(e) => { setArrastrando({ tipo: 'tarea', id: S(t.id) }); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', S(t.id)); } catch { /* Safari */ } }}
-                  onDragEnd={() => { setArrastrando(null); setSobre(null); }}
-                  className={`cursor-grab rounded-lg border px-2 py-1.5 active:cursor-grabbing ${arrastrando?.id === S(t.id) ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-orange/60'}`}
-                  title="Arrastra al calendario">
-                  <p className="flex items-center gap-1.5 text-[12px] font-bold text-[#EAF4F7]"><code className="shrink-0 whitespace-nowrap text-[10.5px] text-brand-verdeTexto">{t.codigo}</code><span className="truncate">{t.titulo}</span></p>
-                  <p className="mt-0.5 flex items-center justify-between text-[10.5px] text-[#9FC0CB]">
-                    <span className={resp ? '' : 'text-amber-200'}>{resp || 'sin responsable'}</span>
-                    <span>{b.planificadas ? `${fmtH(b.planificadas)} de ` : ''}{fmtH(b.teoricas)} · faltan <b className="text-brand-orange">{fmtH(faltan)}</b></span>
-                  </p>
+                <li key={t.id}>
+                  {nuevoGrupo && (
+                    <p className={`flex items-baseline justify-between border-b border-[#1E5468] px-0.5 pb-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-brand-verdeTexto ${i ? 'mt-2' : ''}`}>
+                      <span>{nombreNorma(t.norma_id)}</span><span className="font-bold normal-case tracking-normal text-[#7FA7B4]">{delGrupo.length} · {fmtH(delGrupo.reduce((a, x) => a + x.faltan, 0))}</span>
+                    </p>
+                  )}
+                  <div draggable={!ocupado}
+                    onDragStart={(e) => { setArrastrando({ tipo: 'tarea', id: S(t.id) }); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', S(t.id)); } catch { /* Safari */ } }}
+                    onDragEnd={() => { setArrastrando(null); setSobre(null); }}
+                    className={`mt-1 cursor-grab rounded-lg border px-2 py-1.5 active:cursor-grabbing ${arrastrando?.id === S(t.id) ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-orange/60'}`}
+                    title="Arrastra al calendario">
+                    <p className="text-[10.5px] font-bold text-brand-verdeTexto"><code>{etiqueta(t)}</code>{t.subproceso ? <span className="ml-1.5 font-normal text-[#7FA7B4]">{S(t.subproceso).split(' ').slice(0, 2).join(' ')}</span> : null}</p>
+                    <p className="mt-0.5 whitespace-normal text-[12px] font-bold leading-snug text-[#EAF4F7]">{t.titulo || t.subproceso || 'Tarea sin nombre'}</p>
+                    <p className="mt-0.5 flex items-center justify-between gap-2 text-[10.5px] text-[#9FC0CB]">
+                      <span className={`truncate ${resp ? '' : 'text-amber-200'}`}>{resp || 'sin responsable'}</span>
+                      <span className="shrink-0">{b.planificadas ? `${fmtH(b.planificadas)} de ` : ''}{fmtH(b.teoricas)} · faltan <b className="text-brand-orange">{fmtH(faltan)}</b></span>
+                    </p>
+                  </div>
                 </li>
               );
             })}
@@ -211,8 +232,11 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
                           onDragStart={(e) => { e.stopPropagation(); setArrastrando({ tipo: 'sesion', id: S(s.id) }); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', S(s.id)); } catch { /* Safari */ } }}
                           onDragEnd={() => { setArrastrando(null); setSobre(null); }}
                           className={`group rounded border px-1 py-0.5 text-[10px] leading-tight ${ESTADO[s.estado] || ESTADO.programada} ${s.estado !== 'hecha' ? 'cursor-grab' : ''}`}
-                          title={`${t?.codigo || ''} ${t?.titulo || ''} · ${S(s.hora_inicio).slice(0, 5)}–${S(s.hora_fin).slice(0, 5)} · ${nombreDe(s.consultor_id) || 'sin persona'}${s.estado === 'hecha' ? ' · hecha' : ''}`}>
-                          <button type="button" onClick={() => onAbrirTarea?.(t)} className="block w-full truncate text-left font-bold hover:underline">{t?.codigo || 'Tarea'} · {fmtH(s.horas)}</button>
+                          title={`${etiqueta(t)} · ${t?.titulo || ''} · ${S(s.hora_inicio).slice(0, 5)}–${S(s.hora_fin).slice(0, 5)} · ${nombreDe(s.consultor_id) || 'sin persona'}${s.estado === 'hecha' ? ' · hecha' : ''}`}>
+                          <button type="button" onClick={() => onAbrirTarea?.(t)} className="block w-full text-left hover:underline">
+                            <span className="block truncate font-bold">{t?.codigo || 'Tarea'} · {fmtH(s.horas)}</span>
+                            {t?.titulo && <span className="block truncate text-[9.5px] font-normal opacity-90">{t.titulo}</span>}
+                          </button>
                           <div className="flex items-center justify-between gap-1">
                             <select className="max-w-[80%] truncate bg-transparent text-[9.5px] text-current outline-none" value={S(s.consultor_id || '')} onChange={(e) => cambiarPersona(s, e.target.value)} onClick={(e) => e.stopPropagation()} title="Quién la hace (gente del proyecto)">
                               {!gente.some((g) => g.id === S(s.consultor_id)) && <option value={S(s.consultor_id || '')}>{nombreDe(s.consultor_id) || 'sin persona'}</option>}
@@ -228,7 +252,7 @@ export default function PlanificadorArrastre({ proyecto, tareas = [], sesiones =
               );
             })}
           </div>
-          <p className="mt-1.5 text-[10.5px] text-[#5E8494]">Fines de semana y festivos no admiten sesiones. Pulsa el código de una sesión para abrir la tarea (horas, checklist y más sesiones).</p>
+          <p className="mt-1.5 text-[10.5px] text-[#5E8494]">Fines de semana y festivos no admiten sesiones. Pulsa una sesión para abrir la tarea (horas, checklist y más sesiones).</p>
         </div>
       </div>
     </div>

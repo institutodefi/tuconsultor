@@ -1083,7 +1083,7 @@ export default function Proyectos() {
 
           {/* Calendario del proyecto + tareas sin programar, para arrastrar. */}
           {tareasProyecto.length > 0 && (
-            <PlanificadorArrastre proyecto={proyecto} tareas={tareasProyecto} sesiones={sesiones} horasTeoricas={horasTeoricas}
+            <PlanificadorArrastre proyecto={proyecto} nombreCliente={resueltos.find((x) => String(x.id) === String(proyecto.id))?.nombreCliente || ''} tareas={tareasProyecto} sesiones={sesiones} horasTeoricas={horasTeoricas}
               onGuardado={() => { listTable('tarea_sesiones').then(setSesiones).catch(() => {}); listTable('cliente_tareas').then(setTareas).catch(() => {}); }}
               onAbrirTarea={(t) => t && setAbierta(t)} />
           )}
