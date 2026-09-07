@@ -4,6 +4,8 @@ import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../
 import { NORMAS, NORMA_BY_ID } from '../../lib/calcEngine.js';
 import { propuestasDesdeLecturas, filaCertificado, validarPropuesta } from '../../lib/certificadosIA.js';
 import { aISO } from '../../lib/auditorias.js';
+import { cargarContactosFicha, guardarContactoFicha, quitarContactoFicha, guardarDatosEmpresa, ROL_CONTACTO } from '../../lib/cuentaCliente.js';
+import UsuariosCuenta from '../../components/UsuariosCuenta.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MI EMPRESA · zona de clientes
@@ -13,6 +15,11 @@ import { aISO } from '../../lib/auditorias.js';
 //      representante…). Se guardan en `clientes` (columnas de la v125).
 //   2. Sedes / centros de trabajo (`cliente_sedes`, v125).
 //   3. Normas certificadas y sus alcances (`cliente_certificados`).
+//   4. Personas de contacto: LAS DE SU FICHA del CRM (empresas ↔ contactos),
+//      para que el portal y la ficha digan lo mismo. Y los usuarios de la
+//      cuenta (administrador / usuario).
+//   Solo el administrador de la cuenta ve y edita esto; el usuario de cuenta
+//   usa el portal de proyectos.
 //
 // Y el conector: «Proponer desde mis documentos» lee todo lo que ha subido
 // (certificados, escrituras, CIF, memorias…) y propone datos, sedes y
@@ -57,7 +64,7 @@ const errorMigracion = (e) => {
   if (/cliente_sedes|nombre_comercial|representante|could not find the '(direccion|cp|poblacion|provincia|pais|web|actividad|empleados|sector)'/i.test(m)) return ' Falta aplicar la migración v125 (datos de empresa y sedes).';
   return '';
 };
-const CONTACTO_VACIO = () => ({ nombre: '', apellidos: '', cargo: '', email: '', telefono: '', movil: '', principal: false, notas: '', rgpd_aceptado: false });
+const CONTACTO_VACIO = () => ({ nombre: '', apellidos: '', cargo: '', email: '', telefono: '', movil: '', principal: false, notas: '', rgpd_aceptado: false, rol: 'proyecto' });
 const fmtFechaHora = (iso) => (iso ? new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
 export const TEXTO_RGPD_EMPRESA = 'He leído la política de privacidad y acepto, en nombre de la empresa, que TuConsultor trate estos datos y los de las personas de contacto que registre para la prestación del servicio contratado (RGPD y LOPDGDD).';
 export const TEXTO_RGPD_CONTACTO = 'Esta persona ha sido informada y acepta que sus datos se traten para la gestión del servicio (RGPD).';
@@ -87,7 +94,8 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
   const [guardando, setGuardando] = useState(false);
 
   const [sedes, setSedes] = useState([]);
-  const [contactos, setContactos] = useState([]);
+  const [contactos, setContactos] = useState([]);    // personas de la ficha del CRM
+  const [empresaCrm, setEmpresaCrm] = useState(null);
   const [formContacto, setFormContacto] = useState(null);
   const [msgContacto, setMsgContacto] = useState(null);
   const [rgpd, setRgpd] = useState(!!cliente?.rgpd_aceptado);
@@ -108,13 +116,13 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
 
   const cargar = async () => {
     if (!clienteId) return;
-    const [s, c, d, ct] = await Promise.all([
+    const [s, c, d, ficha] = await Promise.all([
       listTable('cliente_sedes').catch(() => null),
       listTable('cliente_certificados').catch(() => []),
       listTable('cliente_documentos').catch(() => []),
-      listTable('cliente_contactos').catch(() => []),
+      cargarContactosFicha(cliente).catch(() => ({ empresa: null, contactos: [] })),
     ]);
-    setContactos((ct || []).filter((x) => String(x.cliente_id) === String(clienteId)).sort((a, b) => Number(b.principal) - Number(a.principal) || T(a.nombre).localeCompare(T(b.nombre))));
+    setContactos(ficha.contactos || []); setEmpresaCrm(ficha.empresa || null);
     setSinSedes(s === null);
     const mio = (x) => String(x.cliente_id) === String(clienteId);
     setSedes((s || []).filter(mio).sort((a, b) => Number(b.principal) - Number(a.principal) || String(a.creado || '').localeCompare(String(b.creado || ''))));
@@ -137,8 +145,8 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
         const v = T(f[k]);
         patch[k] = k === 'empleados' ? (v ? Math.max(0, Math.round(Number(v.replace(',', '.')) || 0)) : null) : (v || null);
       }
-      await updateRow('clientes', clienteId, patch);
-      setMsg({ err: false, t: 'Datos de empresa guardados. Tu consultor los ve al momento.' });
+      const r = await guardarDatosEmpresa(cliente, patch);
+      setMsg({ err: false, t: r.soloFicha ? 'Datos guardados en tu ficha de cliente (la ficha del CRM se coordinará al aplicar la migración v127).' : 'Datos de empresa guardados en tu ficha y en el CRM. Tu consultor los ve al momento.' });
       onGuardado?.();
     } catch (e) { setMsg({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'clientes')}${errorMigracion(e)}` }); }
     finally { setGuardando(false); }
@@ -180,7 +188,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
     catch (e) { setMsgCert({ err: true, t: `No se pudo quitar: ${e?.message || e}` }); }
   }
 
-  // ── 2b · Personas de contacto de la empresa ─────────────────────────────
+  // ── 2b · Personas de contacto: las de la ficha del CRM ──────────────────
   async function guardarContacto() {
     const c = formContacto;
     if (!T(c.nombre)) { setMsgContacto({ err: true, t: 'El nombre no puede quedar vacío.' }); return; }
@@ -188,18 +196,16 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
     if (!c.rgpd_aceptado) { setMsgContacto({ err: true, t: 'Hace falta confirmar que la persona está informada y acepta el tratamiento de sus datos (RGPD).' }); return; }
     setMsgContacto(null);
     try {
-      const fila = { cliente_id: clienteId, nombre: T(c.nombre), apellidos: T(c.apellidos) || null, cargo: T(c.cargo) || null, email: T(c.email).toLowerCase() || null, telefono: T(c.telefono) || null, movil: T(c.movil) || null, principal: !!c.principal, notas: T(c.notas) || null, rgpd_aceptado: true, rgpd_fecha: c.rgpd_fecha || new Date().toISOString(), origen: c.origen || 'cliente', updated_at: new Date().toISOString() };
-      if (c.id) await updateRow('cliente_contactos', c.id, fila); else await insertRow('cliente_contactos', fila);
-      if (fila.principal) for (const o of contactos) if (o.principal && String(o.id) !== String(c.id)) await updateRow('cliente_contactos', o.id, { principal: false }).catch(() => {});
+      await guardarContactoFicha(cliente, c);
       setFormContacto(null); await cargar(); onGuardado?.();
-    } catch (e) { setMsgContacto({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'cliente_contactos')}${errorMigracion(e)}` }); }
+    } catch (e) { setMsgContacto({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'contactos')}${/cliente_guardar_contacto|does not exist|PGRST202/i.test(String(e?.message || e)) ? ' Falta aplicar la migración v127 (contactos coordinados con la ficha).' : ''}` }); }
   }
   async function borrarContacto(c) {
-    if (!window.confirm(`¿Quitar a ${c.nombre}${c.apellidos ? ` ${c.apellidos}` : ''} de los contactos?`)) return;
-    try { await deleteRow('cliente_contactos', c.id); await cargar(); onGuardado?.(); }
+    if (!window.confirm(`¿Quitar a ${c.nombre}${c.apellidos ? ` ${c.apellidos}` : ''} de las personas de contacto de tu empresa?`)) return;
+    try { await quitarContactoFicha(cliente, c.id); await cargar(); onGuardado?.(); }
     catch (e) { setMsgContacto({ err: true, t: `No se pudo quitar: ${e?.message || e}` }); }
   }
-  const editarContacto = (c) => setFormContacto({ ...CONTACTO_VACIO(), ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v == null && !['principal', 'rgpd_aceptado'].includes(k) ? '' : v])) });
+  const editarContacto = (c) => setFormContacto({ ...CONTACTO_VACIO(), ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v == null && !['principal', 'rgpd_aceptado'].includes(k) ? '' : v])), rol: c.roles?.[0] || 'proyecto' });
 
   // ── Conector IA: proponer desde los documentos ──────────────────────────
   async function proponer() {
@@ -239,7 +245,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
       if (campos.length) {
         const patch = {};
         for (const x of campos) patch[x.campo] = x.campo === 'empleados' ? (Math.round(Number(x.valor)) || null) : (String(x.valor).trim() || null);
-        try { await updateRow('clientes', clienteId, patch); setF((prev) => ({ ...prev, ...Object.fromEntries(campos.map((x) => [x.campo, String(x.valor)])) })); hecho.push(`${campos.length} dato${campos.length === 1 ? '' : 's'} de empresa`); }
+        try { await guardarDatosEmpresa(cliente, patch); setF((prev) => ({ ...prev, ...Object.fromEntries(campos.map((x) => [x.campo, String(x.valor)])) })); hecho.push(`${campos.length} dato${campos.length === 1 ? '' : 's'} de empresa`); }
         catch (e) { errores.push(`datos de empresa: ${explicarErrorBd(e, 'clientes')}${errorMigracion(e)}`); }
       }
       let nS = 0;
@@ -521,7 +527,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2 className="text-sm font-extrabold text-[#EAF4F7]">Personas de contacto · {contactos.length}</h2>
-            <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Quién es quién en tu empresa para el servicio: dirección, responsable del sistema, administración… Tu consultor las ve en tu ficha.</p>
+            <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Quién es quién en tu empresa para el servicio: dirección, responsable del sistema, administración… Son las mismas personas de tu ficha de cliente{empresaCrm?.nombre ? ` (${empresaCrm.nombre_comercial || empresaCrm.nombre})` : ''}: lo que cambies aquí lo ve tu consultor al momento.</p>
           </div>
           {!formContacto && <button type="button" onClick={() => setFormContacto({ ...CONTACTO_VACIO(), principal: contactos.length === 0 })} className="btn-ghost !px-3 !py-1 text-[12px]">+ Añadir persona</button>}
         </div>
@@ -530,7 +536,7 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
             {contactos.map((c) => (
               <li key={c.id} className="flex flex-wrap items-start justify-between gap-2 py-2">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-bold text-[#EAF4F7]">{c.nombre}{c.apellidos ? ` ${c.apellidos}` : ''}{c.cargo && <span className="font-medium text-[#9FC0CB]"> · {c.cargo}</span>}{c.principal && <span className="chip ml-2 bg-brand-verde/20 !px-2 !py-0 text-[10px] text-brand-verdeTexto">principal</span>}</p>
+                  <p className="text-[13px] font-bold text-[#EAF4F7]">{c.nombre}{c.apellidos ? ` ${c.apellidos}` : ''}{c.cargo && <span className="font-medium text-[#9FC0CB]"> · {c.cargo}</span>}{c.principal && <span className="chip ml-2 bg-brand-verde/20 !px-2 !py-0 text-[10px] text-brand-verdeTexto">principal</span>}{(c.roles || []).map((r) => <span key={r} className="chip ml-1 bg-[#123F52] !px-2 !py-0 text-[10px] text-[#9FC0CB]">{ROL_CONTACTO[r] || r}</span>)}</p>
                   <p className="text-[11.5px] text-[#9FC0CB]">{[c.email, c.movil || c.telefono].filter(Boolean).join(' · ') || 'Sin datos de contacto'}{c.rgpd_aceptado ? <span className="ml-2 text-[10.5px] text-emerald-200">✓ RGPD</span> : <span className="ml-2 text-[10.5px] text-amber-100">RGPD pendiente</span>}</p>
                 </div>
                 <div className="flex gap-2 text-[11.5px] font-bold">
@@ -552,7 +558,13 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
               <Campo id="pc-email" etq="Correo" tipo="email" v={formContacto.email} set={(x) => setFormContacto({ ...formContacto, email: x })} />
               <Campo id="pc-tel" etq="Teléfono" tipo="tel" v={formContacto.telefono} set={(x) => setFormContacto({ ...formContacto, telefono: x })} />
               <Campo id="pc-movil" etq="Móvil" tipo="tel" v={formContacto.movil} set={(x) => setFormContacto({ ...formContacto, movil: x })} />
-              <Campo id="pc-notas" etq="Notas" v={formContacto.notas} set={(x) => setFormContacto({ ...formContacto, notas: x })} ancho="sm:col-span-3" />
+              <div>
+                <label className="label" htmlFor="pc-rol">Papel en el servicio</label>
+                <select id="pc-rol" className="input !py-1.5 !text-[13px]" value={formContacto.rol || 'proyecto'} onChange={(e) => setFormContacto({ ...formContacto, rol: e.target.value })}>
+                  {Object.entries(ROL_CONTACTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <Campo id="pc-notas" etq="Notas" v={formContacto.notas} set={(x) => setFormContacto({ ...formContacto, notas: x })} ancho="sm:col-span-2" />
               <label className="flex items-center gap-2 text-[12.5px] font-bold text-[#EAF4F7] sm:col-span-3">
                 <input type="checkbox" checked={!!formContacto.principal} onChange={(e) => setFormContacto({ ...formContacto, principal: e.target.checked })} /> Es la persona de contacto principal
               </label>
@@ -570,6 +582,9 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
         )}
         {!formContacto && <Aviso msg={msgContacto} />}
       </section>
+
+      {/* ── 2c · Usuarios de la cuenta ── */}
+      <UsuariosCuenta clienteId={clienteId} email={email} />
 
       {/* ── 3 · Normas certificadas y alcances ── */}
       <section className="card">

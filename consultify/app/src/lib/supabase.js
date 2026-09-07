@@ -91,6 +91,11 @@ export const demoDB = {
     { id: 'doc1', cliente_id: 'cl1', proyecto_id: 'pc1', titulo: 'Certificado ISO 45001 · Bureau Veritas', tipo: 'certificado', nombre_fichero: 'cert-45001-bv.pdf', mime: 'application/pdf', creado: '2026-08-20T10:00:00Z' },
     { id: 'doc2', cliente_id: 'cl1', proyecto_id: 'pc1', titulo: 'Escritura de constitución', tipo: 'escritura', nombre_fichero: 'escritura.pdf', mime: 'application/pdf', creado: '2026-08-20T10:05:00Z' },
   ],
+  // Usuarios de la cuenta (v127): María administra; Jorge solo usa el portal.
+  cliente_usuarios: [
+    { id: 'cu1', cliente_id: 'cl1', email: 'maria@industriasnorte.es', rol_cuenta: 'admin', nombre: 'María López', invitado_por: null, creado: '2026-08-01T10:00:00Z' },
+    { id: 'cu2', cliente_id: 'cl1', email: 'jorge@industriasnorte.es', rol_cuenta: 'usuario', nombre: 'Jorge Ruiz', invitado_por: 'maria@industriasnorte.es', creado: '2026-08-02T10:00:00Z' },
+  ],
   // Personas de contacto de la empresa (cliente_contactos, v126).
   cliente_contactos: [
     { id: 'cco1', cliente_id: 'cl1', nombre: 'María', apellidos: 'López', cargo: 'Responsable de calidad', email: 'maria@industriasnorte.es', telefono: '+34 600 111 222', movil: null, principal: true, rgpd_aceptado: true, rgpd_fecha: '2026-08-01T10:00:00Z', origen: 'cliente', notas: null },

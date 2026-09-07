@@ -61,6 +61,11 @@ function demo() {
       { id: 'emp-prov', nombre: 'LABORATORIO CALIBRA, S.L.', cif: 'B06996631',
         es_cliente: false, es_proveedor: true, estado_comercial: 'activo', poblacion: 'Getafe', provincia: 'Madrid',
         pais: 'España', empresa_matriz_id: null, creado: '2026-02-02T09:00:00Z' },
+      // La empresa del CRM de la ficha de cliente cl1 (Industrias Norte), para
+      // que el portal enseñe sus personas de contacto.
+      { id: 'emp-inor', nombre: 'INDUSTRIAS NORTE, S.L.', cif: 'B12345678', cliente_id_old: 'cl1',
+        es_cliente: true, es_proveedor: false, estado_comercial: 'activo', direccion: 'C/ Mayor 1', cp: '28001',
+        poblacion: 'Madrid', provincia: 'Madrid', pais: 'España', email: 'maria@industriasnorte.es', telefono: '+34 600 111 222', creado: '2026-01-05T09:00:00Z' },
       { id: 'emp-pot', nombre: 'TALLERES NORTE', cif: null,
         es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', origen: 'web',
         pais: 'España', empresa_matriz_id: null, creado: '2026-07-01T09:00:00Z' },
@@ -74,12 +79,19 @@ function demo() {
         telefono: '600111224', consentimiento_marketing: true, consentimiento_fecha: '2026-01-12T09:00:00Z', creado: '2026-01-12T09:00:00Z' },
       { id: 'con-4', nombre: 'Óscar', apellidos: 'Prieto', cargo: 'Gerente', email: 'oscar@calibra.example',
         consentimiento_marketing: false, creado: '2026-02-02T09:00:00Z' },
+      { id: 'con-5', nombre: 'María', apellidos: 'López', cargo: 'Responsable de calidad', email: 'maria@industriasnorte.es',
+        telefono: '+34 600 111 222', consentimiento_marketing: false, rgpd_aceptado: true, rgpd_fecha: '2026-08-01T10:00:00Z', creado: '2026-01-05T09:00:00Z' },
+      { id: 'con-6', nombre: 'Pedro', apellidos: 'Sanz', cargo: 'Gerente', email: 'pedro@industriasnorte.es',
+        consentimiento_marketing: false, creado: '2026-01-05T09:05:00Z' },
     ],
     empresa_contactos: [
       { id: 'ec-1', empresa_id: 'emp-matriz', contacto_id: 'con-1', rol: 'directivo',   principal: true },
       { id: 'ec-2', empresa_id: 'emp-matriz', contacto_id: 'con-2', rol: 'facturacion', principal: false },
       { id: 'ec-3', empresa_id: 'emp-fil1',   contacto_id: 'con-3', rol: 'proyecto',    principal: false },
       { id: 'ec-4', empresa_id: 'emp-prov',   contacto_id: 'con-4', rol: 'directivo',   principal: true },
+      { id: 'ec-5', empresa_id: 'emp-inor',   contacto_id: 'con-5', rol: 'proyecto',    principal: true },
+      { id: 'ec-6', empresa_id: 'emp-inor',   contacto_id: 'con-5', rol: 'directivo',   principal: false },
+      { id: 'ec-7', empresa_id: 'emp-inor',   contacto_id: 'con-6', rol: 'directivo',   principal: false },
     ],
     homologaciones: [
       { id: 'hom-1', empresa_id: 'emp-prov', concepto: 'Certificado ISO 9001 en vigor', estado: 'validado',
@@ -97,7 +109,7 @@ function demo() {
       { id: 'p1', nombre: 'ISO 9001 · ACADEMIA AXON', empresa_id: 'e1', consultor_id: 'c1' },
       { id: 'p2', nombre: 'ISO 14001 · GRUPO MERIDIA', empresa_id: 'e2', consultor_id: 'c1' },
       { id: 'p3', nombre: 'ENS · AYUNTAMIENTO DE ALCORCÓN', empresa_id: 'e3', consultor_id: 'c1' },
-    ], cliente_contactos: demoClone('cliente_contactos'), vacaciones: [], festivos: [],
+    ], cliente_contactos: demoClone('cliente_contactos'), cliente_usuarios: demoClone('cliente_usuarios'), vacaciones: [], festivos: [],
   };
   return demoState;
 }

@@ -3,43 +3,39 @@ import { useAuth } from '../../lib/auth.jsx';
 import { listTable } from '../../lib/data.js';
 import MisDatosCliente from './MisDatosCliente.jsx';
 import DatosEmpresaCliente from './DatosEmpresaCliente.jsx';
+import ResumenEmpresa from './ResumenEmpresa.jsx';
+import { ROLES_CUENTA } from '../../lib/cuentaClientePuro.js';
 
-// Pestaña «Mi empresa» del portal de cliente. Está siempre, haya proyectos o no.
+// Pestaña «Mi empresa» (administrador de cuenta) o «Mis datos» (usuario de
+// cuenta) del portal de cliente. Está siempre, haya proyectos o no.
 //
-// Primero lo de la empresa (datos, sedes, normas certificadas y alcances, con
-// propuestas leídas de sus documentos); los datos personales del contacto y
-// la contraseña van debajo, plegados: antes solo salían los personales y el
-// cliente no podía tocar los de su empresa.
-export default function MisDatosPagina() {
+// · Administrador: datos de empresa, sedes, personas de contacto, usuarios y
+//   normas certificadas (con propuestas leídas de sus documentos); sus datos
+//   personales y contraseña debajo, plegados.
+// · Usuario: un resumen de su empresa (solo lectura) y sus datos personales.
+export default function MisDatosPagina({ cuenta }) {
   const { user } = useAuth();
   const [contacto, setContacto] = useState(null);
-  const [empresa, setEmpresa] = useState(null);
-  const [cargando, setCargando] = useState(true);
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
     const correo = (user?.email || '').toLowerCase();
-    Promise.all([
-      listTable('contactos').catch(() => []),
-      listTable('clientes').catch(() => []),
-    ]).then(([co, cl]) => {
-      setContacto((co || []).find((c) => (c.email || '').toLowerCase() === correo) || null);
-      // Su ficha de cliente: por usuario enlazado (lo que permite la RLS) o,
-      // si no, por el correo de la ficha.
-      setEmpresa((cl || []).find((c) => String(c.user_id) === String(user?.id))
-              || (cl || []).find((c) => (c.email || '').toLowerCase() === correo) || null);
-    }).finally(() => setCargando(false));
+    listTable('contactos').catch(() => []).then((co) => setContacto((co || []).find((c) => (c.email || '').toLowerCase() === correo) || null));
   }, [user, recarga]);
 
-  if (cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando tus datos…</p>;
+  if (!cuenta || cuenta.cargando) return <p className="font-semibold text-[#9FC0CB]">Cargando tus datos…</p>;
+  const empresa = cuenta.cliente;
+  const recargar = () => { setRecarga((n) => n + 1); cuenta.recargar?.(); };
 
   return (
     <div className="space-y-4">
-      <DatosEmpresaCliente cliente={empresa} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
-      <details className="card">
+      {cuenta.esAdmin
+        ? <DatosEmpresaCliente cliente={empresa} email={user?.email} onGuardado={recargar} />
+        : <ResumenEmpresa cliente={empresa} rol={cuenta.rol} />}
+      <details className="card" open={!cuenta.esAdmin}>
         <summary className="cursor-pointer text-sm font-extrabold text-[#EAF4F7]">Mis datos personales y contraseña</summary>
-        <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Tu nombre, cargo y teléfonos como persona de contacto, y la contraseña de tu acceso.</p>
-        <MisDatosCliente contacto={contacto} empresa={empresa} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
+        <p className="mt-0.5 mb-3 text-[11.5px] text-[#7FA7B4]">Tu nombre, cargo y teléfonos como persona de contacto, y la contraseña de tu acceso.{cuenta.rol ? ` Eres ${ROLES_CUENTA[cuenta.rol]?.etq.toLowerCase()}.` : ''}</p>
+        <MisDatosCliente contacto={contacto} empresa={empresa} email={user?.email} onGuardado={recargar} />
       </details>
     </div>
   );

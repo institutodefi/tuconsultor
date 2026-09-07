@@ -3,6 +3,7 @@ import { Routes, Route, NavLink, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import ClienteSinProyectos from './cliente/SinProyectos.jsx';
 import MisDatosPagina from './cliente/MisDatosPagina.jsx';
+import useCuenta from './cliente/useCuenta.js';
 import MisOfertas from './cliente/MisOfertas.jsx';
 import ProyectoCliente from './cliente/ProyectoCliente.jsx';
 import { funcionesDe } from '../lib/zonaCliente.js';
@@ -130,19 +131,8 @@ function Soporte() {
 // genera el equipo NO se le muestra: la política de `documento_notas` no se la
 // devuelve, y el componente ni siquiera la pide cuando quien mira es cliente.
 function MisDocumentos() {
-  const { user } = useAuth();
-  const [clienteId, setClienteId] = useState(undefined);
-
-  useEffect(() => {
-    let vivo = true;
-    listTable('clientes')
-      .then((cs) => {
-        const mio = (cs || []).find((c) => String(c.user_id) === String(user?.id));
-        if (vivo) setClienteId(mio?.id || null);
-      })
-      .catch(() => vivo && setClienteId(null));
-    return () => { vivo = false; };
-  }, [user?.id]);
+  const { cargando, cliente } = useCuenta();
+  const clienteId = cargando ? undefined : (cliente?.id || null);
 
   if (clienteId === undefined) return <p className="text-sm text-[#9FC0CB]">Cargando…</p>;
   if (!clienteId) {
@@ -168,12 +158,15 @@ function MisDocumentos() {
 }
 
 export default function ClientePortal() {
+  // Administrador de cuenta: gestiona «Mi empresa». Usuario de cuenta: solo
+  // el portal de proyectos y sus datos personales.
+  const cuenta = useCuenta();
   const tabs = [
     { to: '', end: true, label: 'Mis servicios' },
     { to: 'presupuestos', label: 'Mis presupuestos' },
     { to: 'documentos', label: 'Mis documentos' },
     { to: 'soporte', label: 'Soporte' },
-    { to: 'mis-datos', label: 'Mi empresa' },
+    { to: 'mis-datos', label: cuenta.esAdmin ? 'Mi empresa' : 'Mis datos' },
   ];
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -191,7 +184,7 @@ export default function ClientePortal() {
           <Route path="presupuestos" element={<Presupuestos />} />
           <Route path="documentos" element={<MisDocumentos />} />
           <Route path="soporte" element={<Soporte />} />
-          <Route path="mis-datos" element={<MisDatosPagina />} />
+          <Route path="mis-datos" element={<MisDatosPagina cuenta={cuenta} />} />
           <Route path="*" element={<Navigate to="." replace />} />
         </Routes>
       </div>

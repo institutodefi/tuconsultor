@@ -9,6 +9,8 @@ import GanttProyecto from '../../components/GanttProyecto.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
 import MisDatosCliente from './MisDatosCliente.jsx';
 import DatosEmpresaCliente from './DatosEmpresaCliente.jsx';
+import ResumenEmpresa from './ResumenEmpresa.jsx';
+import { rolCuenta } from '../../lib/cuentaClientePuro.js';
 import { normalizarSubtareas } from '../../lib/subtareas.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -44,7 +46,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
   useEffect(() => {
     let vivo = true;
     (async () => {
-      const [proyectos, tareas, sesiones, equipo, clientes, contactos, certificados, documentos, empresas] = await Promise.all([
+      const [proyectos, tareas, sesiones, equipo, clientes, contactos, certificados, documentos, empresas, usuariosCuenta] = await Promise.all([
         listTable('proyectos_cliente').catch(() => []),
         listTable('cliente_tareas').catch(() => []),
         listTable('tarea_sesiones').catch(() => []),
@@ -54,6 +56,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
         listTable('cliente_certificados').catch(() => []),
         listTable('cliente_documentos').catch(() => []),
         listTable('empresas').catch(() => []),
+        listTable('cliente_usuarios').catch(() => []),
       ]);
       if (!vivo) return;
       const p = proyectos.find((x) => String(x.id) === String(proyectoId)) || null;
@@ -63,7 +66,7 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
       // Nombre comercial de la empresa (CRM) si lo hay; si no, el de la ficha de cliente.
       const cif = (x) => String(x || '').toUpperCase().replace(/[\s.-]/g, '');
       const empresa = cliente?.cif ? empresas.find((e) => cif(e.cif) === cif(cliente.cif)) : null;
-      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto, certificados, documentos, nombreCliente: empresa?.nombre_comercial || empresa?.nombre || cliente?.empresa || null });
+      setD({ p, tareas, sesiones, equipo: equipo.filter((e) => String(e.proyecto_id) === String(proyectoId)), cliente, contacto, certificados, documentos, usuariosCuenta, nombreCliente: empresa?.nombre_comercial || empresa?.nombre || cliente?.empresa || null });
     })();
     return () => { vivo = false; };
   }, [proyectoId, user?.email, recarga]);
@@ -71,6 +74,16 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
   const hoy = hoyISO();
   const filas = useMemo(() => (d?.p ? filasGantt(d.tareas, d.sesiones, d.p, hoy) : []), [d, hoy]);
   const funciones = useMemo(() => funcionesDe(d?.p), [d]);
+  // Administrador de cuenta: edita los datos de su empresa. Usuario de cuenta:
+  // solo los ve. El equipo, en previsualización, lo ve como administrador.
+  const rol = useMemo(() => {
+    if (previsualizacion) return 'admin';
+    if (!d?.cliente) return null;
+    const r = rolCuenta(user, d.cliente, d.usuariosCuenta || []);
+    if (r) return r;
+    const correo = (user?.email || '').toLowerCase();
+    return correo && (d.cliente.email || '').toLowerCase() === correo ? 'admin' : 'usuario';
+  }, [d, user, previsualizacion]);
   const procesos = useMemo(() => procesosDe(filas), [filas]);
   const resumen = useMemo(() => resumenProyecto(filas), [filas]);
   // Lo que tiene pendiente: certificación, auditoría externa, tareas con
@@ -222,7 +235,9 @@ export default function ProyectoCliente({ proyectoId: idProp = null, previsualiz
           {/* 2 · Su empresa: datos, sedes, normas certificadas y documentos */}
           {seccionActiva === 'datos' && funciones.datos_cliente && (
             <div className="space-y-4">
-              <DatosEmpresaCliente cliente={d.cliente} proyectoId={p.id} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
+              {rol === 'admin'
+                ? <DatosEmpresaCliente cliente={d.cliente} proyectoId={p.id} email={user?.email} onGuardado={() => setRecarga((n) => n + 1)} />
+                : <ResumenEmpresa cliente={d.cliente} rol={rol || 'usuario'} />}
               {d.cliente && <section className="card"><DocumentosCliente clienteId={d.cliente.id} titulo="Mis documentos" /></section>}
               <details className="card">
                 <summary className="cursor-pointer text-sm font-extrabold text-[#EAF4F7]">Mis datos personales y contraseña</summary>
