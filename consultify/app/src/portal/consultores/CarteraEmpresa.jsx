@@ -8,6 +8,7 @@ import { nombreVisible } from '../../lib/crm.js';
 import { pagoAdelantado } from '../../lib/calcEngine.js';
 import { estaAceptada } from '../../lib/ofertasAceptadas.js';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
+import { asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Cartera de la empresa · ofertas, contratos y proyectos
@@ -117,6 +118,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
 
   // Ficha de cliente de esta empresa: los proyectos cuelgan de ahí, no de la
   // ficha del CRM. Sin ella no se puede abrir un proyecto.
+  // `clienteCreado`: la ficha recién creada desde aquí, antes de recargar.
+  const [clienteCreado, setClienteCreado] = useState(null);
+  const [creandoFicha, setCreandoFicha] = useState(null);   // null | 'creando' | 'error'
   const clienteId = useMemo(() => {
     if (!datos || !empresa) return null;
     const c = carteraDe(empresa, datos);
@@ -125,8 +129,27 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
         const n = (s) => String(s || '').toUpperCase().replace(/[\s.-]/g, '');
         return (n(x.cif) && n(x.cif) === n(empresa.cif));
       })?.id
+      || clienteCreado
       || null;
-  }, [datos, empresa]);
+  }, [datos, empresa, clienteCreado]);
+
+  // Crea la ficha de cliente si no existe. Una empresa dada de alta como
+  // cliente en el CRM ya es cliente: no tiene por qué esperar a su primer
+  // proyecto para poder adjuntar documentos o abrir uno.
+  const asegurarFicha = async () => {
+    if (clienteId) return clienteId;
+    if (!empresa?.es_cliente) return null;
+    setCreandoFicha('creando');
+    try {
+      const r = await asegurarCliente(empresa, datos?.clientes || []);
+      setClienteCreado(r.id); setCreandoFicha(null);
+      return r.id;
+    } catch { setCreandoFicha('error'); return null; }
+  };
+  // Al abrir la pestaña de documentos, la ficha se prepara sola.
+  useEffect(() => {
+    if (pestana === 'documentos' && !clienteId && empresa?.es_cliente && datos && !creandoFicha) asegurarFicha();
+  }, [pestana, clienteId, empresa?.es_cliente, datos]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const aProyectos = clienteId ? `/consultores/proyectos?cliente=${clienteId}` : '/consultores/proyectos';
 
@@ -201,12 +224,12 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
       {!alta && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11.5px] text-[#7FA7B4]">
-            {clienteId
+            {clienteId || empresa?.es_cliente
               ? 'Los proyectos nacen de una oferta aceptada.'
-              : 'Esta empresa aún no tiene ficha de cliente: créala para poder abrir proyectos.'}
+              : 'Marca esta empresa como cliente para poder abrir proyectos.'}
           </p>
-          <button type="button" disabled={!clienteId}
-            onClick={() => setAlta({ origen: null })}
+          <button type="button" disabled={!clienteId && !empresa?.es_cliente}
+            onClick={async () => { const id = await asegurarFicha(); if (id) setAlta({ origen: null }); }}
             className="rounded-full bg-brand-orange px-3.5 py-1.5 text-[12px] font-extrabold text-[#0A2B3A] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
             + Nuevo proyecto
           </button>
@@ -322,7 +345,9 @@ export default function CarteraEmpresa({ empresa, onAbrirOferta }) {
           {pestana === 'documentos' && (
             clienteId
               ? <DocumentosCliente clienteId={clienteId} titulo="Documentos del cliente" />
-              : <Vacio>Esta empresa aún no tiene ficha de cliente: créala para poder adjuntar documentos.</Vacio>
+              : <Vacio>{creandoFicha === 'error' ? 'No se pudo crear la ficha de cliente.'
+                  : empresa?.es_cliente ? 'Preparando la ficha de cliente…'
+                  : 'Marca esta empresa como cliente para poder adjuntar documentos.'}</Vacio>
           )}
 
           {/* ── Ofertas ── */}

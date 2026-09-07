@@ -13,6 +13,7 @@ import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 import CarteraEmpresa from './CarteraEmpresa.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
+import { buscarCliente, asegurarCliente } from '../../lib/clienteDeEmpresa.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha de empresa (una sola entidad para cliente / proveedor / potencial).
@@ -91,17 +92,33 @@ export default function FichaEmpresa({
   // fallar al cargar.
   const [clienteOperativoId, setClienteOperativoId] = useState(null);
   useEffect(() => {
-    if (!empresa?.cif) { setClienteOperativoId(null); return; }
+    if (!empresa?.id) { setClienteOperativoId(null); return; }
     let vivo = true;
+    // Por CIF y, si no lo tiene, por nombre: la misma regla que usa el alta de
+    // proyectos (`buscarCliente`), para que las dos pantallas vean lo mismo.
     listTable('clientes')
-      .then((cs) => {
-        const n = (s) => String(s || '').toUpperCase().replace(/[\s.-]/g, '');
-        const mio = (cs || []).find((c) => n(c.cif) && n(c.cif) === n(empresa.cif));
-        if (vivo) setClienteOperativoId(mio?.id || null);
-      })
+      .then((cs) => { if (vivo) setClienteOperativoId(buscarCliente(empresa, cs || [])?.id || null); })
       .catch(() => vivo && setClienteOperativoId(null));
     return () => { vivo = false; };
-  }, [empresa?.cif]);
+  }, [empresa?.id, empresa?.cif, empresa?.nombre]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── La ficha de cliente se crea en cuanto hace falta ──
+  // Antes solo nacía al abrir el primer proyecto, y hasta entonces no se
+  // podían adjuntar documentos: el contrato firmado, el certificado anterior o
+  // el organigrama llegan ANTES del proyecto, no después. Si la empresa está
+  // dada de alta como cliente en el CRM, con eso basta: al entrar en la
+  // pestaña de documentos se crea la ficha operativa (por CIF, sin duplicar).
+  const [creandoFicha, setCreandoFicha] = useState(null);   // null | 'creando' | 'error'
+  useEffect(() => {
+    if (pestanaFicha !== 'documentos' || clienteOperativoId || !empresa?.id || !empresa.es_cliente || creandoFicha) return;
+    let vivo = true;
+    setCreandoFicha('creando');
+    listTable('clientes')
+      .then((cs) => asegurarCliente(empresa, cs || []))
+      .then((r) => { if (vivo) { setClienteOperativoId(r.id); setCreandoFicha(null); } })
+      .catch(() => vivo && setCreandoFicha('error'));
+    return () => { vivo = false; };
+  }, [pestanaFicha, clienteOperativoId, empresa?.id, empresa?.es_cliente]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [holded, setHolded] = useState({ estado: 'inactivo' });
   const [diag, setDiag] = useState(null);
   const [brevoOcupado, setBrevoOcupado] = useState(false);
@@ -958,8 +975,10 @@ export default function FichaEmpresa({
           <DocumentosCliente clienteId={clienteOperativoId} titulo="Documentos del cliente" />
         ) : (
           <p className="rounded-xl border border-dashed border-[#1E5468] px-3 py-4 text-center text-[12.5px] text-[#7FA7B4]">
-            Esta empresa aún no tiene ficha de cliente, y los documentos cuelgan de ella.
-            Se crea sola al abrir su primer proyecto.
+            {creandoFicha === 'creando' ? 'Preparando la ficha de cliente…'
+              : creandoFicha === 'error' ? 'No se pudo crear la ficha de cliente. Vuelve a abrir la pestaña o avisa a administración.'
+              : empresa?.es_cliente ? 'Preparando la ficha de cliente…'
+              : 'Los documentos cuelgan de la ficha de cliente. Marca esta empresa como cliente (✎ Editar) para poder adjuntarlos.'}
           </p>
         )
       )}

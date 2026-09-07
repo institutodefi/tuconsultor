@@ -34,3 +34,6 @@
 
 ## Corrección · tareas de otro proyecto al cambiar de proyecto
 - `consultify/app/src/portal/consultores/ProyectosConfig.jsx` · al pasar de un proyecto a otro había un render en el que el proyecto ya era el nuevo pero las normas y el modelo en pantalla eran los del anterior; el volcado automático metió 24 tareas de Diversidad (Implantación) en CECE. Ahora el volcado espera a que la configuración cargada sea la de ese proyecto (`configPara`) y, además, filtra las candidatas contra las normas y el modelo del proyecto guardado (`candidatasDelProyecto`): nada de otra norma ni de otro modelo entra en un proyecto. Las 24 tareas erróneas de CECE se han borrado (no tenían sesiones).
+
+## CRM · documentos sin esperar al primer proyecto
+- `portal/consultores/FichaEmpresa.jsx`, `portal/consultores/CarteraEmpresa.jsx` · la ficha de `clientes` (de la que cuelgan documentos y proyectos) se crea en cuanto hace falta si la empresa está dada de alta como cliente en el CRM: al abrir la pestaña Documentos, o al pulsar «+ Nuevo proyecto». Por CIF (o nombre), sin duplicar (`asegurarCliente`). Si la empresa no es cliente, lo dice y pide marcarla.
