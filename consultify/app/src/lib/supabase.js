@@ -21,6 +21,13 @@ export const demoDB = {
     { id: 'c2', nombre: 'Irene',   apellidos: '', rol: 'director',   email: 'irene@tuconsultor.com',   nivel: 'J2', normas: ['9001','14001'],                 capacidad_clientes: 17, activo: true },
     { id: 'c3', nombre: 'Daniela', apellidos: '', rol: 'consultor', email: 'daniela@tuconsultor.com', nivel: 'J1', normas: ['9001'],                          capacidad_clientes: 8,  activo: false },
   ],
+  // Perfiles (cuentas): en producción es la tabla de la que salen el equipo
+  // de las sesiones y el enlace de calendario. En demo, las mismas personas.
+  perfiles: [
+    { id: 'c1', nombre: 'Carlota', apellidos: '', rol: 'consultor', email: 'carlota@tuconsultor.com', nivel: 'J3', activo: true, feed_token: null },
+    { id: 'c2', nombre: 'Irene',   apellidos: '', rol: 'director',  email: 'irene@tuconsultor.com',   nivel: 'J2', activo: true, feed_token: null },
+    { id: 'c3', nombre: 'Daniela', apellidos: '', rol: 'consultor', email: 'daniela@tuconsultor.com', nivel: 'J1', activo: false, feed_token: null },
+  ],
   clientes: [
     { id: 'cl1', codigo: 'CL-0001', empresa: 'Industrias Norte S.L.', cif: 'B12345678', contacto: 'María López', email: 'maria@industriasnorte.es', telefono: '+34 600 111 222' },
     { id: 'cl2', codigo: 'CL-0002', empresa: 'TechSecure S.A.',       cif: 'A87654321', contacto: 'Jorge Ruiz',  email: 'jorge@techsecure.es',      telefono: '+34 600 333 444' },

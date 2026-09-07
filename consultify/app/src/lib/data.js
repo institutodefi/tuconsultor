@@ -5,7 +5,7 @@ import { catalogoFilas } from './catalogoTareas';
 let demoState = null;
 function demo() {
   if (!demoState) demoState = {
-    consultores: demoClone('consultores'), clientes: demoClone('clientes'),
+    consultores: demoClone('consultores'), perfiles: demoClone('perfiles'), clientes: demoClone('clientes'),
     presupuestos: demoClone('presupuestos'),
     procesos_internos: demoClone('procesos_internos'),
     proyectos_cliente: demoClone('proyectos_cliente'), proyecto_equipo: demoClone('proyecto_equipo'),

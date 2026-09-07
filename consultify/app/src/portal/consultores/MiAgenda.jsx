@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listTable } from '../../lib/data.js';
 import { getTareasAgenda, getFestivos, getVacaciones, capacidadMes, tipoBolsa, TIPO_BY_ID } from '../../lib/agenda.js';
 import TareasInternas from './TareasInternas.jsx';
+import CalendarioSuscripcion from '../../components/CalendarioSuscripcion.jsx';
 import { useAuth } from '../../lib/auth.jsx';
 import CalendarioPlanning from './CalendarioPlanning.jsx';
 import ResumenAgenda from './ResumenAgenda.jsx';
@@ -119,6 +120,9 @@ export default function MiAgenda() {
       {/* El 30 % que no es proyecto: gestión y coordinación, procesos internos.
           Se programan aquí, en sesiones, y entran en la agenda como las demás. */}
       <TareasInternas />
+
+      {/* Su agenda, en Outlook: un enlace que se actualiza solo. */}
+      <CalendarioSuscripcion perfilId={yo?.id} />
 
       <MisProyectos />
 

@@ -21,7 +21,7 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql`, `migracion-v119-reparto-niveles.sql`, `migracion-v120-reparto-niveles-proyecto.sql`, `migracion-v121-definicion-y-subtareas.sql` y `migracion-v122-subtareas-base.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql`, `migracion-v119-reparto-niveles.sql`, `migracion-v120-reparto-niveles-proyecto.sql`, `migracion-v121-definicion-y-subtareas.sql`, `migracion-v122-subtareas-base.sql` y `migracion-v123-convocatorias-y-feed.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
 
 ## Normas · ISO 27701 (privacidad de la información)
@@ -113,3 +113,8 @@
 - Sistemas de gestión · si una fila no tiene subtareas propias, el popup enseña la **propuesta base** (marcada «· base») para retocarla y fijarla con Guardar. El volcado de tareas (`lib/planCliente.js`) y el catálogo de demo usan la misma base como respaldo.
 - **Primera sincronización** (`ProyectosConfig.jsx`) · al abrir un proyecto, una sola vez, cada tarea sin checklist y sin hacer recibe la definición y las subtareas de su fila del catálogo (o de la base). Como en un Jira: la tarea nace con sus subtareas. Lo que ya tenga checklist no se toca.
 - Edición en los dos sitios: en Sistemas de gestión (popup) y en cada proyecto (`ChecklistTarea.jsx`: doble clic o ✎ para cambiar el texto de un paso, añadir, quitar, definición propia del cliente).
+
+## Agenda · convocar a personas y calendario suscribible (Outlook, Google, Apple)
+- `consultify/supabase/migracion-v123-convocatorias-y-feed.sql` · **pendiente de aplicar** (tras la v122). `tarea_sesiones.convocatoria_id` (una fila por persona convocada, mismo id) y `perfiles.feed_token` (token del calendario de cada persona). Probada en seco.
+- **Convocar** (`SesionesTarea.jsx`) · al añadir una sesión, en cualquier tarea (gestión, proceso interno o de proyecto), «Convocar también a»: cada persona recibe su sesión en la misma franja, la ve en su agenda y en su calendario, y las horas le cuentan. Aviso si alguien ya tiene algo a esa hora. En la lista, «+N convocados» con los nombres al pasar el ratón.
+- **Calendario suscribible** (`netlify/functions/agenda-feed.mjs`, rehecha; `components/CalendarioSuscripcion.jsx` en Mi agenda) · cada consultor genera su enlace (`/api/agenda-feed?c=<perfil>&t=<token>`), lo copia o lo abre en su calendario (`webcal://`), y Outlook / Google / Apple lo actualizan solos. Lleva las sesiones de proyectos y las de gestión y procesos internos, con quién más está convocado; las hechas salen como «libre». Horas en Europe/Madrid con VTIMEZONE (antes se emitían en UTC y se desplazaban). Botón «Descargar .ics de una vez» y «Regenerar el enlace», que invalida el anterior. Mientras no exista `feed_token`, sigue valiendo `AGENDA_FEED_TOKEN` de Netlify si está configurado. Demo con `perfiles`.

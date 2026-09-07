@@ -118,15 +118,19 @@ export default function SesionesTarea({
 
   const horasNueva = nueva ? horasEntre(nueva.hora_inicio, nueva.hora_fin) : 0;
   const choques = nueva?.consultor_id ? solapes(todas, { ...nueva, id: null }) : [];
+  // Convocados: los demás, aparte del responsable. Cada uno recibe su propia
+  // sesión (misma franja) para que la vea en su agenda y en su calendario.
+  const convocados = (nueva?.convocados || []).filter((id) => String(id) !== String(nueva?.consultor_id || ''));
+  const choquesConvocados = convocados.map((id) => ({ id, choques: solapes(todas, { ...nueva, consultor_id: id, id: null }) })).filter((x) => x.choques.length);
+  const toggleConvocado = (id) => setNueva((n) => ({ ...n, convocados: (n.convocados || []).includes(id) ? (n.convocados || []).filter((x) => x !== id) : [...(n.convocados || []), id] }));
 
   async function anadir() {
     if (!nueva.fecha) { setError('Pon una fecha.'); return; }
     if (!horasNueva) { setError('La hora de fin tiene que ser posterior a la de inicio.'); return; }
     setOcupado(true); setError(null);
     try {
-      await insertRow('tarea_sesiones', {
+      const base = {
         [campoTarea]: tarea.id,
-        consultor_id: nueva.consultor_id || null,
         fecha: nueva.fecha,
         hora_inicio: nueva.hora_inicio,
         hora_fin: nueva.hora_fin,
@@ -134,13 +138,24 @@ export default function SesionesTarea({
         // Si la sesión ya pasó se puede dar por hecha desde el principio: se
         // están cargando proyectos en marcha con trabajo de meses atrás.
         estado: 'programada',
-      });
+      };
+      // Con convocados, todas las filas comparten un id de convocatoria (v123).
+      const convocatoria = convocados.length ? (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`) : null;
+      const personas = [nueva.consultor_id || null, ...convocados];
+      for (const cid of personas) {
+        await insertRow('tarea_sesiones', { ...base, consultor_id: cid, ...(convocatoria ? { convocatoria_id: convocatoria } : {}) });
+      }
       setNueva(null);
       await cargar();
       onGuardado?.();
     } catch (e) { setError(explicarErrorBd(e, 'tarea_sesiones')); }
     finally { setOcupado(false); }
   }
+
+  // Quién más está convocado en la misma convocatoria que una sesión.
+  const otrosConvocados = (s) => (s.convocatoria_id
+    ? todas.filter((x) => x.convocatoria_id === s.convocatoria_id && x.id !== s.id && x.estado !== 'anulada').map((x) => x.consultor_id)
+    : []);
 
   // ── Editar una sesión ya creada ──
   // Se movía la reunión, cambiaba el consultor o se alargaba media hora, y la
@@ -388,8 +403,8 @@ export default function SesionesTarea({
                     <span className="text-[12px] font-bold text-brand-orange">
                       {s.horas ?? horasEntre(s.hora_inicio, s.hora_fin)} h
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[11.5px] text-[#7FA7B4]">
-                      {nombreDe(s.consultor_id)}{s.notas ? ` · ${s.notas}` : ''}
+                    <span className="min-w-0 flex-1 truncate text-[11.5px] text-[#7FA7B4]" title={otrosConvocados(s).length ? `Convocados: ${otrosConvocados(s).map(nombreDe).join(', ')}` : ''}>
+                      {nombreDe(s.consultor_id)}{otrosConvocados(s).length ? ` +${otrosConvocados(s).length} convocado${otrosConvocados(s).length === 1 ? '' : 's'}` : ''}{s.notas ? ` · ${s.notas}` : ''}
                     </span>
 
                     {s.estado === 'hecha' ? (
@@ -454,13 +469,42 @@ export default function SesionesTarea({
                 <p className="campo-nota">
                   {sinEquipo
                     ? 'Asigna equipo al proyecto antes de programar.'
-                    : 'Solo el equipo de este proyecto. Entra en su agenda ese día.'}
+                    : esInterna ? 'Entra en su agenda ese día.' : 'Solo el equipo de este proyecto. Entra en su agenda ese día.'}
                 </p>
               </div>
             </div>
 
             <input className="input mt-2 !py-1.5 !text-[12.5px]" placeholder="Notas de la sesión (opcional)"
               value={nueva.notas} onChange={(e) => setNueva({ ...nueva, notas: e.target.value })} />
+
+            {/* ── Convocar a más personas ──
+                Una reunión de coordinación, un proceso interno con varias
+                personas: cada convocado recibe su sesión en la misma franja y
+                la ve en su agenda y en su calendario de Outlook. */}
+            {equipo.length > 1 && (
+              <div className="mt-2 rounded-lg border border-[#1E5468] bg-[#0B2E3D] px-2.5 py-2">
+                <p className="text-[10.5px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">
+                  Convocar también a{convocados.length ? <span className="ml-1.5 text-brand-orange">{convocados.length}</span> : ''}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {equipo.filter((p) => String(p.id) !== String(nueva.consultor_id || '')).map((p) => {
+                    const on = (nueva.convocados || []).includes(p.id);
+                    return (
+                      <button key={p.id} type="button" onClick={() => toggleConvocado(p.id)}
+                        className={`rounded-lg border px-2 py-1 text-[11.5px] font-bold transition ${on ? 'border-brand-orange bg-brand-orange/20 text-brand-orange' : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-orange/60'}`}>
+                        {on ? '✓ ' : ''}{`${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[10.5px] text-[#7FA7B4]">Cada persona convocada recibe la sesión en su agenda con estas mismas horas; las horas cuentan para cada una.</p>
+                {choquesConvocados.length > 0 && (
+                  <p className="mt-1 text-[11px] font-bold text-amber-200">
+                    Con algo a esa hora: {choquesConvocados.map((x) => nombreDe(x.id)).join(', ')}.
+                  </p>
+                )}
+              </div>
+            )}
 
             {choques.length > 0 && (
               <p className="mt-2 rounded-lg bg-amber-400/10 px-2.5 py-2 text-[11.5px] font-bold text-amber-200">
