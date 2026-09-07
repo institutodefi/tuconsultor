@@ -112,9 +112,9 @@ export default function AuditoriasExternas({ compacto = false, soloAvisos = fals
           })}
         </ul>
       )}
-      {compacto && visibles.length > 6 && (
-        <Link to="/consultores/panel" className="mt-2 inline-block text-[12px] font-bold text-brand-orange hover:underline">Ver las {visibles.length} →</Link>
-      )}
+      <Link to="/consultores/proyectos?vista=auditorias" className="mt-2 inline-block text-[12px] font-bold text-brand-orange hover:underline">
+        {compacto && visibles.length > 6 ? `Ver las ${visibles.length} en la planificación →` : 'Planificación de auditorías externas →'}
+      </Link>
     </div>
   );
 }

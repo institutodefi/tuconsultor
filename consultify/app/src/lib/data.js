@@ -10,9 +10,9 @@ function demo() {
     procesos_internos: demoClone('procesos_internos'),
     proyectos_cliente: demoClone('proyectos_cliente'), proyecto_equipo: demoClone('proyecto_equipo'),
     cliente_tareas: demoClone('cliente_tareas'), tarea_sesiones: demoClone('tarea_sesiones'),
-    // Certificados y documentos del cliente (v118): vacíos en demo, pero con
-    // la clave presente para que un alta no reviente.
-    cliente_certificados: [], cliente_documentos: [],
+    // Certificados (v118) con dos de muestra; documentos vacíos pero con la
+    // clave presente para que un alta no reviente.
+    cliente_certificados: demoClone('cliente_certificados'), cliente_documentos: [],
     reglas_comerciales: [],
     versiones: [],
     registro_accesos: [],

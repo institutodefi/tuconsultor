@@ -21,7 +21,7 @@ import { generarPDFOferta } from './documento-oferta-premium.mjs';
 import { LOGO_CONSULTIFY, LOGO_TUCONSULTOR } from './logos-oferta.mjs';
 import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs';
 import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
-import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe } from './contenido-oferta.mjs';
+import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, textoDedicacion, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe } from './contenido-oferta.mjs';
 
 // Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
 const BLOQUES = {
@@ -67,8 +67,10 @@ import {
   NORMAS, NORMA_BY_ID, MODELOS, TARIFA, MARGEN, IVA as IVA_MOTOR, calcular,
 } from '../../app/src/lib/calcEngine.js';
 import { DISCLAIMER_OFERTA } from '../../app/src/lib/legal.js';
+import { eurES } from '../../app/src/lib/formato.js';
 
-const eur = (v) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0) + ' €';
+// Punto de miles siempre («1.325,00 €»): Intl en es-ES no agrupa cuatro cifras.
+const eur = (v) => eurES(v, 2);
 
 // ======================= GENERADORES =======================
 const NAVY = rgb(0.024, 0.106, 0.271);  // #061B45
@@ -181,7 +183,7 @@ async function generarPPTX(r, cli, anexo) {
     ['Persona de contacto',
      [cli?.contacto || cli?.email || '—', cli?.cargo].filter(Boolean).join(' · ')],
     ['Modelo de servicio', r.modelo + (esImpl && r.meses ? ' · ' + r.meses + ' meses' : '')],
-    ['Dedicación estimada', r.hTotal + ' h'],
+    ['Dedicación comprometida', textoDedicacion(r)],
   ];
   if (r.complejidad) datos.push(['Complejidad', r.complejidad]);
   if (r.sedes && r.sedes > 1) datos.push(['Sedes o alcances', String(r.sedes)]);
@@ -516,6 +518,9 @@ export default async (req) => {
     fasesPlan: body.fasesPlan || body.fases_plan || undefined,
     ajustes: body.ajustes || [],
     preciosSistema: body.preciosSistema || body.precios_sistema || null,
+    // Reparto manual de la carga por nivel (v119): sin él, el servidor
+    // calcularía con otro reparto que el navegador y el PDF saldría distinto.
+    repartoNiveles: body.repartoNiveles || body.reparto_niveles || null,
     aplicarReglas: body.aplicar_reglas !== false,
     pagoAdelantado: body.pago_adelantado === true,
   });

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR } from '../lib/calcEngine.js';
+import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto } from '../lib/calcEngine.js';
+import RentabilidadOferta from '../components/RentabilidadOferta.jsx';
 import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, listTable, siguienteNumeroOferta, upsertClienteDesdeFormulario } from '../lib/data.js';
@@ -117,7 +118,14 @@ export default function GeneradorOfertas({ publico = false }) {
   const [complejidad, setComplejidad] = useState('media');
   const [sedes, setSedes] = useState(1);
   const [equipo, setEquipo] = useState(EQUIPO_VACIO());
+  // Reparto de la carga por nivel (% de las horas para J1, J2, J3 y Senior).
+  // null = automático: cada norma carga en su nivel. Con reparto manual el
+  // precio sale de quién va a hacer el trabajo de verdad.
+  const [reparto, setReparto] = useState(null);
   const [formaPago, setFormaPago] = useState('unico');      // 'unico' | 'dos'
+  // Modelos de cuota: cada mes, o el año por adelantado (12 meses de servicio
+  // por 11 mensualidades). Cambia lo que se factura, no lo que se hace.
+  const [pagoMes, setPagoMes] = useState('mensual');        // 'mensual' | 'adelantado'
   const [fasesPlan, setFasesPlan] = useState({});           // fases elegidas de cada plan
   const [ajustes, setAjustes] = useState([]);               // trato particular de ESTA oferta
   const [notas, setNotas] = useState('');                   // salen en el PDF y el PPT
@@ -190,13 +198,16 @@ export default function GeneradorOfertas({ publico = false }) {
       aprobada_en: publico || !aprobador ? null : new Date().toISOString(),
       aprobada_nota: publico ? null : (notaAprobacion.trim() || null),
       preciosSistema: clienteAntiguo ? preciosSistema : null,
+      repartoNiveles: publico ? null : reparto,
+      pagoAdelantado: pagoMes === 'adelantado',
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
-     equipo, fasesPlan, ajustes, clienteAntiguo, preciosSistema],
+     equipo, fasesPlan, ajustes, clienteAntiguo, preciosSistema, reparto, pagoMes],
   );
   const esImpl = res?.modelo === 'Implantación';
   const esApoyo = res?.modelo === 'Apoyo';
   const esMes = res?.tipo === 'mes' && !esImpl;
+  const adelantado = esMes && pagoMes === 'adelantado' && res?.adelantado ? res.adelantado : null;
   const plazoMal = res && !res.plazoOk;
 
   async function generar() {
@@ -255,6 +266,7 @@ export default function GeneradorOfertas({ publico = false }) {
         // Todo lo que define el encargo, para poder regenerar la oferta igual
         // dentro de seis meses. Si esto no se guarda, al regenerar sale otra cosa.
         complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
+        reparto_niveles: normalizarReparto(reparto),
         fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null,
         fecha_fin: fechaFin || null,
         fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
@@ -263,6 +275,7 @@ export default function GeneradorOfertas({ publico = false }) {
         ajuste_oferta: res?.ajusteOferta ?? 0,
         notas_oferta: notas || null, notas_internas: notasInternas || null,
         forma_pago: modelo === 'Implantación' ? formaPago : null,
+        pago_adelantado: !!adelantado,
         modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
       });
@@ -329,10 +342,12 @@ export default function GeneradorOfertas({ publico = false }) {
           fecha_fin: fechaFin || null,
           fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
           complejidad, sedes, equipo: totalEquipo(equipo) ? equipo : null,
+          repartoNiveles: normalizarReparto(reparto),
           ajustes, fasesPlan, emisora_id: emisora,
           notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
           forma_pago: modelo === 'Implantación' ? formaPago : null,
+          pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
           // Resultado con reglas comerciales aplicadas (manda el motor del cliente)
@@ -683,6 +698,64 @@ export default function GeneradorOfertas({ publico = false }) {
                   </p>
                 </div>
               </div>
+
+              {/* ── Reparto de la carga por nivel ──
+                  Cada norma carga sus horas en su nivel (la 27001 en J2, la
+                  9001 en J3…). Aquí se afina: qué porcentaje del trabajo hará
+                  cada nivel. El precio y la rentabilidad salen de ahí. */}
+              {res?.rentabilidad && (
+                <div className="mt-4 rounded-xl border border-[#1E5468] bg-[#0B2E3D] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">
+                      Reparto de la carga por nivel
+                      <span className={`ml-2 chip !px-1.5 !py-0 text-[10px] ${reparto ? 'bg-brand-orange/15 text-brand-orange' : 'bg-[#123F52] text-[#9FC0CB]'}`}>{reparto ? 'manual' : 'automático'}</span>
+                    </p>
+                    <div className="flex gap-2">
+                      {!reparto && (
+                        <button type="button" onClick={() => setReparto({ ...res.rentabilidad.repartoAuto })}
+                          className="text-[11.5px] font-bold text-brand-orange hover:underline">Ajustar a mano</button>
+                      )}
+                      {reparto && (
+                        <button type="button" onClick={() => setReparto(null)}
+                          className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">Volver al automático</button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {NIVELES.map((nv) => {
+                      const pct = reparto ? (Number(reparto[nv]) || 0) : res.rentabilidad.repartoAuto[nv];
+                      const fila = res.rentabilidad.porNivel.find((x) => x.nivel === nv);
+                      return (
+                        <div key={nv} className="rounded-lg border border-[#153F52] bg-[#0D3242] px-2.5 py-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[12px] font-extrabold text-[#EAF4F7]">{nv}</span>
+                            <span className="text-[10px] text-[#7FA7B4]">{fila?.tarifa} €/h</span>
+                          </div>
+                          {reparto ? (
+                            <div className="mt-1 flex items-center gap-1">
+                              <input type="number" min="0" max="100" step="5" className="input !w-16 !px-1.5 !py-0.5 text-right !text-[12.5px]" value={pct}
+                                onChange={(e) => setReparto({ ...reparto, [nv]: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} />
+                              <span className="text-[11px] text-[#7FA7B4]">%</span>
+                            </div>
+                          ) : (
+                            <p className="mt-1 text-[14px] font-extrabold text-[#EAF4F7]">{pct} %</p>
+                          )}
+                          <p className="text-[10.5px] text-[#7FA7B4]">{fila?.horas ?? 0} h{esMes ? '/mes' : ''}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {reparto && (() => {
+                    const suma = NIVELES.reduce((a, nv) => a + (Number(reparto[nv]) || 0), 0);
+                    const ok = Math.abs(suma - 100) <= 0.5;
+                    return (
+                      <p className={`mt-1.5 text-[11px] font-bold ${ok ? 'text-emerald-300' : 'text-red-300'}`}>
+                        {ok ? 'Suma 100 %: el precio ya usa este reparto.' : `Suma ${Math.round(suma * 10) / 10} %: tiene que sumar 100 para aplicarse (mientras tanto, reparto automático).`}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
@@ -812,12 +885,26 @@ export default function GeneradorOfertas({ publico = false }) {
                     </p>
                     <p className="mt-1 text-sm font-semibold text-white/70">{res.fraccionado.meses} meses de implantación</p>
                   </>
+                ) : adelantado ? (
+                  <>
+                    <p className="mt-3 text-4xl font-extrabold tracking-tight">
+                      {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
+                      {fmtEUR(adelantado.total)}<span className="text-base font-bold text-white/60"> /año {SUFIJO_SIN_IMPUESTOS}</span>
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/70">
+                      Pago único al inicio · {adelantado.mesesServicio} meses por {adelantado.mesesCobrados} mensualidades de {fmtEUR(res.precioCatalogo)}
+                      <span className="ml-1.5 font-bold text-brand-verdeTexto">ahorras {fmtEUR(adelantado.ahorro)}</span>
+                    </p>
+                  </>
                 ) : (
                   <>
                     <p className="mt-3 text-4xl font-extrabold tracking-tight">
                       {desde && <span className="mr-1.5 align-middle text-xl font-bold text-white/70">desde</span>}
                       {fmtEUR(res.precioCatalogo)}<span className="text-base font-bold text-white/60">{esMes ? ` /mes ${SUFIJO_SIN_IMPUESTOS}` : ` ${SUFIJO_SIN_IMPUESTOS}`}</span>
                     </p>
+                    {esMes && res.adelantado && (
+                      <p className="mt-1 text-sm font-semibold text-white/70">{fmtEUR(res.adelantado.anual)} al año · permanencia 12 meses</p>
+                    )}
                   </>
                 )}
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -827,6 +914,33 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 {res.tiene9001 && (
                   <p className="mt-3 rounded-xl bg-brand-orange/20 p-2.5 text-xs font-bold text-brand-orange">ISO 9001 ya certificada: −50 % en sus horas aplicado.</p>
+                )}
+
+                {/* ── Forma de pago de la cuota: cada mes o el año por adelantado ──
+                    Con 12 meses por 11 mensualidades. Lo que se hace no cambia:
+                    cambia cuándo se factura, y el documento sale con la opción
+                    elegida (cuadro de facturación de un solo cargo). */}
+                {esMes && res.adelantado && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">Forma de pago</p>
+                    {[
+                      { id: 'mensual', titulo: 'Cuota mensual', importe: res.precioCatalogo, unidad: '/mes', condicion: `${res.adelantado.mesesServicio} cuotas · ${fmtEUR(res.adelantado.anual)} al año` },
+                      { id: 'adelantado', titulo: 'Pago único al inicio', importe: res.adelantado.total, unidad: '/año', condicion: `${res.adelantado.mesesServicio} meses de servicio por ${res.adelantado.mesesCobrados} mensualidades`, ahorro: res.adelantado.ahorro },
+                    ].map((f) => {
+                      const on = pagoMes === f.id;
+                      return (
+                        <button key={f.id} onClick={() => setPagoMes(f.id)}
+                          className={`w-full rounded-xl border p-2.5 text-left transition ${on ? 'border-brand-orange bg-brand-orange/15' : 'border-white/15 hover:border-brand-orange/50'}`}>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[13px] font-bold text-white">{on ? '✓ ' : ''}{f.titulo}</span>
+                            <span className="text-[13px] font-extrabold text-white">{fmtEUR(f.importe)}<span className="text-[10px] font-bold text-white/60">{f.unidad} {SUFIJO_SIN_IMPUESTOS}</span></span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] leading-snug text-white/70">{f.condicion}</p>
+                          {f.ahorro > 0 && <p className="mt-0.5 text-[11px] font-bold text-brand-verdeTexto">Ahorras {fmtEUR(f.ahorro)}</p>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
 
                 {/* Condiciones de pago de la implantación · las dos, para comparar */}
@@ -915,6 +1029,12 @@ export default function GeneradorOfertas({ publico = false }) {
                   </p>
                 )}
 
+                {/* ¿Encaja este precio con lo que cuesta hacerlo? Solo para el
+                    equipo: al cliente no se le enseña el margen. */}
+                {!publico && res.rentabilidad && (
+                  <RentabilidadOferta r={res.rentabilidad} esMes={esMes} />
+                )}
+
                 {/* Reglas comerciales aplicadas a esta oferta */}
                 {res.reglas?.length > 0 && (
                   <div className="mt-3 rounded-xl bg-brand-verde/15 p-3">
@@ -948,7 +1068,7 @@ export default function GeneradorOfertas({ publico = false }) {
                   {esImpl && res.formasPago && (
                     <p>{res.formasPago.nota} Puedes elegir arriba cuál de las dos aplicar.</p>
                   )}
-                  {esMes && <p>Cuota mensual recurrente. Permanencia mínima 12 meses.</p>}
+                  {esMes && <p>{adelantado ? `Pago único al inicio: ${adelantado.mesesServicio} meses de servicio por ${adelantado.mesesCobrados} mensualidades. Permanencia 12 meses.` : 'Cuota mensual recurrente. Permanencia mínima 12 meses.'}</p>}
                 </div>
 
                 {/* Datos del cliente, dentro del panel para no perder al usuario */}

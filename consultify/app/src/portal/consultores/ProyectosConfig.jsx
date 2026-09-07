@@ -9,6 +9,7 @@ import { resolverProyectos, resolverProyecto } from '../../lib/proyectoResuelto.
 import SesionesTarea from './SesionesTarea.jsx';
 import { balanceTarea, horasDe } from '../../lib/sesionesTarea.js';
 import DashboardProyectos from './DashboardProyectos.jsx';
+import PlanAuditorias from './PlanAuditorias.jsx';
 import EquipoProyecto from './EquipoProyecto.jsx';
 import { fechasDeProyecto, hayDesfase, DIAS_ANTES_CERTIFICACION } from '../../lib/fechasProyecto.js';
 import CuadroTareas from '../../components/CuadroTareas.jsx';
@@ -689,7 +690,11 @@ export default function Proyectos() {
 
   const totalHoras = candidatas.reduce((s, c) => s + (Number(c.horas) || 0), 0);
 
-  const [vista, setVista] = useState('cartera');   // cartera | panel
+  const [vista, setVista] = useState(() => {   // cartera | panel | auditorias
+    // ?vista=auditorias abre directamente la planificación (enlace desde Inicio y el Panel).
+    const v = new URLSearchParams(window.location.search).get('vista');
+    return ['cartera', 'panel', 'auditorias'].includes(v) ? v : 'cartera';
+  });
 
   return (
     <div className="space-y-6">
@@ -703,7 +708,7 @@ export default function Proyectos() {
           que acordarse de en cuál estaba cada cosa. Ahora es una, con dos
           vistas y sin perder el proyecto seleccionado al cambiar. */}
       <div className="flex gap-1.5 border-b border-[#1E5468]">
-        {[['cartera', 'Cartera y configuración'], ['panel', 'Cómo van']].map(([k, etq]) => (
+        {[['cartera', 'Cartera y configuración'], ['panel', 'Cómo van'], ['auditorias', 'Auditorías externas']].map(([k, etq]) => (
           <button key={k} onClick={() => setVista(k)}
             className={`-mb-px border-b-2 px-3 py-2 text-[13px] font-bold transition ${
               vista === k
@@ -715,6 +720,7 @@ export default function Proyectos() {
       </div>
 
       {vista === 'panel' && <DashboardProyectos />}
+      {vista === 'auditorias' && <PlanAuditorias />}
 
       <div className={vista === 'cartera' ? 'space-y-6' : 'hidden'}>
 
@@ -723,7 +729,6 @@ export default function Proyectos() {
           lo que ya hace el «Abrir →» de la tabla de abajo, y solo listaba los
           activos, así que un proyecto pausado o cerrado no aparecía por ninguna
           de las dos vías. */}
-      </div>
 
       {abierta && (
         <SesionesTarea
@@ -1187,6 +1192,7 @@ export default function Proyectos() {
           )}
         </>
       )}
+      </div>{/* fin de la vista cartera */}
     </div>
   );
 }

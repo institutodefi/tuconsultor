@@ -21,7 +21,7 @@
 - `lib/agenda.js` · capa de datos de `tareas_internas` y vacaciones de todo el equipo. Datos de demo para proyectos, equipo, tareas y sesiones (`lib/supabase.js`, `lib/data.js`).
 
 ## Pendiente
-- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql` y `migracion-v118-certificados-y-auditoria-externa.sql`, en ese orden.
+- Aplicar `migracion-v115-suelos-y-cliente-antiguo.sql` (si no se ha hecho), `migracion-v116-control-horas-y-tareas-internas.sql`, `migracion-v117-iso-27701.sql`, `migracion-v118-certificados-y-auditoria-externa.sql` y `migracion-v119-reparto-niveles.sql`, en ese orden.
 - Revisar en Accesos el % de jornada de cada persona (todas quedan al 100 %).
 
 ## Normas · ISO 27701 (privacidad de la información)
@@ -56,3 +56,24 @@
 - `lib/auditorias.js` · la regla, en funciones puras (`scripts/test-auditorias.mjs`, 17 comprobaciones): próxima auditoría = siguiente aniversario de la certificación cada 365 días, sin pasar de la validez; **rojo a 30 días o pasada, ámbar a 90 (tres meses)**; validez vencida = rojo.
 - `components/AuditoriasExternas.jsx` · **nuevo**. En el Panel de gestión (completo, con la fecha editable en línea) y en Inicio (solo avisos: rojo, ámbar y sin programar). Si el proyecto tiene fecha programada manda esa; si no, «Sin programar · toca antes del …» estimado desde los certificados del cliente; sin certificado, «sin certificado registrado».
 - `portal/consultores/ProyectosConfig.jsx` · campo **Auditoría externa** en la ficha del proyecto (se guarda al elegir la fecha; vacío = sin programar).
+
+## Ofertas · rentabilidad y reparto de la carga por nivel
+- `consultify/supabase/migracion-v119-reparto-niveles.sql` · **pendiente de aplicar** (tras la v118). Columna `presupuestos.reparto_niveles jsonb` con el reparto manual de la oferta. Probada en seco contra producción.
+- `lib/calcEngine.js` · `opts.repartoNiveles` (% J1/J2/J3/Senior) redistribuye las horas del proyecto por nivel antes de valorar; el resultado trae `rentabilidad`: precio, horas, €/h cobrado, €/h debido (tarifa × 1,6), coste, **debido según la carga**, diferencia, margen real y veredicto encaja / justo / por debajo, con el detalle por nivel. Exporta `NIVELES`, `normalizarReparto`, `repartoDesdeHoras`, `precioHoraObjetivo`, `calcularRentabilidad`. Sin reparto manual, el motor calcula el automático por norma.
+- `components/RentabilidadOferta.jsx` · **nuevo**. Cuadro del lateral del generador interno (no aparece en la oferta pública): precio ofertado, horas a echar, €/h cobrado frente al debido, cuánto falta o sobra y la tabla por nivel.
+- `pages/GeneradorOfertas.jsx` · bloque **Reparto de la carga por nivel** (automático o a mano, con comprobación de que suma 100 %); se guarda en el presupuesto y viaja al servidor (`netlify/functions/generar-oferta.mjs`) para que la oferta se calcule con el mismo reparto.
+- `components/InformeRentabilidad.jsx` · **nuevo**, en Ofertas: por cada oferta lo que se debería cobrar según la carga y lo que se cobra, diferencia, €/h, margen real, reparto y veredicto; totales separados en cuotas mensuales y bolsas/implantaciones; filtro «solo vivas» y exportación CSV.
+
+## Proyectos · pestaña «Auditorías externas»
+- `portal/consultores/PlanAuditorias.jsx` · **nuevo**, tercera pestaña de Proyectos (`/consultores/proyectos?vista=auditorias`). Una fila por certificado: cliente · norma · entidad · validez · auditoría estimada (seguimiento anual o renovación, con los días que faltan) · fecha programada (editable ahí mismo, se guarda en el proyecto) · aviso con el semáforo. Los proyectos vivos cuya norma no tiene certificado registrado salen como «Sin certificado», con enlace a la ficha del cliente para darlo de alta. Filtros (todas / avisos / sin programar), buscador y CSV.
+- Debajo, **calendario de los próximos doce meses** con cada auditoría en el mes que manda (programada o estimada) y las pasadas sin resolver, para repartir la carga del año.
+- `components/AuditoriasExternas.jsx` · el aviso de Inicio y del Panel enlaza a la planificación.
+- `portal/consultores/ProyectosConfig.jsx` · corregido: al cambiar a «Cómo van» (o a la nueva pestaña) la cartera seguía pintándose debajo; ahora solo se ve la vista elegida.
+- Datos de demo con dos certificados de Industrias Norte (`lib/supabase.js`, `lib/data.js`).
+
+## Ofertas · horas comprometidas, formato de importes y pago anual
+- **Horas según el modelo.** `lib/calcEngine.js` · en los modelos de cuota `hTotal` es ahora lo comprometido con el cliente: horas del modelo por cada sistema más las presenciales (Relación con dos sistemas: **4 h**, no 5). La coordinación, los solapes y los redondeos por nivel siguen en `hInternas` y en la rentabilidad (son para costear y planificar, no lo que se promete). Nuevo `dedicacion` {porSistema, sistemas, online, presenciales, mes, texto}. Es lo que se había ido en la oferta de Royal Mayline.
+- **Documentos** (`netlify/functions/contenido-oferta.mjs`, `documento-oferta-premium.mjs`, `generar-oferta.mjs`) · «Dedicación comprometida: 4 h online al mes (2 h por sistema × 2)» en PDF y PPT; el cuadro «Cuándo se factura» lleva una columna **HORAS** (las del mes en cuota; en proyecto o bolsa, el total repartido en proporción a cada cargo) y el total de horas junto al importe.
+- **Formato de importes** · `lib/formato.js` (nuevo): punto de miles siempre y coma decimal («1.325,00 €»). `Intl` en es-ES no agrupa los números de cuatro cifras y salía «1325,00 €». Aplicado a `fmtEUR` del motor y a todos los formateadores de euros de la app y de los documentos.
+- **Pago anual por adelantado en el generador** (`pages/GeneradorOfertas.jsx`) · en Relación, Implicación y Compromiso se elige «Cuota mensual» o «Pago único al inicio» (12 meses de servicio por 11 mensualidades). El cuadro de precio enseña el importe anual, el ahorro y la equivalencia mensual; se guarda `pago_adelantado` y el PDF sale con la portada, la caja y el cuadro de facturación de un solo cargo.
+- **Regenerar en bloque** (`portal/consultores/Ofertas.jsx`) · botón «↻ Regenerar documentos de las vivas»: vuelve a generar PDF y PPT de todas las ofertas en borrador, emitidas o aceptadas, cada una con su precio y su número, sin enviar nada. La regeneración individual también reenvía el reparto por nivel guardado.

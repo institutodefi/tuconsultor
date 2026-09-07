@@ -73,6 +73,10 @@ export const demoDB = {
     { id: 'ct4', cliente_id: 'cl2', proyecto_id: 'pc2', norma_id: '27001', modelo: 'Implicación', titulo: 'Análisis de riesgos', codigo: 'TSEC-27001-01', horas: 60, tipo: 'produccion' },
     { id: 'ct5', cliente_id: 'cl2', proyecto_id: 'pc2', norma_id: '27001', modelo: 'Implicación', titulo: 'Declaración de aplicabilidad', codigo: 'TSEC-27001-02', horas: 36, tipo: 'produccion' },
   ],
+  cliente_certificados: [
+    { id: 'cc1', cliente_id: 'cl1', proyecto_id: 'pc1', norma: '9001', entidad: 'AENOR', numero: 'ER-0412/2024', alcance: 'Diseño y fabricación de estructuras metálicas', fecha_certificacion: '2024-10-15', fecha_validez: '2027-10-14', documento_id: null, notas: null },
+    { id: 'cc2', cliente_id: 'cl1', proyecto_id: 'pc1', norma: '14001', entidad: 'AENOR', numero: 'GA-0198/2024', alcance: 'Diseño y fabricación de estructuras metálicas', fecha_certificacion: '2024-10-15', fecha_validez: '2027-10-14', documento_id: null, notas: null },
+  ],
   tarea_sesiones: [
     { id: 'ts1', cliente_tarea_id: 'ct1', consultor_id: 'c1', fecha: '2026-09-02', hora_inicio: '09:00', hora_fin: '13:00', horas: 4, estado: 'hecha' },
     { id: 'ts2', cliente_tarea_id: 'ct1', consultor_id: 'c1', fecha: '2026-09-09', hora_inicio: '09:00', hora_fin: '13:00', horas: 4, estado: 'programada' },

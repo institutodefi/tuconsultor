@@ -8,6 +8,7 @@
 import { reglasAplicables, factorOptimizacion, describirEfecto } from './reglas.js';
 import { tarifaEquipo, perfilesDe, totalEquipo, normalizarSedes } from './proyecto.js';
 import { FASES as FASES_PLAN, TARIFA_PROYECTO } from './fases.js';
+import { eurES } from './formato.js';
 
 export const NORMAS = [
   { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
@@ -398,6 +399,19 @@ export function calcular(normaIds, modeloId, opts = {}) {
   if (normas.length <= 4) raw.J3 += coord;
   else raw.Senior += coord;
 
+  // ── Reparto manual de la carga por nivel ──
+  // Por defecto cada norma carga sus horas en el nivel que tiene asignado (la
+  // 27001 en J2, la 9001 en J3…). Quien oferta puede afinar: «este proyecto
+  // lo hará un J1 al 60 % con un Senior al 40 %». Se reparte el TOTAL de horas
+  // según esos porcentajes y el precio sale de ahí. Es lo que hace que la
+  // oferta refleje quién va a hacer el trabajo de verdad.
+  const repartoAuto = { J1: raw.J1, J2: raw.J2, J3: raw.J3, Senior: raw.Senior };
+  const repartoManual = normalizarReparto(opts.repartoNiveles);
+  if (repartoManual) {
+    const total = raw.J1 + raw.J2 + raw.J3 + raw.Senior;
+    for (const nv of ['J1', 'J2', 'J3', 'Senior']) raw[nv] = total * (repartoManual[nv] / 100);
+  }
+
   // ── Regla 1 · OPTIMIZACIÓN: ajusta las horas; el precio deriva de ellas ──
   const hSinReglas = Math.ceil(raw.J1) + Math.ceil(raw.J2) + Math.ceil(raw.J3) + Math.ceil(raw.Senior);
   for (const r of reglas.filter((x) => x.tipo === 'optimizacion')) {
@@ -451,7 +465,25 @@ export function calcular(normaIds, modeloId, opts = {}) {
   }
 
   // Las horas de los planes se suman al total: son trabajo igual que el resto.
-  const hTotal = (h.J1 + h.J2 + h.J3 + h.Senior) + horasPlanes;
+  const hInternas = (h.J1 + h.J2 + h.J3 + h.Senior) + horasPlanes;
+
+  // ── Dedicación comprometida con el cliente ──
+  // En los modelos de cuota lo que se vende son las horas del modelo por cada
+  // sistema (Relación: 2 h online por sistema y mes → con dos sistemas, 4 h)
+  // más las presenciales, que son por cliente. La coordinación, el solape
+  // entre normas y los redondeos por nivel son cosa nuestra: sirven para
+  // costear y planificar, pero no cambian lo que se le promete al cliente.
+  // Antes `hTotal` llevaba esas horas internas (5 en vez de 4 para Relación
+  // con dos sistemas) y así salía en la oferta.
+  const dedicacion = m.tipo === 'mes' && m.hSist != null && genericas.length ? {
+    porSistema: m.hSist,
+    sistemas: genericas.length,
+    online: m.hSist * genericas.length,
+    presenciales: m.hPres || 0,
+    mes: m.hSist * genericas.length + (m.hPres || 0),
+    texto: `${m.hSist * genericas.length} h online${m.hPres ? ` + ${m.hPres} h presenciales` : ''} al mes`,
+  } : null;
+  const hTotal = dedicacion ? dedicacion.mes + horasPlanes : hInternas;
 
   // ── Regla 2 · PRECIO/HORA: sustituye la tarifa de catálogo ──
   const tarifa = { ...TARIFA };
@@ -479,6 +511,11 @@ export function calcular(normaIds, modeloId, opts = {}) {
   const coste = h.J1 * tarifa.J1 + h.J2 * tarifa.J2 + h.J3 * tarifa.J3 + h.Senior * tarifa.Senior;
   const precioGenerico = Math.round(coste * (1 + margen));
   const precioExacto = precioGenerico + Math.round(importePlanes);
+  // Lo que se DEBERÍA cobrar según la carga, sin reglas ni suelos ni redondeos:
+  // horas de cada nivel × tarifa de catálogo del nivel × (1 + margen). Es la
+  // referencia contra la que se mide el precio que se está ofertando.
+  const costeCatalogo = h.J1 * TARIFA.J1 + h.J2 * TARIFA.J2 + h.J3 * TARIFA.J3 + h.Senior * TARIFA.Senior;
+  const debidoCarga = Math.round(costeCatalogo * (1 + MARGEN)) + Math.round(importePlanes);
 
   // El redondeo al escalón se aplica SOLO a la parte genérica. El importe de
   // las fases es exacto —horas × 99 €— y redondearlo lo separaría del número
@@ -616,6 +653,15 @@ export function calcular(normaIds, modeloId, opts = {}) {
   const iva = Math.round(precioCatalogo * IVA * 100) / 100;
   const totalConIva = Math.round((precioCatalogo + iva) * 100) / 100;
 
+  // ── Rentabilidad: lo que se cobra frente a lo que cuesta ──
+  // Con el precio ya cerrado (reglas, suelos, ajustes) se mira si encaja con
+  // las tarifas de la casa. Todo en la misma unidad que el precio: al mes en
+  // los recurrentes, total en bolsa e implantación.
+  const rentabilidad = calcularRentabilidad({
+    precio: precioCatalogo, horas: h, horasPlanes, tarifa, margen, coste, costeCatalogo, debidoCarga,
+    repartoAuto, repartoManual,
+  });
+
   // Implantación: pago único fraccionado en 3 tramos:
   // 50% por adelantado, 25% a mitad del proyecto, 25% al final.
   // El importe total es la cuota mensual × meses de implantación.
@@ -697,7 +743,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
     plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
     tiene9001,
     horas: h,
-    hTotal,
+    hTotal,             // lo comprometido con el cliente (en cuota: horas del modelo × sistemas + presenciales)
+    hInternas,          // lo que cuesta hacerlo: con coordinación, solapes y redondeo por nivel
+    dedicacion,         // desglose de la dedicación comprometida (solo cuota mensual)
     hSinReglas,
     coste,
     precioExacto,
@@ -714,11 +762,80 @@ export function calcular(normaIds, modeloId, opts = {}) {
     sedes: ctx.sedes,
     equipo: opts.equipo || null,
     tarifaEquipo: tEquipo,
+    repartoNiveles: repartoManual,   // null si se usa el reparto automático
+    rentabilidad,
+    debidoCarga,
     iva,
     totalConIva,
     fraccionado,
     formasPago,
     leyenda: m.leyenda,
+  };
+}
+
+// ── Reparto de la carga y rentabilidad ───────────────────────────────────────
+
+export const NIVELES = ['J1', 'J2', 'J3', 'Senior'];
+
+/**
+ * Normaliza un reparto {J1, J2, J3, Senior} en porcentajes. Devuelve null si
+ * no hay reparto o no suma 100 (con un margen de medio punto): un reparto que
+ * no cierra es un error de tecleo, no una decisión.
+ */
+export function normalizarReparto(r) {
+  if (!r || typeof r !== 'object') return null;
+  const out = {}; let suma = 0;
+  for (const nv of NIVELES) { const v = Number(r[nv]) || 0; if (v < 0) return null; out[nv] = v; suma += v; }
+  if (Math.abs(suma - 100) > 0.5) return null;
+  return out;
+}
+
+/** Porcentaje de horas por nivel a partir de horas absolutas. */
+export function repartoDesdeHoras(h) {
+  const total = NIVELES.reduce((a, nv) => a + (Number(h?.[nv]) || 0), 0);
+  if (!total) return { J1: 0, J2: 0, J3: 0, Senior: 0 };
+  return Object.fromEntries(NIVELES.map((nv) => [nv, Math.round(((Number(h?.[nv]) || 0) / total) * 1000) / 10]));
+}
+
+/** Precio por hora que la casa debe cobrar por cada nivel: tarifa × (1 + margen objetivo). */
+export const precioHoraObjetivo = (nivel, margen = MARGEN) => Math.round(TARIFA[nivel] * (1 + margen) * 100) / 100;
+
+/**
+ * Compara el precio ofertado con lo que exige la carga de trabajo.
+ *
+ *   precioHora        lo que se cobra por hora, en media (precio ÷ horas)
+ *   precioHoraDebido  lo que habría que cobrar por hora según el reparto por
+ *                     nivel (coste de catálogo × (1 + margen) ÷ horas)
+ *   margenReal        (precio − coste) ÷ coste, con la tarifa que se aplica
+ *   encaja            'si' si el margen real llega al objetivo, 'justo' si se
+ *                     queda entre la mitad y el objetivo, 'no' por debajo (o
+ *                     sin cubrir el coste)
+ */
+export function calcularRentabilidad({ precio, horas, horasPlanes = 0, tarifa = TARIFA, margen = MARGEN, coste, costeCatalogo, debidoCarga, repartoAuto, repartoManual }) {
+  const hTotal = NIVELES.reduce((a, nv) => a + (horas?.[nv] || 0), 0) + (horasPlanes || 0);
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const porNivel = NIVELES.map((nv) => ({
+    nivel: nv, horas: horas?.[nv] || 0,
+    tarifa: TARIFA[nv], tarifaAplicada: tarifa[nv],
+    precioHora: precioHoraObjetivo(nv, margen),
+    debido: r2((horas?.[nv] || 0) * precioHoraObjetivo(nv, margen)),
+    coste: r2((horas?.[nv] || 0) * tarifa[nv]),
+  }));
+  const margenReal = coste > 0 ? (precio - coste) / coste : null;
+  const encaja = margenReal == null ? null : margenReal >= margen - 0.005 ? 'si' : margenReal >= margen / 2 ? 'justo' : 'no';
+  return {
+    precio: r2(precio), horas: r2(hTotal),
+    precioHora: hTotal ? r2(precio / hTotal) : null,
+    precioHoraDebido: hTotal ? r2(debidoCarga / hTotal) : null,
+    coste: r2(coste), costeCatalogo: r2(costeCatalogo),
+    debido: r2(debidoCarga),
+    diferencia: r2(precio - debidoCarga),            // + cobramos de más · − de menos
+    margenObjetivo: margen, margenReal: margenReal == null ? null : r2(margenReal),
+    encaja,
+    porNivel,
+    reparto: repartoManual || repartoDesdeHoras(repartoAuto),
+    repartoAuto: repartoDesdeHoras(repartoAuto),
+    manual: !!repartoManual,
   };
 }
 
@@ -730,5 +847,5 @@ export function compararModelos(normaIds) {
 // Formato corto para las trazas de reglas (sin dependencias de Intl en SSR).
 const fmtEURplano = (n) => `${Math.round(n * 100) / 100} €`;
 
-export const fmtEUR = (n) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+// Punto de miles siempre (Intl en es-ES deja «1325 €» sin punto): ver formato.js.
+export const fmtEUR = (n) => eurES(n, (Math.round((Number(n) || 0) * 100) / 100) % 1 ? 2 : 0);

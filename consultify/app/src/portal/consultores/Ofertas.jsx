@@ -12,6 +12,7 @@ import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImportarContacto from '../../components/ImportarContacto.jsx';
 import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
+import InformeRentabilidad from '../../components/InformeRentabilidad.jsx';
 import { normalizarCif } from '../../lib/crm.js';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
@@ -99,14 +100,17 @@ export default function Ofertas() {
 
   const [msg, setMsg] = useState(null);
 
-  async function generar(r, { forzarPrecioNuevo = false } = {}) {
+  async function generar(r, { forzarPrecioNuevo = false, mantenerPrecio = false, silencioso = false } = {}) {
     // ── Una oferta ya emitida se regenera CON SU PRECIO, no con el de hoy ──
     // El motor cambia: tarifas, horas por norma, solapes. Si al regenerar se
     // recalculara, saldría un documento con el mismo número de oferta y otro
     // importe que el que recibió el cliente. Por eso se manda el precio guardado
     // como override, y solo se recalcula si se pide expresamente.
     const emitida = !!r.numero_oferta && Number.isFinite(Number(r.precio));
-    if (emitida && !forzarPrecioNuevo) {
+    // `mantenerPrecio`: regenerar el documento tal cual se emitió, sin
+    // preguntar aunque el motor diera hoy otro precio (es lo que hace la
+    // regeneración en bloque, que solo quiere el documento al día).
+    if (emitida && !forzarPrecioNuevo && !mantenerPrecio) {
       try {
         const hoy = calcular(r.normas || [], r.modelo, {
           meses: r.meses, complejidad: r.complejidad, sedes: r.sedes,
@@ -123,7 +127,8 @@ export default function Ofertas() {
       } catch { /* si no se puede comparar, se sigue con el guardado */ }
     }
 
-    setGenId(r.id); setMsg(null);
+    setGenId(r.id); if (!silencioso) setMsg(null);
+    let ok = false;
     try {
       const resp = await fetch('/.netlify/functions/generar-oferta', {
         method: 'POST',
@@ -148,19 +153,48 @@ export default function Ofertas() {
           precios_sistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
           aplicar_reglas: r.aplicar_reglas !== false,
           pago_adelantado: !!r.pago_adelantado,
+          // Reparto manual de la carga por nivel (v119): el servidor calcula
+          // con el mismo reparto que se guardó.
+          reparto_niveles: r.reparto_niveles || null,
           // El precio que se emitió manda sobre el que calcularía hoy el motor.
           ...(emitida && !forzarPrecioNuevo ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         }),
       });
       let j = null; try { j = await resp.json(); } catch { j = null; }
       if (j && j.ok) {
+        ok = true;
         setRows(rs => rs.map(x => x.id === r.id ? { ...x, url_pdf: j.url_pdf, url_pptx: j.url_pptx, numero_oferta: j.numero_oferta || x.numero_oferta } : x));
-        setMsg(`✓ Oferta ${j.numero_oferta || r.numero_oferta} generada. PDF y PPT listos.`);
-      } else {
+        if (!silencioso) setMsg(`✓ Oferta ${j.numero_oferta || r.numero_oferta} generada. PDF y PPT listos.`);
+      } else if (!silencioso) {
         setMsg(`No se pudo generar la oferta (${j?.error || `código ${resp.status}`}).`);
       }
-    } catch (e) { setMsg('Error de conexión al generar la oferta.'); }
+    } catch (e) { if (!silencioso) setMsg('Error de conexión al generar la oferta.'); }
     setGenId(null);
+    return ok;
+  }
+
+  // ── Regenerar en bloque los documentos de las ofertas vivas ──
+  // Cuando cambia lo que imprime el documento (las horas comprometidas, el
+  // formato de los importes, una cláusula), todas las ofertas que siguen en
+  // juego tienen que volver a salir con la versión nueva, con SU precio y su
+  // número. Una a una, para no atascar la función.
+  const [bloque, setBloque] = useState(null);   // {hecho, total, fallos: []}
+  const VIVAS_BLOQUE = ['borrador', 'emitida', 'aceptada'];
+  async function regenerarVivas() {
+    const lista = (rows || []).filter((r) => VIVAS_BLOQUE.includes(String(r.estado || 'emitida')) && r.numero_oferta && r.normas?.length && r.modelo);
+    if (!lista.length) { setMsg('No hay ofertas vivas que regenerar.'); return; }
+    if (!window.confirm(`Se van a regenerar los documentos de ${lista.length} oferta${lista.length === 1 ? '' : 's'} viva${lista.length === 1 ? '' : 's'} (borrador, emitida o aceptada), cada una con su precio y su número. No se envía nada al cliente. ¿Seguimos?`)) return;
+    setBloque({ hecho: 0, total: lista.length, fallos: [] }); setMsg(null);
+    const fallos = [];
+    for (let i = 0; i < lista.length; i++) {
+      const ok = await generar(lista[i], { mantenerPrecio: true, silencioso: true });
+      if (!ok) fallos.push(lista[i].numero_oferta || lista[i].empresa || lista[i].id);
+      setBloque({ hecho: i + 1, total: lista.length, fallos: [...fallos] });
+    }
+    setMsg(fallos.length
+      ? `Regeneradas ${lista.length - fallos.length} de ${lista.length}. Fallaron: ${fallos.join(', ')}.`
+      : `✓ ${lista.length} oferta${lista.length === 1 ? '' : 's'} regenerada${lista.length === 1 ? '' : 's'} con la versión actual del documento.`);
+    setBloque(null);
   }
 
   // ETAPA 2: enviar la oferta YA generada (sin regenerar el documento).
@@ -459,9 +493,19 @@ export default function Ofertas() {
           <p className="text-sm font-medium text-[#9FC0CB]">{rows.length} oferta{rows.length !== 1 ? 's' : ''} emitida{rows.length !== 1 ? 's' : ''}.</p>
           <p className="mt-1 max-w-2xl text-[11.5px] font-medium leading-relaxed text-[#7FA7B4]">{DISCLAIMER_CORTO} Todas las ofertas emitidas incluyen este aviso en el PDF y en el PowerPoint.</p>
         </div>
-        <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
+        <div className="flex flex-col items-end gap-2">
+          <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
+          <button onClick={regenerarVivas} disabled={!!bloque || !!genId}
+            className="btn-ghost !px-3 !py-1 text-[11.5px] disabled:opacity-50"
+            title="Vuelve a generar el PDF y el PPT de todas las ofertas vivas con la versión actual del documento, cada una con su precio y su número">
+            {bloque ? `Regenerando ${bloque.hecho}/${bloque.total}…` : '↻ Regenerar documentos de las vivas'}
+          </button>
+        </div>
       </div>
 
+
+      {/* ── Lo debido según la carga frente a lo cobrado, oferta a oferta ── */}
+      {rows && <InformeRentabilidad ofertas={rows} />}
 
       {/* ── El motor da hoy un precio distinto al que se emitió ── */}
       {avisoPrecio && (
