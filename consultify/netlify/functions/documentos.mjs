@@ -104,8 +104,8 @@ Devuelve EXCLUSIVAMENTE un objeto JSON, sin texto alrededor ni bloques de códig
   "razon_social": "la razón social tal y como figura, o null",
   "cif": "el CIF/NIF que aparece, o null",
   "alcance": "el alcance CERTIFICADO, literal, o null",
-  "sedes": [{"nombre": "nombre del centro o null", "direccion": "calle y número", "cp": "código postal o null", "poblacion": "localidad o null", "provincia": "provincia o null", "actividad": "qué se hace ahí, si se dice, o null"}],
-  "domicilio": {"direccion": "domicilio social o fiscal", "cp": null, "poblacion": null, "provincia": null, "pais": null} o null,
+  "sedes": [{"nombre": "nombre del centro o null", "direccion": "SOLO tipo de vía, nombre y número (p. ej. «C/ Mayor, 1» o «Pol. Ind. Sur, nave 5»)", "cp": "código postal de 5 cifras o null", "poblacion": "localidad o null", "provincia": "provincia o null", "pais": "país o null", "actividad": "qué se hace ahí, si se dice, o null"}],
+  "domicilio": {"direccion": "SOLO tipo de vía, nombre y número del domicilio social o fiscal", "cp": null, "poblacion": null, "provincia": null, "pais": null} o null,
   "actividad": "actividad u objeto social de la empresa, o null",
   "empleados": número de personas en plantilla si figura, o null,
   "representante": "representante legal o firmante, o null",
@@ -116,6 +116,8 @@ Devuelve EXCLUSIVAMENTE un objeto JSON, sin texto alrededor ni bloques de códig
   "avisos": ["cosas que convenga mirar: caducado, alcance distinto del esperado, CIF que no cuadra..."],
   "confianza": "alta|media|baja"
 }
+
+Sobre las direcciones (sedes y domicilio): SEPARA SIEMPRE los trozos en sus campos. En "direccion" va solo la vía y el número; el código postal en "cp", la localidad en "poblacion", la provincia en "provincia" y el país en "pais". Nunca metas el CP, la población o la provincia dentro de "direccion". Si el documento dice «C/ Mayor 1, 28001 Madrid», devuelve {"direccion": "C/ Mayor, 1", "cp": "28001", "poblacion": "Madrid", "provincia": "Madrid"}. Una sede por centro de trabajo: si el alcance nombra varios centros, una entrada por cada uno.
 
 Sobre la confianza: "alta" si el documento se lee bien y los datos son inequívocos; "media" si hay que interpretar algo; "baja" si está borroso, incompleto o no es lo que parece.`;
 

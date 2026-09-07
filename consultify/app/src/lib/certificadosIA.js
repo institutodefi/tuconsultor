@@ -116,16 +116,83 @@ export function validarPropuesta(p) {
 const limpio = (v) => S(v).replace(/\s+/g, ' ');
 const clave = (v) => limpio(v).toLowerCase().replace(/[.,;:]/g, '');
 
-/** Una sede (objeto o texto suelto) → fila normalizada. */
+const PROVINCIAS = ['Álava', 'Araba', 'Albacete', 'Alicante', 'Alacant', 'Almería', 'Asturias', 'Ávila', 'Badajoz', 'Baleares', 'Illes Balears', 'Barcelona', 'Burgos', 'Cáceres', 'Cádiz', 'Cantabria', 'Castellón', 'Castelló', 'Ciudad Real', 'Córdoba', 'Cuenca', 'Girona', 'Gerona', 'Granada', 'Guadalajara', 'Gipuzkoa', 'Guipúzcoa', 'Huelva', 'Huesca', 'Jaén', 'A Coruña', 'La Coruña', 'La Rioja', 'Las Palmas', 'León', 'Lleida', 'Lérida', 'Lugo', 'Madrid', 'Málaga', 'Murcia', 'Navarra', 'Ourense', 'Orense', 'Palencia', 'Pontevedra', 'Salamanca', 'Santa Cruz de Tenerife', 'Segovia', 'Sevilla', 'Soria', 'Tarragona', 'Teruel', 'Toledo', 'Valencia', 'València', 'Valladolid', 'Bizkaia', 'Vizcaya', 'Zamora', 'Zaragoza', 'Ceuta', 'Melilla'];
+const PAISES = ['España', 'Spain', 'Portugal', 'Francia', 'France', 'Italia', 'Italy', 'Alemania', 'Germany', 'México', 'Mexico', 'Colombia', 'Chile', 'Argentina', 'Perú', 'Peru', 'Andorra', 'Reino Unido', 'United Kingdom', 'Marruecos', 'Morocco'];
+const esProvincia = (t) => PROVINCIAS.find((p) => p.localeCompare(limpio(t), 'es', { sensitivity: 'base' }) === 0) || null;
+const esPais = (t) => PAISES.find((p) => p.localeCompare(limpio(t), 'es', { sensitivity: 'base' }) === 0) || null;
+
+/**
+ * Trocea una dirección escrita de un tirón en sus campos:
+ *   «C/ Mayor 1, 28001 Madrid (Madrid)»   → direccion, cp, poblacion, provincia
+ *   «Pol. Ind. Sur, nave 5 · 28906 Getafe, Madrid, España»
+ * Lo que ya venga separado manda; esto solo rellena lo que falte.
+ */
+export function trocearDireccion(texto) {
+  const out = { direccion: null, cp: null, poblacion: null, provincia: null, pais: null };
+  let t = limpio(texto);
+  if (!t) return out;
+  // Provincia entre paréntesis al final: «Madrid (Madrid)», «Getafe (Madrid)».
+  const par = t.match(/\(([^()]{2,40})\)\s*$/);
+  if (par && esProvincia(par[1])) { out.provincia = esProvincia(par[1]); t = t.slice(0, par.index).trim(); }
+  // Código postal español (5 cifras, el primer par 01–52) o portugués (1234-567).
+  const cp = t.match(/(^|[\s,;·-])((?:0[1-9]|[1-4]\d|5[0-2])\d{3}|\d{4}-\d{3})(?=$|[\s,;·])/);
+  if (cp) {
+    out.cp = cp[2];
+    const antes = t.slice(0, cp.index).replace(/[\s,;·-]+$/, '');
+    const despues = t.slice(cp.index + cp[0].length).replace(/^[\s,;·-]+/, '');
+    out.direccion = antes || null;
+    // Tras el CP: población[, provincia][, país]
+    const trozos = despues.split(/\s*[,;·]\s*|\s+-\s+/).map(limpio).filter(Boolean);
+    for (const x of trozos) {
+      if (!out.pais && esPais(x)) { out.pais = esPais(x); continue; }
+      if (!out.poblacion) { out.poblacion = x; continue; }
+      if (!out.provincia && esProvincia(x)) { out.provincia = esProvincia(x); continue; }
+      if (!out.provincia) out.provincia = x;
+    }
+  } else {
+    // Sin CP: «C/ Mayor 1, Madrid» → lo último que sea población/provincia/país.
+    const trozos = t.split(/\s*[,;·]\s*/).map(limpio).filter(Boolean);
+    while (trozos.length > 1) {
+      const u = trozos[trozos.length - 1];
+      if (!out.pais && esPais(u)) { out.pais = esPais(u); trozos.pop(); continue; }
+      if (!out.provincia && !out.poblacion && esProvincia(u) && trozos.length > 2 && esProvincia(trozos[trozos.length - 2])) { out.provincia = esProvincia(u); trozos.pop(); continue; }
+      if (!out.poblacion && !/\d/.test(u) && trozos.length > 1) { out.poblacion = u; trozos.pop(); continue; }
+      break;
+    }
+    out.direccion = trozos.join(', ') || null;
+    if (out.poblacion && !out.provincia && esProvincia(out.poblacion)) out.provincia = esProvincia(out.poblacion);
+  }
+  // Población que en realidad es provincia («28001 Madrid»): la provincia es la misma.
+  if (out.poblacion && !out.provincia && esProvincia(out.poblacion)) out.provincia = esProvincia(out.poblacion);
+  return out;
+}
+
+/** Una sede (objeto o texto suelto) → fila normalizada, con la dirección troceada. */
 export function sedeDesde(x, doc = null) {
   if (!x) return null;
   const o = typeof x === 'string' ? { direccion: x } : x;
-  const direccion = limpio(o.direccion || o.calle || '');
-  const poblacion = limpio(o.poblacion || o.localidad || o.ciudad || '');
+  let direccion = limpio(o.direccion || o.calle || '');
+  let cp = limpio(o.cp || o.codigo_postal || '');
+  let poblacion = limpio(o.poblacion || o.localidad || o.ciudad || o.municipio || '');
+  let provincia = limpio(o.provincia || '');
+  let pais = limpio(o.pais || '');
+  // Si la dirección trae dentro el CP o la población, se separa; lo que ya
+  // venía en su campo no se pisa.
+  if (direccion && (/\d{5}/.test(direccion) || /,/.test(direccion))) {
+    const t = trocearDireccion(direccion);
+    if (t.cp || t.poblacion) {
+      direccion = t.direccion || direccion;
+      cp = cp || t.cp || ''; poblacion = poblacion || t.poblacion || ''; provincia = provincia || t.provincia || ''; pais = pais || t.pais || '';
+    }
+  }
+  // Población con CP pegado («28001 Madrid») o con provincia entre paréntesis.
+  const pc = poblacion.match(/^(\d{5})\s+(.+)$/); if (pc) { cp = cp || pc[1]; poblacion = pc[2]; }
+  const pp = poblacion.match(/^(.+?)\s*\(([^()]+)\)$/); if (pp && esProvincia(pp[2])) { poblacion = limpio(pp[1]); provincia = provincia || esProvincia(pp[2]); }
+  if (!provincia && esProvincia(poblacion)) provincia = esProvincia(poblacion);
   if (!direccion && !poblacion && !limpio(o.nombre)) return null;
   return {
-    nombre: limpio(o.nombre) || null, direccion: direccion || null, cp: limpio(o.cp) || null,
-    poblacion: poblacion || null, provincia: limpio(o.provincia) || null, pais: limpio(o.pais) || null,
+    nombre: limpio(o.nombre) || null, direccion: direccion || null, cp: cp || null,
+    poblacion: poblacion || null, provincia: provincia || null, pais: pais || null,
     actividad: limpio(o.actividad) || null, documento_id: doc?.id || null, origen: 'ia',
   };
 }
@@ -168,7 +235,10 @@ export function propuestasDesdeLecturas(lecturas = [], actual = {}) {
     votar('telefono', d.telefono, conf, doc); votar('email', d.email, conf, doc); votar('web', d.web, conf, doc);
     if (d.empleados != null && Number(d.empleados) > 0) votar('empleados', String(Math.round(Number(d.empleados))), conf, doc);
     const dom = d.domicilio && typeof d.domicilio === 'object' ? d.domicilio : (typeof d.domicilio === 'string' ? { direccion: d.domicilio } : null);
-    if (dom) { votar('direccion', dom.direccion, conf, doc); votar('cp', dom.cp, conf, doc); votar('poblacion', dom.poblacion, conf, doc); votar('provincia', dom.provincia, conf, doc); votar('pais', dom.pais, conf, doc); }
+    if (dom) {
+      const sd = sedeDesde(dom) || {};   // trocea «C/ Mayor 1, 28001 Madrid» si viene junto
+      votar('direccion', sd.direccion, conf, doc); votar('cp', sd.cp, conf, doc); votar('poblacion', sd.poblacion, conf, doc); votar('provincia', sd.provincia, conf, doc); votar('pais', sd.pais, conf, doc);
+    }
     for (const x of Array.isArray(d.sedes) ? d.sedes : []) {
       const sd = sedeDesde(x, doc); if (!sd) continue;
       const k = claveSede(sd);

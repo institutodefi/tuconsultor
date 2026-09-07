@@ -50,5 +50,25 @@ ok(pr.sedes.find((s) => /Getafe/.test(s.poblacion)).yaExiste && !pr.sedes.find((
 ok(pr.certificados.length === 1 && pr.certificados[0].norma === '9001' && !pr.certificados[0].existente, 'un certificado propuesto, nuevo');
 ok(C.sedeDesde('  ') === null && C.sedeDesde({ nombre: 'Almacén' }).nombre === 'Almacén', 'sede vacía → null; solo nombre vale');
 
+console.log('\n── Direcciones troceadas ──');
+let t = C.trocearDireccion('C/ Mayor 1, 28001 Madrid (Madrid)');
+ok(t.direccion === 'C/ Mayor 1' && t.cp === '28001' && t.poblacion === 'Madrid' && t.provincia === 'Madrid', `con CP y provincia entre paréntesis: ${JSON.stringify(t)}`);
+t = C.trocearDireccion('Pol. Ind. Sur, nave 5 · 28906 Getafe, Madrid, España');
+ok(t.direccion === 'Pol. Ind. Sur, nave 5' && t.cp === '28906' && t.poblacion === 'Getafe' && t.provincia === 'Madrid' && t.pais === 'España', `con país: ${JSON.stringify(t)}`);
+t = C.trocearDireccion('Avda. de la Industria 12, Alcorcón');
+ok(t.direccion === 'Avda. de la Industria 12' && !t.cp && t.poblacion === 'Alcorcón', `sin CP: ${JSON.stringify(t)}`);
+t = C.trocearDireccion('Rua Augusta 10, 1100-048 Lisboa, Portugal');
+ok(t.cp === '1100-048' && t.poblacion === 'Lisboa' && t.pais === 'Portugal', `CP portugués: ${JSON.stringify(t)}`);
+t = C.trocearDireccion('Calle Real 3');
+ok(t.direccion === 'Calle Real 3' && !t.poblacion, 'solo calle: no inventa población');
+let sd = C.sedeDesde('C/ Mayor 1, 28001 Madrid');
+ok(sd.direccion === 'C/ Mayor 1' && sd.cp === '28001' && sd.poblacion === 'Madrid' && sd.provincia === 'Madrid', `sede como texto: ${JSON.stringify(sd)}`);
+sd = C.sedeDesde({ direccion: 'C/ Mayor 1, 28001 Madrid', cp: '28002', poblacion: 'Alcobendas' });
+ok(sd.direccion === 'C/ Mayor 1' && sd.cp === '28002' && sd.poblacion === 'Alcobendas', 'lo que ya viene separado manda');
+sd = C.sedeDesde({ direccion: 'Pol. Sur 5', poblacion: '28906 Getafe (Madrid)' });
+ok(sd.cp === '28906' && sd.poblacion === 'Getafe' && sd.provincia === 'Madrid', `población con CP pegado y provincia: ${JSON.stringify(sd)}`);
+const pr2 = C.propuestasDesdeLecturas([{ documento: { id: 'x', titulo: 'CIF' }, confianza: 'alta', datos: { tipo: 'otro', domicilio: 'C/ Mayor 1, 28001 Madrid' } }], { cliente: {} });
+ok(pr2.empresa.direccion.valor === 'C/ Mayor 1' && pr2.empresa.cp.valor === '28001' && pr2.empresa.poblacion.valor === 'Madrid', 'domicilio en texto → campos separados en la propuesta');
+
 console.log(fallos ? `\n${fallos} fallo(s)` : '\nTodo correcto');
 process.exit(fallos ? 1 : 0);

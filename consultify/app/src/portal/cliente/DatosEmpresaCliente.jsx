@@ -66,7 +66,7 @@ async function llamar(payload) {
 function lecturasDemo(docs) {
   return docs.map((d) => (String(d.tipo).toLowerCase() === 'certificado'
     ? { documento: d, confianza: 'alta', datos: { tipo: 'certificado', norma: 'ISO 45001:2018', emisor: 'Bureau Veritas', numero: 'ES-045-2025', alcance: 'Diseño y fabricación de estructuras metálicas', razon_social: 'Industrias Norte, S.L.', cif: 'B12345678', valido_desde: '2025-03-01', valido_hasta: '2028-02-28', sedes: [{ direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid' }, { nombre: 'Planta de Getafe', direccion: 'Pol. Ind. Sur, nave 5', cp: '28906', poblacion: 'Getafe', provincia: 'Madrid', actividad: 'Fabricación' }], confianza: 'alta', avisos: ['Modo demo: datos de ejemplo'] } }
-    : { documento: d, confianza: 'media', datos: { tipo: 'escritura', razon_social: 'INDUSTRIAS NORTE SL', cif: 'B12345678', domicilio: { direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid', pais: 'España' }, actividad: 'Fabricación de estructuras metálicas', representante: 'María López', empleados: 42, confianza: 'media', avisos: ['Modo demo: datos de ejemplo'] } }));
+    : { documento: d, confianza: 'media', datos: { tipo: 'escritura', razon_social: 'INDUSTRIAS NORTE SL', cif: 'B12345678', domicilio: { direccion: 'C/ Mayor 1', cp: '28001', poblacion: 'Madrid', provincia: 'Madrid', pais: 'España' }, actividad: 'Fabricación de estructuras metálicas', representante: 'María López', empleados: 42, sedes: ['Avda. de la Industria 12, 28923 Alcorcón (Madrid)'], confianza: 'media', avisos: ['Modo demo: datos de ejemplo'] } }));
 }
 
 export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuardado }) {
@@ -286,6 +286,8 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, onGuar
                         <input className="input !py-1 !text-[12.5px]" placeholder="CP" value={s.cp || ''} onChange={(e) => setPropSede(i, { cp: e.target.value })} />
                         <input className="input !py-1 !text-[12.5px]" placeholder="Población" value={s.poblacion || ''} onChange={(e) => setPropSede(i, { poblacion: e.target.value })} />
                         <input className="input !py-1 !text-[12.5px]" placeholder="Provincia" value={s.provincia || ''} onChange={(e) => setPropSede(i, { provincia: e.target.value })} />
+                        <input className="input !py-1 !text-[12.5px]" placeholder="País" value={s.pais || ''} onChange={(e) => setPropSede(i, { pais: e.target.value })} />
+                        <input className="input !py-1 !text-[12.5px] sm:col-span-2" placeholder="Actividad en esta sede" value={s.actividad || ''} onChange={(e) => setPropSede(i, { actividad: e.target.value })} />
                       </div>
                     </div>
                   ))}
