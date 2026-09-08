@@ -60,3 +60,15 @@ console.log('\n── Solapes del mismo consultor ──');
   const otroDia = solapes(ss, { id:null, consultor_id:'u1', fecha:'2026-05-02', hora_inicio:'09:00', hora_fin:'13:00' });
   console.log(' otro día NO solapa:', otroDia.length, ok(otroDia.length===0));
 }
+
+// ── Duración de la sesión nueva = horas que faltan a la tarea (hasta una jornada) ──
+{
+  const { duracionSesion, sumarHoras, JORNADA } = await import('../consultify/app/src/lib/sesionesTarea.js');
+  const ok = (c, m) => { if (!c) { console.error('FALLA:', m); process.exit(1); } };
+  ok(duracionSesion(3) === 3, 'faltan 3 → 3 h');
+  ok(duracionSesion(2.3) === 2.25, 'se redondea al cuarto de hora');
+  ok(duracionSesion(40) === JORNADA, 'más de una jornada → 8 h');
+  ok(duracionSesion(0.1) === 0.5, 'mínimo media hora');
+  ok(sumarHoras('09:00', 3) === '12:00' && sumarHoras('09:00', 2.5) === '11:30' && sumarHoras('09:00', 8) === '17:00', 'hora fin');
+  console.log('duración de sesión: ok');
+}

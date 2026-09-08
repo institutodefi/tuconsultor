@@ -218,3 +218,8 @@
 - En pantalla el cliente va siempre delante por su **nombre comercial** y el código (CECE · CECE-9001-03), en el planificador, la lista de tareas de la ficha del proyecto y el Gantt del cliente. `tituloTarea(t)` (`lib/zonaCliente.js`) limpia el formato largo si todavía llega alguno.
 - **Agenda del equipo** (Por tarea y Calendario): cada sesión dice «CECE · CECE-9001-01 · S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS»: nombre comercial del cliente, código y nombre de la tarea abreviado, en vez de la razón social entera. El nombre comercial se lee de la empresa del CRM (o de la ficha del cliente; si no hay, la razón social).
 - Pruebas: `scripts/test-zona-cliente.mjs` (+3).
+
+## Programar una tarea · la sesión dura lo que la tarea
+- Al arrastrar una tarea al calendario, la sesión se crea con **las horas que le faltan a la tarea** (horas de la tarea menos lo ya planificado), desde las 09:00, en vez del bloque fijo de 4 h. Tope de una jornada (8 h, hasta las 17:00): si la tarea es más larga, se programa una jornada y el resto sigue en la lista para arrastrarlo otro día; el aviso dice cuánto queda. Se redondea al cuarto de hora, mínimo media hora.
+- Lo mismo al pulsar **«+ añadir sesión»** en el diálogo de una tarea: la hora de fin sale ya calculada con lo que falta (antes siempre 09:00–13:00). Se puede cambiar a mano.
+- `lib/sesionesTarea.js`: `duracionSesion(faltan)`, `sumarHoras(hhmm, h)`, `JORNADA`. Pruebas en `scripts/test-sesiones.mjs` (+5).

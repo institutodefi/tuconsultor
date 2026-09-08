@@ -23,6 +23,26 @@ export function horasEntre(inicio, fin) {
   return Math.round(((b - a) / 60) * 100) / 100;
 }
 
+/** Jornada máxima de una sesión (09:00–17:00). Lo que pase de ahí queda para otro día. */
+export const JORNADA = 8;
+
+/**
+ * Duración de la sesión nueva de una tarea: lo que le falta por programar
+ * (horas de la tarea menos lo ya planificado), entre media hora y una jornada.
+ * Así la sesión coincide con las horas de la tarea en vez de un bloque fijo.
+ */
+export function duracionSesion(faltan, maximo = JORNADA) {
+  const f = Number(faltan) || 0;
+  return Math.max(0.5, Math.min(maximo, Math.round(f * 4) / 4));
+}
+
+/** Suma horas a una «HH:MM». */
+export function sumarHoras(hhmm, h) {
+  const [H, M] = String(hhmm || '09:00').split(':').map(Number);
+  const t = (H || 0) * 60 + (M || 0) + Math.round((Number(h) || 0) * 60);
+  return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+
 /** Suma de horas de las sesiones que cuentan (todo menos las anuladas). */
 export const horasDe = (sesiones = [], soloHechas = false) =>
   Math.round(sesiones

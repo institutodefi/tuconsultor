@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ChecklistTarea from '../../components/ChecklistTarea.jsx';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../../lib/data.js';
-import { horasEntre, balanceTarea, sesionesTrasCertificacion, solapes } from '../../lib/sesionesTarea.js';
+import { horasEntre, balanceTarea, sesionesTrasCertificacion, solapes, duracionSesion, sumarHoras } from '../../lib/sesionesTarea.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 
@@ -335,7 +335,13 @@ export default function SesionesTarea({
           <div className="flex items-baseline justify-between gap-2">
             <p className="label !mb-0">Sesiones</p>
             {!nueva && (
-              <button onClick={() => setNueva({ ...VACIA(), consultor_id: consultorPorDefecto || '' })} className="text-[12px] font-bold text-brand-orange hover:underline">
+              <button onClick={() => {
+                // La sesión nueva dura lo que le falta a la tarea (hasta una jornada).
+                const faltan = Math.max(0, (bal.teoricas || 0) - (bal.planificadas || 0));
+                const v = VACIA();
+                if (faltan > 0) v.hora_fin = sumarHoras(v.hora_inicio, duracionSesion(faltan));
+                setNueva({ ...v, consultor_id: consultorPorDefecto || '' });
+              }} className="text-[12px] font-bold text-brand-orange hover:underline">
                 + añadir sesión
               </button>
             )}

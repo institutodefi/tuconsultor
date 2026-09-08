@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../lib/data.js';
-import { balanceTarea } from '../lib/sesionesTarea.js';
+import { balanceTarea, duracionSesion, sumarHoras, JORNADA } from '../lib/sesionesTarea.js';
 import { esLaborable, FESTIVOS_2026 } from '../lib/agenda.js';
 import { NORMAS, NORMA_BY_ID } from '../lib/calcEngine.js';
 import { tituloTarea } from '../lib/zonaCliente.js';
@@ -11,9 +11,10 @@ import { tituloTarea } from '../lib/zonaCliente.js';
 // A la izquierda, las tareas del proyecto a las que les faltan horas por
 // programar (sin sesiones, o cortas), con su responsable. A la derecha, un
 // calendario mensual con las sesiones del proyecto. Se arrastra una tarea a
-// un día y queda programada: una sesión de hasta 4 h (lo que falte, si es
-// menos) a las 09:00, para la persona responsable de la tarea o, si no tiene,
-// para quien esté elegido arriba. Las sesiones del calendario también se
+// un día y queda programada: una sesión con las horas que le faltan a la
+// tarea (hasta una jornada de 8 h; el resto sigue en la lista para otro día)
+// a las 09:00, para la persona responsable de la tarea o, si no tiene, para
+// quien esté elegido arriba. Las sesiones del calendario también se
 // arrastran de un día a otro.
 //
 // Solo se puede programar a gente del proyecto (proyecto_equipo). Sustituye
@@ -29,8 +30,7 @@ const num = (v) => Number(v) || 0;
 const aISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const hoyISO = () => aISO(new Date());
 const HORA_INICIO = '09:00';
-const BLOQUE = 4;
-const sumaHoras = (hhmm, h) => { const [H, M] = hhmm.split(':').map(Number); const t = H * 60 + M + Math.round(h * 60); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+const sumaHoras = sumarHoras;
 const fmtH = (n) => `${(Math.round(num(n) * 10) / 10).toLocaleString('es-ES')} h`;
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -109,8 +109,9 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
       if (a.tipo === 'tarea') {
         const t = tareaPor[a.id]; if (!t) return;
         const b = pendientes.find((x) => S(x.t.id) === a.id);
-        const faltan = b ? b.faltan : BLOQUE;
-        const horas = Math.max(0.5, Math.min(BLOQUE, faltan));
+        // La sesión dura lo que le falta a la tarea (hasta una jornada).
+        const faltan = b ? b.faltan : horasTeoricas(t);
+        const horas = duracionSesion(faltan);
         let consultor = S(t.consultor_id || '') || responsableDefecto;
         if (consultor && !gente.some((g) => g.id === consultor)) consultor = responsableDefecto;
         if (!consultor) { setMsg({ err: true, t: 'Sin nadie en el equipo del proyecto: asigna personas arriba antes de programar.' }); return; }
@@ -122,7 +123,8 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
         await insertRow('tarea_sesiones', fila);
         // La tarea queda con responsable si no lo tenía.
         if (!t.consultor_id) await updateRow('cliente_tareas', t.id, { consultor_id: consultor }).catch(() => {});
-        setMsg({ err: false, t: `${etiqueta(t)} · ${tituloTarea(t)}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}.` });
+        const resto = Math.round((faltan - horas) * 10) / 10;
+        setMsg({ err: false, t: `${etiqueta(t)} · ${tituloTarea(t)}: ${fmtH(horas)} el ${iso.split('-').reverse().join('/')} para ${nombreDe(consultor)}${resto > 0.4 ? ` (quedan ${fmtH(resto)} por programar otro día)` : ''}.` });
       } else if (a.tipo === 'sesion') {
         const s = sesionesProyecto.find((x) => S(x.id) === a.id); if (!s || S(s.fecha).slice(0, 10) === iso) return;
         await updateRow('tarea_sesiones', s.id, { fecha: iso });
@@ -148,7 +150,7 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h4 className="font-extrabold text-[#EAF4F7]">Programar arrastrando</h4>
-          <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Arrastra una tarea de la lista a un día del calendario y queda programada (hasta {BLOQUE} h a las {HORA_INICIO}, o lo que le falte). Las sesiones también se mueven de un día a otro. Solo a gente del proyecto.</p>
+          <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Arrastra una tarea de la lista a un día del calendario y queda programada con las horas que le faltan, desde las {HORA_INICIO} (como mucho una jornada de {JORNADA} h; el resto sigue en la lista para otro día). Las sesiones también se mueven de un día a otro. Solo a gente del proyecto.</p>
         </div>
         <label className="flex items-center gap-2 text-[11.5px] text-[#9FC0CB]">
           Sin responsable, programar a
