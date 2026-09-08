@@ -4,6 +4,7 @@ import { balanceTarea, duracionSesion, sumarHoras, JORNADA } from '../lib/sesion
 import { esLaborable, FESTIVOS_2026 } from '../lib/agenda.js';
 import { NORMAS, NORMA_BY_ID } from '../lib/calcEngine.js';
 import { tituloTarea } from '../lib/zonaCliente.js';
+import { planAutomatico, fechasObjetivo, MARGEN_DIAS, DIAS_ANTES_CERT } from '../lib/planAutomatico.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // PLANIFICADOR POR ARRASTRE · calendario del proyecto + tareas sin programar
@@ -32,6 +33,7 @@ const hoyISO = () => aISO(new Date());
 const HORA_INICIO = '09:00';
 const sumaHoras = sumarHoras;
 const fmtH = (n) => `${(Math.round(num(n) * 10) / 10).toLocaleString('es-ES')} h`;
+const fmtFecha = (iso) => (iso ? S(iso).slice(0, 10).split('-').reverse().join('/') : '—');
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const ORDEN_NORMA = Object.fromEntries(NORMAS.map((n, i) => [n.id, i]));
@@ -49,6 +51,7 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
   const [msg, setMsg] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [filtro, setFiltro] = useState('');
+  const [plan, setPlan] = useState(null);      // propuesta del plan automático, pendiente de aplicar
 
   useEffect(() => {
     Promise.all([listTable('perfiles').catch(() => []), listTable('proyecto_equipo').catch(() => []), listTable('festivos').catch(() => [])]).then(([ps, eq, fs]) => {
@@ -142,6 +145,39 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
     try { await updateRow('tarea_sesiones', s.id, { consultor_id: id || null }); onGuardado?.(); } catch (e) { setMsg({ err: true, t: explicarErrorBd(e, 'tarea_sesiones') }); }
   };
 
+  // ── Plan automático: se calcula, se enseña y solo se guarda al aplicar ──
+  const proponerPlan = async () => {
+    setMsg(null); setOcupado(true);
+    try {
+      // Todas las sesiones (de todos los proyectos): la ocupación de cada persona.
+      const todas = await listTable('tarea_sesiones').catch(() => sesiones);
+      const r = planAutomatico({ proyecto, tareas, sesiones: todas, gente, responsableDefecto, hoy, festivos, horasTeoricas });
+      if (r.error) { setMsg({ err: true, t: r.error }); return; }
+      if (!r.nuevas.length && !r.quitar.length) { setMsg({ err: false, t: 'No hay nada que programar: todo está ya en el calendario.' }); return; }
+      setPlan(r);
+    } finally { setOcupado(false); }
+  };
+  const aplicarPlan = async () => {
+    if (!plan) return;
+    setOcupado(true); setMsg(null);
+    try {
+      for (const s of plan.quitar) await deleteRow('tarea_sesiones', s.id);
+      const conResponsable = new Set();
+      for (const s of plan.nuevas) {
+        // Sin `horas` ni campos de apoyo: en la base es una columna generada.
+        const { horas, _codigo, _titulo, ...fila } = s; // eslint-disable-line no-unused-vars
+        await insertRow('tarea_sesiones', fila);
+        const t = tareaPor[S(s.cliente_tarea_id)];
+        if (t && !t.consultor_id && !conResponsable.has(S(t.id))) { conResponsable.add(S(t.id)); await updateRow('cliente_tareas', t.id, { consultor_id: s.consultor_id }).catch(() => {}); }
+      }
+      setMsg({ err: false, t: `Programadas ${plan.nuevas.length} sesiones (${fmtH(plan.resumen.horas)}) del ${fmtFecha(plan.resumen.desde)} al ${fmtFecha(plan.resumen.hasta)}${plan.quitar.length ? `; ${plan.quitar.length} sesiones lejanas rehechas` : ''}.` });
+      setPlan(null);
+      onGuardado?.();
+    } catch (e) { setMsg({ err: true, t: explicarErrorBd(e, 'tarea_sesiones') }); }
+    finally { setOcupado(false); }
+  };
+  const objetivo = fechasObjetivo(proyecto);
+
   const totalFaltan = Math.round(pendientes.reduce((a, x) => a + x.faltan, 0) * 10) / 10;
   const ESTADO = { programada: 'border-sky-400/50 bg-sky-500/15 text-sky-100', hecha: 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100', anulada: 'opacity-40' };
 
@@ -152,6 +188,10 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
           <h4 className="font-extrabold text-[#EAF4F7]">Programar arrastrando</h4>
           <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Arrastra una tarea de la lista a un día del calendario y queda programada con las horas que le faltan, desde las {HORA_INICIO} (como mucho una jornada de {JORNADA} h; el resto sigue en la lista para otro día). Las sesiones también se mueven de un día a otro. Solo a gente del proyecto.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={proponerPlan} disabled={ocupado || !!plan} className="btn-primary !px-3 !py-1.5 text-[12px]" title={`Reparte las tareas pendientes desde dentro de ${MARGEN_DIAS} días hasta la auditoría externa${objetivo.auditoria ? ` (${fmtFecha(objetivo.auditoria)})` : ''}. Auditoría interna y revisión por la dirección, la semana anterior a la certificación.`}>
+          ✦ Programar automáticamente
+        </button>
         <label className="flex items-center gap-2 text-[11.5px] text-[#9FC0CB]">
           Sin responsable, programar a
           <select className="input !w-auto !py-1 !text-[12px]" value={responsableDefecto} onChange={(e) => setResponsableDefecto(e.target.value)}>
@@ -159,7 +199,38 @@ export default function PlanificadorArrastre({ proyecto, nombreCliente = '', tar
             {gente.map((g) => <option key={g.id} value={g.id}>{g.nombre}{g.nivel ? ` · ${g.nivel}` : ''}{g.papel === 'responsable' ? ' (responsable)' : ''}</option>)}
           </select>
         </label>
+        </div>
       </div>
+      {plan && (
+        <div className="mt-3 rounded-xl border border-brand-orange/50 bg-brand-orange/10 p-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-[13px] font-extrabold text-[#EAF4F7]">✦ Propuesta · {plan.nuevas.length} sesiones · {fmtH(plan.resumen.horas)}</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={aplicarPlan} disabled={ocupado} className="btn-primary !px-3 !py-1 text-[12px]">{ocupado ? 'Guardando…' : 'Aplicar al calendario'}</button>
+              <button type="button" onClick={() => setPlan(null)} disabled={ocupado} className="btn-ghost !px-3 !py-1 text-[12px]">Descartar</button>
+            </div>
+          </div>
+          <p className="mt-1 text-[11.5px] text-[#CFE3E9]">
+            Del <b>{fmtFecha(plan.resumen.desde)}</b> (a más de {MARGEN_DIAS} días vista; lo anterior no se toca) al <b>{fmtFecha(plan.resumen.hasta)}</b>.
+            Auditoría externa el <b>{fmtFecha(plan.resumen.auditoria)}</b>{plan.resumen.certificacion !== plan.resumen.auditoria ? <>, certificación el <b>{fmtFecha(plan.resumen.certificacion)}</b></> : null}:
+            auditoría interna y revisión por la dirección van las últimas, terminando el {fmtFecha(plan.resumen.finRevision)} ({DIAS_ANTES_CERT} días antes).
+            {plan.quitar.length > 0 && <> Se rehacen <b>{plan.quitar.length}</b> sesiones ya programadas más allá de esa fecha.</>}
+          </p>
+          {plan.avisos.map((a, i) => <p key={i} className="mt-1 text-[11.5px] font-bold text-amber-200">⚠ {a}</p>)}
+          <ul className="mt-2 max-h-56 space-y-0.5 overflow-y-auto pr-1 text-[11.5px]">
+            {plan.nuevas.map((s, i) => (
+              <li key={i} className="flex items-center gap-2 rounded bg-[#0B2E3D]/70 px-2 py-0.5">
+                <span className="w-[74px] shrink-0 font-bold text-brand-orange">{fmtFecha(s.fecha)}</span>
+                <span className="w-[88px] shrink-0 text-[#9FC0CB]">{s.hora_inicio}–{s.hora_fin}</span>
+                <span className="w-[44px] shrink-0 text-[#9FC0CB]">{fmtH(s.horas)}</span>
+                <code className="shrink-0 text-[10.5px] text-brand-verdeTexto">{etiqueta(tareaPor[S(s.cliente_tarea_id)])}</code>
+                <span className="min-w-0 flex-1 truncate text-[#EAF4F7]">{tituloTarea(tareaPor[S(s.cliente_tarea_id)])}</span>
+                <span className="shrink-0 text-[#9FC0CB]">{nombreDe(s.consultor_id)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {msg && <p className={`mt-2 text-[12px] font-bold ${msg.err ? 'text-red-300' : 'text-emerald-300'}`}>{msg.t}</p>}
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[320px_1fr]">
