@@ -11,6 +11,7 @@ import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL , nombreVisibl
 import { puedeEditarContactos } from '../../lib/crm.js';
 import { linkWhatsApp } from '../../lib/telefono.js';
 import BuscadorContactoIA from '../../components/BuscadorContactoIA.jsx';
+import AsociarLinkedIn from '../../components/AsociarLinkedIn.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONTACTOS · las personas del CRM.
@@ -610,6 +611,8 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onB
             <ConsentimientoRgpd contacto={contacto} puedeEditar={!!puedeEditar} onCambio={onRecargar} compacto />
             {contacto.brevo_sincronizado_en && <span className="chip mt-1 !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
           </div>
+          {/* Hasta cinco perfiles de LinkedIn por afinidad; se asocia el que sea a mano (v140). */}
+          <AsociarLinkedIn contacto={contacto} empresa={empresas[0] ? nombreVisible(empresas[0].e) : ''} puedeEditar={!!puedeEditar} onCambio={onRecargar} />
           </div>
         </div>
         {puedeEditar && (

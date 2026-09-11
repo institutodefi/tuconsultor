@@ -44,11 +44,11 @@ Busca en la web (LinkedIn público, web de la empresa, notas de prensa, registro
   "linkedin_url": "", "ciudad": "", "email_publico": "",
   "resumen": "una o dos frases sobre su perfil profesional",
   "fuentes": ["url", "url"],
-  "candidatos": [{"nombre": "", "cargo": "", "empresa": "", "linkedin_url": ""}]
+  "candidatos": [{"nombre": "", "cargo": "", "empresa": "", "linkedin_url": "", "ciudad": "", "afinidad": 0, "motivo": ""}]
 }
 Reglas:
 - Solo datos profesionales: cargo, empresa, perfil público, ciudad de trabajo, correo profesional si la propia empresa lo publica. NUNCA teléfonos personales, direcciones particulares, datos de familia, salud, opiniones ni nada privado.
-- Si hay varias personas con ese nombre, pon la más probable en los campos principales (por la empresa indicada) y las otras en "candidatos".
+- "candidatos": HASTA 5 personas que podrían ser la buscada, ordenadas de más a menos probable, incluida la principal en primer lugar. "afinidad" es 0-100 según coincidan nombre, empresa, cargo y ciudad con lo pedido; "motivo" dice en una frase por qué (p. ej. «mismo nombre y misma empresa» o «mismo nombre, otra empresa del sector»). Pon la más probable también en los campos principales.
 - Si no encuentras nada fiable, "encontrado": false y explica en "resumen" qué has probado.
 - "fuentes": las URL de donde sale cada dato. Sin fuente, no afirmes.
 - Responde en español. Nombres con mayúsculas y minúsculas normales.`;
@@ -98,7 +98,11 @@ export default async (req) => {
     linkedin_url: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i.test(datos.linkedin_url || '') ? datos.linkedin_url : (url || ''),
     resumen: String(datos.resumen || '').slice(0, 600),
     fuentes: Array.isArray(datos.fuentes) ? datos.fuentes.filter((f) => /^https?:\/\//.test(String(f))).slice(0, 6) : [],
-    candidatos: Array.isArray(datos.candidatos) ? datos.candidatos.slice(0, 5) : [],
+    candidatos: (Array.isArray(datos.candidatos) ? datos.candidatos : []).filter((c) => c && c.nombre).slice(0, 5).map((c) => ({
+      nombre: capitalizar(c.nombre || '') || '', cargo: capitalizar(c.cargo || '') || '', empresa: capitalizar(c.empresa || '') || '', ciudad: capitalizar(c.ciudad || '') || '',
+      linkedin_url: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i.test(c.linkedin_url || '') ? c.linkedin_url : '',
+      afinidad: Math.max(0, Math.min(100, Number(c.afinidad) || 0)), motivo: String(c.motivo || '').slice(0, 200),
+    })).sort((a, b) => b.afinidad - a.afinidad),
     fuente_datos: `Búsqueda IA en fuentes públicas (${new Date().toLocaleDateString('es-ES')}) por ${quien.nombre || 'equipo'}${Array.isArray(datos.fuentes) && datos.fuentes[0] ? `: ${datos.fuentes[0]}` : ''}`,
   };
   return json({ ok: true, propuesta, modelo: MODELO });
