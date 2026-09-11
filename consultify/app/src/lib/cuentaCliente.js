@@ -1,4 +1,5 @@
 import { supabase, DEMO } from './supabase.js';
+import { limpiarFila } from './capitalizar.js';
 import { listTable, insertRow, updateRow, deleteRow } from './data.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -40,11 +41,11 @@ export async function cargarContactosFicha(cliente) {
 
 /** Guardar (alta o cambio) una persona de contacto de la ficha. */
 export async function guardarContactoFicha(cliente, datos) {
-  const p = {
+  const p = limpiarFila('contactos', {
     id: datos.id || null, nombre: S(datos.nombre), apellidos: S(datos.apellidos) || null, cargo: S(datos.cargo) || null,
     email: low(datos.email) || null, telefono: S(datos.telefono) || null, movil: S(datos.movil) || null, notas: S(datos.notas) || null,
     principal: !!datos.principal, rgpd_aceptado: !!datos.rgpd_aceptado, rol: datos.rol || 'proyecto',
-  };
+  });
   if (!DEMO) return rpc('cliente_guardar_contacto', { cid: cliente.id, p });
   // Demo: mismas reglas sobre las tablas en memoria.
   const [empresas, enlaces, contactos] = await Promise.all([listTable('empresas'), listTable('empresa_contactos'), listTable('contactos')]);
@@ -79,6 +80,7 @@ const CAMPOS_CRM = ['empresa', 'nombre_comercial', 'cif', 'telefono', 'movil', '
  * ficha de cliente y se avisa con `soloFicha`.
  */
 export async function guardarDatosEmpresa(cliente, patch) {
+  patch = limpiarFila('clientes', patch);
   if (!DEMO) {
     try { await rpc('cliente_guardar_empresa', { cid: cliente.id, p: patch }); return { soloFicha: false }; }
     catch (e) { if (!sinFuncion(e)) throw e; }

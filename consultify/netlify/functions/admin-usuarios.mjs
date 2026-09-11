@@ -22,6 +22,7 @@
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 //   SITE_URL (para el redirect de la invitación, por defecto https://consultify.tuconsultor.com)
 
+import { limpiarFila } from '../../app/src/lib/capitalizar.js';
 const ROLES_VALIDOS = ['superadmin', 'admin', 'director', 'consultor', 'gestion', 'cliente'];
 const NIVELES = ['J1', 'J2', 'J3', 'Senior'];
 // Roles de equipo que EXIGEN email con dominio corporativo.
@@ -121,7 +122,7 @@ export default async (req) => {
 
     // ── INVITAR por email (el usuario define su contraseña) ──
     if (action === 'invite') {
-      const { email, nombre = '', apellidos = '', rol = 'consultor', nivel = null, normas = [], capacidad_clientes = 12, pct_jornada = 100 } = body;
+      const { email, nombre = '', apellidos = '', rol = 'consultor', nivel = null, normas = [], capacidad_clientes = 12, pct_jornada = 100 } = limpiarFila('perfiles', body);
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ ok: false, error: 'Email no válido' }, 400);
       if (!ROLES_VALIDOS.includes(rol)) return json({ ok: false, error: 'Rol no válido' }, 400);
       if (rol === 'superadmin' && caller.rol !== 'superadmin') {
@@ -154,7 +155,7 @@ export default async (req) => {
     // ── CAMBIAR ROL ──
     // ── EDITAR PERFIL (nombre, apellidos, nivel, normas, capacidad) ──
     if (action === 'update_perfil') {
-      const { id, nombre, apellidos, nivel, normas, capacidad_clientes, pct_jornada } = body;
+      const { id, nombre, apellidos, nivel, normas, capacidad_clientes, pct_jornada } = limpiarFila('perfiles', body);
       if (!id) return json({ ok: false, error: 'Falta id' }, 400);
       { const g = await puedeTocarA(caller, id); if (!g.ok) return json({ ok: false, error: g.error }, 403); }
       if (nivel && !NIVELES.includes(nivel)) return json({ ok: false, error: 'Nivel no válido' }, 400);

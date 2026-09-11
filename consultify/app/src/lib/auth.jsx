@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { limpiarFila } from './capitalizar.js';
 import { registrar } from './registro.js';
 import { supabase, DEMO } from './supabase';
 import { can } from './permisos';
@@ -54,6 +55,7 @@ export function AuthProvider({ children }) {
     // Solo lo que venga: nombre/apellidos desde Mis datos, foto_url desde la foto.
     if (DEMO) { setPerfil((p) => ({ ...p, ...patch })); return { ok: true }; }
     if (!supabase || !user) return { ok: false, error: 'Sin sesión.' };
+    patch = limpiarFila('perfiles', patch);
     const { error } = await supabase.from('perfiles').update(patch).eq('id', user.id);
     if (error) return { ok: false, error: error.message };
     setPerfil((p) => ({ ...p, ...patch }));

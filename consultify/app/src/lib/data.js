@@ -1,5 +1,8 @@
 import { supabase, DEMO, demoClone } from './supabase';
 import { catalogoFilas } from './catalogoTareas';
+// Mayúsculas y minúsculas (v137): razones sociales, personas, correos y CIF
+// entran en la base con una sola forma, se escriban como se escriban.
+import { limpiarFila } from './capitalizar.js';
 
 // Capa de datos: misma API en modo demo y con Supabase real.
 let demoState = null;
@@ -224,6 +227,7 @@ export function explicarErrorBd(error, tabla) {
 }
 
 export async function insertRow(table, row) {
+  row = limpiarFila(table, row);
   if (NORMALIZAR[table]) row = NORMALIZAR[table](row);
   if (DEMO) { const r = { id: uid(), creado: new Date().toISOString(), ...row }; demo()[table].unshift(r); return r; }
   // 1) Intento normal: insertar y devolver la fila creada.
@@ -350,6 +354,7 @@ export async function upsertClienteDesdeFormulario({ empresa, contacto, email, t
 // usa el código del criterio (1.4.3) como clave, no un uuid.
 export async function updateRow(table, id, patch, clave = 'id') {
   if (DEMO) { const t = demo()[table]; const i = t.findIndex(r => r[clave] === id); if (i >= 0) t[i] = { ...t[i], ...patch }; return t[i]; }
+  patch = limpiarFila(table, patch);
   if (NORMALIZAR[table]) patch = NORMALIZAR[table](patch);
   const { data, error } = await supabase.from(table).update(patch).eq(clave, id).select().single();
 

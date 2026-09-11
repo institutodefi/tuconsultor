@@ -68,6 +68,7 @@ import {
 } from '../../app/src/lib/calcEngine.js';
 import { DISCLAIMER_OFERTA } from '../../app/src/lib/legal.js';
 import { eurES } from '../../app/src/lib/formato.js';
+import { limpiarFila, capitalizar } from '../../app/src/lib/capitalizar.js';
 
 // Punto de miles siempre («1.325,00 €»): Intl en es-ES no agrupa cuatro cifras.
 const eur = (v) => eurES(v, 2);
@@ -504,6 +505,11 @@ export default async (req) => {
     }
   }
 
+  // Lo que teclea quien pide la oferta («rafa», «NOMBRE DE LA EMPRESA»,
+  // «Correo@Dominio.com») entra ya limpio (v137): así sale en el PDF, en el
+  // histórico y en la ficha que crea `alta_desde_oferta`.
+  const limpio = limpiarFila('presupuestos', { empresa: body.empresa, nombre: body.contacto, cargo: body.cargo, email: body.email, cif: body.cif });
+  body = { ...body, empresa: limpio.empresa ?? body.empresa, contacto: limpio.nombre ?? body.contacto, cargo: limpio.cargo ?? body.cargo, email: limpio.email ?? body.email, cif: limpio.cif ?? body.cif, direccion: capitalizar(body.direccion) || body.direccion };
   const { normas = [], modelo = '', empresa = '', cif = '', contacto = '', cargo = '', ref = '', comercial = 'Alejandro', presupuesto_id, email = '', meses, tiene9001 = false, direccion = '', enviar_cliente = false,
     // De dónde nace la oferta. Las de la web llevan cláusula de aprobación
     // posterior; las que emite el equipo van en firme y no la llevan.

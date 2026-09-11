@@ -23,6 +23,8 @@ const LISTA_PENDIENTES = 7;
 const LISTA_CONFIRMADOS = 9;
 const LISTA_EMPRESAS = 10;
 
+import { limpiarFila } from '../../app/src/lib/capitalizar.js';
+
 const limpioCif = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const norm = (v) => (v === undefined || v === null || v === '' ? null : String(v).trim());
 
@@ -138,7 +140,11 @@ export default async (req) => {
           if (!cif) continue;                       // sin CIF no hay forma de casar
           const actual = porCif.get(cif);
 
-          const fiscal = {
+          // Holded lo manda todo en mayúsculas; aquí se guarda como se escribe
+          // (v137): «Academia Axon S.L.», no «ACADEMIA AXON S.L.». Se limpia
+          // ANTES de comparar para que una razón social ya limpia no cuente
+          // como cambio en cada sincronización.
+          const fiscal = limpiarFila('empresas', {
             nombre: norm(h.name),
             cif: norm(h.code || h.vatnumber),
             direccion: norm(h.billAddress?.address),
@@ -149,7 +155,7 @@ export default async (req) => {
             vat_id: norm(h.vatnumber),
             holded_id: norm(h.id),
             holded_sincronizado_en: new Date().toISOString(),
-          };
+          });
 
           if (!actual) {
             const ins = await fetch(`${base}/rest/v1/empresas`, {

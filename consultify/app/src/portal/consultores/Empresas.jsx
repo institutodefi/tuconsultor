@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SincronizarCrm from '../../components/SincronizarCrm.jsx';
+import LimpiezaMayusculas from '../../components/LimpiezaMayusculas.jsx';
 import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES , nombreVisible, tieneComercialDistinto, ETIQUETAS_EMPRESA, tieneEtiqueta, puedeEditarEmpresas, puedeEditarEmpresa } from '../../lib/crm.js';
@@ -235,6 +236,7 @@ export default function Empresas() {
             </button>
           )}
           {puedeEditar && <SincronizarCrm />}
+          {['superadmin', 'admin'].includes(role) && <LimpiezaMayusculas onCambio={cargar} />}
           {puedeEditar && <button onClick={() => setNueva(true)} className="btn-orange">+ Nueva empresa</button>}
         </div>
       </div>
