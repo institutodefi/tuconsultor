@@ -7,6 +7,7 @@ import Calculadora from './pages/Calculadora.jsx';
 import GeneradorOfertas from './pages/GeneradorOfertas.jsx';
 import Acceso from './pages/Acceso.jsx';
 import Consentimiento from './pages/Consentimiento.jsx';
+import OfertaCliente from './pages/OfertaCliente.jsx';
 import EstablecerPassword from './pages/EstablecerPassword.jsx';
 import ClientePortal from './portal/ClientePortal.jsx';
 import ConsultorPortal from './portal/ConsultorPortal.jsx';
@@ -70,6 +71,8 @@ function App() {
             <Route path="/acceso" element={<Acceso />} />
             {/* Pública: la abre el contacto desde su enlace personal, sin sesión. */}
             <Route path="/consentimiento" element={<Consentimiento />} />
+            {/* Pública: la oferta desde el botón del correo, con su enlace personal (v138). */}
+            <Route path="/oferta" element={<OfertaCliente />} />
             <Route path="/establecer-password" element={<EstablecerPassword />} />
             <Route path="/nueva-password" element={<EstablecerPassword />} />
             <Route path="/clientes/*" element={<Protected allow={['cliente','admin','superadmin']}><ClientePortal /></Protected>} />

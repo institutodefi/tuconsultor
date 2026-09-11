@@ -30,12 +30,14 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return Response.json({ ok: false, error: 'JSON inválido' }, { status: 400 }); }
 
-  const { email, nombre = '', apellidos = '', empresa = '', telefono = '', cif = '', cargo = '', numero_oferta = '', comercial = 'Alejandro', normas = [], modelo = '', precio = 0, tipo = 'mes', meses, tiene9001 = false, mensaje = '', origen = '', consent } = body;
+  const { email, nombre = '', apellidos = '', empresa = '', telefono = '', cif = '', cargo = '', numero_oferta = '', comercial = 'Alejandro', normas = [], modelo = '', precio = 0, tipo = 'mes', meses, tiene9001 = false, mensaje = '', origen = '', consent, consent_datos = false } = body;
   // Email siempre obligatorio. El consentimiento es obligatorio para MARKETING,
   // pero un contacto de WhatsApp puede registrarse sin consentimiento (solo como
   // contacto operativo, sin entrar en la lista de doble opt-in).
   if (!email) return Response.json({ ok: false, error: 'Email obligatorio' }, { status: 400 });
-  if (!consent && origen !== 'whatsapp') return Response.json({ ok: false, error: 'Email y consentimiento RGPD obligatorios' }, { status: 400 });
+  // `consent_datos` (v138): aceptó el tratamiento pero no las comunicaciones.
+  // Se registra el contacto (como en WhatsApp) sin entrar en la lista de marketing.
+  if (!consent && origen !== 'whatsapp' && !consent_datos) return Response.json({ ok: false, error: 'Email y consentimiento RGPD obligatorios' }, { status: 400 });
 
   const attributes = {
     NOMBRE: nombre,
@@ -53,7 +55,7 @@ export default async (req) => {
     TIPO_PRECIO: tipo === 'mes' ? 'MENSUAL' : (tipo === 'proyecto' || tipo === 'fraccionado' ? 'PROYECTO' : 'BOLSA'),
     MESES: meses != null && meses !== '' ? Number(meses) : undefined,
     YA_TIENE_9001: !!tiene9001,
-    CONSENT_RGPD: !!consent,
+    CONSENT_RGPD: !!consent || !!consent_datos,
     FECHA_CONSENT: new Date().toISOString().slice(0, 10),
     FECHA_SIMULACION: new Date().toISOString().slice(0, 10),
   };

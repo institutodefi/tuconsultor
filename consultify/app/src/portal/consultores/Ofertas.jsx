@@ -201,6 +201,11 @@ export default function Ofertas() {
   }
 
   // ETAPA 2: enviar la oferta YA generada (sin regenerar el documento).
+  // Enlace personal del cliente (v138): lo mismo que lleva el botón del correo.
+  async function copiarEnlace(r) {
+    const url = `${window.location.origin}/app/oferta?t=${r.token_acceso}`;
+    try { await navigator.clipboard?.writeText(url); setMsg(`Enlace copiado: ${url}`); } catch { setMsg(url); }
+  }
   async function enviar(r) {
     if (!r.email) { setMsg('Esta oferta no tiene email de cliente; edítala para añadirlo.'); return; }
     if (!r.url_pdf) { setMsg('Genera primero la oferta (no hay PDF que enviar).'); return; }
@@ -211,13 +216,13 @@ export default function Ofertas() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'enviar_existente',
+          action: 'enviar_existente', presupuesto_id: r.id,
           url_pdf: r.url_pdf, email: r.email, empresa: r.empresa || '', contacto: r.nombre || '',
           comercial: r.comercial || 'Alejandro', numero_oferta: r.numero_oferta || '', normas: r.normas || [],
         }),
       });
       let j = null; try { j = await resp.json(); } catch { j = null; }
-      if (j && j.ok) setMsg(`✓ Oferta ${r.numero_oferta || ''} enviada a ${r.email}.`);
+      if (j && j.ok) setMsg(`✓ Oferta ${r.numero_oferta || ''} enviada a ${r.email}${j.enlace ? ' con el botón «Ver y aceptar la oferta»' : ''}.`);
       else setMsg(`No se pudo enviar (${j?.error || `código ${resp.status}`}).`);
     } catch (e) { setMsg('Error de conexión al enviar.'); }
     setGenId(null);
@@ -967,7 +972,10 @@ export default function Ofertas() {
                         {r.url_pdf && <a href={r.url_pdf} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PDF</a>}
                         {r.url_pptx && <a href={r.url_pptx} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PPT</a>}
                         <button onClick={() => generar(r)} disabled={genId === r.id} className="text-xs font-semibold text-[#9FC0CB] hover:underline disabled:opacity-50" title="Regenerar documentos">{genId === r.id ? '…' : '↻ Regenerar'}</button>
-                        <button onClick={() => enviar(r)} disabled={genId === r.id || !r.email} className="rounded-lg bg-brand-orange/15 px-2.5 py-1 text-xs font-bold text-[#F9A83A] hover:bg-brand-orange/25 disabled:opacity-40" title={r.email ? `Enviar a ${r.email}` : 'Sin email de cliente'}>✉ Enviar</button>
+                        <button onClick={() => enviar(r)} disabled={genId === r.id || !r.email} className="rounded-lg bg-brand-orange/15 px-2.5 py-1 text-xs font-bold text-[#F9A83A] hover:bg-brand-orange/25 disabled:opacity-40" title={r.email ? `Enviar a ${r.email} con el botón para aceptarla` : 'Sin email de cliente'}>✉ Enviar</button>
+                        {r.token_acceso && (
+                          <button onClick={() => copiarEnlace(r)} className="text-xs font-semibold text-[#9FC0CB] hover:underline" title="Copiar el enlace personal con el que el cliente ve y acepta la oferta (para WhatsApp o tu propio correo)">⧉ Enlace</button>
+                        )}
                       </span>
                     ) : (
                       <button onClick={() => generar(r)} disabled={genId === r.id} className="text-xs font-bold text-[#CFE3E9] hover:underline disabled:opacity-50">

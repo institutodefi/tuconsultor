@@ -12,6 +12,7 @@
 // app. El token es la clave; sin él no se ve ni se acepta nada.
 // ════════════════════════════════════════════════════════════════════════════
 import { RGPD_VERSION, RGPD_TEXTO, RGPD_CASILLAS } from '../../app/src/lib/rgpd.js';
+import { sincronizarContactoBrevo } from './brevo-contacto.mjs';
 
 const env = (n) => process.env[n] || '';
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } });
@@ -87,7 +88,10 @@ async function registrarAceptacion(contacto, { canal, datos = true, marketing = 
     await sb(`/rest/v1/contactos?id=eq.${contacto.id}`, { method: 'PATCH', body: marketing ? { consentimiento_marketing: true, consentimiento_fecha: ahora } : {}, headers: { Prefer: 'return=minimal' } });
   }
   await sb('/rest/v1/consentimientos_rgpd', { method: 'POST', body: { contacto_id: contacto.id, canal, acepta_datos: !!datos, acepta_marketing: !!marketing, texto_version: RGPD_VERSION, ip, user_agent: ua, nota, registrado_por: por }, headers: { Prefer: 'return=minimal' } });
-  return { ok: true, fecha: ahora };
+  // Brevo al momento (v138): a la lista de confirmados si marcó comunicaciones,
+  // a la de pendientes si no. Antes había que esperar a «Sincronizar CRM».
+  const brevo = await sincronizarContactoBrevo(contacto.id);
+  return { ok: true, fecha: ahora, brevo: brevo.ok ? 'ok' : brevo.motivo };
 }
 
 export default async (req) => {
@@ -111,7 +115,7 @@ export default async (req) => {
     const ip = req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || null;
     const ua = req.headers.get('user-agent') || null;
     const r = await registrarAceptacion(c, { canal: 'enlace', datos: true, marketing: !!body.marketing, ip, ua });
-    return json({ ok: true, fecha: r.fecha });
+    return json({ ok: true, fecha: r.fecha, brevo: r.brevo });
   }
 
   // ── Equipo ──
@@ -134,7 +138,7 @@ export default async (req) => {
   if (action === 'registrar') {
     const canal = ['formulario', 'verbal', 'oferta'].includes(body.canal) ? body.canal : 'formulario';
     const r = await registrarAceptacion(c, { canal, datos: true, marketing: !!body.marketing, nota: body.nota || null, por: quien.id });
-    return json({ ok: true, fecha: r.fecha });
+    return json({ ok: true, fecha: r.fecha, brevo: r.brevo });
   }
   return json({ ok: false, error: 'Acción no reconocida.' }, 400);
 };

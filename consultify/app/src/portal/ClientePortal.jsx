@@ -107,7 +107,10 @@ function Presupuestos() {
   }, [user, recarga]);
 
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando tus propuestas…</p>;
-  return <MisOfertas ofertas={rows} contratos={contratos} onCambio={() => setRecarga((n) => n + 1)} />;
+  // ?oferta=<id>: viene del enlace del correo (v138); esa propuesta va primero y destacada.
+  const destacada = new URLSearchParams(window.location.search).get('oferta');
+  const ordenadas = destacada ? [...rows].sort((a, b) => (String(b.id) === destacada) - (String(a.id) === destacada)) : rows;
+  return <MisOfertas ofertas={ordenadas} contratos={contratos} destacada={destacada} onCambio={() => setRecarga((n) => n + 1)} />;
 }
 
 function Soporte() {

@@ -24,7 +24,7 @@ const ESTADO = {
   borrador:  { etq: 'En preparación', tono: 'bg-white/8 text-[#9FC0CB]' },
 };
 
-export default function MisOfertas({ ofertas, contratos = [], onCambio }) {
+export default function MisOfertas({ ofertas, contratos = [], onCambio, destacada = null }) {
   const [rechazando, setRechazando] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [msg, setMsg] = useState(null);
@@ -67,8 +67,10 @@ export default function MisOfertas({ ofertas, contratos = [], onCambio }) {
       {ofertas.map((o) => {
         const est = ESTADO[o.estado || 'emitida'] || ESTADO.emitida;
         const decidible = (o.estado || 'emitida') === 'emitida';
+        const esLaDelCorreo = destacada && String(o.id) === String(destacada);
         return (
-          <section key={o.id} className="card">
+          <section key={o.id} className={`card ${esLaDelCorreo ? 'ring-2 ring-brand-orange' : ''}`}>
+            {esLaDelCorreo && <p className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-brand-orange">La propuesta de tu correo</p>}
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[13.5px] font-extrabold text-[#EAF4F7]">{o.numero_oferta || 'Propuesta'}</p>

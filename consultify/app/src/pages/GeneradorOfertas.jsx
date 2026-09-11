@@ -14,6 +14,7 @@ import AjustesOferta from '../components/AjustesOferta.jsx';
 import { COMPLEJIDADES, totalEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
+import { RGPD_TEXTO, RGPD_CASILLAS } from '../lib/rgpd.js';
 
 // Generador de ofertas: selección de normas + modelo + datos del cliente,
 // precio en vivo (siempre sin impuestos) y exportación a PDF/PPTX vía la función serverless.
@@ -111,6 +112,8 @@ export default function GeneradorOfertas({ publico = false }) {
     }
   }, [location.state]);
   const [consent, setConsent] = useState(false);
+  // Comunicaciones comerciales (opcional, v138): es lo que decide la lista de Brevo.
+  const [marketing, setMarketing] = useState(false);
   const [estado, setEstado] = useState(null);        // null | 'gen' | {ok,url_pdf,url_pptx,numero}
   const [error, setError] = useState(null);
   const [pideInfo, setPideInfo] = useState(false);   // "Otra norma · pide info": abre formulario de solicitud
@@ -336,7 +339,11 @@ export default function GeneradorOfertas({ publico = false }) {
           nombre: contactoCompleto, empresa: cli.empresa, email: cli.email, telefono: cli.telefono,
           cif: cli.cif, cargo: cli.cargo, numero_oferta: numero, comercial,
           normas: sel, modelo, precio: precioLead, tipo: tipoLead,
-          meses: res.meses, tiene9001, consent: true,
+          meses: res.meses, tiene9001,
+          // En la web «consent» es la casilla de comunicaciones (lista de
+          // marketing); el tratamiento de datos va aparte y siempre está
+          // aceptado si se llega aquí.
+          consent: publico ? marketing : true, consent_datos: true,
         }),
       }).catch(() => {});
     }
@@ -378,6 +385,8 @@ export default function GeneradorOfertas({ publico = false }) {
           pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
+          // RGPD marcado al pedirla (v138): queda en el contacto del CRM y en Brevo.
+          rgpd: publico && consent, marketing: publico && marketing,
           // Resultado con reglas comerciales aplicadas (manda el motor del cliente)
           override: {
             precioCatalogo: res.precioCatalogo, precioBase: res.precioBase,
@@ -1115,10 +1124,31 @@ export default function GeneradorOfertas({ publico = false }) {
                     <input autoComplete="street-address" className="col-span-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-brand-orange focus:outline-none" placeholder="Dirección (opcional, sale en la oferta)" value={cli.direccion} onChange={e => setCli({ ...cli, direccion: e.target.value })} />
                   </div>
                   <p className="mt-1.5 text-[11px] font-medium text-white/60">Todos los campos son obligatorios.</p>
-                  <label className="mt-3 flex items-start gap-2 text-[11.5px] text-white/70 cursor-pointer">
-                    <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
-                    <span>Acepto que TuConsultor trate mis datos para gestionar esta solicitud. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad</a> (RGPD).</span>
-                  </label>
+                  {publico ? (
+                    <div className="mt-3 space-y-2">
+                      {/* RGPD al pedir la oferta (v138): el mismo texto y las mismas dos
+                          casillas que el enlace de consentimiento. Queda registrado con
+                          canal «oferta» y el contacto entra en Brevo en la lista que le toca. */}
+                      <details className="text-[11px] text-white/60">
+                        <summary className="cursor-pointer font-semibold text-white/80">Cómo tratamos tus datos (información básica RGPD)</summary>
+                        <div className="mt-1.5 space-y-1 leading-relaxed">{RGPD_TEXTO.map((t, i) => <p key={i}>{t}</p>)}</div>
+                        <p className="mt-1"><a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad completa</a></p>
+                      </details>
+                      <label className="flex items-start gap-2 text-[11.5px] text-white/80 cursor-pointer">
+                        <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
+                        <span>{RGPD_CASILLAS.datos} <span className="text-brand-orange">*</span></span>
+                      </label>
+                      <label className="flex items-start gap-2 text-[11.5px] text-white/70 cursor-pointer">
+                        <input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
+                        <span>{RGPD_CASILLAS.marketing}</span>
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="mt-3 flex items-start gap-2 text-[11.5px] text-white/70 cursor-pointer">
+                      <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-brand-orange" />
+                      <span>Acepto que TuConsultor trate mis datos para gestionar esta solicitud. <a href="/legal/privacidad.html" target="_blank" rel="noreferrer" className="font-semibold text-brand-orange underline">Política de privacidad</a> (RGPD).</span>
+                    </label>
+                  )}
                 </div>
 
                 {/* ── Quién aprueba, solo en el generador interno ──

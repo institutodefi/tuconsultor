@@ -19,9 +19,7 @@
 //   #10 empresas
 // ════════════════════════════════════════════════════════════════════════════
 
-const LISTA_PENDIENTES = 7;
-const LISTA_CONFIRMADOS = 9;
-const LISTA_EMPRESAS = 10;
+import { subirContactoBrevo, LISTA_EMPRESAS } from './brevo-contacto.mjs';
 
 import { limpiarFila } from '../../app/src/lib/capitalizar.js';
 
@@ -248,27 +246,11 @@ export default async (req) => {
 
       for (const c of contactos) {
         if (!c.email) continue;
-        const confirmado = !!c.consentimiento_marketing;
-        const lista = confirmado ? LISTA_CONFIRMADOS : LISTA_PENDIENTES;
         const empId = c.empresa_contactos?.[0]?.empresa_id;
-
-        const r = await fetch('https://api.brevo.com/v3/contacts', {
-          method: 'POST',
-          headers: { 'api-key': brevoKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: c.email, updateEnabled: true,
-            listIds: [lista],
-            // Sacarlo de la otra lista: si confirma, deja de estar pendiente.
-            unlinkListIds: [confirmado ? LISTA_PENDIENTES : LISTA_CONFIRMADOS],
-            attributes: {
-              NOMBRE: c.nombre || '', APELLIDOS: c.apellidos || '',
-              CARGO: c.cargo || '', SMS: c.movil || c.telefono || '',
-              EMPRESA: empId ? (nombreEmpresa.get(String(empId)) || '') : '',
-              DOI_PENDIENTE: !confirmado,
-            },
-          }),
-        });
-        if (r.ok || r.status === 204) informe.brevo.subidas += 1;
+        // Misma función que usan el enlace RGPD y las ofertas (v138): una sola
+        // regla para decidir la lista.
+        const r = await subirContactoBrevo(c, { apiKey: brevoKey, empresa: empId ? (nombreEmpresa.get(String(empId)) || '') : '' });
+        if (r.ok) informe.brevo.subidas += 1;
       }
 
       // ── Brevo → CRM: SOLO las bajas ──

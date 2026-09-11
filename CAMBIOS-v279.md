@@ -310,3 +310,21 @@
 - **Lo que ya había**: en Empresas, botón **«Aa Mayúsculas»** (administración y superadministración): revisa empresas, contactos, clientes y ofertas, enseña cada cambio (antes → después) con casilla para desmarcar lo que no convenga y lo aplica. Mismas reglas que al guardar: aplicarlo dos veces no cambia nada la segunda.
 - **Migración `migracion-v137-limpieza-mayusculas.sql`** (aplicada en la base): los 71 cambios sobre los datos actuales (49 empresas, 9 clientes, 13 ofertas, 2 perfiles; los contactos ya estaban bien), generados con estas mismas reglas y con el valor anterior en cada `where`. Sin cambios de esquema.
 - Pruebas: `scripts/test-capitalizar.mjs` (48 comprobaciones).
+
+## Aceptar la oferta desde el correo
+- El correo al cliente («✉ Enviar» en el histórico, o `enviar_cliente` al generar) lleva ahora el botón **«Ver y aceptar la oferta»** con su **enlace personal** (`/app/oferta?t=…`, token en `presupuestos.token_acceso`). Al lado, **⧉ Enlace** copia esa misma dirección para mandarla por WhatsApp o desde tu propio correo.
+- **Si el correo ya tiene cuenta en Órbita**, al abrir el enlace entra solo (enlace mágico de un solo uso, sin contraseña) y aterriza en **Mis presupuestos** con esa propuesta la primera y destacada («La propuesta de tu correo»).
+- **Si no tiene cuenta**, la ve como invitado: importe, normas, modelo, validez, notas y el PDF, y la **acepta** o la **rechaza con motivo**. Pasa por `cambiar_estado_oferta` con actor «cliente», igual que desde el portal; queda **prueba** (fecha, IP y navegador en `presupuestos`, `decidida_por_enlace`) y al equipo le llega un **correo de aviso** («✓ Aceptada · Oferta … · empresa», con enlace a Órbita). Una oferta caducada, aceptada o rechazada lo dice y no deja decidir dos veces.
+- Al aceptar, **«Quiero acceso al portal»**: se crea (o encuentra por CIF) la ficha de cliente, se le apunta como administrador de la cuenta y le llega la **invitación** para poner su contraseña. Si ya tenía cuenta, se le manda a entrar.
+- Si el contacto no había aceptado el RGPD, la misma pantalla se lo pide (casilla de datos obligatoria, comunicaciones opcional) y lo registra con canal «oferta».
+- Función `netlify/functions/oferta-cliente.mjs` (`/api/oferta-cliente`: ver, entrar, aceptar, rechazar, acceso; todo por token, sin sesión). Página `pages/OfertaCliente.jsx` (ruta pública `/oferta`). **Migración `migracion-v138-oferta-por-enlace.sql`** (aplicada en la base): `token_acceso` (único, generado para las existentes), `enlace_enviado_en`, `aceptada_ip`, `aceptada_user_agent`, `decidida_por_enlace`.
+
+## RGPD al pedir la oferta en la web
+- La calculadora pública sustituye la casilla genérica por las **dos casillas del consentimiento** (`lib/rgpd.js`): tratamiento de datos (obligatoria) y comunicaciones comerciales (opcional), con la información básica desplegable. El generador interno sigue con su casilla de siempre.
+- Al pedir la oferta queda registrado en el contacto que crea el alta automática (`contactos.rgpd_aceptado`, y `consentimiento_marketing` si marcó comunicaciones) y en `consentimientos_rgpd` con canal «oferta», IP y navegador (`generar-oferta`).
+
+## Brevo · la lista se sincroniza al momento
+- Nueva `netlify/functions/brevo-contacto.mjs`: una sola regla para subir un contacto a Brevo. **Con comunicaciones → lista #9 (confirmados)**; **solo datos → lista #7 (pendientes)**, sin comercial; sale de la otra lista; atributos `CONSENT_RGPD`, `CONSENT_MARKETING`, `DOI_PENDIENTE`, `FECHA_CONSENT`, `EMPRESA`.
+- Se usa en **todos los momentos** en que cambia el consentimiento: al aceptar el enlace RGPD o registrarlo a mano (`consentimiento`), al pedir la oferta en la web (`generar-oferta`), al aceptarla desde el correo (`oferta-cliente`) y en «Sincronizar CRM» (`sincronizar-crm`, que ahora llama a la misma función). Antes solo lo hacía la sincronización manual.
+- `brevo-lead` admite `consent_datos`: quien acepta el tratamiento pero no las comunicaciones se registra en Brevo sin entrar en la lista de marketing.
+- Pruebas: `scripts/test-brevo-contacto.mjs` (10 comprobaciones).

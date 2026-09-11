@@ -69,6 +69,8 @@ import {
 import { DISCLAIMER_OFERTA } from '../../app/src/lib/legal.js';
 import { eurES } from '../../app/src/lib/formato.js';
 import { limpiarFila, capitalizar } from '../../app/src/lib/capitalizar.js';
+import { RGPD_VERSION } from '../../app/src/lib/rgpd.js';
+import { sincronizarContactoBrevo } from './brevo-contacto.mjs';
 
 // Punto de miles siempre («1.325,00 €»): Intl en es-ES no agrupa cuatro cifras.
 const eur = (v) => eurES(v, 2);
@@ -401,16 +403,21 @@ const COPIA_INTERNA = process.env.OFERTA_COPIA_EMAIL || 'hola@tuconsultor.com';
 const REMITENTE = process.env.BREVO_SENDER_EMAIL || 'hola@tuconsultor.com';
 
 // Envía la oferta AL CLIENTE (a su email), con el PDF adjunto y un mensaje de presentación.
-async function enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email }) {
+async function enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email, enlace = null }) {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey || !email) return { ok: false, motivo: !apiKey ? 'sin BREVO_API_KEY' : 'sin email' };
 
-  const normNames = r.normas.map((id) => NORMA_BY_ID[id].nombre).join(' + ');
+  const normNames = r.normas.map((id) => NORMA_BY_ID[id]?.nombre || id).join(' + ');
   const saludo = cli.contacto ? `Hola ${cli.contacto.split(' ')[0]},` : 'Hola,';
+  // El botón para verla y aceptarla desde el correo (v138). Si tiene cuenta en
+  // Órbita entra directo; si no, la ve y decide con su enlace personal.
+  const bloqueEnlace = enlace ? `
+      <p style="margin:22px 0 6px"><a href="${enlace}" style="background:#F39C30;color:#0C1424;font-weight:bold;padding:12px 22px;border-radius:10px;text-decoration:none;display:inline-block">Ver y aceptar la oferta</a></p>
+      <p style="color:#4B5A70;font-size:13px;margin:0 0 14px">Desde ese enlace puedes leer la propuesta, aceptarla o decirnos qué cambiarías. Es personal: no hace falta registrarse. Si el botón no funciona, copia esta dirección en el navegador:<br><a href="${enlace}" style="color:#1B4F66">${enlace}</a></p>` : '';
   const html = `
     <div style="font-family:Arial,sans-serif;color:#0C1424;font-size:15px;line-height:1.7">
       <p>${saludo}</p>
-      <p>Te enviamos la oferta que has solicitado para <strong>${normNames}</strong>. Encontrarás todos los detalles en el PDF adjunto.</p>
+      <p>Te enviamos la oferta que has solicitado para <strong>${normNames}</strong>. Encontrarás todos los detalles en el PDF adjunto.</p>${bloqueEnlace}
       <p>Si tienes cualquier duda o quieres que la comentemos, respóndenos a este correo o escríbenos a <a href="mailto:hola@tuconsultor.com" style="color:#F5A623;font-weight:bold">hola@tuconsultor.com</a>. Estaremos encantados de ayudarte.</p>
       <p style="margin-top:20px">Un saludo,<br><strong>${cli.comercial || 'El equipo de TuConsultor'}</strong><br>Consultify · TuConsultor</p>
       <p style="color:#8896AD;font-size:12px;margin-top:20px">Instituto de Excelencia Europea S.L. · CIF B87093076 · Madrid<br>Desde 2006 gestionando con el corazón.</p>
@@ -475,6 +482,38 @@ async function enviarCopiaInterna({ numeroOferta, cli, r, pdfBuf, url_pdf, url_p
 }
 
 // ======================= HANDLER =======================
+// ── Enlace personal de la oferta (v138) ──
+// El token vive en `presupuestos.token_acceso`. Se busca por id o por número;
+// sin la migración v138 no hay columna y el correo sale sin botón.
+async function enlaceOferta(base, key, { presupuesto_id, numero_oferta }) {
+  const h = { apikey: key, Authorization: `Bearer ${key}` };
+  const filtro = presupuesto_id ? `id=eq.${presupuesto_id}` : (numero_oferta ? `numero_oferta=eq.${encodeURIComponent(numero_oferta)}` : null);
+  if (!filtro) return null;
+  try {
+    const r = await fetch(`${base}/rest/v1/presupuestos?${filtro}&select=id,token_acceso`, { headers: h });
+    if (!r.ok) return null;
+    const fila = (await r.json())?.[0];
+    if (!fila?.token_acceso) return null;
+    const sitio = process.env.SITE_URL || 'https://consultify.tuconsultor.com';
+    fetch(`${base}/rest/v1/presupuestos?id=eq.${fila.id}`, { method: 'PATCH', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ enlace_enviado_en: new Date().toISOString() }) }).catch(() => {});
+    return `${sitio}/app/oferta?t=${fila.token_acceso}`;
+  } catch { return null; }
+}
+
+// ── RGPD al pedir la oferta (v138) ──
+// Quien pide la oferta en la web marca la casilla de datos (obligatoria) y, si
+// quiere, la de comunicaciones. Queda en el contacto y en `consentimientos_rgpd`
+// con canal «oferta», y el contacto sube a Brevo a la lista que le toca.
+async function registrarRgpdOferta(base, key, { contacto_id, marketing, ip, ua, numeroOferta }) {
+  if (!contacto_id) return null;
+  const h = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+  const ahora = new Date().toISOString();
+  const patch = { rgpd_aceptado: true, rgpd_fecha: ahora, ...(marketing ? { consentimiento_marketing: true, consentimiento_fecha: ahora } : {}) };
+  await fetch(`${base}/rest/v1/contactos?id=eq.${contacto_id}`, { method: 'PATCH', headers: h, body: JSON.stringify(patch) }).catch(() => {});
+  await fetch(`${base}/rest/v1/consentimientos_rgpd`, { method: 'POST', headers: h, body: JSON.stringify({ contacto_id, canal: 'oferta', acepta_datos: true, acepta_marketing: !!marketing, texto_version: RGPD_VERSION, ip, user_agent: ua, nota: `Al pedir la oferta ${numeroOferta || ''} en la web` }) }).catch(() => {});
+  return sincronizarContactoBrevo(contacto_id, { supabaseUrl: base, serviceKey: key });
+}
+
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
@@ -488,7 +527,7 @@ export default async (req) => {
   // ── ETAPA 2 · ENVIAR una oferta YA generada (sin regenerar) ──────────────
   // Descarga el PDF guardado (url_pdf) y lo envía al cliente por email.
   if (body.action === 'enviar_existente') {
-    const { url_pdf, email, empresa = '', contacto = '', comercial = 'Alejandro', numero_oferta = '', normas = [] } = body;
+    const { url_pdf, email, empresa = '', contacto = '', comercial = 'Alejandro', numero_oferta = '', normas = [], presupuesto_id = null } = body;
     if (!email) return Response.json({ ok: false, error: 'La oferta no tiene email de cliente.' }, { status: 400 });
     if (!url_pdf) return Response.json({ ok: false, error: 'La oferta no tiene PDF generado. Genérala primero.' }, { status: 400 });
     try {
@@ -497,8 +536,9 @@ export default async (req) => {
       const pdfBuf = new Uint8Array(await pr.arrayBuffer());
       const cli = { empresa, contacto, comercial, email };
       const rInfo = { normas };
-      const env = await enviarAlCliente({ numeroOferta: numero_oferta, cli, r: rInfo, pdfBuf, url_pdf, email });
-      if (env.ok) return Response.json({ ok: true, enviado: true, email });
+      const enlace = await enlaceOferta(base, key, { presupuesto_id, numero_oferta });
+      const env = await enviarAlCliente({ numeroOferta: numero_oferta, cli, r: rInfo, pdfBuf, url_pdf, email, enlace });
+      if (env.ok) return Response.json({ ok: true, enviado: true, email, enlace });
       return Response.json({ ok: false, error: `No se pudo enviar: ${env.motivo || 'error'}` }, { status: 502 });
     } catch (e) {
       return Response.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
@@ -693,7 +733,19 @@ export default async (req) => {
     // Envío AL CLIENTE (solo si se solicita explícitamente y hay email).
     let envio_cliente = null;
     if (enviar_cliente) {
-      envio_cliente = await enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email }).catch((e) => ({ ok: false, motivo: String(e) }));
+      const enlace = await enlaceOferta(base, key, { presupuesto_id, numero_oferta: numeroOferta });
+      envio_cliente = await enviarAlCliente({ numeroOferta, cli, r, pdfBuf, url_pdf, email, enlace }).catch((e) => ({ ok: false, motivo: String(e) }));
+    }
+
+    // RGPD marcado al pedir la oferta (v138): al contacto que acaba de crear
+    // (o encontrar) el alta automática.
+    let rgpd = null;
+    if (body.rgpd && alta?.contacto_id) {
+      rgpd = await registrarRgpdOferta(base, key, {
+        contacto_id: alta.contacto_id, marketing: !!body.marketing, numeroOferta,
+        ip: req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || null,
+        ua: req.headers.get('user-agent') || null,
+      }).catch(() => null);
     }
 
     // ── RED DE SEGURIDAD ──────────────────────────────────────────────────
@@ -732,7 +784,7 @@ export default async (req) => {
       } catch (e) { console.error('red de seguridad del histórico', e); }
     }
 
-    return Response.json({ ok: true, alta, url_pdf, url_pptx, numero_oferta: numeroOferta, precio: r.precioCatalogo, tipo: r.tipo, envio_cliente });
+    return Response.json({ ok: true, alta, url_pdf, url_pptx, numero_oferta: numeroOferta, precio: r.precioCatalogo, tipo: r.tipo, envio_cliente, rgpd: rgpd ? (rgpd.ok ? 'ok' : rgpd.motivo) : null });
   } catch (e) {
     return Response.json({ ok: false, error: String(e.message || e) }, { status: 502 });
   }
