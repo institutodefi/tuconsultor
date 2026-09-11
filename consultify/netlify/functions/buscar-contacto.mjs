@@ -89,18 +89,20 @@ export default async (req) => {
   try { datos = JSON.parse(m ? m[0] : limpio); } catch { datos = null; }
   if (!datos) return json({ ok: false, error: 'La IA no devolvió una propuesta legible.', texto: limpio.slice(0, 600) }, 502);
 
+  // Una URL de LinkedIn vale con o sin https, en cualquier dominio de país (es.linkedin.com…).
+  const urlLi = (u) => { const t = String(u || '').trim().replace(/^(?!https?:\/\/)/, 'https://'); return /^https?:\/\/([a-z0-9-]+\.)*linkedin\.com\/.+/i.test(t) ? t : ''; };
   // Lo que se propone entra ya con la forma de la base (mayúsculas, correo…).
   const p = limpiarFila('contactos', { nombre: datos.nombre || '', apellidos: datos.apellidos || '', cargo: datos.cargo || '', email: datos.email_publico || '' });
   const propuesta = {
     encontrado: datos.encontrado !== false, confianza: datos.confianza || 'media',
     nombre: p.nombre || '', apellidos: p.apellidos || '', cargo: p.cargo || '', email: p.email || '',
     empresa: capitalizar(datos.empresa || '') || '', empresa_web: datos.empresa_web || '', ciudad: capitalizar(datos.ciudad || '') || '',
-    linkedin_url: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i.test(datos.linkedin_url || '') ? datos.linkedin_url : (url || ''),
+    linkedin_url: urlLi(datos.linkedin_url) || urlLi(url) || '',
     resumen: String(datos.resumen || '').slice(0, 600),
     fuentes: Array.isArray(datos.fuentes) ? datos.fuentes.filter((f) => /^https?:\/\//.test(String(f))).slice(0, 6) : [],
     candidatos: (Array.isArray(datos.candidatos) ? datos.candidatos : []).filter((c) => c && c.nombre).slice(0, 5).map((c) => ({
       nombre: capitalizar(c.nombre || '') || '', cargo: capitalizar(c.cargo || '') || '', empresa: capitalizar(c.empresa || '') || '', ciudad: capitalizar(c.ciudad || '') || '',
-      linkedin_url: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i.test(c.linkedin_url || '') ? c.linkedin_url : '',
+      linkedin_url: urlLi(c.linkedin_url),
       afinidad: Math.max(0, Math.min(100, Number(c.afinidad) || 0)), motivo: String(c.motivo || '').slice(0, 200),
     })).sort((a, b) => b.afinidad - a.afinidad),
     fuente_datos: `Búsqueda IA en fuentes públicas (${new Date().toLocaleDateString('es-ES')}) por ${quien.nombre || 'equipo'}${Array.isArray(datos.fuentes) && datos.fuentes[0] ? `: ${datos.fuentes[0]}` : ''}`,
