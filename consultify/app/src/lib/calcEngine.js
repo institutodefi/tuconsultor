@@ -89,7 +89,7 @@ export const MODELOS = {
     factorFondo: 0.6,
     titulo: 'Apoyo',
     claim: 'Bolsa de horas · 60 % de lo planificado',
-    leyenda: 'Solo con tres meses o menos hasta la certificación. Pago único o dos cuotas. Acompañamiento a auditoría aparte (600 €/jornada).',
+    leyenda: 'Solo con tres meses o menos hasta la certificación. Un solo pago a la firma. Acompañamiento a auditoría aparte (600 €/jornada).',
   },
   Relación: {
     id: 'Relación', tipo: 'mes', hSist: 2, hPres: 0, paso: 25, suelo: 350,
@@ -683,10 +683,26 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // oferta: quien decide es el cliente, y verlas al lado hace la decisión fácil.
   let fraccionado = null;
   let formasPago = null;
-  // Apoyo se paga igual que la implantación: único o dos cuotas. Es una bolsa
-  // de horas para la recta final, no una cuota.
+  // Apoyo es una bolsa de horas para la recta final: se abona en UN SOLO
+  // PAGO a la firma, sin cuotas ni descuento por pagar de una vez (no hay
+  // alternativa con la que comparar). La implantación sí ofrece dos formas.
   const esApoyoPago = modeloId === 'Apoyo';
-  if (modeloId === 'Implantación' || esApoyoPago) {
+  if (esApoyoPago) {
+    const r2 = (x) => Math.round(x * 100) / 100;
+    const base = precioCatalogo;
+    formasPago = {
+      descuentoUnico: 0,
+      soloUnico: true,
+      unico: {
+        id: 'unico', titulo: 'Pago único',
+        sinIva: base, iva: r2(base * IVA), total: r2(base * (1 + IVA)), ahorro: 0,
+        condicion: 'Un solo pago a la firma: la bolsa de horas se abona por adelantado, antes de empezar.',
+      },
+      dos: null,
+      nota: 'El apoyo a certificación se abona en un solo pago a la firma. No admite cuotas.',
+      intro: 'El apoyo a certificación se abona en un solo pago, a la firma:',
+    };
+  } else if (modeloId === 'Implantación') {
     const r2 = (x) => Math.round(x * 100) / 100;
     const base = precioCatalogo;                       // proyecto completo, sin IVA
 
@@ -702,7 +718,7 @@ export function calcular(normaIds, modeloId, opts = {}) {
         id: 'unico', titulo: 'Pago único',
         sinIva: unicoSinIva, iva: r2(unicoSinIva * IVA), total: r2(unicoSinIva * (1 + IVA)),
         ahorro: r2(base - unicoSinIva),
-        condicion: `Un solo pago al inicio${esApoyoPago ? '' : ' del proyecto'}, con un ${Math.round(DTO_PAGO_UNICO * 100)} % de descuento sobre el importe${esApoyoPago ? ' de la bolsa' : ' del proyecto'}.`,
+        condicion: `Un solo pago al inicio del proyecto, con un ${Math.round(DTO_PAGO_UNICO * 100)} % de descuento sobre el importe del proyecto.`,
       },
       dos: {
         id: 'dos', titulo: 'Dos cuotas',
@@ -713,21 +729,15 @@ export function calcular(normaIds, modeloId, opts = {}) {
         // El impuesto se determina al facturar según el domicilio fiscal.
         cuota1SinIva: cuota,
         cuota2SinIva: r2(dosSinIva - cuota),
-        condicion: esApoyoPago
-          ? '50 % a la firma, para arrancar, y 50 % antes del inicio de las auditorías.'
-          : '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
+        condicion: '50 % a la firma, para arrancar el proyecto, y 50 % antes del inicio de las auditorías.',
       },
-      nota: esApoyoPago
-        ? 'El apoyo a certificación no admite cuota mensual: se abona en pago único o en dos cuotas.'
-        : 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
-      intro: esApoyoPago
-        ? 'El apoyo a certificación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:'
-        : 'La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:',
+      nota: 'La implantación no admite cuota mensual: se abona en pago único o en dos cuotas.',
+      intro: 'La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:',
     };
 
     // Se mantiene `fraccionado` con la opción de dos cuotas para no romper lo
     // que ya lo lee (documentos y presupuestos anteriores).
-    if (!esApoyoPago) fraccionado = {
+    fraccionado = {
       meses: mesesProyecto,
       totalSinIva: dosSinIva,
       totalConIva: r2(dosSinIva * (1 + IVA)),

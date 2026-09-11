@@ -26,7 +26,8 @@ const ROLES_VALIDOS = ['superadmin', 'admin', 'director', 'consultor', 'gestion'
 const NIVELES = ['J1', 'J2', 'J3', 'Senior'];
 // Roles de equipo que EXIGEN email con dominio corporativo.
 const ROLES_DOMINIO = ['director', 'consultor'];
-const DOMINIOS_PERMITIDOS = ['tuconsultor.com', 'consultify.pro'];
+// Dominios de casa: los mismos que usa la app (app/src/lib/dominios.js).
+const DOMINIOS_PERMITIDOS = ['tuconsultor.com', '3coreproyectos.com', 'institutoexcelencia.com', 'consultify.pro'];
 function dominioOk(email, rol) {
   if (!ROLES_DOMINIO.includes(rol)) return true; // otros roles no restringidos aquí
   const dom = String(email).split('@')[1]?.toLowerCase() || '';
@@ -127,7 +128,7 @@ export default async (req) => {
         return json({ ok: false, error: 'Solo Superadministración puede invitar con ese rol.' }, 403);
       }
       if (nivel && !NIVELES.includes(nivel)) return json({ ok: false, error: 'Nivel no válido' }, 400);
-      if (!dominioOk(email, rol)) return json({ ok: false, error: `Para el perfil «${rol === 'director' ? 'Director de Proyecto' : 'Consultor'}» el email debe ser @tuconsultor.com o @consultify.pro.` }, 400);
+      if (!dominioOk(email, rol)) return json({ ok: false, error: `Para el perfil «${rol === 'director' ? 'Director de Proyecto' : 'Consultor'}» el email debe ser de casa: ${DOMINIOS_PERMITIDOS.map((d) => `@${d}`).join(', ')}.` }, 400);
 
       // Admin API: enviar invitación. El rol viaja en metadata → el trigger lo aplica al crear el perfil.
       const r = await sb('/auth/v1/invite', {

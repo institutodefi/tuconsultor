@@ -437,7 +437,7 @@ export async function generarPDFOferta(r, cli, anexo) {
   if (r.formasPago) {
     seccion('Formas de pago', 24);   // rótulo + entradilla + las dos tarjetas
     parrafo(r.formasPago.intro || 'La implantación no admite cuota mensual. Se abona de una de estas dos formas, a elección de la organización:');
-    const opciones = [r.formasPago.unico, r.formasPago.dos];
+    const opciones = [r.formasPago.unico, r.formasPago.dos].filter(Boolean);
     const anchoCol = (ANCHO - U * 2) / 2;
     asegurar(14);
     const yTop = cursor;

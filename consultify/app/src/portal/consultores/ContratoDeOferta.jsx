@@ -3,6 +3,7 @@ import { supabase, DEMO } from '../../lib/supabase.js';
 import { codigoProyecto } from '../../lib/codigos.js';
 import { updateRow, explicarErrorBd } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
+import { darAccesoPortal, explicarAcceso } from '../../lib/accesoPortal.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEL CONTRATO AL PROYECTO
@@ -21,7 +22,7 @@ const PRODUCTOS = [
 
 export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
   // `user` para dejar constancia de quién da la oferta por aceptada.
-  const { user } = useAuth();
+  const { user, role, adminUsuarios } = useAuth();
   const [abierto, setAbierto] = useState(false);
   const [previa, setPrevia] = useState(false);
   const [productos, setProductos] = useState(['mstool']);
@@ -162,6 +163,20 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
     } finally { setOcupado(false); }
   }
 
+  // ── Quien pidió y aceptó la oferta, como usuario del portal ──
+  async function darAcceso() {
+    if (!window.confirm(`¿Dar acceso a la zona de clientes a ${oferta.email} (${oferta.nombre || 'contacto'}) como administrador de la cuenta de ${oferta.empresa}?`)) return;
+    setOcupado(true); setMsg(null);
+    try {
+      const puedeInvitar = ['superadmin', 'admin'].includes(role);
+      const r = await darAccesoPortal({ oferta, invitadoPor: user?.email || null, invitar: puedeInvitar ? adminUsuarios : null });
+      setMsg({ err: false, t: explicarAcceso(r) });
+      onCambio && onCambio();
+    } catch (e) {
+      setMsg({ err: true, t: `No se pudo dar acceso: ${explicarErrorBd(e, 'cliente_usuarios')}` });
+    } finally { setOcupado(false); }
+  }
+
   async function revertirAceptacion() {
     if (!window.confirm('¿Devolver la oferta a «emitida»? Solo si se marcó por error.')) return;
     setOcupado(true);
@@ -203,6 +218,13 @@ export default function ContratoDeOferta({ oferta, contrato, onCambio }) {
           className="btn-orange !px-3 !py-1 text-[11.5px] disabled:opacity-50">
           {ocupado ? 'Generando…' : 'Generar contrato'}
         </button>
+        {oferta.email && (
+          <button onClick={darAcceso} disabled={ocupado}
+            className="rounded-full border border-brand-verde/50 px-3 py-1 text-[11.5px] font-bold text-brand-verdeTexto transition hover:bg-brand-verde/10 disabled:opacity-50"
+            title={`Quien aceptó la oferta pasa a ser usuario de la zona de clientes: ${oferta.email}`}>
+            👤 Dar acceso al portal
+          </button>
+        )}
         <button onClick={revertirAceptacion} disabled={ocupado}
           className="text-[11px] font-bold text-[#7FA7B4] hover:text-red-300"
           title="Deshacer: la oferta vuelve a «emitida»">deshacer</button>

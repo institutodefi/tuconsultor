@@ -74,6 +74,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/consentimiento"
+  to = "/.netlify/functions/consentimiento"
+  status = 200
+
+[[redirects]]
   from = "/api/generar-contrato"
   to = "/.netlify/functions/generar-contrato"
   status = 200

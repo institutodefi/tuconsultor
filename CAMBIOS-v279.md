@@ -261,3 +261,26 @@
 - La integración admite **dos cuentas de Holded**: `HOLDED_API_KEY_IEE` y `HOLDED_API_KEY_TRESCORE` en las variables de Netlify (opcionalmente `_V1`/`_V2` por API). Sin ellas sigue usando `HOLDED_API_KEY`.
 - En Empresas → «⇄ Sincronizar CRM» se elige la **cuenta de Holded** (IEE o Trescore); se recuerda en el navegador y la usan todas las llamadas a Holded (sincronización, cobros, alta desde Holded). El diagnóstico dice qué cuentas están configuradas.
 - **Para enlazar el Holded de IEE**: en Holded (cuenta de IEE) → Ajustes → Desarrolladores → Credenciales, crea una clave con permisos de Contactos y Facturación, y ponla en Netlify como `HOLDED_API_KEY_IEE` (y, si usas la API v1, también `HOLDED_API_KEY_IEE_V1`). Redespliega.
+
+## Contactos · lista más compacta, buscador, filtros y orden
+- Filas a media altura y letra de 12,5 px; columnas nuevas **Cargo** y **RGPD** (aceptado / pendiente, comunicaciones, Brevo); «sin revisar» marcado junto al nombre.
+- **Buscador** por nombre, correo, teléfono, móvil, cargo, notas, empresa y CIF. **Filtros**: todos, con comunicaciones, RGPD aceptado, RGPD pendiente, en Brevo, sin revisar, sin empresa o sin email; por **empresa**, por **rol** en su empresa (directivo, facturación, proyecto, secundario, principal) y por **origen** (manual, pidió oferta en la web, Holded, importación). **Orden** por nombre, apellidos, empresa, cargo, correo, última modificación o fecha de alta (desplegable y cabeceras). «limpiar» quita todo.
+
+## Apoyo · un solo pago
+- El modelo Apoyo se abona en **un solo pago a la firma**, igual al importe de la bolsa: sin la opción de dos cuotas y sin descuento por pago único (no hay alternativa con la que comparar). Motor (`calcEngine`), generador, PPT y PDF de la oferta y regeneración de ofertas existentes. Implantación sigue con sus dos formas. Pruebas en `scripts/test-fechas-oferta.mjs` (+3).
+
+## Quien pide una oferta · datos, alta en el CRM y RGPD desde el histórico
+- Debajo del cliente de cada oferta: **«✓ En el CRM» / «⚠ Sin revisar» / «＋ No está en el CRM»** y el estado RGPD. Desplegado: los datos de la persona y su empresa, **✎ Editar datos** (nombre, apellidos, cargo, correo, teléfonos, razón social y nombre comercial; guarda en el CRM, marca revisado y actualiza la oferta), **✓ Marcar revisado**, enlaces a las fichas y, si la oferta es anterior a la v67 o no encontró la empresa, **＋ Añadir al CRM** (crea empresa por CIF, contacto y vínculo, y los enlaza a la oferta). `components/ContactoDeOferta.jsx`.
+
+## Consentimiento RGPD · la ayuda para «pasárselo»
+- Cada contacto tiene un **enlace personal** (token, v135). En la ficha del contacto y en el histórico de ofertas: **✉ Pedir por correo** (le llega un correo de TuConsultor, por Brevo, con el botón «Revisar y aceptar»), **⧉ Copiar enlace** (para WhatsApp o desde tu propio correo) y **✎ Registrar** (si ya lo dio por otra vía: formulario firmado, correo de aceptación o verbal, con nota).
+- La persona abre **/app/consentimiento?t=…** (página pública, sin cuenta): ve responsable, finalidad, legitimación, destinatarios, conservación y derechos (`lib/rgpd.js`, versión `v1-2026-09`) y marca dos casillas: tratamiento de datos (necesaria) y comunicaciones comerciales (opcional). Al aceptar queda **prueba** en `consentimientos` (fecha, canal, versión del texto, IP y navegador) y se rellenan `rgpd_aceptado`/`rgpd_fecha` y, si marca comunicaciones, `consentimiento_marketing`/`consentimiento_fecha` (lo que ya usa Brevo).
+- Función `netlify/functions/consentimiento.mjs` (`/api/consentimiento`; acciones enviar, enlace, registrar para el equipo; ver y aceptar públicas por token). **Migración `migracion-v135-consentimiento-rgpd.sql`** (sin aplicar): `contactos.consentimiento_token` y tabla `consentimientos`.
+
+## Quien acepta la oferta, usuario del portal
+- En una oferta **aceptada**: botón **«👤 Dar acceso al portal»**. Busca (o crea) la ficha de cliente por CIF, apunta a la persona en `cliente_usuarios` como **administradora de la cuenta** y, si lo hace Administración, le envía la **invitación** de Supabase para poner su contraseña. `lib/accesoPortal.js`.
+- En «Usuarios de la cuenta» (ficha de empresa y zona de cliente): botón **✉ Invitar** por usuario (Administración), que manda esa misma invitación.
+
+## Correos de casa y correos genéricos
+- **Dominios internos** en un solo sitio (`lib/dominios.js`): tuconsultor.com, 3coreproyectos.com, institutoexcelencia.com y consultify.pro. Con cualquiera de ellos se puede invitar como Director de Proyecto o Consultor (Accesos y función admin-usuarios); el registro público avisa de que esas cuentas entran sin registrarse.
+- **Correos genéricos (Gmail, Hotmail…) como cliente, excepcionalmente**: el registro público los sigue rechazando (dice que pida la invitación a su consultor), pero Administración puede darles acceso con **✉ Invitar** desde Usuarios de la cuenta o con **Dar acceso al portal** desde la oferta aceptada: la excepción la decide el equipo, no el formulario.

@@ -221,7 +221,7 @@ async function generarPPTX(r, cli, anexo) {
   s.addShape(p.ShapeType.rect, { x: 6.3, y: 1.0, w: 0.05, h: 1.6, fill: { color: C.naranja } });
   s.addText((esMes ? 'CUOTA MENSUAL' : 'IMPORTE DEL PROYECTO') + (r?.canal === 'web' ? ' DESDE' : ''),
     { x: 6.55, y: 1.15, w: 2.8, h: 0.22, fontFace: F, fontSize: 8, bold: true, color: C.apagado, charSpacing: 1 });
-  s.addText(fmtEur(r.formasPago ? (r.formasPago.dos.sinIva || r.precioCatalogo) : r.precioCatalogo),
+  s.addText(fmtEur(r.formasPago ? (r.formasPago.dos?.sinIva || r.formasPago.unico?.sinIva || r.precioCatalogo) : r.precioCatalogo),
     { x: 6.55, y: 1.42, w: 2.8, h: 0.55, fontFace: F, fontSize: 22, bold: true, color: C.tinta });
   // El pago adelantado, junto a la cuota: es la cifra que se factura de verdad.
   s.addText(r.pagoAdelantado && r.adelantado
@@ -247,14 +247,14 @@ async function generarPPTX(r, cli, anexo) {
 
   if (r.formasPago) {
     s.addText('FORMAS DE PAGO', { x: 0.6, y: 2.95, w: 9, h: 0.22, fontFace: F, fontSize: 9, bold: true, color: C.naranja, charSpacing: 2 });
-    [r.formasPago.unico, r.formasPago.dos].forEach(function (f, i) {
+    [r.formasPago.unico, r.formasPago.dos].filter(Boolean).forEach(function (f, i) {
       const x = 0.6 + i * 4.6;
       const elegida = r.formaPagoElegida === f.id || (!r.formaPagoElegida && i === 0);
       s.addShape(p.ShapeType.rect, { x: x, y: 3.25, w: 4.3, h: 1.55, fill: { color: C.blanco },
         line: { color: elegida ? C.naranja : C.linea, width: elegida ? 1.6 : 1 } });
       s.addText(String.fromCharCode(65 + i) + ' · ' + f.titulo, { x: x + 0.2, y: 3.38, w: 4, h: 0.3, fontFace: F, fontSize: 13, bold: true, color: C.tinta });
       s.addText(fmtEur(f.sinIva) + '  sin impuestos', { x: x + 0.2, y: 3.7, w: 4, h: 0.34, fontFace: F, fontSize: 15, bold: true, color: C.tinta });
-      s.addText(f.id === 'unico' ? 'Ahorras ' + fmtEur(f.ahorro) : fmtEur(f.cuota1) + ' + ' + fmtEur(f.cuota2),
+      s.addText(f.id === 'unico' ? (f.ahorro ? 'Ahorras ' + fmtEur(f.ahorro) : 'A la firma') : fmtEur(f.cuota1) + ' + ' + fmtEur(f.cuota2),
         { x: x + 0.2, y: 4.04, w: 4, h: 0.24, fontFace: F, fontSize: 10, bold: true, color: f.id === 'unico' ? C.teal : C.apagado });
       s.addText(f.condicion, { x: x + 0.2, y: 4.28, w: 3.95, h: 0.45, fontFace: F, fontSize: 8.5, color: C.apagado });
     });
@@ -547,7 +547,12 @@ export default async (req) => {
     // con el precio anterior: el documento acababa con el importe de un cálculo
     // y las cuotas de otro. Es lo que hizo que una oferta llevara 11.650 € de
     // total y 4.200 € de importe en la misma página.
-    if (r.formasPago) {
+    if (r.formasPago && !r.formasPago.dos) {
+      // Apoyo: un solo pago, igual al importe de la bolsa.
+      const base = r.precioCatalogo;
+      r.formasPago = { ...r.formasPago, unico: { ...r.formasPago.unico, sinIva: base, iva: r2(base * IVA_MOTOR), total: r2(base * (1 + IVA_MOTOR)), ahorro: 0 } };
+    }
+    if (r.formasPago && r.formasPago.dos) {
       const base = r.precioCatalogo;
       const dto = r.formasPago.descuentoUnico ?? 0.05;
       const unicoSinIva = r2(base * (1 - dto));

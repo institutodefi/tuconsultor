@@ -8,6 +8,7 @@ import { COMPLEJIDADES } from '../../lib/proyecto.js';
 import { MODELOS_PROYECTO } from '../../lib/planificacion.js';
 import EstadosOferta, { etapaDe, ETAPAS } from '../../components/EstadosOferta.jsx';
 import ContratoDeOferta from './ContratoDeOferta.jsx';
+import ContactoDeOferta from '../../components/ContactoDeOferta.jsx';
 import { DISCLAIMER_CORTO } from '../../lib/legal.js';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImportarContacto from '../../components/ImportarContacto.jsx';
@@ -50,6 +51,7 @@ function finSugerido(fechaISO, manual) {
 export default function Ofertas() {
   const { role } = useAuth();
   const puedeBorrar = role === 'superadmin' || role === 'admin'; // solo administradores
+  const puedeEditar = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState('');
   const [genId, setGenId] = useState(null);
@@ -914,6 +916,8 @@ export default function Ofertas() {
                       {(r.normas || []).map(id => NORMA_BY_ID[id]?.nombre || id).join(' + ')}
                     </span>
                     <span className="block text-[11px] text-[#7FA7B4] sm:hidden">{(r.creado || '').slice(0, 10)}</span>
+                    {/* Quien la pidió: datos, revisión y RGPD, sin salir de aquí. */}
+                    <ContactoDeOferta oferta={r} puedeEditar={puedeEditar} onCambio={cargar} />
                   </td>
                   <td className="hidden py-2 font-semibold lg:table-cell">{r.comercial || 'Alejandro'}</td>
                   <td className="hidden py-2 font-semibold md:table-cell">

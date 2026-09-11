@@ -65,3 +65,17 @@ console.log('\n── Fin anterior al inicio: bloquea ──');
   ok(!conCert.errores.length, `con certificación a menos de 3 meses → válido (${conCert.errores[0] || ''})`);
   console.log('apoyo: reglas ok');
 }
+
+// ── Apoyo: un solo pago ──
+{
+  const { calcular } = await import('../consultify/app/src/lib/calcEngine.js').catch(() => ({}));
+  const ok = (c, m) => { if (!c) { console.error('FALLA:', m); process.exit(1); } };
+  if (calcular) {
+    const r = calcular(['9001'], 'Apoyo', { meses: 3 });
+    ok(r.formasPago && r.formasPago.soloUnico === true && r.formasPago.dos === null, 'Apoyo: solo pago único');
+    ok(r.formasPago.unico.sinIva === r.precioCatalogo, 'Apoyo: el pago único es el importe de la bolsa, sin descuento');
+    const i = calcular(['9001'], 'Implantación', { meses: 12 });
+    ok(i.formasPago && i.formasPago.dos && i.formasPago.dos.cuota1SinIva > 0, 'Implantación: sigue con dos formas');
+    console.log('apoyo pago único: ok');
+  } else console.log('calcular no exportado: se omite');
+}

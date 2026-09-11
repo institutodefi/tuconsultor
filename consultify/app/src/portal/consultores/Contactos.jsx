@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImagenSubible, { Avatar } from '../../components/ImagenSubible.jsx';
+import ConsentimientoRgpd from '../../components/ConsentimientoRgpd.jsx';
 import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
 import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn , explicarErrorBd } from '../../lib/data.js';
@@ -26,9 +27,17 @@ const VACIO = {
 
 const FILTROS = [
   ['todos',      'Todos'],
-  ['consent',    'Con consentimiento'],
+  ['consent',    'Con comunicaciones'],
+  ['rgpd',       'RGPD aceptado'],
+  ['sin_rgpd',   'RGPD pendiente'],
+  ['brevo',      'En Brevo'],
+  ['sin_revisar', 'Sin revisar'],
   ['huerfanos',  'Sin empresa o sin email'],
 ];
+const ROLES_FILTRO = [['', 'Rol: todos'], ['directivo', 'Directivo'], ['facturacion', 'Facturación'], ['proyecto', 'Proyecto'], ['secundario', 'Secundario'], ['principal', 'Principal de su empresa']];
+const ORIGENES = [['', 'Origen: todos'], ['manual', 'Manual'], ['calculadora', 'Pidió oferta (web)'], ['holded', 'Holded'], ['importacion', 'Importación'], ['web', 'Web']];
+const ORDENES = [['nombre', 'Nombre'], ['apellidos', 'Apellidos'], ['empresa', 'Empresa'], ['cargo', 'Cargo'], ['email', 'Correo'], ['reciente', 'Última modificación'], ['creado', 'Fecha de alta']];
+const SS = (v) => String(v ?? '');
 
 export default function Contactos() {
   const { role, demo } = useAuth();
@@ -42,7 +51,12 @@ export default function Contactos() {
   const [vinculos, setVinculos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
-  const [filtro, setFiltro] = useState(params.get('filtro') === 'huerfanos' ? 'huerfanos' : 'todos');
+  const [filtro, setFiltro] = useState(FILTROS.some(([k]) => k === params.get('filtro')) ? params.get('filtro') : 'todos');
+  const [empresaFiltro, setEmpresaFiltro] = useState('');
+  const [rolFiltro, setRolFiltro] = useState('');
+  const [origenFiltro, setOrigenFiltro] = useState('');
+  const [orden, setOrden] = useState('nombre');
+  const [desc, setDesc] = useState(false);
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
   const [sync, setSync] = useState(false);
@@ -90,14 +104,45 @@ export default function Contactos() {
 
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase();
+    const empresaDe = (id) => empresas.find((e) => String(e.id) === String(id));
+    const vincsDe = (c) => vinculos.filter((v) => String(v.contacto_id) === String(c.id));
+    const nombresEmpresa = (c) => vincsDe(c).map((v) => empresaDe(v.empresa_id)).filter(Boolean).map((e) => `${e.nombre} ${e.nombre_comercial || ''} ${e.cif || ''}`).join(' ');
     return contactos.filter((c) => {
-      const n = vinculos.filter((v) => String(v.contacto_id) === String(c.id)).length;
+      const vs = vincsDe(c);
+      const n = vs.length;
       if (filtro === 'consent' && !c.consentimiento_marketing) return false;
+      if (filtro === 'rgpd' && !c.rgpd_aceptado) return false;
+      if (filtro === 'sin_rgpd' && c.rgpd_aceptado) return false;
+      if (filtro === 'brevo' && !c.brevo_sincronizado_en) return false;
+      if (filtro === 'sin_revisar' && c.revisado !== false) return false;
       if (filtro === 'huerfanos' && n > 0 && emailValido(c.email)) return false;
+      if (empresaFiltro && !vs.some((v) => String(v.empresa_id) === empresaFiltro)) return false;
+      if (rolFiltro === 'principal' && !vs.some((v) => v.principal)) return false;
+      if (rolFiltro && rolFiltro !== 'principal' && !vs.some((v) => v.rol === rolFiltro)) return false;
+      if (origenFiltro && (c.origen || 'manual') !== origenFiltro) return false;
       if (!t) return true;
-      return [c.nombre, c.apellidos, c.email, c.telefono, c.cargo].filter(Boolean).join(' ').toLowerCase().includes(t);
+      return [c.nombre, c.apellidos, c.email, c.telefono, c.movil, c.cargo, c.notas, nombresEmpresa(c)].filter(Boolean).join(' ').toLowerCase().includes(t);
+    }).sort((a, b) => {
+      const emp = (c) => { const v = vincsDe(c).sort((x, y) => (y.principal ? 1 : 0) - (x.principal ? 1 : 0))[0]; const e = v && empresaDe(v.empresa_id); return e ? nombreVisible(e) : ''; };
+      let r = 0;
+      if (orden === 'nombre') r = `${SS(a.nombre)} ${SS(a.apellidos)}`.localeCompare(`${SS(b.nombre)} ${SS(b.apellidos)}`, 'es');
+      else if (orden === 'apellidos') r = `${SS(a.apellidos)} ${SS(a.nombre)}`.localeCompare(`${SS(b.apellidos)} ${SS(b.nombre)}`, 'es');
+      else if (orden === 'empresa') r = emp(a).localeCompare(emp(b), 'es') || SS(a.nombre).localeCompare(SS(b.nombre), 'es');
+      else if (orden === 'cargo') r = SS(a.cargo).localeCompare(SS(b.cargo), 'es') || SS(a.nombre).localeCompare(SS(b.nombre), 'es');
+      else if (orden === 'email') r = SS(a.email).localeCompare(SS(b.email), 'es');
+      else if (orden === 'reciente') r = SS(a.updated_at || a.creado).localeCompare(SS(b.updated_at || b.creado));
+      else if (orden === 'creado') r = SS(a.creado).localeCompare(SS(b.creado));
+      return desc ? -r : r;
     });
-  }, [contactos, vinculos, q, filtro]);
+  }, [contactos, vinculos, empresas, q, filtro, empresaFiltro, rolFiltro, origenFiltro, orden, desc]);
+  const cabecera = (k, etq, cls = '') => (
+    <th className={`px-2 py-1.5 ${cls}`}>
+      <button type="button" onClick={() => { if (orden === k) setDesc(!desc); else { setOrden(k); setDesc(false); } }}
+        className={`inline-flex items-center gap-1 uppercase hover:text-[#EAF4F7] ${orden === k ? 'text-[#EAF4F7]' : ''}`} title="Ordenar">
+        {etq}{orden === k ? <span className="text-brand-orange">{desc ? '▼' : '▲'}</span> : null}
+      </button>
+    </th>
+  );
 
   const contacto = sel ? contactos.find((c) => String(c.id) === String(sel)) : null;
   const nHuerfanos = useMemo(() => contactos.filter((c) =>
@@ -309,15 +354,31 @@ export default function Contactos() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, email…" className="input max-w-xs !py-2" />
-        <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#1E5468] text-xs font-bold">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar: nombre, correo, teléfono, cargo, empresa, CIF, notas…" className="input max-w-sm !py-1.5 !text-[12.5px]" />
+        <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#1E5468] text-[11.5px] font-bold">
           {FILTROS.map(([k, l]) => (
             <button key={k} onClick={() => setFiltro(k)}
-              className={`px-3 py-2 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
+              className={`px-2.5 py-1.5 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
               {l}{k === 'huerfanos' && nHuerfanos > 0 ? ` (${nHuerfanos})` : ''}
             </button>
           ))}
         </div>
+        <select value={empresaFiltro} onChange={(e) => setEmpresaFiltro(e.target.value)} className="input !w-auto max-w-[220px] !py-1.5 !text-[12px]" title="Empresa">
+          <option value="">Empresa: todas</option>
+          {[...empresas].sort((a, b) => nombreVisible(a).localeCompare(nombreVisible(b), 'es')).map((e) => <option key={e.id} value={String(e.id)}>{nombreVisible(e)}</option>)}
+        </select>
+        <select value={rolFiltro} onChange={(e) => setRolFiltro(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="Rol en su empresa">
+          {ROLES_FILTRO.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <select value={origenFiltro} onChange={(e) => setOrigenFiltro(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="De dónde salió la ficha">
+          {ORIGENES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <select value={`${orden}${desc ? ':d' : ''}`} onChange={(e) => { const [k, d] = e.target.value.split(':'); setOrden(k); setDesc(d === 'd'); }} className="input !w-auto !py-1.5 !text-[12px]" title="Orden">
+          {ORDENES.flatMap(([k, l]) => [<option key={k} value={k}>{l} ▲</option>, <option key={`${k}:d`} value={`${k}:d`}>{l} ▼</option>])}
+        </select>
+        {(q || filtro !== 'todos' || empresaFiltro || rolFiltro || origenFiltro) && (
+          <button type="button" onClick={() => { setQ(''); setFiltro('todos'); setEmpresaFiltro(''); setRolFiltro(''); setOrigenFiltro(''); }} className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">limpiar</button>
+        )}
         <span className="text-xs font-semibold text-[#7FA7B4]">{lista.length} de {contactos.length}</span>
       </div>
 
@@ -340,17 +401,19 @@ export default function Contactos() {
 
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
         <div className="overflow-x-auto rounded-2xl border border-[#1E5468]">
-          <table className="w-full min-w-[420px] text-[13px]">
+          <table className="w-full min-w-[420px] text-[12.5px]">
             <thead>
-              <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
-                <th className="w-9 px-2 py-1.5">
+              <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
+                <th className="w-8 px-2 py-1.5">
                   <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
                 </th>
-                <th className="px-2 py-1.5">Nombre</th>
-                <th className="hidden px-2 py-1.5 sm:table-cell">Correo</th>
+                {cabecera('nombre', 'Nombre')}
+                {cabecera('cargo', 'Cargo', 'hidden lg:table-cell')}
+                {cabecera('email', 'Correo', 'hidden sm:table-cell')}
                 <th className="px-2 py-1.5">Móvil</th>
-                <th className="hidden px-2 py-1.5 md:table-cell">Empresa</th>
-                <th className="w-16 px-2 py-1.5 text-right">Ficha</th>
+                {cabecera('empresa', 'Empresa', 'hidden md:table-cell')}
+                <th className="hidden px-2 py-1.5 xl:table-cell">RGPD</th>
+                <th className="w-14 px-2 py-1.5 text-right">Ficha</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#153F52]">
@@ -371,9 +434,10 @@ export default function Contactos() {
                           className="flex w-full items-center gap-1.5 text-left">
                           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
                             title={st.motivos.join(' · ') || 'Ficha completa'} />
-                          <Avatar src={c.foto_url} inicial={(c.nombre || '?').charAt(0)} tamano={26} />
+                          <Avatar src={c.foto_url} inicial={(c.nombre || '?').charAt(0)} tamano={22} />
                           <span className="min-w-0">
-                            <span className="block truncate font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
+                            <span className="block truncate font-bold leading-tight text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}{c.revisado === false && <span className="ml-1.5 text-[9.5px] font-extrabold uppercase text-amber-200">sin revisar</span>}</span>
+                            <span className="block truncate text-[11px] leading-tight text-[#7FA7B4] lg:hidden">{c.cargo || ''}</span>
                             {/* En móvil, correo y empresa se ocultan como
                                 columna pero aparecen aquí: ocultar un dato sin
                                 dejarlo a mano es peor que la tabla ancha. */}
@@ -384,11 +448,9 @@ export default function Contactos() {
                               {emps.length ? emps.map((x) => nombreVisible(x.e)).join(' · ') : 'sin empresa'}
                             </span>
                           </span>
-                          {c.consentimiento_marketing && (
-                            <span className="chip !px-1 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300">RGPD</span>
-                          )}
                         </button>
                       </td>
+                      <td className="hidden px-2 py-1 text-[#9FC0CB] lg:table-cell"><span className="block truncate">{c.cargo || <span className="text-[#5E8494]">—</span>}</span></td>
                       <td className="hidden px-2 py-1 text-[#9FC0CB] sm:table-cell">
                         {emailValido(c.email)
                           ? <a href={`mailto:${c.email}`} className="block truncate hover:text-brand-orange">{c.email}</a>
@@ -405,6 +467,13 @@ export default function Contactos() {
                               {emps.map((x) => nombreVisible(x.e)).join(' · ')}</span>
                           : <span className="font-bold text-red-300">sin empresa</span>}
                       </td>
+                      <td className="hidden px-2 py-1 xl:table-cell">
+                        <span className="flex flex-wrap gap-1">
+                          {c.rgpd_aceptado ? <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9.5px] text-emerald-300" title="Aceptó el tratamiento de datos">✓ RGPD</span> : <span className="chip !px-1.5 !py-0 bg-amber-400/15 text-[9.5px] text-amber-200">pendiente</span>}
+                          {c.consentimiento_marketing && <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9.5px] text-emerald-300" title="Acepta comunicaciones">✓ com.</span>}
+                          {c.brevo_sincronizado_en && <span className="chip !px-1.5 !py-0 bg-brand-verde/15 text-[9.5px] text-brand-verdeTexto">Brevo</span>}
+                        </span>
+                      </td>
                       <td className="px-2 py-1 text-right">
                         <button onClick={() => setAbierta(desplegada ? null : c.id)}
                           className="text-[11px] font-bold text-[#7FA7B4] hover:text-brand-orange"
@@ -418,7 +487,7 @@ export default function Contactos() {
                         está editando sin perder de vista el resto de la lista. */}
                     {desplegada && (
                       <tr className="bg-[#0B2E3D]">
-                        <td colSpan={6} className="px-3 py-3">
+                        <td colSpan={8} className="px-3 py-3">
                           <FichaContacto
                             contacto={c} empresas={emps} puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
                             sync={sync}
@@ -435,7 +504,7 @@ export default function Contactos() {
                 );
               })}
               {!lista.length && (
-                <tr><td colSpan={6} className="px-3 py-8 text-center text-[#7FA7B4]">
+                <tr><td colSpan={8} className="px-3 py-8 text-center text-[#7FA7B4]">
                   {contactos.length === 0 ? 'Sin contactos todavía.' : 'Ninguno con ese filtro.'}
                 </td></tr>
               )}
@@ -488,11 +557,9 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
             {contacto.movil ? ` · móvil ${contacto.movil}` : ''}
             {contacto.telefono ? ` · tel. ${contacto.telefono}` : ''}
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {contacto.consentimiento_marketing
-              ? <span className="chip !py-0 bg-emerald-500/15 text-[10px] text-emerald-300">✓ Consentimiento RGPD</span>
-              : <span className="chip !py-0 bg-white/5 text-[10px] text-[#7FA7B4]">Sin consentimiento</span>}
-            {contacto.brevo_sincronizado_en && <span className="chip !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
+          <div className="mt-1.5">
+            <ConsentimientoRgpd contacto={contacto} puedeEditar={!!puedeEditar} onCambio={onRecargar} compacto />
+            {contacto.brevo_sincronizado_en && <span className="chip mt-1 !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
           </div>
           </div>
         </div>

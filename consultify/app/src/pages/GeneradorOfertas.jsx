@@ -302,7 +302,7 @@ export default function GeneradorOfertas({ publico = false }) {
         precio_catalogo: res?.precioAntesDeAjustes ?? precioLead,
         ajuste_oferta: res?.ajusteOferta ?? 0,
         notas_oferta: notas || null, notas_internas: notasInternas || null,
-        forma_pago: res?.formasPago ? formaPago : null,
+        forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
         pago_adelantado: !!adelantado,
         modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
@@ -374,7 +374,7 @@ export default function GeneradorOfertas({ publico = false }) {
           ajustes, fasesPlan, emisora_id: emisora,
           notas_oferta: notas || null, notas_internas: notasInternas || null,
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
-          forma_pago: res?.formasPago ? formaPago : null,
+          forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
           pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
           email: cli.email, presupuesto_id: fila?.id,
@@ -972,7 +972,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 {res.formasPago && (
                   <div className="mt-3 space-y-2">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">Condiciones de pago</p>
-                    {[res.formasPago.unico, res.formasPago.dos].map((f) => {
+                    {[res.formasPago.unico, res.formasPago.dos].filter(Boolean).map((f) => {
                       const on = formaPago === f.id;
                       return (
                         <button key={f.id} onClick={() => setFormaPago(f.id)}
@@ -983,7 +983,7 @@ export default function GeneradorOfertas({ publico = false }) {
                           </div>
                           <p className="mt-0.5 text-[11px] leading-snug text-white/70">{f.condicion}</p>
                           {f.id === 'unico'
-                            ? <p className="mt-0.5 text-[11px] font-bold text-brand-verdeTexto">Ahorras {fmtEUR(f.ahorro)}</p>
+                            ? (f.ahorro > 0 ? <p className="mt-0.5 text-[11px] font-bold text-brand-verdeTexto">Ahorras {fmtEUR(f.ahorro)}</p> : null)
                             : <p className="mt-0.5 text-[11px] text-white/60">{fmtEUR(f.cuota1SinIva)} + {fmtEUR(f.cuota2SinIva)}</p>}
                         </button>
                       );
@@ -1085,7 +1085,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 {/* Plan de pagos según modelo */}
                 <div className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-relaxed text-white/85">
                   <p className="font-extrabold text-white/90 mb-1">Forma de pago</p>
-                  {esApoyo && <p>Bolsa de horas para la recta final: solo con {res.maxMeses} meses o menos hasta la certificación. Pago único o dos cuotas. Acompañamiento a auditoría aparte (600 €/jornada).</p>}
+                  {esApoyo && <p>Bolsa de horas para la recta final: solo con {res.maxMeses} meses o menos hasta la certificación. Un solo pago a la firma. Acompañamiento a auditoría aparte (600 €/jornada).</p>}
                   {/* Las tres cuotas desaparecieron en la v99: la implantación
                       solo admite pago único o dos cuotas, y eso ya lo enseña el
                       bloque de arriba. Repetirlo aquí con otro reparto era decir

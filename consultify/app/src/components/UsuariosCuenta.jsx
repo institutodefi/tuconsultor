@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow, explicarErrorBd } from '../lib/data.js';
 import { ROLES_CUENTA } from '../lib/cuentaClientePuro.js';
+import { useAuth } from '../lib/auth.jsx';
+import { esGratuito } from '../lib/dominios.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // USUARIOS DE LA CUENTA DE CLIENTE
@@ -19,6 +21,22 @@ const low = (v) => T(v).toLowerCase();
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(T(v));
 
 export default function UsuariosCuenta({ clienteId, email = '', puedeGestionar = true, titulo = 'Usuarios de la cuenta' }) {
+  const { role, adminUsuarios } = useAuth();
+  const puedeInvitar = ['superadmin', 'admin'].includes(role);
+  const [invitando, setInvitando] = useState(null);
+  // Invitación de Supabase: la persona recibe un correo para poner su
+  // contraseña. Es la vía para correos genéricos (Gmail…), que el registro
+  // público no admite: la excepción la decide Administración desde aquí.
+  async function invitar(u) {
+    setInvitando(u.id); setMsg(null);
+    try {
+      const r = await adminUsuarios({ action: 'invite', email: low(u.email), nombre: T(u.nombre), apellidos: '', rol: 'cliente' });
+      if (r?.ok) setMsg({ err: false, t: `Invitación enviada a ${u.email}: recibirá un correo para poner su contraseña.` });
+      else if (/ya tiene cuenta/i.test(r?.error || '')) setMsg({ err: false, t: `${u.email} ya tiene cuenta: entra con su contraseña y verá esta empresa.` });
+      else setMsg({ err: true, t: r?.error || 'No se pudo invitar.' });
+    } catch (e) { setMsg({ err: true, t: String(e?.message || e) }); }
+    finally { setInvitando(null); }
+  }
   const [lista, setLista] = useState(null);
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -47,7 +65,9 @@ export default function UsuariosCuenta({ clienteId, email = '', puedeGestionar =
       if (f.id) await updateRow('cliente_usuarios', f.id, fila);
       else await insertRow('cliente_usuarios', { ...fila, invitado_por: low(email) || null });
       setForm(null); await cargar();
-      setMsg({ err: false, t: f.id ? 'Guardado.' : `Añadido. Para entrar, esa persona crea su cuenta en Órbita («Entrar como cliente → Crear cuenta») con el correo ${fila.email}; con eso ya ve esta empresa.` });
+      setMsg({ err: false, t: f.id ? 'Guardado.' : (esGratuito(fila.email)
+        ? `Añadido. ${fila.email} es un correo genérico y no puede registrarse solo: ${puedeInvitar ? 'pulsa «✉ Invitar» para mandarle el acceso.' : 'pide a Administración que le envíe la invitación.'}`
+        : `Añadido. Para entrar, esa persona crea su cuenta en Órbita («Entrar como cliente → Crear cuenta») con el correo ${fila.email}; con eso ya ve esta empresa.${puedeInvitar ? ' O pulsa «✉ Invitar» y le llega el acceso por correo.' : ''}`) });
     } catch (e) { setMsg({ err: true, t: `No se pudo guardar: ${explicarErrorBd(e, 'cliente_usuarios')}${/cliente_usuarios|does not exist/i.test(String(e?.message || e)) ? ' Falta aplicar la migración v127 (usuarios de cuenta).' : ''}` }); }
     finally { setOcupado(false); }
   }
@@ -78,6 +98,12 @@ export default function UsuariosCuenta({ clienteId, email = '', puedeGestionar =
               </div>
               {puedeGestionar && (
                 <div className="flex gap-2 text-[11.5px] font-bold">
+                  {puedeInvitar && !soyYo(u) && (
+                    <button type="button" onClick={() => invitar(u)} disabled={invitando === u.id} className="text-brand-verdeTexto hover:underline disabled:opacity-50"
+                      title={esGratuito(u.email) ? 'Correo genérico: solo puede entrar por invitación' : 'Le llega un correo para poner su contraseña'}>
+                      {invitando === u.id ? '…' : '✉ Invitar'}{esGratuito(u.email) ? ' (correo genérico)' : ''}
+                    </button>
+                  )}
                   <button type="button" onClick={() => setForm({ id: u.id, email: u.email, nombre: u.nombre || '', rol_cuenta: u.rol_cuenta })} className="text-brand-orange hover:underline">Editar</button>
                   {!soyYo(u) && <button type="button" onClick={() => quitar(u)} className="text-[#7FA7B4] hover:text-red-300">Quitar</button>}
                 </div>

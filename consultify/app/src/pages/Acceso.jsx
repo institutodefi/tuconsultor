@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { validarPassword, mensajePassword } from '../lib/password.js';
+import { esGratuito, esInterno, listaInternos } from '../lib/dominios.js';
 
 function CampoPassword({ id, label, value, onChange, required, autoComplete, error }) {
   const [visible, setVisible] = useState(false);
@@ -52,10 +53,6 @@ function PanelAcceso({ acento, titulo, subtitulo, icono, children, footer }) {
   );
 }
 
-const DOMINIOS_GRATUITOS = ['gmail.com','googlemail.com','hotmail.com','hotmail.es','outlook.com','outlook.es','live.com','msn.com','yahoo.com','yahoo.es','icloud.com','me.com','mac.com','protonmail.com','proton.me','aol.com','gmx.com','gmx.es','mail.com','yandex.com','zoho.com','tutanota.com','mail.ru'];
-const dominioDe = (email) => (email.split('@')[1] || '').toLowerCase();
-const esGratuito = (email) => DOMINIOS_GRATUITOS.includes(dominioDe(email));
-const esInterno = (email) => ['tuconsultor.com', 'consultify.pro'].includes(dominioDe(email));
 
 export default function Acceso() {
   const { login, register, demo, user, role } = useAuth();
@@ -110,11 +107,11 @@ export default function Acceso() {
         nav(ROLES_EQUIPO.includes(role) ? '/consultores' : '/clientes');
       } else {
         if (esGratuito(k.email)) {
-          setKMsg({ ok: false, text: 'Solo se admiten cuentas de correo profesionales (dominio de tu empresa). Las cuentas de Gmail, Hotmail, Outlook, etc. no son válidas.' });
+          setKMsg({ ok: false, text: 'Para registrarte hace falta un correo profesional (el dominio de tu empresa). Si solo tienes Gmail, Hotmail u otro genérico, pide a tu consultor que te invite: puede darte acceso con ese correo.' });
           setKBusy(false); return;
         }
         if (esInterno(k.email)) {
-          setKMsg({ ok: false, text: 'Las cuentas @tuconsultor.com y @consultify.pro son de equipo: entra directamente con tu contraseña, sin registro.' });
+          setKMsg({ ok: false, text: `Las cuentas ${listaInternos()} son de equipo: entra directamente con tu contraseña, sin registro.` });
           setKBusy(false); return;
         }
         const r = await register(k.email, k.password, k.nombre, k.empresa);
