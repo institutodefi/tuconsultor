@@ -57,17 +57,25 @@ export const GRUPOS_PORTAL = [
       // Empresas y clientes son la misma lista con un filtro: una sola pestaña
       // (antes «Cartera de clientes» era otra entrada que llevaba al mismo sitio).
       {
-        to: 'empresas', label: 'Empresas y clientes', icon: 'building',
+        to: 'empresas', label: 'Empresas', icon: 'building',
         roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'],
         hijos: [
-          { to: 'empresas',                 label: 'Todas',                  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-          { to: 'empresas?filtro=cliente',  label: 'Clientes',               roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-          { to: 'empresas?filtro=potencial', label: 'Potenciales',           roles: ['superadmin', 'admin', 'director', 'gestion'] },
-          { to: 'clientes/dashboard',       label: 'Dashboard de clientes',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'empresas',                  label: 'Todas',                       roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=cliente',   label: 'Clientes',                    roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=proveedor', label: 'Proveedores',                 roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=potencial', label: 'Potenciales',                 roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'proveedores',               label: 'Homologación de proveedores', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'clientes/dashboard',        label: 'Dashboard de clientes',       roles: ['superadmin', 'admin', 'director', 'gestion'] },
         ],
       },
       { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-      { to: 'proveedores', label: 'Proveedores', icon: 'truck', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+    ],
+  },
+  {
+    // Lo comercial y los proyectos, aparte del CRM: el CRM son las empresas y
+    // las personas; esto es lo que se hace con ellas.
+    label: 'Comercial y proyectos',
+    items: [
       {
         to: 'ofertas', label: 'Ofertas', icon: 'receipt',
         roles: ['superadmin', 'admin', 'director', 'gestion'],

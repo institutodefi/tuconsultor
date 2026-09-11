@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import SincronizarCrm from '../../components/SincronizarCrm.jsx';
 import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
-import { semaforoEmpresa, ESTADOS_COMERCIALES , nombreVisible, tieneComercialDistinto } from '../../lib/crm.js';
+import { semaforoEmpresa, ESTADOS_COMERCIALES , nombreVisible, tieneComercialDistinto, ETIQUETAS_EMPRESA, tieneEtiqueta, puedeEditarEmpresas, puedeEditarEmpresa } from '../../lib/crm.js';
 import { Avatar } from '../../components/ImagenSubible.jsx';
 import FichaEmpresa from './FichaEmpresa.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
@@ -38,15 +38,16 @@ const ORDENES = [
 const S = (v) => String(v ?? '');
 
 export default function Empresas() {
-  const { role, demo } = useAuth();
+  const { role, demo, user } = useAuth();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const puedeEditar = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
+  const puedeEditar = puedeEditarEmpresas(role);
   const puedeBorrar = ['superadmin', 'admin'].includes(role);
 
   const [empresas, setEmpresas] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [vinculos, setVinculos] = useState([]);
+  const [clientes, setClientes] = useState([]);   // para saber quién es gestor de cuenta de cada empresa
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
   // El filtro vive en la ruta (empresas?filtro=cliente): así «Clientes» del
@@ -54,6 +55,7 @@ export default function Empresas() {
   const filtro = FILTROS.some(([k]) => k === params.get('filtro')) ? params.get('filtro') : 'todas';
   const setFiltro = (k) => { const n = new URLSearchParams(params); if (k === 'todas') n.delete('filtro'); else n.set('filtro', k); n.delete('e'); setParams(n); };
   const [estado, setEstado] = useState('');        // estado comercial
+  const [etiqueta, setEtiqueta] = useState('');    // crítico / regular / partner
   const [provincia, setProvincia] = useState('');
   const [orden, setOrden] = useState('nombre');
   const [desc, setDesc] = useState(false);
@@ -73,13 +75,14 @@ export default function Empresas() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const [e, c, v] = await Promise.all([
+      const [e, c, v, cl] = await Promise.all([
         listTable('empresas').catch((e) => { setErrorCarga(e?.message || String(e)); return []; }),
         listTable('contactos').catch(() => []),
         listTable('empresa_contactos').catch(() => []),
+        listTable('clientes').catch(() => []),
       ]);
       (e || []).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-      setEmpresas(e || []); setContactos(c || []); setVinculos(v || []);
+      setEmpresas(e || []); setContactos(c || []); setVinculos(v || []); setClientes(cl || []);
     } finally { setCargando(false); }
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
@@ -106,6 +109,7 @@ export default function Empresas() {
       // tecleó el cliente y nadie del equipo los ha mirado todavía.
       if (filtro === 'sin_revisar' && e.revisado !== false) return false;
       if (estado && (e.estado_comercial || 'potencial') !== estado) return false;
+      if (etiqueta && !tieneEtiqueta(e, etiqueta)) return false;
       if (provincia && S(e.provincia).trim().toLowerCase() !== provincia.toLowerCase()) return false;
       if (!t) return true;
       return [e.nombre, e.nombre_comercial, e.cif, e.poblacion, e.provincia, e.email, e.web, e.telefono, e.codigo, ...(Array.isArray(e.tags) ? e.tags : [])]
@@ -120,7 +124,7 @@ export default function Empresas() {
       else if (orden === 'reciente') r = S(a.updated_at || a.creado).localeCompare(S(b.updated_at || b.creado));
       return desc ? -r : r;
     });
-  }, [empresas, q, filtro, semaforos, estado, provincia, orden, desc]);
+  }, [empresas, q, filtro, semaforos, estado, provincia, orden, desc, etiqueta]);
   const provincias = useMemo(() => [...new Set(empresas.map((e) => S(e.provincia).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), [empresas]);
   const cabecera = (k, etq, cls = '') => (
     <th className={`px-3 py-2 text-left ${cls}`}>
@@ -206,7 +210,7 @@ export default function Empresas() {
           <FichaEmpresa
             empresa={nueva ? EMPRESA_NUEVA : empresa}
             empresas={empresas} contactos={contactos} vinculos={vinculos}
-            puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
+            puedeEditar={nueva ? puedeEditar : puedeEditarEmpresa({ role, userId: user?.id, empresa, clientes })} puedeBorrar={puedeBorrar}
             onCambio={cargar}
             onSeleccionar={seleccionar}
             onCerrar={cerrarFicha}
@@ -332,6 +336,10 @@ export default function Empresas() {
           <option value="">Estado: todos</option>
           {ESTADOS_COMERCIALES.map((x) => <option key={x.k} value={x.k}>{x.label}</option>)}
         </select>
+        <select value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="Etiqueta">
+          <option value="">Etiqueta: todas</option>
+          {ETIQUETAS_EMPRESA.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
         {provincias.length > 1 && (
           <select value={provincia} onChange={(e) => setProvincia(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="Provincia">
             <option value="">Provincia: todas</option>
@@ -341,8 +349,8 @@ export default function Empresas() {
         <select value={`${orden}${desc ? ':d' : ''}`} onChange={(e) => { const [k, d] = e.target.value.split(':'); setOrden(k); setDesc(d === 'd'); }} className="input !w-auto !py-1.5 !text-[12px]" title="Orden">
           {ORDENES.flatMap(([k, l]) => [<option key={k} value={k}>{l} ▲</option>, <option key={`${k}:d`} value={`${k}:d`}>{l} ▼</option>])}
         </select>
-        {(q || estado || provincia || filtro !== 'todas') && (
-          <button type="button" onClick={() => { setQ(''); setEstado(''); setProvincia(''); setFiltro('todas'); }} className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">limpiar</button>
+        {(q || estado || provincia || etiqueta || filtro !== 'todas') && (
+          <button type="button" onClick={() => { setQ(''); setEstado(''); setProvincia(''); setEtiqueta(''); setFiltro('todas'); }} className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">limpiar</button>
         )}
         <span className="text-xs font-semibold text-[#7FA7B4]">{lista.length} de {empresas.length}</span>
       </div>
@@ -424,6 +432,9 @@ export default function Empresas() {
                           {e.es_cliente && <span className="chip bg-brand-orange/15 !px-1.5 !py-0 text-[10px] text-brand-orange">Cliente</span>}
                           {e.es_proveedor && <span className="chip bg-brand-verde/15 !px-1.5 !py-0 text-[10px] text-brand-verdeTexto">Proveedor</span>}
                           {!e.es_cliente && !e.es_proveedor && <span className="text-[10px] text-[#7FA7B4]">—</span>}
+                          {ETIQUETAS_EMPRESA.filter(([k]) => tieneEtiqueta(e, k)).map(([k, l]) => (
+                            <span key={k} className={`chip !px-1.5 !py-0 text-[10px] ${k === 'critico' ? 'bg-red-500/15 text-red-200' : k === 'partner' ? 'bg-sky-500/15 text-sky-200' : 'bg-white/5 text-[#9FC0CB]'}`}>{l}</span>
+                          ))}
                         </span>
                       </td>
                       <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] font-semibold text-[#9FC0CB] md:table-cell">

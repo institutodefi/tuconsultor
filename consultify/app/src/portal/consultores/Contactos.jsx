@@ -8,6 +8,7 @@ import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn , explicarErrorBd } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL , nombreVisible } from '../../lib/crm.js';
+import { puedeEditarContactos } from '../../lib/crm.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONTACTOS · las personas del CRM.
@@ -43,7 +44,7 @@ export default function Contactos() {
   const { role, demo } = useAuth();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const puedeEditar = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
+  const puedeEditar = puedeEditarContactos(role);
   const puedeBorrar = ['superadmin', 'admin'].includes(role);
 
   const [contactos, setContactos] = useState([]);

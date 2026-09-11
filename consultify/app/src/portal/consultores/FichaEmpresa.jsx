@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { insertRow, updateRow, deleteRow, holdedFn, brevoFn, explicarErrorBd, listTable } from '../../lib/data.js';
 import {
   validarCif, normalizarCif, emailValido, semaforoEmpresa,
-  candidatasMatriz, ESTADOS_COMERCIALES, nombreVisible,
+  candidatasMatriz, ESTADOS_COMERCIALES, nombreVisible, ETIQUETAS_EMPRESA, tieneEtiqueta, alternarEtiqueta,
 } from '../../lib/crm.js';
 import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
@@ -396,6 +396,7 @@ export default function FichaEmpresa({
       vat_id: String(form.vat_id ?? '').trim() || null,
       es_cliente: !!form.es_cliente,
       es_proveedor: !!form.es_proveedor,
+      tags: Array.isArray(form.tags) && form.tags.length ? form.tags : null,
       estado_comercial: form.estado_comercial || 'potencial',
       direccion: String(form.direccion ?? '').trim() || null,
       poblacion: String(form.poblacion ?? '').trim() || null,
@@ -790,6 +791,19 @@ export default function FichaEmpresa({
             ))}
             <span className="text-[11px] text-[#7FA7B4]">se pueden marcar los dos</span>
           </div>
+          {/* Etiquetas no excluyentes: crítico, regular, partner. */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {ETIQUETAS_EMPRESA.map(([k, l, ayuda]) => {
+              const on = tieneEtiqueta(form, k);
+              return (
+                <button key={k} type="button" onClick={() => setForm({ ...form, tags: alternarEtiqueta(form.tags, k) })} title={ayuda}
+                  className={`rounded-lg border px-2.5 py-1 text-[12px] font-bold transition ${on ? (k === 'critico' ? 'border-red-400 bg-red-500/20 text-red-100' : k === 'partner' ? 'border-sky-400 bg-sky-500/20 text-sky-100' : 'border-[#9FC0CB] bg-white/10 text-[#EAF4F7]') : 'border-[#1E5468] text-[#9FC0CB] hover:border-brand-verde/60'}`}>
+                  {on ? '✓ ' : ''}{l}
+                </button>
+              );
+            })}
+            <span className="text-[11px] text-[#7FA7B4]">etiquetas · no excluyentes</span>
+          </div>
 
           {/* El estado comercial describe la relación de VENTA: en un proveedor
                     puro no significa nada y ensucia los informes de clientes. */}
@@ -934,6 +948,9 @@ export default function FichaEmpresa({
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1">
               {empresa.es_cliente && <span className="chip !px-2 !py-0 bg-brand-orange/15 text-[10px] text-brand-orange">Cliente</span>}
+              {ETIQUETAS_EMPRESA.filter(([k]) => tieneEtiqueta(empresa, k)).map(([k, l, ayuda]) => (
+                <span key={k} title={ayuda} className={`chip !px-2 !py-0 text-[10px] ${k === 'critico' ? 'bg-red-500/15 text-red-200' : k === 'partner' ? 'bg-sky-500/15 text-sky-200' : 'bg-white/5 text-[#9FC0CB]'}`}>{l}</span>
+              ))}
               {empresa.es_proveedor && <span className="chip !px-2 !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">Proveedor</span>}
               <span className="chip !px-2 !py-0 bg-white/5 text-[10px] text-[#9FC0CB]">
                 {ESTADOS_COMERCIALES.find((e) => e.k === empresa.estado_comercial)?.label || 'Potencial'}

@@ -289,3 +289,16 @@
 - En la ficha de empresa, el organigrama del grupo se **edita arrastrando** (quien puede editar la ficha): una caja sobre otra → pasa a ser filial de esa; una filial sobre **«⤴ Sacar del grupo»** (aparece al arrastrar) → deja de colgar de nadie; una empresa de la lista lateral **«Añadir al grupo»** (con buscador) sobre una caja → entra en el grupo colgando de ella. Cada gesto guarda `empresa_matriz_id` al soltar; no hay botón de guardar.
 - No se puede colgar una empresa de sí misma ni de una de sus filiales (bucle): esas cajas se apagan mientras se arrastra. La caja destino se marca en naranja discontinuo con «Soltar aquí: pasa a ser filial».
 - La caja «Estructura del grupo» sale también en empresas sin grupo (para crearlo arrastrando); las cajas ahora son HTML sobre las líneas SVG, porque el arrastrar del navegador no funciona sobre SVG. Pulsar una caja sigue abriendo su ficha.
+
+## CRM limpio · Empresas y Contactos
+- El grupo **CRM** del menú queda en dos entradas: **Empresas** (subentradas Todas · Clientes · Proveedores · Potenciales · Homologación de proveedores · Dashboard de clientes) y **Contactos**. Ofertas, Proyectos y Sistemas de gestión pasan al grupo «Comercial y proyectos». La entrada «Proveedores» desaparece como pestaña propia: es el filtro de Empresas, y su homologación sigue en su pantalla (subentrada).
+- **Etiquetas de empresa no excluyentes**: **Crítico**, **Regular** y **Partner**, además de Cliente / Proveedor. Se marcan en el formulario de la empresa (botones), se ven como chips en la cabecera de la ficha y en la lista, y hay filtro «Etiqueta» en Empresas. Van en la columna `tags` que ya existía (sin migración).
+
+## Quién edita qué en el CRM
+- **Datos de empresa**: administración, superadministración, equipo de gestión y el **gestor (jefe) de cuenta** del cliente al que pertenece la empresa (`clientes.jefe_cuenta_id`); el **administrador de la cuenta de cliente** lo hace desde su portal. Dirección de proyecto y consultoría, solo lectura (`puedeEditarEmpresa`, `lib/crm.js`).
+- **Datos de contacto**: administración y superadministración; la **propia persona** edita los suyos desde «Mis datos» del portal. El resto, solo lectura (también en el histórico de ofertas).
+- Las políticas de la base no cambian: esto es lo que la pantalla ofrece; quien no puede editar no ve los botones.
+
+## Portal de cliente · mismos datos que el CRM
+- **Datos de empresa** del portal: se añaden **Móvil**, **Identificación VAT** y el **logo** (pulsando la imagen), que van a la misma ficha del CRM (`empresas`) a través de `cliente_guardar_empresa`. **Migración `migracion-v136-cliente-empresa-campos.sql`** (aplicada en la base): columnas `movil`, `vat_id`, `logo_url` en `clientes` y la función ampliada.
+- **Mis datos** (persona): **foto** (a la ficha de contacto del CRM, `contactos.foto_url`) y aviso de que son los mismos datos que ve el consultor. Nombre, apellidos, cargo, teléfono y móvil ya iban a `contactos`.

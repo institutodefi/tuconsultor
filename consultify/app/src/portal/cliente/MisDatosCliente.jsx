@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { updateRow, insertRow, brevoFn } from '../../lib/data.js';
 import { emailValido } from '../../lib/crm.js';
+import ImagenSubible from '../../components/ImagenSubible.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // EDITAR MIS DATOS · zona de clientes
@@ -105,10 +106,18 @@ export default function MisDatosCliente({ contacto, empresa, email, onGuardado }
   return (
     <div className="space-y-4">
       <section className="card">
-        <h2 className="text-sm font-extrabold text-[#EAF4F7]">Tus datos</h2>
-        <p className="mt-1 text-[11.5px] text-[#7FA7B4]">
-          El correo es el de tu cuenta y no se cambia desde aquí: escríbenos si necesitas otro.
-        </p>
+        <div className="flex items-start gap-3">
+          {contacto?.id && (
+            <ImagenSubible tabla="contactos" id={contacto.id} campo="foto_url" valor={contacto.foto_url} tamano={56}
+              inicial={(f.nombre || email || '?').charAt(0)} titulo="Tu foto" onCambio={() => onGuardado?.()} />
+          )}
+          <div>
+            <h2 className="text-sm font-extrabold text-[#EAF4F7]">Tus datos</h2>
+            <p className="mt-1 text-[11.5px] text-[#7FA7B4]">
+              Son los mismos que tiene tu consultor en su ficha de contacto: lo que corrijas aquí lo ve al momento. El correo es el de tu cuenta y no se cambia desde aquí: escríbenos si necesitas otro.
+            </p>
+          </div>
+        </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Campo id="md-nombre" etq="Nombre" v={f.nombre} set={(x) => setF({ ...f, nombre: x })} />

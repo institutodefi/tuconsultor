@@ -6,6 +6,7 @@ import { propuestasDesdeLecturas, filaCertificado, validarPropuesta } from '../.
 import { aISO } from '../../lib/auditorias.js';
 import { cargarContactosFicha, guardarContactoFicha, quitarContactoFicha, guardarDatosEmpresa, ROL_CONTACTO } from '../../lib/cuentaCliente.js';
 import UsuariosCuenta from '../../components/UsuariosCuenta.jsx';
+import ImagenSubible from '../../components/ImagenSubible.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MI EMPRESA · zona de clientes
@@ -44,10 +45,10 @@ const Aviso = ({ msg }) => (msg ? (
   <p role={msg.err ? 'alert' : 'status'} className={`mt-3 rounded-lg px-3 py-2 text-[12.5px] font-bold ${msg.err ? 'bg-red-500/12 text-red-200' : 'bg-emerald-500/12 text-emerald-200'}`}>{msg.t}</p>
 ) : null);
 
-const CAMPOS_EMPRESA = ['empresa', 'nombre_comercial', 'cif', 'actividad', 'sector', 'empleados', 'representante', 'telefono', 'email', 'web', 'direccion', 'cp', 'poblacion', 'provincia', 'pais'];
+const CAMPOS_EMPRESA = ['empresa', 'nombre_comercial', 'cif', 'vat_id', 'actividad', 'sector', 'empleados', 'representante', 'telefono', 'movil', 'email', 'web', 'direccion', 'cp', 'poblacion', 'provincia', 'pais'];
 const ETQ = {
-  empresa: 'Razón social', nombre_comercial: 'Nombre comercial', cif: 'CIF', actividad: 'Actividad', sector: 'Sector', empleados: 'Plantilla (personas)',
-  representante: 'Representante legal', telefono: 'Teléfono', email: 'Correo de la empresa', web: 'Web',
+  empresa: 'Razón social', nombre_comercial: 'Nombre comercial', cif: 'CIF', vat_id: 'Identificación VAT (intracomunitario)', actividad: 'Actividad', sector: 'Sector', empleados: 'Plantilla (personas)',
+  representante: 'Representante legal', telefono: 'Teléfono', movil: 'Móvil', email: 'Correo de la empresa', web: 'Web',
   direccion: 'Dirección (domicilio social)', cp: 'Código postal', poblacion: 'Población', provincia: 'Provincia', pais: 'País',
 };
 const T = (v) => String(v ?? '').trim();   // trim que no revienta con null (sedes/certificados guardados con campos vacíos)
@@ -418,9 +419,15 @@ export default function DatosEmpresaCliente({ cliente, proyectoId = null, email 
       {/* ── 1 · Datos de empresa ── */}
       <section className="card">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-extrabold text-[#EAF4F7]">Datos de empresa</h2>
-            <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Los de tu ficha de cliente. Puedes corregirlos aquí; tu consultor los ve al momento.</p>
+          <div className="flex items-start gap-3">
+            {/* El logo va a la misma ficha del CRM que el resto de datos (v136). */}
+            <ImagenSubible tabla="empresas" id={cliente?.id} campo="logo_url" valor={cliente?.logo_url} tamano={56} forma="cuadrado"
+              inicial={(cliente?.nombre_comercial || cliente?.empresa || '?').charAt(0)} titulo="Logo de la empresa"
+              guardar={async (url) => { await guardarDatosEmpresa(cliente, { logo_url: url }); }} onCambio={() => onGuardado?.()} />
+            <div>
+              <h2 className="text-sm font-extrabold text-[#EAF4F7]">Datos de empresa</h2>
+              <p className="mt-0.5 text-[11.5px] text-[#7FA7B4]">Los mismos que ve tu consultor en el CRM. Puedes corregirlos aquí (y el logo, pulsándolo); se ven al momento.</p>
+            </div>
           </div>
           <button type="button" onClick={traerDatosEmpresa} disabled={trayendo} className="btn-ghost !px-3 !py-1 text-[12px] disabled:opacity-50" title="Lee tus documentos y rellena lo que falte">
             {trayendo ? 'Leyendo documentos…' : '✦ Traer datos con IA'}

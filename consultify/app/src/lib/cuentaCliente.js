@@ -71,7 +71,7 @@ export async function quitarContactoFicha(cliente, contactoId) {
 }
 
 // Campos que la ficha de cliente y la empresa del CRM comparten.
-const CAMPOS_CRM = ['empresa', 'nombre_comercial', 'cif', 'telefono', 'email', 'web', 'direccion', 'cp', 'poblacion', 'provincia', 'pais'];
+const CAMPOS_CRM = ['empresa', 'nombre_comercial', 'cif', 'telefono', 'movil', 'email', 'web', 'vat_id', 'logo_url', 'direccion', 'cp', 'poblacion', 'provincia', 'pais'];
 
 /**
  * Guardar los datos de empresa: en la ficha de cliente y en la empresa del

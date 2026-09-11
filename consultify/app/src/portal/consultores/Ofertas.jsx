@@ -14,7 +14,7 @@ import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImportarContacto from '../../components/ImportarContacto.jsx';
 import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
 import InformeRentabilidad from '../../components/InformeRentabilidad.jsx';
-import { normalizarCif } from '../../lib/crm.js';
+import { normalizarCif, puedeEditarContactos } from '../../lib/crm.js';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
 function fFecha(f) {
@@ -51,7 +51,7 @@ function finSugerido(fechaISO, manual) {
 export default function Ofertas() {
   const { role } = useAuth();
   const puedeBorrar = role === 'superadmin' || role === 'admin'; // solo administradores
-  const puedeEditar = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
+  const puedeEditar = puedeEditarContactos(role);   // los datos de la persona son del CRM de contactos
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState('');
   const [genId, setGenId] = useState(null);

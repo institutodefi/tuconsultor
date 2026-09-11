@@ -263,3 +263,42 @@ export const razonSocial = (e) => e?.nombre || '';
 /** ¿Merece la pena enseñar las dos? Solo si difieren. */
 export const tieneComercialDistinto = (e) =>
   !!e?.nombre_comercial?.trim() && e.nombre_comercial.trim() !== e?.nombre;
+
+// ── Etiquetas de empresa ──
+// No excluyentes: una empresa puede ser cliente crítico y partner a la vez. Van
+// en `tags` (text[]), junto a las etiquetas libres que ya hubiera.
+export const ETIQUETAS_EMPRESA = [
+  ['critico', 'Crítico', 'Cliente o proveedor del que depende el servicio: se atiende primero y se vigila.'],
+  ['regular', 'Regular', 'Relación estable, sin especial criticidad.'],
+  ['partner', 'Partner', 'Colabora con nosotros: co-vende, subcontrata o comparte proyectos.'],
+];
+export const tieneEtiqueta = (e, k) => Array.isArray(e?.tags) && e.tags.map((t) => String(t).toLowerCase()).includes(k);
+export const alternarEtiqueta = (tags, k) => { const t = (Array.isArray(tags) ? tags : []).filter((x) => String(x).toLowerCase() !== k); return tieneEtiquetaEn(tags, k) ? t : [...t, k]; };
+const tieneEtiquetaEn = (tags, k) => Array.isArray(tags) && tags.map((t) => String(t).toLowerCase()).includes(k);
+
+// ── Quién puede tocar qué en el CRM ──
+// Empresas: gestión de cuenta (equipo de gestión), administración y
+// superadministración; el administrador de la cuenta de cliente lo hace desde
+// su portal (RPC cliente_guardar_empresa). Contactos: administración y
+// superadministración; la propia persona edita lo suyo desde «Mis datos».
+export const puedeEditarEmpresas = (role) => ['superadmin', 'admin', 'gestion'].includes(role);
+export const puedeEditarContactos = (role) => ['superadmin', 'admin'].includes(role);
+/** El cliente operativo de una empresa: por traza (cliente_id_old) o por CIF. */
+export function clienteDeEmpresa(empresa, clientes = []) {
+  if (!empresa) return null;
+  const porTraza = empresa.cliente_id_old ? clientes.find((c) => String(c.id) === String(empresa.cliente_id_old)) : null;
+  if (porTraza) return porTraza;
+  const cif = normalizarCif(empresa.cif);
+  return cif ? clientes.find((c) => normalizarCif(c.cif) === cif) || null : null;
+}
+/**
+ * ¿Puede esta persona editar ESTA empresa? Administración, superadministración
+ * y equipo de gestión, siempre; y el gestor (jefe) de cuenta del cliente al
+ * que pertenece la empresa. El resto, solo lectura.
+ */
+export function puedeEditarEmpresa({ role, userId, empresa, clientes = [] }) {
+  if (puedeEditarEmpresas(role)) return true;
+  if (!userId || !empresa) return false;
+  const c = clienteDeEmpresa(empresa, clientes);
+  return !!c && String(c.jefe_cuenta_id || '') === String(userId);
+}
