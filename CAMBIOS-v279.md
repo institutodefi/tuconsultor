@@ -214,7 +214,7 @@
 
 ## Nombre de las tareas de CECE · sin la razón social delante
 - Las 65 tareas de CECE se volcaron con el título antiguo «CONFEDERACIÓN ESPAÑOLA DE CENTROS DE ENSEÑANZA (CECE) - 9001 - PE1 PLANIFICACIÓN ESTRATÉGICA - S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS» (razón social - norma - proceso - subproceso). DICS y FGUP, y todo lo que se vuelca ahora, llevan solo el subproceso.
-- **Migración `migracion-v133-titulos-tareas-cece.sql`**: deja esos títulos en el subproceso («S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS»). Solo toca títulos con el formato largo que terminan en su propio subproceso; los editados a mano no se tocan.
+- **Migración `migracion-v133-titulos-tareas-cece.sql`** (aplicada en la base): deja esos títulos en el subproceso («S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS»). Solo toca títulos con el formato largo que terminan en su propio subproceso; los editados a mano no se tocan.
 - En pantalla el cliente va siempre delante por su **nombre comercial** y el código (CECE · CECE-9001-03), en el planificador, la lista de tareas de la ficha del proyecto y el Gantt del cliente. `tituloTarea(t)` (`lib/zonaCliente.js`) limpia el formato largo si todavía llega alguno.
 - **Agenda del equipo** (Por tarea y Calendario): cada sesión dice «CECE · CECE-9001-01 · S1 PE1 GESTIÓN DEL CONTEXTO Y GRUPOS DE INTERÉS»: nombre comercial del cliente, código y nombre de la tarea abreviado, en vez de la razón social entera. El nombre comercial se lee de la empresa del CRM (o de la ficha del cliente; si no hay, la razón social).
 - Pruebas: `scripts/test-zona-cliente.mjs` (+3).
@@ -241,7 +241,7 @@
 ## Fotos de personas y logos de empresas
 - **Foto** en Mis datos (la propia), en la ficha de cada miembro del equipo (la persona o RR. HH.) y en la ficha de cada **contacto** del CRM; **logo** en la cabecera de la ficha de **empresa**. Se pulsa la imagen, se elige el fichero, se reduce a 512 px en el navegador y se guarda en el depósito público `imagenes`. «Quitar» la borra de la ficha.
 - Se ven en la barra lateral (avatar), en la lista del equipo, en la lista de contactos y en la lista de empresas. Componente `components/ImagenSubible.jsx` (+ `Avatar` para listas).
-- **Migración `migracion-v134-fotos-y-logos.sql`** (sin aplicar): columnas `perfiles.foto_url`, `contactos.foto_url`, `empresas.logo_url` y el depósito `imagenes` con sus políticas. La sesión ya no depende de la lista de columnas de `perfiles` (se lee `*`), así no se rompe si la migración aún no está.
+- **Migración `migracion-v134-fotos-y-logos.sql`** (aplicada en la base): columnas `perfiles.foto_url`, `contactos.foto_url`, `empresas.logo_url` y el depósito `imagenes` con sus políticas. La sesión ya no depende de la lista de columnas de `perfiles` (se lee `*`), así no se rompe si la migración aún no está.
 
 ## Inicio por defecto
 - Al identificarse, el equipo entra en **Inicio** (antes iba a Mi agenda). Con sesión guardada ya entraba en Inicio desde la raíz.
@@ -275,7 +275,7 @@
 ## Consentimiento RGPD · la ayuda para «pasárselo»
 - Cada contacto tiene un **enlace personal** (token, v135). En la ficha del contacto y en el histórico de ofertas: **✉ Pedir por correo** (le llega un correo de TuConsultor, por Brevo, con el botón «Revisar y aceptar»), **⧉ Copiar enlace** (para WhatsApp o desde tu propio correo) y **✎ Registrar** (si ya lo dio por otra vía: formulario firmado, correo de aceptación o verbal, con nota).
 - La persona abre **/app/consentimiento?t=…** (página pública, sin cuenta): ve responsable, finalidad, legitimación, destinatarios, conservación y derechos (`lib/rgpd.js`, versión `v1-2026-09`) y marca dos casillas: tratamiento de datos (necesaria) y comunicaciones comerciales (opcional). Al aceptar queda **prueba** en `consentimientos` (fecha, canal, versión del texto, IP y navegador) y se rellenan `rgpd_aceptado`/`rgpd_fecha` y, si marca comunicaciones, `consentimiento_marketing`/`consentimiento_fecha` (lo que ya usa Brevo).
-- Función `netlify/functions/consentimiento.mjs` (`/api/consentimiento`; acciones enviar, enlace, registrar para el equipo; ver y aceptar públicas por token). **Migración `migracion-v135-consentimiento-rgpd.sql`** (sin aplicar): `contactos.consentimiento_token` y tabla `consentimientos`.
+- Función `netlify/functions/consentimiento.mjs` (`/api/consentimiento`; acciones enviar, enlace, registrar para el equipo; ver y aceptar públicas por token). **Migración `migracion-v135-consentimiento-rgpd.sql`** (aplicada en la base): `contactos.consentimiento_token` y tabla `consentimientos_rgpd` (ya existía una `consentimientos` de la v71, de un diseño antiguo sin terminar y vacía; no se toca).
 
 ## Quien acepta la oferta, usuario del portal
 - En una oferta **aceptada**: botón **«👤 Dar acceso al portal»**. Busca (o crea) la ficha de cliente por CIF, apunta a la persona en `cliente_usuarios` como **administradora de la cuenta** y, si lo hace Administración, le envía la **invitación** de Supabase para poner su contraseña. `lib/accesoPortal.js`.
@@ -284,3 +284,8 @@
 ## Correos de casa y correos genéricos
 - **Dominios internos** en un solo sitio (`lib/dominios.js`): tuconsultor.com, 3coreproyectos.com, institutoexcelencia.com y consultify.pro. Con cualquiera de ellos se puede invitar como Director de Proyecto o Consultor (Accesos y función admin-usuarios); el registro público avisa de que esas cuentas entran sin registrarse.
 - **Correos genéricos (Gmail, Hotmail…) como cliente, excepcionalmente**: el registro público los sigue rechazando (dice que pida la invitación a su consultor), pero Administración puede darles acceso con **✉ Invitar** desde Usuarios de la cuenta o con **Dar acceso al portal** desde la oferta aceptada: la excepción la decide el equipo, no el formulario.
+
+## Estructura del grupo · arrastrar y soltar
+- En la ficha de empresa, el organigrama del grupo se **edita arrastrando** (quien puede editar la ficha): una caja sobre otra → pasa a ser filial de esa; una filial sobre **«⤴ Sacar del grupo»** (aparece al arrastrar) → deja de colgar de nadie; una empresa de la lista lateral **«Añadir al grupo»** (con buscador) sobre una caja → entra en el grupo colgando de ella. Cada gesto guarda `empresa_matriz_id` al soltar; no hay botón de guardar.
+- No se puede colgar una empresa de sí misma ni de una de sus filiales (bucle): esas cajas se apagan mientras se arrastra. La caja destino se marca en naranja discontinuo con «Soltar aquí: pasa a ser filial».
+- La caja «Estructura del grupo» sale también en empresas sin grupo (para crearlo arrastrando); las cajas ahora son HTML sobre las líneas SVG, porque el arrastrar del navegador no funciona sobre SVG. Pulsar una caja sigue abriendo su ficha.

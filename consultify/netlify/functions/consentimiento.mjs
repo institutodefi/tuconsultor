@@ -86,7 +86,7 @@ async function registrarAceptacion(contacto, { canal, datos = true, marketing = 
     // Sin las columnas de la v126/v135 se registra lo que se pueda.
     await sb(`/rest/v1/contactos?id=eq.${contacto.id}`, { method: 'PATCH', body: marketing ? { consentimiento_marketing: true, consentimiento_fecha: ahora } : {}, headers: { Prefer: 'return=minimal' } });
   }
-  await sb('/rest/v1/consentimientos', { method: 'POST', body: { contacto_id: contacto.id, canal, acepta_datos: !!datos, acepta_marketing: !!marketing, texto_version: RGPD_VERSION, ip, user_agent: ua, nota, registrado_por: por }, headers: { Prefer: 'return=minimal' } });
+  await sb('/rest/v1/consentimientos_rgpd', { method: 'POST', body: { contacto_id: contacto.id, canal, acepta_datos: !!datos, acepta_marketing: !!marketing, texto_version: RGPD_VERSION, ip, user_agent: ua, nota, registrado_por: por }, headers: { Prefer: 'return=minimal' } });
   return { ok: true, fecha: ahora };
 }
 

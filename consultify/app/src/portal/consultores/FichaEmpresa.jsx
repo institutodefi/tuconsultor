@@ -1039,10 +1039,10 @@ export default function FichaEmpresa({
         {empresa.notas && <p className="mt-2 whitespace-pre-line rounded-lg bg-[#0D3242] p-2 text-[12.5px] text-[#CFE3E9]">{empresa.notas}</p>}
       </Caja>
 
-      {/* Grupo · solo si lo hay */}
-      {tieneGrupo && (
-        <Caja titulo="Estructura del grupo" resumen={matriz ? `filial de ${matriz.nombre}` : 'es matriz'}>
-          <OrganigramaGrupo empresas={empresas} empresaId={empresa.id} onSeleccionar={onSeleccionar} desnudo />
+      {/* Grupo · si lo hay, o si quien edita quiere crearlo arrastrando */}
+      {(tieneGrupo || puedeEditar) && (
+        <Caja titulo="Estructura del grupo" resumen={matriz ? `filial de ${matriz.nombre}` : tieneGrupo ? 'es matriz' : 'sin grupo · arrastra empresas para crearlo'} abiertaPorDefecto={tieneGrupo}>
+          <OrganigramaGrupo empresas={empresas} empresaId={empresa.id} onSeleccionar={onSeleccionar} desnudo puedeEditar={puedeEditar} onCambio={onCambio} />
         </Caja>
       )}
 
