@@ -118,6 +118,7 @@ export const GRUPOS_PORTAL = [
       { to: 'registro', label: 'Control de accesos', icon: 'shield-alert', roles: ['superadmin', 'admin'] },
       { to: 'accesibilidad', label: 'Accesibilidad AAA', icon: 'accessibility', roles: ['superadmin', 'admin', 'director'] },
       { to: 'accesos', label: 'Accesos', icon: 'key', roles: ['superadmin', 'admin'] },
+      { to: 'politicas', label: 'Políticas y avisos', icon: 'shield-check', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
     ],
   },
 ];

@@ -42,7 +42,7 @@ const horaSql = (h) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(h || '').tr
 
 export function campanaDe(r) {
   const id = String(r.id || '');
-  if (/^PV/i.test(id)) return 'premios';
+  if (/^PV/i.test(id) || /\/premios\//.test(r.imagen_url || '')) return 'premios';
   if (/^R\d/i.test(id) || /reel/.test(r.red || '')) return 'reels';
   if (/utm_campaign=orbita-ventajas/.test(r.texto || '') || /\/orbita\/V\d\d[A-Z]_/.test(r.imagen_url || '')) return 'orbita-ventajas';
   if (/\/orbita\//.test(r.enlace || '')) return 'orbita';

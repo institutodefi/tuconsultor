@@ -6,6 +6,7 @@ import Empresas from './consultores/Empresas.jsx';
 import Contactos from './consultores/Contactos.jsx';
 import Ofertas from './consultores/Ofertas.jsx';
 import Publicaciones from './consultores/Publicaciones.jsx';
+import Politicas from './consultores/Politicas.jsx';
 import ProyectoCliente from './cliente/ProyectoCliente.jsx';
 import ProyectosConfig from './consultores/ProyectosConfig.jsx';
 import Agenda from './consultores/Agenda.jsx';
@@ -227,6 +228,7 @@ export default function ConsultorPortal() {
               <Route path="contactos" element={<Guard ok={verCrm}><Contactos /></Guard>} />
               <Route path="ofertas" element={<Guard ok={verClientes}><Ofertas /></Guard>} />
               <Route path="publicaciones" element={<Guard ok={['superadmin', 'admin', 'gestion'].includes(role)}><Publicaciones /></Guard>} />
+              <Route path="politicas" element={<Politicas />} />
               <Route path="*" element={<Navigate to="." replace />} />
             </Routes>
           </main>

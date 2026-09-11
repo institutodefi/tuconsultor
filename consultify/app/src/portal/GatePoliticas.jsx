@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth.jsx';
+import TextoPoliticas from '../components/TextoPoliticas.jsx';
 
 // Gate que se muestra en el primer login: el usuario debe aceptar las políticas
 // de seguridad y confidencialidad antes de poder usar el portal.
@@ -21,33 +22,13 @@ export default function GatePoliticas() {
       <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-[#10394A] shadow-2xl">
         <div className="bg-navy-900 px-6 py-5">
           <p className="text-xs font-bold uppercase tracking-wider text-brand-orange">Antes de empezar</p>
-          <h1 className="mt-1 text-xl font-extrabold text-white">Políticas de seguridad y confidencialidad</h1>
+          <h1 className="mt-1 text-xl font-extrabold text-white">Políticas de seguridad, confidencialidad y herramientas</h1>
         </div>
 
         <div className="max-h-[52vh] space-y-4 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-[#B9D2DA]">
-          <p>Como miembro del equipo de Consultify, al acceder a la plataforma aceptas cumplir las siguientes obligaciones de seguridad y confidencialidad:</p>
-
-          <div>
-            <h2 className="font-extrabold text-[#EAF4F7]">1. Confidencialidad</h2>
-            <p>Toda la información de clientes, proyectos, ofertas, precios y datos personales a la que accedas es estrictamente confidencial. No la compartirás, copiarás ni divulgarás fuera de la organización, ni durante ni después de tu relación con la empresa.</p>
-          </div>
-
-          <div>
-            <h2 className="font-extrabold text-[#EAF4F7]">2. Protección de datos (RGPD/LOPDGDD)</h2>
-            <p>Tratarás los datos personales de clientes y contactos conforme al Reglamento (UE) 2016/679 y la LOPDGDD, únicamente para las finalidades del proyecto y bajo las instrucciones de la organización, aplicando las medidas de seguridad establecidas.</p>
-          </div>
-
-          <div>
-            <h2 className="font-extrabold text-[#EAF4F7]">3. Seguridad de la información</h2>
-            <p>Custodiarás tus credenciales de acceso, no las compartirás con terceros, usarás contraseñas robustas y notificarás de inmediato cualquier incidente de seguridad o acceso no autorizado que detectes.</p>
-          </div>
-
-          <div>
-            <h2 className="font-extrabold text-[#EAF4F7]">4. Uso adecuado</h2>
-            <p>Utilizarás la plataforma y la información exclusivamente para el desempeño de tus funciones profesionales, sin extraer datos para fines personales ni ajenos a la organización.</p>
-          </div>
-
-          <p className="text-xs text-[#9FC0CB]">La aceptación queda registrada con fecha y hora. Si tienes dudas sobre estas políticas, consulta con la dirección antes de continuar.</p>
+          <p>Como miembro del equipo de Consultify, al acceder a la plataforma aceptas cumplir las siguientes obligaciones de seguridad, confidencialidad y uso de las herramientas:</p>
+          <TextoPoliticas compacto />
+          <p className="text-xs text-[#9FC0CB]">La aceptación queda registrada con fecha y hora. Estas políticas quedan siempre a mano en Organización → Políticas y avisos. Si tienes dudas, consulta con la dirección antes de continuar.</p>
         </div>
 
         <div className="border-t border-[#1E5468] px-6 py-5">

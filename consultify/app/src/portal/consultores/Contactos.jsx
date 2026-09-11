@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImagenSubible, { Avatar } from '../../components/ImagenSubible.jsx';
@@ -9,6 +9,8 @@ import { listTable, insertRow, updateRow, deleteRow, brevoFn , explicarErrorBd }
 import { useAuth } from '../../lib/auth.jsx';
 import { emailValido, semaforoContacto, ROLES_CONTACTO, ROL_LABEL , nombreVisible } from '../../lib/crm.js';
 import { puedeEditarContactos } from '../../lib/crm.js';
+import { linkWhatsApp } from '../../lib/telefono.js';
+import BuscadorContactoIA from '../../components/BuscadorContactoIA.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONTACTOS · las personas del CRM.
@@ -36,7 +38,9 @@ const FILTROS = [
   ['huerfanos',  'Sin empresa o sin email'],
 ];
 const ROLES_FILTRO = [['', 'Rol: todos'], ['directivo', 'Directivo'], ['facturacion', 'Facturación'], ['proyecto', 'Proyecto'], ['secundario', 'Secundario'], ['principal', 'Principal de su empresa']];
-const ORIGENES = [['', 'Origen: todos'], ['manual', 'Manual'], ['calculadora', 'Pidió oferta (web)'], ['holded', 'Holded'], ['importacion', 'Importación'], ['web', 'Web']];
+const ORIGENES = [['', 'Origen: todos'], ['manual', 'Manual'], ['calculadora', 'Pidió oferta (web)'], ['holded', 'Holded'], ['importacion', 'Importación'], ['web', 'Web'], ['ia-web', 'Buscado con IA (LinkedIn/web)']];
+const TAMANOS = [10, 25, 50, 100, 0];   // 0 = todos
+const leerTamano = () => { try { const g = localStorage.getItem('contactos_por_pagina'); if (g === null) return 25; const v = Number(g); return TAMANOS.includes(v) ? v : 25; } catch { return 25; } };
 const ORDENES = [['nombre', 'Nombre'], ['apellidos', 'Apellidos'], ['empresa', 'Empresa'], ['cargo', 'Cargo'], ['email', 'Correo'], ['reciente', 'Última modificación'], ['creado', 'Fecha de alta']];
 const SS = (v) => String(v ?? '');
 
@@ -61,11 +65,16 @@ export default function Contactos() {
   const [form, setForm] = useState(null);
   const [msg, setMsg] = useState(null);
   const [sync, setSync] = useState(false);
-  // Fila desplegada para ver la ficha sin salir de la tabla.
-  const [abierta, setAbierta] = useState(null);
+  // Paginación (v279ap): 10 · 25 · 50 · 100 · todos, recordado en el navegador.
+  const [porPagina, setPorPagina] = useState(leerTamano);
+  const [pagina, setPagina] = useState(1);
+  const [buscadorIA, setBuscadorIA] = useState(false);
+  const { perfil } = useAuth();
 
   const sel = params.get('c');
   const seleccionar = (id) => { setForm(null); if (id) setParams({ c: String(id) }); else setParams({}); };
+  // Al pinchar en un contacto se abre su ficha en un popup, con la edición dentro.
+  const abrir = (c) => setForm({ ...c, _teniaConsent: c.consentimiento_marketing });
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -137,7 +146,7 @@ export default function Contactos() {
     });
   }, [contactos, vinculos, empresas, q, filtro, empresaFiltro, rolFiltro, origenFiltro, orden, desc]);
   const cabecera = (k, etq, cls = '') => (
-    <th className={`px-2 py-1.5 ${cls}`}>
+    <th className={`px-2 py-1 ${cls}`}>
       <button type="button" onClick={() => { if (orden === k) setDesc(!desc); else { setOrden(k); setDesc(false); } }}
         className={`inline-flex items-center gap-1 uppercase hover:text-[#EAF4F7] ${orden === k ? 'text-[#EAF4F7]' : ''}`} title="Ordenar">
         {etq}{orden === k ? <span className="text-brand-orange">{desc ? '▼' : '▲'}</span> : null}
@@ -145,7 +154,18 @@ export default function Contactos() {
     </th>
   );
 
-  const contacto = sel ? contactos.find((c) => String(c.id) === String(sel)) : null;
+  // Enlace directo (?c=id, desde ofertas o empresas): se abre el popup de ese contacto.
+  useEffect(() => {
+    if (!sel || cargando) return;
+    const c = contactos.find((x) => String(x.id) === String(sel));
+    if (c) abrir(c);
+  }, [sel, cargando]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPagina(1); }, [q, filtro, empresaFiltro, rolFiltro, origenFiltro, orden, desc, porPagina]);
+  const totalPaginas = porPagina ? Math.max(1, Math.ceil(lista.length / porPagina)) : 1;
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const visibles = porPagina ? lista.slice((paginaActual - 1) * porPagina, paginaActual * porPagina) : lista;
+  const cambiarTamano = (n) => { setPorPagina(n); try { localStorage.setItem('contactos_por_pagina', String(n)); } catch { /* sin almacenamiento */ } };
+  const mensajeWA = (c) => `Hola ${c.nombre || ''}, soy ${perfil?.nombre || 'del equipo'} de TuConsultor.`;
   const nHuerfanos = useMemo(() => contactos.filter((c) =>
     !vinculos.some((v) => String(v.contacto_id) === String(c.id)) || !emailValido(c.email)).length,
     [contactos, vinculos]);
@@ -235,8 +255,11 @@ export default function Contactos() {
         telefono: form.telefono?.trim() || null,
         movil: form.movil?.trim() || null,
         consentimiento_marketing: !!form.consentimiento_marketing,
+        linkedin_url: form.linkedin_url?.trim() || null,
       };
       if (form.consentimiento_marketing && !form._teniaConsent) payload.consentimiento_fecha = new Date().toISOString();
+      if (form.origen === 'ia-web') { payload.origen = 'ia-web'; payload.fuente_datos = form.fuente_datos?.trim() || null; payload.notas = form.notas || null; payload.revisado = true; }
+      if (form._informado) payload.informado_art14_en = new Date().toISOString();
 
       if (form.id) {
         await updateRow('contactos', form.id, payload);
@@ -333,10 +356,11 @@ export default function Contactos() {
         </div>
         {puedeEditar && (
           <div className="flex flex-wrap gap-2">
-            <button onClick={sincronizarTodos} disabled={sync} className="btn-ghost !px-4 !py-2 text-sm disabled:opacity-40">
+            <button onClick={sincronizarTodos} disabled={sync} className="btn-ghost !px-3 !py-1.5 text-xs disabled:opacity-40">
               {sync ? 'Enviando…' : '✉ Sincronizar todos'}
             </button>
-            <button onClick={() => { setForm({ ...VACIO }); setParams({}); }} className="btn-orange">+ Nuevo contacto</button>
+            <button onClick={() => setBuscadorIA(true)} className="btn-ghost !px-3 !py-1.5 text-xs" title="Busca en LinkedIn y en la web la información profesional pública de una persona y la añade al CRM">✦ Buscar en LinkedIn</button>
+            <button onClick={() => { setForm({ ...VACIO }); setParams({}); }} className="btn-orange !px-3 !py-1.5 text-xs">+ Nuevo contacto</button>
           </div>
         )}
       </div>
@@ -401,107 +425,82 @@ export default function Contactos() {
         nombreDe={(c) => `${c.nombre} ${c.apellidos || ''}`.trim()} />
 
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
-        <div className="overflow-x-auto rounded-2xl border border-[#1E5468]">
-          <table className="w-full min-w-[420px] text-[12.5px]">
+        <>
+        {/* Tabla estrecha y fija (v279ap): cada columna con su ancho máximo, texto
+            de 12 px y filas bajas. En pantallas pequeñas se ocultan columnas y el
+            dato pasa debajo del nombre; nunca desaparece. Pinchar en la persona
+            abre su ficha en un popup. */}
+        <div className="mx-auto w-full max-w-[1180px] overflow-hidden rounded-2xl border border-[#1E5468]">
+          <table className="w-full table-fixed text-[12px]">
             <thead>
-              <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
-                <th className="w-8 px-2 py-1.5">
+              <tr className="border-b border-[#1E5468] bg-[#0D3242] text-left text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[#7FA7B4]">
+                <th className="w-7 px-1.5 py-1">
                   <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
                 </th>
                 {cabecera('nombre', 'Nombre')}
-                {cabecera('cargo', 'Cargo', 'hidden lg:table-cell')}
-                {cabecera('email', 'Correo', 'hidden sm:table-cell')}
-                <th className="px-2 py-1.5">Móvil</th>
-                {cabecera('empresa', 'Empresa', 'hidden md:table-cell')}
-                <th className="hidden px-2 py-1.5 xl:table-cell">RGPD</th>
-                <th className="w-14 px-2 py-1.5 text-right">Ficha</th>
+                {cabecera('cargo', 'Cargo', 'hidden w-[130px] xl:table-cell')}
+                {cabecera('email', 'Correo', 'hidden w-[200px] sm:table-cell')}
+                <th className="w-[118px] px-2 py-1">Móvil</th>
+                {cabecera('empresa', 'Empresa', 'hidden w-[170px] md:table-cell')}
+                <th className="hidden w-[110px] px-2 py-1 2xl:table-cell">RGPD</th>
+                <th className="w-9 px-2 py-1 text-right"> </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#153F52]">
-              {lista.map((c) => {
+              {visibles.map((c) => {
                 const emps = empresasDe(c.id);
                 const st = semaforoContacto(c, emps.length);
                 const marcado = lote.marcados.has(String(c.id));
-                const desplegada = String(abierta) === String(c.id);
+                const wa = c.movil ? linkWhatsApp(c.movil, mensajeWA(c)) : '';
                 return (
-                  <Fragment key={c.id}>
-                    <tr className={marcado ? 'bg-brand-orange/[0.07]' : desplegada ? 'bg-white/[0.04]' : undefined}>
-                      <td className="px-2 py-1">
-                        <input type="checkbox" checked={marcado} onChange={() => lote.alternar(c.id)}
-                          aria-label={`Marcar ${c.nombre}`} />
-                      </td>
-                      <td className="px-2 py-1">
-                        <button onClick={() => setAbierta(desplegada ? null : c.id)}
-                          className="flex w-full items-center gap-1.5 text-left">
-                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
-                            title={st.motivos.join(' · ') || 'Ficha completa'} />
-                          <Avatar src={c.foto_url} inicial={(c.nombre || '?').charAt(0)} tamano={22} />
-                          <span className="min-w-0">
-                            <span className="block truncate font-bold leading-tight text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}{c.revisado === false && <span className="ml-1.5 text-[9.5px] font-extrabold uppercase text-amber-200">sin revisar</span>}</span>
-                            <span className="block truncate text-[11px] leading-tight text-[#7FA7B4] lg:hidden">{c.cargo || ''}</span>
-                            {/* En móvil, correo y empresa se ocultan como
-                                columna pero aparecen aquí: ocultar un dato sin
-                                dejarlo a mano es peor que la tabla ancha. */}
-                            <span className="block truncate text-[11px] text-[#7FA7B4] sm:hidden">
-                              {emailValido(c.email) ? c.email : 'sin correo'}
-                            </span>
-                            <span className="block truncate text-[11px] text-[#7FA7B4] md:hidden">
-                              {emps.length ? emps.map((x) => nombreVisible(x.e)).join(' · ') : 'sin empresa'}
-                            </span>
-                          </span>
-                        </button>
-                      </td>
-                      <td className="hidden px-2 py-1 text-[#9FC0CB] lg:table-cell"><span className="block truncate">{c.cargo || <span className="text-[#5E8494]">—</span>}</span></td>
-                      <td className="hidden px-2 py-1 text-[#9FC0CB] sm:table-cell">
-                        {emailValido(c.email)
-                          ? <a href={`mailto:${c.email}`} className="block truncate hover:text-brand-orange">{c.email}</a>
-                          : <span className="font-bold text-red-300">sin correo</span>}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-[#9FC0CB]">
-                        {c.movil || c.telefono
-                          ? <a href={`tel:${(c.movil || c.telefono).replace(/\s/g, '')}`} className="hover:text-brand-orange">{c.movil || c.telefono}</a>
-                          : <span className="text-[#5E8494]">—</span>}
-                      </td>
-                      <td className="hidden px-2 py-1 text-[#B9D2DA] md:table-cell">
-                        {emps.length
-                          ? <span className="block truncate" title={emps.map((x) => nombreVisible(x.e)).join(' · ')}>
-                              {emps.map((x) => nombreVisible(x.e)).join(' · ')}</span>
-                          : <span className="font-bold text-red-300">sin empresa</span>}
-                      </td>
-                      <td className="hidden px-2 py-1 xl:table-cell">
-                        <span className="flex flex-wrap gap-1">
-                          {c.rgpd_aceptado ? <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9.5px] text-emerald-300" title="Aceptó el tratamiento de datos">✓ RGPD</span> : <span className="chip !px-1.5 !py-0 bg-amber-400/15 text-[9.5px] text-amber-200">pendiente</span>}
-                          {c.consentimiento_marketing && <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9.5px] text-emerald-300" title="Acepta comunicaciones">✓ com.</span>}
-                          {c.brevo_sincronizado_en && <span className="chip !px-1.5 !py-0 bg-brand-verde/15 text-[9.5px] text-brand-verdeTexto">Brevo</span>}
+                  <tr key={c.id} className={`${marcado ? 'bg-brand-orange/[0.07]' : ''} hover:bg-white/[0.035]`}>
+                    <td className="px-1.5 py-0.5 align-middle">
+                      <input type="checkbox" checked={marcado} onChange={() => lote.alternar(c.id)} aria-label={`Marcar ${c.nombre}`} />
+                    </td>
+                    <td className="px-2 py-0.5 align-middle">
+                      <button onClick={() => abrir(c)} className="flex w-full min-w-0 items-center gap-1.5 text-left" title="Abrir la ficha">
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`} title={st.motivos.join(' · ') || 'Ficha completa'} />
+                        <Avatar src={c.foto_url} inicial={(c.nombre || '?').charAt(0)} tamano={20} />
+                        <span className="min-w-0">
+                          <span className="block truncate font-bold leading-tight text-[#EAF4F7] hover:text-brand-orange">{c.nombre} {c.apellidos || ''}{c.revisado === false && <span className="ml-1.5 text-[9px] font-extrabold uppercase text-amber-200">sin revisar</span>}</span>
+                          <span className="block truncate text-[10.5px] leading-tight text-[#7FA7B4] xl:hidden">{c.cargo || ''}</span>
+                          <span className="block truncate text-[10.5px] leading-tight text-[#7FA7B4] sm:hidden">{emailValido(c.email) ? c.email : 'sin correo'}</span>
+                          <span className="block truncate text-[10.5px] leading-tight text-[#7FA7B4] md:hidden">{emps.length ? emps.map((x) => nombreVisible(x.e)).join(' · ') : 'sin empresa'}</span>
                         </span>
-                      </td>
-                      <td className="px-2 py-1 text-right">
-                        <button onClick={() => setAbierta(desplegada ? null : c.id)}
-                          className="text-[11px] font-bold text-[#7FA7B4] hover:text-brand-orange"
-                          aria-expanded={desplegada}>
-                          {desplegada ? 'Cerrar ▲' : 'Abrir ▼'}
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Edición desplegada bajo su propia fila: se ve a quién se
-                        está editando sin perder de vista el resto de la lista. */}
-                    {desplegada && (
-                      <tr className="bg-[#0B2E3D]">
-                        <td colSpan={8} className="px-3 py-3">
-                          <FichaContacto
-                            contacto={c} empresas={emps} puedeEditar={puedeEditar} puedeBorrar={puedeBorrar}
-                            sync={sync}
-                            onEditar={() => setForm({ ...c, _teniaConsent: c.consentimiento_marketing })}
-                            onBorrar={() => borrar(c)}
-                            onBrevo={() => sincronizarBrevo(c)}
-                            onEmpresa={(e) => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
-                            onRecargar={cargar}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                      </button>
+                    </td>
+                    <td className="hidden px-2 py-0.5 align-middle text-[#9FC0CB] xl:table-cell"><span className="block truncate" title={c.cargo || ''}>{c.cargo || <span className="text-[#5E8494]">—</span>}</span></td>
+                    <td className="hidden px-2 py-0.5 align-middle text-[#9FC0CB] sm:table-cell">
+                      {emailValido(c.email)
+                        ? <a href={`mailto:${c.email}`} className="block truncate hover:text-brand-orange" title={c.email}>{c.email}</a>
+                        : <span className="font-bold text-red-300">sin correo</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-0.5 align-middle text-[#9FC0CB]">
+                      {c.movil || c.telefono
+                        ? <span className="inline-flex items-center gap-1.5">
+                            <a href={`tel:${(c.movil || c.telefono).replace(/\s/g, '')}`} className="hover:text-brand-orange">{c.movil || c.telefono}</a>
+                            {wa && <a href={wa} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp" aria-label="WhatsApp" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#25D366]/15 text-[11px] text-[#5EE29A] hover:bg-[#25D366]/30">
+                              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7a2.8 2.8 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3z"/></svg>
+                            </a>}
+                          </span>
+                        : <span className="text-[#5E8494]">—</span>}
+                    </td>
+                    <td className="hidden px-2 py-0.5 align-middle text-[#B9D2DA] md:table-cell">
+                      {emps.length
+                        ? <span className="block truncate" title={emps.map((x) => nombreVisible(x.e)).join(' · ')}>{emps.map((x) => nombreVisible(x.e)).join(' · ')}</span>
+                        : <span className="font-bold text-red-300">sin empresa</span>}
+                    </td>
+                    <td className="hidden px-2 py-0.5 align-middle 2xl:table-cell">
+                      <span className="flex flex-wrap gap-1">
+                        {c.rgpd_aceptado ? <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300" title="Aceptó el tratamiento de datos">✓ RGPD</span> : <span className="chip !px-1.5 !py-0 bg-amber-400/15 text-[9px] text-amber-200">pendiente</span>}
+                        {c.consentimiento_marketing && <span className="chip !px-1.5 !py-0 bg-emerald-500/15 text-[9px] text-emerald-300" title="Acepta comunicaciones">✓ com.</span>}
+                        {c.brevo_sincronizado_en && <span className="chip !px-1.5 !py-0 bg-brand-verde/15 text-[9px] text-brand-verdeTexto">Brevo</span>}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-0.5 text-right align-middle">
+                      <button onClick={() => abrir(c)} className="text-[11px] font-bold text-[#7FA7B4] hover:text-brand-orange" title={puedeEditar ? 'Editar' : 'Ver ficha'}>{puedeEditar ? '✎' : '👁'}</button>
+                    </td>
+                  </tr>
                 );
               })}
               {!lista.length && (
@@ -512,24 +511,68 @@ export default function Contactos() {
             </tbody>
           </table>
         </div>
+        {/* Paginación */}
+        <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-2 text-[11.5px] text-[#7FA7B4]">
+          <span className="inline-flex items-center gap-1">
+            Ver
+            {TAMANOS.map((n) => (
+              <button key={n} type="button" onClick={() => cambiarTamano(n)} className={`rounded px-1.5 py-0.5 font-bold ${porPagina === n ? 'bg-brand-orange text-[#0A2B3A]' : 'hover:text-[#EAF4F7]'}`}>{n || 'todos'}</button>
+            ))}
+            <span className="ml-2">{lista.length ? `${porPagina ? (paginaActual - 1) * porPagina + 1 : 1}–${porPagina ? Math.min(paginaActual * porPagina, lista.length) : lista.length} de ${lista.length}` : '0'}</span>
+          </span>
+          {totalPaginas > 1 && (
+            <span className="inline-flex items-center gap-1">
+              <button type="button" onClick={() => setPagina(Math.max(1, paginaActual - 1))} disabled={paginaActual === 1} className="rounded px-1.5 py-0.5 font-bold hover:text-[#EAF4F7] disabled:opacity-30">‹</button>
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).filter((n) => n === 1 || n === totalPaginas || Math.abs(n - paginaActual) <= 2).reduce((acc, n, i, arr) => { if (i && n - arr[i - 1] > 1) acc.push('…'); acc.push(n); return acc; }, []).map((n, i) => (
+                n === '…' ? <span key={`e${i}`} className="px-1">…</span>
+                : <button key={n} type="button" onClick={() => setPagina(n)} className={`rounded px-1.5 py-0.5 font-bold ${n === paginaActual ? 'bg-white/10 text-[#EAF4F7]' : 'hover:text-[#EAF4F7]'}`}>{n}</button>
+              ))}
+              <button type="button" onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))} disabled={paginaActual === totalPaginas} className="rounded px-1.5 py-0.5 font-bold hover:text-[#EAF4F7] disabled:opacity-30">›</button>
+            </span>
+          )}
+        </div>
+        </>
       )}
 
       {/* Alta y edición en diálogo: encima de la lista, sin empujar la tabla
           hacia abajo ni obligar a buscar dónde ha aparecido el formulario. */}
       {form && (
         <DialogoFicha
-          titulo={form.id ? 'Editar contacto' : 'Nuevo contacto'}
-          subtitulo={form.id ? `${form.nombre} ${form.apellidos || ''}`.trim() : 'Todo contacto necesita empresa y correo'}
-          onCerrar={() => setForm(null)}
+          titulo={form.id ? (puedeEditar ? 'Contacto' : 'Ficha del contacto') : 'Nuevo contacto'}
+          subtitulo={form.id ? `${form.nombre} ${form.apellidos || ''}`.trim() : form.origen === 'ia-web' ? 'Propuesto por la búsqueda con IA: revisa los datos antes de guardar' : 'Todo contacto necesita empresa y correo'}
+          onCerrar={() => { setForm(null); if (sel) setParams({}); }}
           haycambios
-          ancho="760px"
+          ancho="800px"
           pie={<>
-            <button onClick={() => setForm(null)} className="btn-ghost !px-4 !py-1.5 text-[13px]">Cancelar</button>
-            <button onClick={guardar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>
+            <button onClick={() => { setForm(null); if (sel) setParams({}); }} className="btn-ghost !px-4 !py-1.5 text-[13px]">{puedeEditar ? 'Cancelar' : 'Cerrar'}</button>
+            {puedeEditar && <button onClick={guardar} className="btn-orange !px-4 !py-1.5 text-[13px]">Guardar</button>}
           </>}
         >
-          <FormContacto form={form} setForm={setForm} empresas={empresas} />
+          {form.id && (() => {
+            const c = contactos.find((x) => String(x.id) === String(form.id)) || form;
+            return (
+              <div className="mb-3 border-b border-[#1E5468] pb-3">
+                <FichaContacto
+                  contacto={c} empresas={empresasDe(c.id)} puedeEditar={puedeEditar} puedeBorrar={puedeBorrar} sync={sync}
+                  onBorrar={() => { setForm(null); borrar(c); }}
+                  onBrevo={() => sincronizarBrevo(c)}
+                  onEmpresa={(e) => { setForm(null); navigate({ pathname: '../empresas', search: `?e=${e.id}` }); }}
+                  onRecargar={cargar}
+                  whatsapp={c.movil ? linkWhatsApp(c.movil, mensajeWA(c)) : ''}
+                />
+              </div>
+            );
+          })()}
+          {puedeEditar ? <FormContacto form={form} setForm={setForm} empresas={empresas} /> : null}
         </DialogoFicha>
+      )}
+
+      {buscadorIA && (
+        <BuscadorContactoIA
+          empresas={empresas}
+          onCerrar={() => setBuscadorIA(false)}
+          onAnadir={(p) => { setBuscadorIA(false); setForm({ ...VACIO, ...p, _empresa_id: p._empresa_id || '', _rol: p._rol || 'secundario', origen: 'ia-web' }); }}
+        />
       )}
     </div>
   );
@@ -539,7 +582,7 @@ export default function Contactos() {
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha desplegada bajo la fila del contacto
 // ════════════════════════════════════════════════════════════════════════════
-function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onEditar, onBorrar, onBrevo, onEmpresa, onRecargar }) {
+function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onBorrar, onBrevo, onEmpresa, onRecargar, whatsapp = '' }) {
   const s = semaforoContacto(contacto, empresas.length);
   const puedeBrevo = emailValido(contacto.email) && contacto.consentimiento_marketing;
   return (
@@ -554,10 +597,15 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
             {contacto.cargo && <span className="ml-2 font-semibold text-[#9FC0CB]">{contacto.cargo}</span>}
           </p>
           <p className="mt-0.5 text-[#7FA7B4]">
-            {emailValido(contacto.email) ? contacto.email : <span className="font-bold text-red-300">sin email válido</span>}
-            {contacto.movil ? ` · móvil ${contacto.movil}` : ''}
+            {emailValido(contacto.email) ? <a href={`mailto:${contacto.email}`} className="hover:text-brand-orange">{contacto.email}</a> : <span className="font-bold text-red-300">sin email válido</span>}
+            {contacto.movil ? <> · móvil <a href={`tel:${contacto.movil.replace(/\s/g, '')}`} className="hover:text-brand-orange">{contacto.movil}</a></> : ''}
             {contacto.telefono ? ` · tel. ${contacto.telefono}` : ''}
+            {whatsapp && <> · <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="font-bold text-[#5EE29A] hover:underline">WhatsApp</a></>}
+            {contacto.linkedin_url && <> · <a href={contacto.linkedin_url} target="_blank" rel="noopener noreferrer" className="font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">LinkedIn</a></>}
           </p>
+          {contacto.origen === 'ia-web' && (
+            <p className="mt-1 text-[11px] text-amber-200">Datos obtenidos de fuentes públicas (LinkedIn/web){contacto.fuente_datos ? `: ${contacto.fuente_datos}` : ''}. {contacto.informado_art14_en ? `Informado el ${new Date(contacto.informado_art14_en).toLocaleDateString('es-ES')}.` : 'Pendiente de informarle (art. 14 RGPD, en el primer contacto o antes de un mes).'}</p>
+          )}
           <div className="mt-1.5">
             <ConsentimientoRgpd contacto={contacto} puedeEditar={!!puedeEditar} onCambio={onRecargar} compacto />
             {contacto.brevo_sincronizado_en && <span className="chip mt-1 !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
@@ -566,7 +614,6 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
         </div>
         {puedeEditar && (
           <div className="flex shrink-0 flex-wrap gap-1.5">
-            <button onClick={onEditar} className="btn-ghost !px-2.5 !py-1 text-[11.5px]">✎ Editar</button>
             <button onClick={onBrevo} disabled={sync || !puedeBrevo}
               title={puedeBrevo ? 'Alta con doble opt-in' : 'Necesita email válido y consentimiento RGPD'}
               className="btn-ghost !px-2.5 !py-1 text-[11.5px] disabled:opacity-40">
@@ -645,6 +692,13 @@ function FormContacto({ form, setForm, empresas }) {
         <div className="campo"><label className="label" htmlFor="ct-tel">Teléfono</label>
           <input id="ct-tel" type="tel" className="input" value={form.telefono || ''} onChange={set('telefono')} />
           <p className="campo-nota">Fijo o centralita.</p></div>
+        <div className="campo"><label className="label" htmlFor="ct-linkedin">LinkedIn</label>
+          <input id="ct-linkedin" type="url" className="input" placeholder="https://www.linkedin.com/in/…" value={form.linkedin_url || ''} onChange={set('linkedin_url')} /></div>
+        {form.origen === 'ia-web' && (
+          <div className="campo"><label className="label">Fuente de los datos</label>
+            <input className="input" value={form.fuente_datos || ''} onChange={set('fuente_datos')} />
+            <p className="campo-nota">Obtenidos de fuentes públicas: hay que informar a la persona (art. 14 RGPD) en el primer contacto o antes de un mes.</p></div>
+        )}
       </div>
 
       {!form.id && (
@@ -667,6 +721,12 @@ function FormContacto({ form, setForm, empresas }) {
         </div>
       )}
 
+      {form.origen === 'ia-web' && !form.informado_art14_en && (
+        <label className="flex items-start gap-2 rounded-xl bg-amber-400/10 p-2.5 text-[12.5px] font-semibold text-amber-100">
+          <input type="checkbox" className="mt-0.5" checked={!!form._informado} onChange={(e) => setForm({ ...form, _informado: e.target.checked })} />
+          <span>Ya le he informado de que tenemos sus datos y de dónde salen (art. 14 RGPD).</span>
+        </label>
+      )}
       <label className="flex items-start gap-2 rounded-xl bg-white/5 p-2.5 text-[12.5px] font-semibold text-[#9FC0CB]">
         <input type="checkbox" className="mt-0.5" checked={!!form.consentimiento_marketing}
           onChange={(e) => setForm({ ...form, consentimiento_marketing: e.target.checked, _teniaConsent: form.consentimiento_marketing })} />
