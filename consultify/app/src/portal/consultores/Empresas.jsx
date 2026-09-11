@@ -4,6 +4,7 @@ import SincronizarCrm from '../../components/SincronizarCrm.jsx';
 import { listTable, updateRow, deleteRow } from '../../lib/data.js';
 import { useAuth } from '../../lib/auth.jsx';
 import { semaforoEmpresa, ESTADOS_COMERCIALES , nombreVisible, tieneComercialDistinto } from '../../lib/crm.js';
+import { Avatar } from '../../components/ImagenSubible.jsx';
 import FichaEmpresa from './FichaEmpresa.jsx';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
 import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
@@ -31,6 +32,10 @@ const FILTROS = [
 ];
 
 const PUNTO = { rojo: 'bg-red-500', ambar: 'bg-brand-orange', verde: 'bg-emerald-400' };
+const ORDENES = [
+  ['nombre', 'Nombre'], ['poblacion', 'Población'], ['estado', 'Estado'], ['contactos', 'Nº contactos'], ['reciente', 'Última modificación'],
+];
+const S = (v) => String(v ?? '');
 
 export default function Empresas() {
   const { role, demo } = useAuth();
@@ -44,7 +49,14 @@ export default function Empresas() {
   const [vinculos, setVinculos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
-  const [filtro, setFiltro] = useState('todas');
+  // El filtro vive en la ruta (empresas?filtro=cliente): así «Clientes» del
+  // menú abre la misma lista ya filtrada y el enlace se puede compartir.
+  const filtro = FILTROS.some(([k]) => k === params.get('filtro')) ? params.get('filtro') : 'todas';
+  const setFiltro = (k) => { const n = new URLSearchParams(params); if (k === 'todas') n.delete('filtro'); else n.set('filtro', k); n.delete('e'); setParams(n); };
+  const [estado, setEstado] = useState('');        // estado comercial
+  const [provincia, setProvincia] = useState('');
+  const [orden, setOrden] = useState('nombre');
+  const [desc, setDesc] = useState(false);
   const [nueva, setNueva] = useState(false);
   const [diagBd, setDiagBd] = useState(null);   // comprobación de escritura en la base
   const [errorCarga, setErrorCarga] = useState(null);  // motivo real si la lectura falla
@@ -56,7 +68,7 @@ export default function Empresas() {
   }
 
   const sel = params.get('e');
-  const seleccionar = (id) => { setNueva(false); if (id) setParams({ e: String(id) }); else setParams({}); };
+  const seleccionar = (id) => { setNueva(false); const n = new URLSearchParams(params); if (id) n.set('e', String(id)); else n.delete('e'); setParams(n); };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -93,11 +105,31 @@ export default function Empresas() {
       // Fichas creadas solas al pedir una oferta desde la web: los datos los
       // tecleó el cliente y nadie del equipo los ha mirado todavía.
       if (filtro === 'sin_revisar' && e.revisado !== false) return false;
+      if (estado && (e.estado_comercial || 'potencial') !== estado) return false;
+      if (provincia && S(e.provincia).trim().toLowerCase() !== provincia.toLowerCase()) return false;
       if (!t) return true;
-      return [e.nombre, e.nombre_comercial, e.cif, e.poblacion, e.email, e.web]
+      return [e.nombre, e.nombre_comercial, e.cif, e.poblacion, e.provincia, e.email, e.web, e.telefono, e.codigo, ...(Array.isArray(e.tags) ? e.tags : [])]
         .filter(Boolean).join(' ').toLowerCase().includes(t);
+    }).sort((a, b) => {
+      const etq = (e) => ESTADOS_COMERCIALES.find((x) => x.k === e.estado_comercial)?.label || 'Potencial';
+      let r = 0;
+      if (orden === 'nombre') r = nombreVisible(a).localeCompare(nombreVisible(b), 'es');
+      else if (orden === 'poblacion') r = S(a.poblacion).localeCompare(S(b.poblacion), 'es') || nombreVisible(a).localeCompare(nombreVisible(b), 'es');
+      else if (orden === 'estado') r = etq(a).localeCompare(etq(b), 'es') || nombreVisible(a).localeCompare(nombreVisible(b), 'es');
+      else if (orden === 'contactos') r = (semaforos.get(String(a.id))?.n || 0) - (semaforos.get(String(b.id))?.n || 0);
+      else if (orden === 'reciente') r = S(a.updated_at || a.creado).localeCompare(S(b.updated_at || b.creado));
+      return desc ? -r : r;
     });
-  }, [empresas, q, filtro, semaforos]);
+  }, [empresas, q, filtro, semaforos, estado, provincia, orden, desc]);
+  const provincias = useMemo(() => [...new Set(empresas.map((e) => S(e.provincia).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), [empresas]);
+  const cabecera = (k, etq, cls = '') => (
+    <th className={`px-3 py-2 text-left ${cls}`}>
+      <button type="button" onClick={() => { if (orden === k) setDesc(!desc); else { setOrden(k); setDesc(false); } }}
+        className={`inline-flex items-center gap-1 uppercase hover:text-[#EAF4F7] ${orden === k ? 'text-[#EAF4F7]' : ''}`} title="Ordenar">
+        {etq}{orden === k ? <span className="text-brand-orange">{desc ? '▼' : '▲'}</span> : null}
+      </button>
+    </th>
+  );
 
   // ── Acciones en lote ──
   const lote = useLote(lista, cargar);
@@ -187,7 +219,7 @@ export default function Empresas() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">CRM</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">Empresas</h1>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">{filtro === 'cliente' ? 'Clientes' : filtro === 'proveedor' ? 'Proveedores' : filtro === 'potencial' ? 'Potenciales' : 'Empresas y clientes'}</h1>
           <p className="mt-1 text-sm font-medium text-[#9FC0CB]">
             Clientes, proveedores y potenciales en una sola ficha. Cada empresa lleva sus contactos y, si es proveedor, su homologación.
           </p>
@@ -287,36 +319,53 @@ export default function Empresas() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, CIF, población…" className="input max-w-xs !py-2" />
-        <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#1E5468] text-xs font-bold">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar: nombre, CIF, población, correo, teléfono, etiqueta…" className="input max-w-sm !py-1.5 !text-[12.5px]" />
+        <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#1E5468] text-[11.5px] font-bold">
           {FILTROS.map(([k, l]) => (
             <button key={k} onClick={() => setFiltro(k)}
-              className={`px-3 py-2 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
+              className={`px-2.5 py-1.5 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
               {l}{k === 'incidencia' && rojas > 0 ? ` (${rojas})` : ''}{k === 'sin_revisar' && sinRevisar > 0 ? ` (${sinRevisar})` : ''}
             </button>
           ))}
         </div>
+        <select value={estado} onChange={(e) => setEstado(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="Estado comercial">
+          <option value="">Estado: todos</option>
+          {ESTADOS_COMERCIALES.map((x) => <option key={x.k} value={x.k}>{x.label}</option>)}
+        </select>
+        {provincias.length > 1 && (
+          <select value={provincia} onChange={(e) => setProvincia(e.target.value)} className="input !w-auto !py-1.5 !text-[12px]" title="Provincia">
+            <option value="">Provincia: todas</option>
+            {provincias.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+        <select value={`${orden}${desc ? ':d' : ''}`} onChange={(e) => { const [k, d] = e.target.value.split(':'); setOrden(k); setDesc(d === 'd'); }} className="input !w-auto !py-1.5 !text-[12px]" title="Orden">
+          {ORDENES.flatMap(([k, l]) => [<option key={k} value={k}>{l} ▲</option>, <option key={`${k}:d`} value={`${k}:d`}>{l} ▼</option>])}
+        </select>
+        {(q || estado || provincia || filtro !== 'todas') && (
+          <button type="button" onClick={() => { setQ(''); setEstado(''); setProvincia(''); setFiltro('todas'); }} className="text-[11.5px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">limpiar</button>
+        )}
         <span className="text-xs font-semibold text-[#7FA7B4]">{lista.length} de {empresas.length}</span>
       </div>
 
       {cargando ? <p className="py-10 text-center text-[#7FA7B4]">Cargando…</p> : (
         <div className="card overflow-hidden p-0">
           <div className="max-h-[640px] overflow-y-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-[12.5px]">
               <thead className="sticky top-0 bg-[#0D3242] text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">
                 <tr>
-                  <th className="w-9 px-2 py-2.5">
+                  <th className="w-8 px-2 py-2">
                     <CasillaTodos marcado={lote.todosMarcados} onCambio={lote.alternarTodos} />
                   </th>
-                  <th className="px-5 py-2.5 text-left">Empresa</th>
-                  <th className="hidden px-3 py-2.5 text-left sm:table-cell">Tipo</th>
-                  <th className="hidden px-3 py-2.5 text-left md:table-cell">Estado</th>
-                  <th className="px-3 py-2.5 text-right">Contactos</th>
+                  {cabecera('nombre', 'Empresa')}
+                  <th className="hidden px-3 py-2 text-left sm:table-cell">Tipo</th>
+                  {cabecera('estado', 'Estado', 'hidden md:table-cell')}
+                  {cabecera('poblacion', 'Población', 'hidden lg:table-cell')}
+                  {cabecera('contactos', 'Contactos', 'text-right')}
                 </tr>
               </thead>
               <tbody>
                 {lista.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[#7FA7B4]">
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-[#7FA7B4]">
                     {empresas.length === 0 ? (
                       errorCarga ? (
                         <>
@@ -351,36 +400,37 @@ export default function Empresas() {
                       {/* La casilla va fuera del área que abre la ficha: marcar
                           para un lote y abrir para editar son gestos distintos
                           y no deben confundirse. */}
-                      <td className="px-2 py-3" onClick={(ev) => ev.stopPropagation()}>
+                      <td className="px-2 py-1.5" onClick={(ev) => ev.stopPropagation()}>
                         <input type="checkbox" aria-label={`Marcar ${nombreVisible(e)}`}
                           checked={lote.marcados.has(String(e.id))}
                           onChange={() => lote.alternar(e.id)} />
                       </td>
-                      <td className="cursor-pointer px-5 py-3" onClick={() => seleccionar(e.id)}>
+                      <td className="cursor-pointer px-3 py-1.5" onClick={() => seleccionar(e.id)}>
                         <div className="flex items-center gap-2">
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${PUNTO[s.color]}`}
+                          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${PUNTO[s.color]}`}
                             title={s.motivos.join(' · ') || 'Ficha completa'} />
-                          <span className="font-bold text-[#EAF4F7]">{nombreVisible(e)}</span>
-                        </div>
-                        <div className="ml-4 text-xs text-[#7FA7B4]">
-                          {/* La razón social solo aparece cuando difiere del
-                              nombre comercial: repetirla en cada fila es ruido. */}
-                          {tieneComercialDistinto(e) && <span className="block truncate">{e.nombre}</span>}
-                          {e.cif || 'sin CIF'}{e.poblacion ? ` · ${e.poblacion}` : ''}
-                          {e.empresa_matriz_id ? ' · filial' : ''}
+                          <Avatar src={e.logo_url} inicial={(nombreVisible(e) || '?').charAt(0)} tamano={22} forma="cuadrado" />
+                          <span className="min-w-0">
+                            <span className="block truncate font-bold leading-tight text-[#EAF4F7]">{nombreVisible(e)}</span>
+                            <span className="block truncate text-[11px] leading-tight text-[#7FA7B4]">
+                              {/* La razón social solo aparece cuando difiere del nombre comercial. */}
+                              {tieneComercialDistinto(e) ? `${e.nombre} · ` : ''}{e.cif || 'sin CIF'}{e.empresa_matriz_id ? ' · filial' : ''}
+                            </span>
+                          </span>
                         </div>
                       </td>
-                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-3 sm:table-cell">
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 sm:table-cell">
                         <span className="inline-flex flex-wrap gap-1">
-                          {e.es_cliente && <span className="chip bg-brand-orange/15 !px-2 !py-0.5 text-[10px] text-brand-orange">Cliente</span>}
-                          {e.es_proveedor && <span className="chip bg-brand-verde/15 !px-2 !py-0.5 text-[10px] text-brand-verdeTexto">Proveedor</span>}
+                          {e.es_cliente && <span className="chip bg-brand-orange/15 !px-1.5 !py-0 text-[10px] text-brand-orange">Cliente</span>}
+                          {e.es_proveedor && <span className="chip bg-brand-verde/15 !px-1.5 !py-0 text-[10px] text-brand-verdeTexto">Proveedor</span>}
                           {!e.es_cliente && !e.es_proveedor && <span className="text-[10px] text-[#7FA7B4]">—</span>}
                         </span>
                       </td>
-                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-3 text-xs font-semibold text-[#9FC0CB] md:table-cell">
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] font-semibold text-[#9FC0CB] md:table-cell">
                         {ESTADOS_COMERCIALES.find((x) => x.k === e.estado_comercial)?.label || 'Potencial'}
                       </td>
-                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer px-3 py-3 text-right text-xs font-bold text-[#9FC0CB]">{s.n}</td>
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] text-[#9FC0CB] lg:table-cell">{e.poblacion || '—'}{e.provincia && e.provincia !== e.poblacion ? ` (${e.provincia})` : ''}</td>
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer px-3 py-1.5 text-right text-[11.5px] font-bold text-[#9FC0CB]">{s.n}</td>
                     </tr>
                   );
                 })}

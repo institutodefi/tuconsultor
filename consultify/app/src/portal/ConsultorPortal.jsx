@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
 import Dashboard from './consultores/Dashboard.jsx';
 import Equipo from './consultores/Equipo.jsx';
 import Empresas from './consultores/Empresas.jsx';
@@ -67,6 +67,7 @@ function Guard({ ok, children }) {
 // tipo nuevo en cada renderizado y remonte todo el menú, perdiendo el foco y
 // el estado de lo que haya dentro.
 function NavItems({ onNavigate, grupos }) {
+  const loc = useLocation();
   return (
     <nav className="flex flex-col gap-5">
       {grupos.map((g, gi) => (
@@ -100,14 +101,25 @@ function NavItems({ onNavigate, grupos }) {
                     para no convertir la barra en una lista de veinte enlaces. */}
                 {t.hijos && t.hijos.length > 0 && (
                   <div className="ml-8 mt-0.5 flex flex-col gap-0.5 border-l border-[#1E5468] pl-3">
-                    {t.hijos.map((h) => (
+                    {t.hijos.map((h) => {
+                      // Con filtro en la ruta («empresas?filtro=cliente») la
+                      // activa es la que coincide también en el filtro.
+                      const conFiltro = h.to.includes('?');
+                      const hermanosConFiltro = t.hijos.some((x) => x.to.includes('?') && x.to.split('?')[0] === h.to.split('?')[0]);
+                      const activaPorFiltro = (isActive) => {
+                        if (!conFiltro && !hermanosConFiltro) return isActive;
+                        const [ruta, q] = h.to.split('?');
+                        return isActive && (q ? loc.search.includes(q) : !loc.search.includes('filtro=')) && loc.pathname.endsWith(ruta);
+                      };
+                      return (
                       <NavLink key={h.to} to={h.to} end onClick={onNavigate}
                         className={({ isActive }) =>
                           `truncate rounded-lg px-2 py-1.5 text-[12.5px] font-semibold transition ${
-                            isActive ? 'text-[#F9A83A]' : 'text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
+                            activaPorFiltro(isActive) ? 'text-[#F9A83A]' : 'text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
                         {h.label}
                       </NavLink>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cuentaHolded, fijarCuentaHolded, CUENTAS_HOLDED } from '../lib/data.js';
 import { DEMO } from '../lib/supabase.js';
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -23,6 +24,7 @@ export default function SincronizarCrm() {
   const [abierto, setAbierto] = useState(false);
   const [modo, setModo] = useState('solo-holded');
   const [prueba, setPrueba] = useState(null);
+  const [cuenta, setCuenta] = useState(cuentaHolded());
 
   async function probar() {
     setOcupado(true); setPrueba(null); setRes(null);
@@ -30,7 +32,7 @@ export default function SincronizarCrm() {
       if (DEMO) { setPrueba({ holded: 'Modo demostración.', brevo: 'Modo demostración.' }); return; }
       const r = await fetch('/api/sincronizar-crm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modo: 'probar' }),
+        body: JSON.stringify({ modo: 'probar', cuenta: cuentaHolded() }),
       });
       const j = await r.json();
       setPrueba(j.prueba || { holded: j.error || 'Sin respuesta.', brevo: '' });
@@ -47,7 +49,7 @@ export default function SincronizarCrm() {
       if (DEMO) { setRes({ ok: false, error: 'En modo demostración no se sincroniza.' }); return; }
       const r = await fetch('/api/sincronizar-crm', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modo }),
+        body: JSON.stringify({ modo, cuenta: cuentaHolded() }),
       });
       setRes(await r.json());
     } catch (e) {
@@ -68,6 +70,13 @@ export default function SincronizarCrm() {
           <p className="text-[11.5px] leading-relaxed text-[#7FA7B4]">
             Holded manda en lo fiscal · el CRM manda en lo comercial · de Brevo solo vuelven las bajas.
           </p>
+          <label className="flex flex-wrap items-center gap-2 text-[11.5px] font-bold text-[#9FC0CB]">
+            Cuenta de Holded
+            <select className="input !w-auto !py-1 !text-[12px]" value={cuenta} onChange={(e) => { fijarCuentaHolded(e.target.value); setCuenta(e.target.value); }}>
+              {CUENTAS_HOLDED.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+            <span className="font-normal text-[#7FA7B4]">se usa en toda la app hasta que la cambies</span>
+          </label>
 
           <div className="space-y-1.5">
             {MODOS.map((m) => (

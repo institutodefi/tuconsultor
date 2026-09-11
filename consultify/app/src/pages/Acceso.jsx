@@ -67,7 +67,7 @@ export default function Acceso() {
   useEffect(() => {
     if (!user) return;
     const esCliente = role === 'cliente';
-    nav(esCliente ? '/clientes' : '/consultores/mi-agenda', { replace: true });
+    nav(esCliente ? '/clientes' : '/consultores', { replace: true });
   }, [user, role, nav]);
 
   // Estado consultores (solo login)

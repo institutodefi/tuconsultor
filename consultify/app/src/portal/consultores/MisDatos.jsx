@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth.jsx';
 import { ROL_LABEL } from '../../lib/permisos.js';
+import ImagenSubible from '../../components/ImagenSubible.jsx';
 
 // Espacio personal del usuario: editar nombre/apellidos y solicitar el cambio de
 // contraseña (por email de restablecimiento).
@@ -44,6 +45,12 @@ export default function MisDatos() {
       {/* Datos personales */}
       <form onSubmit={guardar} className="card space-y-4">
         <h2 className="text-lg font-extrabold text-[#EAF4F7]">Información personal</h2>
+        <div className="flex items-center gap-4">
+          <ImagenSubible tabla="perfiles" id={user?.id} campo="foto_url" valor={perfil?.foto_url} tamano={72}
+            inicial={(nombre || user?.email || '?').charAt(0)} titulo="Cambiar mi foto"
+            guardar={async (url) => { const r = await actualizarMiPerfil({ foto_url: url }); if (!r.ok) throw new Error(r.error); }} />
+          <div className="text-[12.5px] text-[#9FC0CB]"><b className="text-[#EAF4F7]">Tu foto</b><br />Pulsa para subirla o cambiarla. Se ve en el equipo, en las tareas y en la zona de clientes.</div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div><label className="label">Nombre</label><input className="input" value={nombre} onChange={e => setNombre(e.target.value)} /></div>
           <div><label className="label">Apellidos</label><input className="input" value={apellidos} onChange={e => setApellidos(e.target.value)} /></div>

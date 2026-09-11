@@ -59,6 +59,10 @@ export default function DocumentosCliente({ clienteId, proyectoId = null, titulo
   const [abierta, setAbierta] = useState(null);
   const [form, setForm] = useState(null);
   const fichero = useRef(null);
+  // Carga masiva: cola de ficheros con su estado (subiendo → clasificando → hecho / error).
+  const [lote, setLote] = useState(null);
+  const [arrastrando, setArrastrando] = useState(false);
+  const varios = useRef(null);
 
   const cargar = async () => {
     const d = await listTable('cliente_documentos').catch(() => []);
@@ -104,6 +108,55 @@ export default function DocumentosCliente({ clienteId, proyectoId = null, titulo
     } finally { setSubiendo(false); }
   }
 
+  const leerBase64 = (f) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = () => rej(new Error('No se pudo leer el archivo.'));
+    r.readAsDataURL(f);
+  });
+
+  /**
+   * Carga masiva: cada fichero se sube con su nombre como título y la IA lo
+   * clasifica (tipo, título legible, norma, emisor, validez). Uno detrás de
+   * otro, para no saturar la función; el estado de cada uno se ve en la lista.
+   */
+  async function subirVarios(lista) {
+    const ficheros = Array.from(lista || []).filter((f) => f && f.size > 0);
+    if (!ficheros.length) return;
+    setMsg(null);
+    const filas = ficheros.map((f) => ({ nombre: f.name, peso: f.size, estado: 'pendiente', detalle: '' }));
+    setLote(filas);
+    const pon = (i, patch) => setLote((l) => l.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+    let subidos = 0, clasificados = 0;
+    for (let i = 0; i < ficheros.length; i++) {
+      const f = ficheros[i];
+      try {
+        pon(i, { estado: 'subiendo' });
+        const base64 = await leerBase64(f);
+        const j = await llamar({
+          action: 'subir', cliente_id: clienteId, proyecto_id: proyectoId,
+          titulo: f.name.replace(/\.[a-z0-9]+$/i, ''), tipo: 'otro', descripcion: null,
+          nombre: f.name, mime: f.type, base64,
+        });
+        if (!j.ok) throw new Error(j.error || 'No se pudo subir.');
+        subidos++;
+        pon(i, { estado: 'clasificando' });
+        const c = await llamar({ action: 'clasificar', documento_id: j.documento.id });
+        if (!c.ok) { pon(i, { estado: 'subido', detalle: `Subido sin clasificar: ${c.error}` }); continue; }
+        if (!c.clasificado) { pon(i, { estado: 'subido', detalle: c.motivo || 'Subido sin clasificar.' }); continue; }
+        clasificados++;
+        const d = c.documento || {};
+        pon(i, { estado: 'hecho', detalle: `${ETQ_TIPO[d.tipo] || d.tipo} · ${d.titulo}${d.valido_hasta ? ` · vence ${fmtFecha(d.valido_hasta)}` : ''}${c.confianza === 'baja' ? ' · confianza baja, revísalo' : ''}` });
+      } catch (e) {
+        pon(i, { estado: 'error', detalle: explicarErrorBd(e, 'cliente_documentos') });
+      }
+      // La lista se refresca a cada paso, para ver cómo van entrando.
+      await cargar();
+    }
+    setMsg({ err: false, t: `${subidos} de ${ficheros.length} subidos; ${clasificados} clasificados por la IA.` });
+    if (varios.current) varios.current.value = '';
+  }
+
   async function abrir(d) {
     const j = await llamar({ action: 'enlace', documento_id: d.id });
     if (!j.ok) { setMsg({ err: true, t: j.error }); return; }
@@ -131,10 +184,52 @@ export default function DocumentosCliente({ clienteId, proyectoId = null, titulo
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-[14px] font-extrabold text-[#EAF4F7]">{titulo} ({docs.length})</h3>
         {!form && (
-          <button onClick={() => setForm({ titulo: '', tipo: 'certificado', descripcion: '' })}
-            className="btn-orange !px-3 !py-1 text-[12px]">+ Subir documento</button>
+          <div className="flex gap-1.5">
+            <button onClick={() => setForm({ titulo: '', tipo: 'certificado', descripcion: '' })}
+              className="btn-orange !px-3 !py-1 text-[12px]">+ Subir documento</button>
+            <button onClick={() => varios.current?.click()} disabled={!!lote && lote.some((x) => ['pendiente', 'subiendo', 'clasificando'].includes(x.estado))}
+              className="btn-ghost !px-3 !py-1 text-[12px] disabled:opacity-50" title="Varios ficheros a la vez: la IA los clasifica al subirlos">✦ Subir varios</button>
+            <input ref={varios} type="file" multiple className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+              onChange={(e) => subirVarios(e.target.files)} />
+          </div>
         )}
       </div>
+
+      {/* Zona para soltar ficheros: la forma más rápida de meter un expediente entero. */}
+      {!form && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); if (!arrastrando) setArrastrando(true); }}
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={(e) => { e.preventDefault(); setArrastrando(false); subirVarios(e.dataTransfer.files); }}
+          className={`rounded-xl border border-dashed px-3 py-2.5 text-center text-[12px] transition ${arrastrando ? 'border-brand-orange bg-brand-orange/10 text-[#EAF4F7]' : 'border-[#1E5468] text-[#7FA7B4]'}`}>
+          Suelta aquí varios ficheros (PDF o imagen) y la IA los clasifica: tipo, título, norma, emisor y fechas de validez.
+        </div>
+      )}
+
+      {lote && (
+        <div className="rounded-xl border border-[#1E5468] bg-[#0B2E3D] p-2.5">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#9FC0CB]">Carga masiva · {lote.filter((x) => ['hecho', 'subido'].includes(x.estado)).length} de {lote.length}</p>
+            {!lote.some((x) => ['pendiente', 'subiendo', 'clasificando'].includes(x.estado)) && (
+              <button onClick={() => setLote(null)} className="text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">cerrar</button>
+            )}
+          </div>
+          <ul className="mt-1.5 space-y-1">
+            {lote.map((x, i) => (
+              <li key={i} className="flex items-start gap-2 text-[12px]">
+                <span className={`mt-0.5 w-[92px] shrink-0 text-[10.5px] font-extrabold uppercase tracking-wide ${
+                  x.estado === 'hecho' ? 'text-emerald-300' : x.estado === 'error' ? 'text-red-300' : x.estado === 'subido' ? 'text-amber-200' : 'text-brand-orange'}`}>
+                  {{ pendiente: 'en cola', subiendo: 'subiendo…', clasificando: '✦ leyendo…', hecho: 'clasificado', subido: 'subido', error: 'error' }[x.estado]}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold text-[#EAF4F7]">{x.nombre} <span className="font-normal text-[#7FA7B4]">{fmtPeso(x.peso)}</span></span>
+                  {x.detalle && <span className={`block text-[11.5px] ${x.estado === 'error' ? 'text-red-200' : 'text-[#CFE3E9]'}`}>{x.detalle}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Un certificado caducado o a punto de caducar es lo primero que hay que
           ver: de él depende que el cliente siga acreditado. */}

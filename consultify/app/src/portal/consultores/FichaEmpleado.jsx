@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import ImagenSubible from '../../components/ImagenSubible.jsx';
 import { listTable, explicarErrorBd } from '../../lib/data.js';
 import { supabase } from '../../lib/supabase.js';
 import { useAuth } from '../../lib/auth.jsx';
@@ -151,6 +152,12 @@ export default function FichaEmpleado({ persona, onCerrar, onCambio }) {
         {/* ── Datos ── */}
         {pestana === 'datos' && (
           <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <ImagenSubible tabla="perfiles" id={persona?.id} campo="foto_url" valor={persona?.foto_url} tamano={64}
+                inicial={(persona?.nombre || persona?.email || '?').charAt(0)} editable={esRrhh || soyYo} titulo="Cambiar la foto"
+                onCambio={() => onCambio?.()} />
+              <p className="text-[11.5px] text-[#7FA7B4]">{esRrhh || soyYo ? 'Pulsa la foto para cambiarla.' : 'Foto'}</p>
+            </div>
             <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
               {[
                 ['Nombre', nombre],

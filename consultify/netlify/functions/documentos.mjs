@@ -305,6 +305,61 @@ export default async (req) => {
     return json({ ok: true, nota: (await ins.json())?.[0], propuestas });
   }
 
+  // ── CLASIFICAR ───────────────────────────────────────────────────────────
+  // Para la carga masiva: el documento se sube con el nombre del fichero y
+  // aquí la IA lo lee y RELLENA la ficha —tipo, título legible, norma, emisor,
+  // validez y descripción— además de dejar la nota interna. A diferencia de
+  // «analizar», que solo propone, aquí se escribe: quien sube veinte ficheros
+  // de golpe no va a aceptar veinte propuestas una a una. Lo que ya tuviera
+  // un valor puesto a mano (distinto del nombre del fichero) no se pisa.
+  if (action === 'clasificar') {
+    const { documento_id } = body;
+    const q = await sb(`/rest/v1/cliente_documentos?id=eq.${documento_id}&select=*`);
+    const doc = q.ok ? (await q.json())?.[0] : null;
+    if (!doc) return json({ ok: false, error: 'Documento no encontrado.' }, 404);
+    if (!ES_EQUIPO(quien.rol) && !(await esSuCliente(quien, doc.cliente_id))) {
+      return json({ ok: false, error: 'Ese documento no es tuyo.' }, 403);
+    }
+    const legible = doc.mime === 'application/pdf' || String(doc.mime || '').startsWith('image/');
+    if (!legible) return json({ ok: true, clasificado: false, motivo: 'Word no se puede leer: conviértelo a PDF para clasificarlo.' });
+
+    const d = await sb(`/storage/v1/object/${DEPOSITO}/${doc.ruta}`);
+    if (!d.ok) return json({ ok: false, error: 'No se pudo leer el archivo.' }, 502);
+    const base64 = Buffer.from(await d.arrayBuffer()).toString('base64');
+    const r = await analizarConIA(base64, doc.mime, doc.nombre_fichero || doc.titulo);
+    if (r.error) return json({ ok: false, error: r.error }, 502);
+    const datos = r.datos || {};
+    const confianza = ['alta', 'media', 'baja'].includes(datos.confianza) ? datos.confianza : 'media';
+
+    // La nota interna, como en «analizar».
+    await sb(`/rest/v1/documento_notas?documento_id=eq.${documento_id}`, { method: 'DELETE' });
+    await sb('/rest/v1/documento_notas', { method: 'POST', body: { documento_id, resumen: datos.resumen || null, datos, modelo: r.modelo, confianza, revisada: false } });
+
+    // Lo que se escribe en la ficha del documento.
+    const TIPOS = ['certificado', 'auditoria', 'escritura', 'poder', 'politica', 'organigrama', 'licencia', 'seguro', 'otro'];
+    const ETQ = { certificado: 'Certificado', auditoria: 'Informe de auditoría', escritura: 'Escritura', poder: 'Poder de representación', politica: 'Política', organigrama: 'Organigrama', licencia: 'Licencia', seguro: 'Póliza de seguro', otro: 'Documento' };
+    const tipo = TIPOS.includes(datos.tipo) ? datos.tipo : (doc.tipo || 'otro');
+    const norma = datos.norma ? String(datos.norma).replace(/^ISO\s*/i, '').trim() : null;
+    const base = String(doc.nombre_fichero || '').replace(/\.[a-z0-9]+$/i, '');
+    const tituloEraFichero = !doc.titulo || doc.titulo === base || doc.titulo === doc.nombre_fichero;
+    const tituloIA = [ETQ[tipo], norma ? (/^\d/.test(norma) ? `ISO ${norma}` : norma) : null, datos.emisor || null].filter(Boolean).join(' · ');
+    const patch = {
+      tipo,
+      titulo: tituloEraFichero && tituloIA ? tituloIA.slice(0, 120) : doc.titulo,
+      norma: doc.norma || norma || null,
+      emisor: doc.emisor || datos.emisor || null,
+      valido_desde: doc.valido_desde || (/^\d{4}-\d{2}-\d{2}$/.test(datos.valido_desde || '') ? datos.valido_desde : null),
+      valido_hasta: doc.valido_hasta || (/^\d{4}-\d{2}-\d{2}$/.test(datos.valido_hasta || '') ? datos.valido_hasta : null),
+      descripcion: doc.descripcion || datos.resumen || null,
+    };
+    const up = await sb(`/rest/v1/cliente_documentos?id=eq.${documento_id}`, { method: 'PATCH', body: patch, headers: { Prefer: 'return=representation' } });
+    if (!up.ok) {
+      const t = await up.text().catch(() => '');
+      return json({ ok: false, error: `Leído, pero no se pudo clasificar: ${t.slice(0, 200)}` }, 502);
+    }
+    return json({ ok: true, clasificado: true, documento: (await up.json())?.[0], confianza, avisos: Array.isArray(datos.avisos) ? datos.avisos : [] });
+  }
+
   // ── PROPONER ─────────────────────────────────────────────────────────────
   // Lee TODOS los documentos de un cliente (reutilizando las notas que ya
   // existan) y devuelve lo que la IA ha encontrado, documento a documento:

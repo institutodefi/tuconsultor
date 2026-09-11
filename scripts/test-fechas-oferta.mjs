@@ -49,3 +49,19 @@ console.log('\n── Fin anterior al inicio: bloquea ──');
   const v = validarPlanificacion({ inicio:'2026-10-01', certificacion:'', fin:'2026-09-01', modelo:'Compromiso', normas:['9001'] });
   console.log(' errores           :', v.errores.length, ok(v.errores.length>=1));
 }
+
+// ── Apoyo: se puede elegir sin certificación; para emitir hay que declararla (o fijar el fin) ──
+{
+  const { validarPlanificacion, motivoNoDisponible } = await import('../consultify/app/src/lib/planificacion.js');
+  const ok = (c, m) => { if (!c) { console.error('FALLA:', m); process.exit(1); } };
+  ok(motivoNoDisponible({ inicio: '2026-09-15', certificacion: null, normas: ['9001'] }, 'Apoyo') === null, 'Apoyo elegible sin fecha de certificación');
+  ok(/3 meses/.test(motivoNoDisponible({ inicio: '2026-09-15', certificacion: '2027-03-15', normas: ['9001'] }, 'Apoyo') || ''), 'Apoyo vetado a 6 meses de la certificación');
+  ok(motivoNoDisponible({ inicio: '2026-09-15', certificacion: '2026-11-30', normas: ['9001'] }, 'Apoyo') === null, 'Apoyo elegible a menos de 3 meses');
+  const sinNada = validarPlanificacion({ inicio: '2026-09-15', certificacion: '', fin: '2026-12-15', modelo: 'Apoyo', normas: ['9001'], finManual: false });
+  ok(sinNada.errores.some((e) => /declarar/.test(e)), 'sin certificación ni fin a mano → pide declararla');
+  const conFin = validarPlanificacion({ inicio: '2026-09-15', certificacion: '', fin: '2026-12-15', modelo: 'Apoyo', normas: ['9001'], finManual: true });
+  ok(!conFin.errores.length, `con fin a mano a 3 meses → válido (${conFin.errores[0] || ''})`);
+  const conCert = validarPlanificacion({ inicio: '2026-09-15', certificacion: '2026-12-01', fin: '2027-09-15', modelo: 'Apoyo', normas: ['9001'], finManual: false });
+  ok(!conCert.errores.length, `con certificación a menos de 3 meses → válido (${conCert.errores[0] || ''})`);
+  console.log('apoyo: reglas ok');
+}

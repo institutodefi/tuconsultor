@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { empresasDelGrupo, planCopia, copiarContactos } from '../../lib/copiarContactos.js';
 import { insertRow, updateRow, deleteRow } from '../../lib/data.js';
 import { ROLES_CONTACTO, ROL_LABEL, emailValido } from '../../lib/crm.js';
 
@@ -15,7 +16,22 @@ import { ROLES_CONTACTO, ROL_LABEL, emailValido } from '../../lib/crm.js';
 
 const VACIO = { nombre: '', apellidos: '', cargo: '', email: '', telefono: '', consentimiento_marketing: false };
 
-export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEditar, onCambio, onAbrirContacto, desnudo = false }) {
+export default function ContactosEmpresa({ empresa, empresas = [], contactos, vinculos, puedeEditar, onCambio, onAbrirContacto, desnudo = false }) {
+  const [copiando, setCopiando] = useState(false);
+  const [origen, setOrigen] = useState('');
+  const grupo = useMemo(() => empresasDelGrupo(empresa, empresas), [empresa, empresas]);
+  const otrasEmpresas = useMemo(() => empresas.filter((e) => String(e.id) !== String(empresa.id) && !grupo.some((g) => String(g.id) === String(e.id))).sort((a, b) => String(a.nombre_comercial || a.nombre).localeCompare(String(b.nombre_comercial || b.nombre), 'es')), [empresas, grupo, empresa.id]);
+  const origenEfectivo = origen || (grupo[0] ? String(grupo[0].id) : '');
+  const planDeCopia = useMemo(() => (origenEfectivo ? planCopia(origenEfectivo, empresa.id, vinculos) : []), [origenEfectivo, empresa.id, vinculos]);
+  async function copiarDeOtra() {
+    setOcupado(true); setError(null);
+    try {
+      const r = await copiarContactos(origenEfectivo, empresa.id, vinculos);
+      if (r.fallos.length) setError(`Copiados ${r.hechos}; fallaron ${r.fallos.length}: ${r.fallos[0]}`);
+      setCopiando(false); onCambio && onCambio();
+    } catch (e) { setError('No se pudo copiar: ' + (e.message || '')); }
+    finally { setOcupado(false); }
+  }
   const [asignando, setAsignando] = useState(null);   // rol al que se está asignando
   const [modo, setModo] = useState('buscar');         // buscar | crear
   const [busqueda, setBusqueda] = useState('');
@@ -347,6 +363,41 @@ export default function ContactosEmpresa({ empresa, contactos, vinculos, puedeEd
           <p className="mt-0.5 text-xs text-[#7FA7B4]">
             Los mismos registros que la pestaña Contactos: aquí solo se les asigna su papel en esta empresa.
           </p>
+        </div>
+      )}
+
+      {/* ── Copiar los contactos de otra empresa (grupo): las mismas personas
+             llevan varias sociedades y no hay que picarlas otra vez. ── */}
+      {puedeEditar && empresas.length > 1 && (
+        <div className="rounded-xl border border-dashed border-[#1E5468] px-3 py-2">
+          {!copiando ? (
+            <button onClick={() => { setCopiando(true); setError(null); }} className="text-xs font-bold text-brand-verdeTexto hover:underline">
+              ⧉ Copiar los contactos de otra empresa{grupo.length ? ` (${grupo.length} del mismo grupo)` : ''}
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <select className="input !w-auto !py-1 !text-[12px]" value={origenEfectivo} onChange={(e) => setOrigen(e.target.value)}>
+                  {!grupo.length && !origen && <option value="">— elige una empresa —</option>}
+                  {grupo.length > 0 && <optgroup label="Del mismo grupo">{grupo.map((e) => <option key={e.id} value={e.id}>{e.nombre_comercial || e.nombre}{String(e.id) === String(empresa.empresa_matriz_id) ? ' (matriz)' : ''}</option>)}</optgroup>}
+                  <optgroup label="Otras empresas">{otrasEmpresas.map((e) => <option key={e.id} value={e.id}>{e.nombre_comercial || e.nombre}</option>)}</optgroup>
+                </select>
+                <button onClick={copiarDeOtra} disabled={ocupado || !planDeCopia.length} className="btn-orange !px-3 !py-1 text-[12px] disabled:opacity-40">
+                  {ocupado ? '…' : `Copiar ${planDeCopia.length || ''}`}
+                </button>
+                <button onClick={() => setCopiando(false)} className="text-xs font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">cancelar</button>
+              </div>
+              {origenEfectivo && (
+                <ul className="max-h-36 space-y-0.5 overflow-y-auto text-[11.5px] text-[#CFE3E9]">
+                  {planDeCopia.length === 0 && <li className="text-[#7FA7B4]">Nada que copiar: sin contactos, o ya están todos aquí.</li>}
+                  {planDeCopia.map((p) => { const c = contactos.find((x) => String(x.id) === String(p.contacto_id)); return c ? (
+                    <li key={`${p.contacto_id}|${p.rol}`}><span className="chip !px-1.5 !py-0 mr-1.5 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">{etiquetaRol(p.rol)}</span>{c.nombre} {c.apellidos || ''} <span className="text-[#7FA7B4]">{c.email}{p.motivo ? ` · ${p.motivo}` : ''}</span></li>
+                  ) : null; })}
+                </ul>
+              )}
+              {error && <p className="rounded-lg bg-red-500/10 p-2 text-xs font-bold text-red-300">{error}</p>}
+            </div>
+          )}
         </div>
       )}
 

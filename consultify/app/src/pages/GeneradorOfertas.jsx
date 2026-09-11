@@ -246,6 +246,10 @@ export default function GeneradorOfertas({ publico = false }) {
     if (faltan.length) { setError(`Faltan datos obligatorios: ${faltan.join(', ')}.`); return; }
     if (!/^\S+@\S+\.\S+$/.test(cli.email)) { setError('El email no tiene un formato válido.'); return; }
     if (!consent) { setError('Debes aceptar la política de privacidad para continuar.'); return; }
+    if (modelo === 'Apoyo' && !fechaCert && !finTocado) {
+      setError('Apoyo exige declarar la fecha de certificación o fijar a mano hasta cuándo vale la bolsa (fin).');
+      return;
+    }
     if (!res.plazoOk) {
       setError(res.plazoLargo
         ? `Apoyo solo se contrata con ${res.maxMeses} meses o menos hasta la certificación (aquí ${res.meses}). Elige Implantación o un modelo de cuota.`
@@ -791,7 +795,10 @@ export default function GeneradorOfertas({ publico = false }) {
                 // Un modelo que no cabe se deshabilita y DICE por qué al pasar
                 // por encima. Dejarlo elegible para luego dar un error al
                 // generar es hacer perder el tiempo.
-                const veto = motivoNoDisponible({ inicio: fechaInicio, certificacion: fechaCert || fechaFin, normas: sel }, mid);
+                // Apoyo se juzga solo contra la certificación declarada: el fin
+                // propuesto a 12 meses para los demás modelos lo dejaba siempre
+                // vetado y no se podía elegir nunca.
+                const veto = motivoNoDisponible({ inicio: fechaInicio, certificacion: mid === 'Apoyo' ? fechaCert : (fechaCert || fechaFin), normas: sel }, mid);
                 return (
                   <button key={mid} onClick={() => !veto && setModelo(mid)} disabled={!!veto} title={veto || ''}
                     className={`min-w-[96px] flex-1 rounded-xl border-[1.5px] p-3 text-center transition ${
@@ -845,12 +852,12 @@ export default function GeneradorOfertas({ publico = false }) {
 
               <div className="campo">
                 <label className="label" htmlFor="g-cert">
-                  Certificación <span className="ml-1 font-normal normal-case tracking-normal text-[#7FA7B4]">— opcional</span>
+                  Certificación <span className="ml-1 font-normal normal-case tracking-normal text-[#7FA7B4]">{modelo === 'Apoyo' ? '— obligatoria en Apoyo (o fija el fin a mano)' : '— opcional'}</span>
                 </label>
                 <input id="g-cert" type="date" className="input"
                   value={fechaCert} onChange={(e) => setFechaCert(e.target.value)} />
                 <p className="campo-nota">
-                  Si aún no hay auditoría, déjala vacía.
+                  {modelo === 'Apoyo' ? 'Apoyo solo cabe a 3 meses o menos de la certificación: declárala, o fija el fin de la bolsa.' : 'Si aún no hay auditoría, déjala vacía.'}
                 </p>
               </div>
 
@@ -870,7 +877,7 @@ export default function GeneradorOfertas({ publico = false }) {
 
             {/* Lo que las fechas impiden o aconsejan */}
             {(() => {
-              const v = validarPlanificacion({ inicio: fechaInicio, certificacion: fechaCert, fin: fechaFin, modelo, normas: sel });
+              const v = validarPlanificacion({ inicio: fechaInicio, certificacion: fechaCert, fin: fechaFin, modelo, normas: sel, finManual: finTocado });
               if (!v.errores.length && !v.avisos.length) return null;
               return (
                 <div className="mt-3 space-y-1.5">

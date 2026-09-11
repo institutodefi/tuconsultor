@@ -427,8 +427,16 @@ export async function misProyectos(user) {
 
 /** Llama a la Netlify Function de Holded con el token del usuario.
  *  Devuelve el JSON de la función. Solo funciona con backend configurado. */
+/** Cuenta de Holded con la que se trabaja (IEE o Trescore): se elige en Empresas y se recuerda en este navegador. */
+export const CUENTAS_HOLDED = [['iee', 'IEE · Instituto de Excelencia Europea'], ['trescore', 'Trescore Proyectos ITE']];
+export function cuentaHolded() {
+  try { const v = localStorage.getItem('holded_cuenta'); return CUENTAS_HOLDED.some(([k]) => k === v) ? v : 'iee'; } catch { return 'iee'; }
+}
+export function fijarCuentaHolded(v) { try { localStorage.setItem('holded_cuenta', v); } catch { /* sin almacenamiento */ } }
+
 export async function holdedFn(payload) {
   if (DEMO) return { ok: false, error: 'Holded no disponible en modo demo.' };
+  payload = { cuenta: cuentaHolded(), ...payload };
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
   if (!token) return { ok: false, error: 'No hay sesión activa. Vuelve a iniciar sesión.' };

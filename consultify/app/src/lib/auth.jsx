@@ -31,7 +31,9 @@ export function AuthProvider({ children }) {
 
   async function hydrate(u) {
     setUser(u);
-    const { data } = await supabase.from('perfiles').select('rol, activo, politicas_aceptadas_en, nombre, apellidos').eq('id', u.id).single();
+    // `*` y no una lista: si una columna nueva (foto_url, v134) aún no existe, la
+    // sesión no puede caerse por eso.
+    const { data } = await supabase.from('perfiles').select('*').eq('id', u.id).single();
     // Usuario desactivado: cerrar sesión de inmediato.
     if (data && data.activo === false) {
       registrar('salida', { detalle: 'cuenta desactivada' });
@@ -41,19 +43,20 @@ export function AuthProvider({ children }) {
     }
     setRealRole(data?.rol || 'cliente');
     setPoliticasOk(!!data?.politicas_aceptadas_en);
-    setPerfil({ nombre: data?.nombre || '', apellidos: data?.apellidos || '' });
+    setPerfil({ nombre: data?.nombre || '', apellidos: data?.apellidos || '', foto_url: data?.foto_url || null });
     setLoading(false);
     // Marca de último acceso (no bloqueante).
     Promise.resolve(supabase.rpc('marcar_acceso')).catch(() => {});
   }
 
   // Actualiza el nombre/apellidos del propio usuario.
-  async function actualizarMiPerfil({ nombre, apellidos }) {
-    if (DEMO) { setPerfil({ nombre, apellidos }); return { ok: true }; }
+  async function actualizarMiPerfil(patch) {
+    // Solo lo que venga: nombre/apellidos desde Mis datos, foto_url desde la foto.
+    if (DEMO) { setPerfil((p) => ({ ...p, ...patch })); return { ok: true }; }
     if (!supabase || !user) return { ok: false, error: 'Sin sesión.' };
-    const { error } = await supabase.from('perfiles').update({ nombre, apellidos }).eq('id', user.id);
+    const { error } = await supabase.from('perfiles').update(patch).eq('id', user.id);
     if (error) return { ok: false, error: error.message };
-    setPerfil({ nombre, apellidos });
+    setPerfil((p) => ({ ...p, ...patch }));
     return { ok: true };
   }
 

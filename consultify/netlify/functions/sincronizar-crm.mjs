@@ -36,7 +36,6 @@ export default async (req) => {
 
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const holdedKey = process.env.HOLDED_API_KEY;
   const brevoKey = process.env.BREVO_API_KEY;
   if (!base || !key) return Response.json({ ok: false, error: 'Falta la configuración de Supabase.' }, { status: 500 });
 
@@ -77,7 +76,11 @@ export default async (req) => {
   }
 
   try {
-    const { modo = 'completo' } = await req.json().catch(() => ({}));
+    const { modo = 'completo', cuenta = '' } = await req.json().catch(() => ({}));
+    // Dos sociedades, dos Holded: HOLDED_API_KEY_IEE / HOLDED_API_KEY_TRESCORE
+    // (la v1, que es la que usa esta sincronización). Sin cuenta, la de siempre.
+    const C = ['iee', 'trescore'].includes(String(cuenta).toLowerCase()) ? String(cuenta).toUpperCase() : '';
+    const holdedKey = (C && (process.env[`HOLDED_API_KEY_${C}_V1`] || process.env[`HOLDED_API_KEY_${C}`])) || process.env.HOLDED_API_KEY_V1 || process.env.HOLDED_API_KEY;
 
     // ══════════ 0 · COMPROBAR CONEXIONES ══════════
     // Modo aparte que solo prueba las claves, sin escribir nada. Lanzar la

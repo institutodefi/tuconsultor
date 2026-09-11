@@ -133,7 +133,7 @@ export function sumarMeses(iso, meses) {
  * auditoría caiga en el mes cinco. Medirlo contra la certificación impedía
  * emitir ofertas con auditoría temprana, que es un caso normal.
  */
-export function validarPlanificacion({ inicio, certificacion, fin, modelo, normas = [] }) {
+export function validarPlanificacion({ inicio, certificacion, fin, modelo, normas = [], finManual = true, soloPlazo = false }) {
   const errores = [];
   const avisos = [];
   const finContrato = fin || certificacion;
@@ -187,6 +187,12 @@ export function validarPlanificacion({ inicio, certificacion, fin, modelo, norma
       'Con más plazo, elige Implantación o un modelo de cuota.',
     );
   }
+  // Apoyo exige DECLARAR el plazo: la fecha de certificación (auditoría) o,
+  // si aún no está reservada, hasta cuándo vale la bolsa (el fin, puesto a
+  // mano). Sin una de las dos no se sabe si cabe en tres meses.
+  if (modelo === 'Apoyo' && !soloPlazo && !certificacion && !(fin && finManual)) {
+    errores.push('Apoyo exige declarar la fecha de certificación o, si no hay auditoría reservada, fijar a mano hasta cuándo vale la bolsa (fin).');
+  }
 
   // IMPLANTACIÓN: NO bloquea. No hay cuotas —se paga en uno o dos pagos por un
   // alcance cerrado—, así que un calendario corto es una decisión de
@@ -233,6 +239,8 @@ export function modelosPosibles({ inicio, certificacion, normas = [] }, todos) {
 
 /** Por qué NO se puede elegir un modelo, en una frase corta para la interfaz. */
 export function motivoNoDisponible({ inicio, certificacion, normas = [] }, modelo) {
-  const v = validarPlanificacion({ inicio, certificacion, modelo, normas });
+  // Para ELEGIR modelo solo cuenta el plazo; lo que falte por declarar se
+  // pide después, en el formulario.
+  const v = validarPlanificacion({ inicio, certificacion, modelo, normas, soloPlazo: true });
   return v.ok ? null : v.errores[0];
 }

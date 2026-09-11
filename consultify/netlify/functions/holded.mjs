@@ -31,8 +31,23 @@ const HOLDED_BASE_INV = 'https://api.holded.com/api/invoicing/v1';
 
 // Clave por API. Si solo hay una configurada, se usa para las dos y ya avisará
 // el diagnóstico de cuál falla.
-const CLAVE_V2 = () => process.env.HOLDED_API_KEY || process.env.HOLDED_API_KEY_V2 || '';
-const CLAVE_V1 = () => process.env.HOLDED_API_KEY_V1 || process.env.HOLDED_API_KEY || '';
+// ── Dos sociedades, dos Holded ──
+// IEE (Instituto de Excelencia Europea) y Trescore facturan cada una desde su
+// cuenta. La petición dice con cuál trabajar (`body.cuenta`: 'iee' |
+// 'trescore'); cada cuenta tiene sus variables en Netlify:
+//   HOLDED_API_KEY_IEE       (y opcionalmente HOLDED_API_KEY_IEE_V1 / _V2)
+//   HOLDED_API_KEY_TRESCORE  (ídem)
+// Sin `cuenta`, o sin variable para ella, se usa HOLDED_API_KEY como antes.
+export const CUENTAS = ['iee', 'trescore'];
+let CUENTA = '';
+const claveCuenta = (sufijo) => {
+  if (!CUENTA) return '';
+  const c = CUENTA.toUpperCase();
+  return process.env[`HOLDED_API_KEY_${c}${sufijo}`] || process.env[`HOLDED_API_KEY_${c}`] || '';
+};
+const CLAVE_V2 = () => claveCuenta('_V2') || process.env.HOLDED_API_KEY || process.env.HOLDED_API_KEY_V2 || '';
+const CLAVE_V1 = () => claveCuenta('_V1') || process.env.HOLDED_API_KEY_V1 || process.env.HOLDED_API_KEY || '';
+const cuentasConfiguradas = () => CUENTAS.filter((c) => !!(process.env[`HOLDED_API_KEY_${c.toUpperCase()}`] || process.env[`HOLDED_API_KEY_${c.toUpperCase()}_V2`] || process.env[`HOLDED_API_KEY_${c.toUpperCase()}_V1`]));
 
 // Cabeceras de autenticación según el endpoint al que vamos.
 function cabeceras(base) {
@@ -323,9 +338,6 @@ async function estadoCobrosDeContacto(holdedId, opts = {}) {
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  if (!process.env.HOLDED_API_KEY) {
-    return json({ ok: false, error: 'Falta la variable HOLDED_API_KEY en Netlify.' }, 500);
-  }
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return json({ ok: false, error: 'Backend Supabase no configurado.' }, 500);
   }
@@ -338,6 +350,12 @@ export default async (req) => {
   let body;
   try { body = await req.json(); } catch { return json({ ok: false, error: 'JSON inválido' }, 400); }
   const { action } = body;
+  CUENTA = CUENTAS.includes(String(body.cuenta || '').toLowerCase()) ? String(body.cuenta).toLowerCase() : '';
+  if (!CLAVE_V2() && !CLAVE_V1()) {
+    return json({ ok: false, error: CUENTA
+      ? `Falta la clave de Holded de ${CUENTA.toUpperCase()}: pon HOLDED_API_KEY_${CUENTA.toUpperCase()} en las variables de Netlify.`
+      : 'Falta la variable HOLDED_API_KEY (o HOLDED_API_KEY_IEE / HOLDED_API_KEY_TRESCORE) en Netlify.' }, 500);
+  }
 
   try {
     // ── Diagnóstico de conexión ──
@@ -366,6 +384,8 @@ export default async (req) => {
       const funciona = pruebas.find((p) => p.ok);
       return json({
         ok: true,
+        cuenta: CUENTA || 'por defecto',
+        cuentas_configuradas: cuentasConfiguradas(),
         clave_v2_configurada: !!CLAVE_V2(),
         clave_v1_configurada: !!CLAVE_V1(),
         claves_distintas: CLAVE_V1() !== CLAVE_V2(),

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DialogoFicha from '../../components/DialogoFicha.jsx';
+import ImagenSubible, { Avatar } from '../../components/ImagenSubible.jsx';
 import { BarraLote, BotonLote, InformeLote, CasillaTodos } from '../../components/BarraLote.jsx';
 import { useLote, exportarCSV, copiarCorreos } from '../../lib/lote.js';
 import { listTable, insertRow, updateRow, deleteRow, brevoFn , explicarErrorBd } from '../../lib/data.js';
@@ -370,6 +371,7 @@ export default function Contactos() {
                           className="flex w-full items-center gap-1.5 text-left">
                           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.color === 'rojo' ? 'bg-red-500' : 'bg-emerald-400'}`}
                             title={st.motivos.join(' · ') || 'Ficha completa'} />
+                          <Avatar src={c.foto_url} inicial={(c.nombre || '?').charAt(0)} tamano={26} />
                           <span className="min-w-0">
                             <span className="block truncate font-bold text-[#EAF4F7]">{c.nombre} {c.apellidos || ''}</span>
                             {/* En móvil, correo y empresa se ocultan como
@@ -424,6 +426,7 @@ export default function Contactos() {
                             onBorrar={() => borrar(c)}
                             onBrevo={() => sincronizarBrevo(c)}
                             onEmpresa={(e) => navigate({ pathname: '../empresas', search: `?e=${e.id}` })}
+                            onRecargar={cargar}
                           />
                         </td>
                       </tr>
@@ -466,13 +469,16 @@ export default function Contactos() {
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha desplegada bajo la fila del contacto
 // ════════════════════════════════════════════════════════════════════════════
-function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onEditar, onBorrar, onBrevo, onEmpresa }) {
+function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onEditar, onBorrar, onBrevo, onEmpresa, onRecargar }) {
   const s = semaforoContacto(contacto, empresas.length);
   const puedeBrevo = emailValido(contacto.email) && contacto.consentimiento_marketing;
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 text-[12.5px]">
+        <div className="flex min-w-0 items-start gap-3 text-[12.5px]">
+          <ImagenSubible tabla="contactos" id={contacto.id} campo="foto_url" valor={contacto.foto_url} tamano={56}
+            inicial={(contacto.nombre || '?').charAt(0)} editable={!!puedeEditar} titulo="Foto del contacto" onCambio={() => onRecargar?.()} />
+          <div className="min-w-0">
           <p className="font-extrabold text-[#EAF4F7]">
             {contacto.nombre} {contacto.apellidos || ''}
             {contacto.cargo && <span className="ml-2 font-semibold text-[#9FC0CB]">{contacto.cargo}</span>}
@@ -487,6 +493,7 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onE
               ? <span className="chip !py-0 bg-emerald-500/15 text-[10px] text-emerald-300">✓ Consentimiento RGPD</span>
               : <span className="chip !py-0 bg-white/5 text-[10px] text-[#7FA7B4]">Sin consentimiento</span>}
             {contacto.brevo_sincronizado_en && <span className="chip !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
+          </div>
           </div>
         </div>
         {puedeEditar && (

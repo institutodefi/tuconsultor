@@ -54,17 +54,20 @@ export const GRUPOS_PORTAL = [
     // en dos bloques obligaba a saltar de un sitio a otro para lo mismo.
     label: 'CRM',
     items: [
-      { to: 'empresas',  label: 'Empresas',  icon: 'building', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-      { to: 'proveedores', label: 'Proveedores', icon: 'truck', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      // Empresas y clientes son la misma lista con un filtro: una sola pestaña
+      // (antes «Cartera de clientes» era otra entrada que llevaba al mismo sitio).
       {
-        to: 'clientes', label: 'Clientes', icon: 'users',
-        roles: ['superadmin', 'admin', 'director', 'gestion'],
+        to: 'empresas', label: 'Empresas y clientes', icon: 'building',
+        roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'],
         hijos: [
-          { to: 'clientes',           label: 'Cartera de clientes',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
-          { to: 'clientes/dashboard', label: 'Dashboard de clientes', roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'empresas',                 label: 'Todas',                  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=cliente',  label: 'Clientes',               roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=potencial', label: 'Potenciales',           roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'clientes/dashboard',       label: 'Dashboard de clientes',  roles: ['superadmin', 'admin', 'director', 'gestion'] },
         ],
       },
+      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'proveedores', label: 'Proveedores', icon: 'truck', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
       {
         to: 'ofertas', label: 'Ofertas', icon: 'receipt',
         roles: ['superadmin', 'admin', 'director', 'gestion'],

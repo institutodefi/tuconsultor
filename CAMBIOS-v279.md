@@ -233,3 +233,31 @@
   - Cada tarea la hace su responsable; sin responsable, la persona elegida en «Sin responsable, programar a» (y la tarea se queda con ella). Solo gente del proyecto.
 - **Se enseña la propuesta antes de guardar**: periodo, fechas de auditoría/certificación, cuántas sesiones se rehacen, avisos (sin fecha de auditoría, certificación demasiado cerca, equipo sin hueco suficiente, horas sin sitio) y la lista de sesiones (día, horas, cliente · código, tarea, persona). «Aplicar al calendario» las guarda; «Descartar» no toca nada.
 - Pruebas: `scripts/test-plan-automatico.mjs` (25 comprobaciones: margen de 15 días, cierre en la semana previa, orden por fases, ocupación de otros proyectos, festivos, sin solapes, errores claros).
+
+## Documentos · carga masiva con clasificación por IA
+- En **Documentos** (ficha de empresa del CRM y zona de cliente): botón **«✦ Subir varios»** y una zona para **soltar ficheros**. Cada uno se sube con el nombre del fichero y la IA lo lee y **rellena la ficha**: tipo (certificado, informe de auditoría, escritura, poder, política, organigrama, licencia, seguro), un título legible («Certificado · ISO 9001 · AENOR»), norma, emisor, fechas de validez y descripción; deja también la nota interna. Van uno detrás de otro y se ve el estado de cada fichero (en cola, subiendo, leyendo, clasificado, error). Word se sube pero no se clasifica (se dice).
+- Acción nueva `clasificar` en `netlify/functions/documentos.mjs`: a diferencia de `analizar` (que solo propone), escribe; no pisa lo que ya tuviera valor puesto a mano. El cliente puede clasificar solo sus documentos.
+
+## Fotos de personas y logos de empresas
+- **Foto** en Mis datos (la propia), en la ficha de cada miembro del equipo (la persona o RR. HH.) y en la ficha de cada **contacto** del CRM; **logo** en la cabecera de la ficha de **empresa**. Se pulsa la imagen, se elige el fichero, se reduce a 512 px en el navegador y se guarda en el depósito público `imagenes`. «Quitar» la borra de la ficha.
+- Se ven en la barra lateral (avatar), en la lista del equipo, en la lista de contactos y en la lista de empresas. Componente `components/ImagenSubible.jsx` (+ `Avatar` para listas).
+- **Migración `migracion-v134-fotos-y-logos.sql`** (sin aplicar): columnas `perfiles.foto_url`, `contactos.foto_url`, `empresas.logo_url` y el depósito `imagenes` con sus políticas. La sesión ya no depende de la lista de columnas de `perfiles` (se lee `*`), así no se rompe si la migración aún no está.
+
+## Inicio por defecto
+- Al identificarse, el equipo entra en **Inicio** (antes iba a Mi agenda). Con sesión guardada ya entraba en Inicio desde la raíz.
+
+## CRM · contactos compartidos, alta sin volver a picar, una sola pestaña de empresas y clientes
+- **Contactos al crear una empresa** (`ContactosAlta`): tres formas de apuntarlos sin teclear lo que ya está en el CRM: **«De la base de contactos»** (buscador; se vincula la misma persona, con las empresas donde ya figura), **«Copiar de otra empresa»** (la matriz sale la primera si se ha indicado; después el resto del grupo y las demás; se ve la lista antes de copiar) y «Escribir nuevo». Cada contacto de la lista se puede **editar** (antes había que quitarlo y volver a escribirlo). Al crear la empresa, los que ya existían se vinculan; los nuevos se crean.
+- **Copiar contactos entre empresas ya creadas**: en la ficha de una empresa, «⧉ Copiar los contactos de otra empresa», con las del mismo grupo (matriz, filiales y hermanas) primero. Se vincula la misma persona con el mismo rol; facturación y proyecto son únicos, así que si el destino ya tiene, el copiado entra como secundario; el principal solo se copia si el destino no tiene ninguno. `lib/copiarContactos.js` (`empresasDelGrupo`, `planCopia`, `copiarContactos`).
+- **Una sola pestaña «Empresas y clientes»** con subentradas Todas · Clientes · Potenciales · Dashboard de clientes. El filtro va en la ruta (`empresas?filtro=cliente`), así el enlace del menú abre la lista ya filtrada y se puede compartir. Fuera «Cartera de clientes» (era la misma lista sin el filtro aplicado). `/consultores/clientes` sigue redirigiendo.
+- **Buscador, filtros y orden**: el buscador mira nombre, razón social, CIF, población, provincia, correo, teléfono, código y etiquetas; filtros de tipo (todas/clientes/proveedores/potenciales/incidencias/alta automática), **estado comercial** y **provincia**; orden por nombre, población, estado, nº de contactos o última modificación (desplegable y también pulsando la cabecera de la columna); «limpiar» quita todo.
+- **Listado más compacto**: filas a media altura, letra de 12,5 px, logo pequeño, columna Población; caben el doble de empresas en pantalla.
+
+## Generador de ofertas · Apoyo
+- **Por qué no funcionaba**: el modelo se juzgaba contra la fecha de fin propuesta para los demás modelos (12 meses), así que Apoyo salía siempre vetado («más de 3 meses hasta la certificación») y no se podía elegir nunca.
+- Ahora Apoyo se puede elegir y la regla es la que dijiste: **solo a 3 meses o menos de la certificación**, y **hay que declararla** (campo Certificación, obligatorio en Apoyo) o, si aún no hay auditoría reservada, **fijar a mano hasta cuándo vale la bolsa** (fin). Sin una de las dos, la oferta no se emite y se dice. `validarPlanificacion` (nuevo aviso), `motivoNoDisponible` (solo plazo). Pruebas en `scripts/test-fechas-oferta.mjs` (+6).
+
+## Holded · IEE y Trescore
+- La integración admite **dos cuentas de Holded**: `HOLDED_API_KEY_IEE` y `HOLDED_API_KEY_TRESCORE` en las variables de Netlify (opcionalmente `_V1`/`_V2` por API). Sin ellas sigue usando `HOLDED_API_KEY`.
+- En Empresas → «⇄ Sincronizar CRM» se elige la **cuenta de Holded** (IEE o Trescore); se recuerda en el navegador y la usan todas las llamadas a Holded (sincronización, cobros, alta desde Holded). El diagnóstico dice qué cuentas están configuradas.
+- **Para enlazar el Holded de IEE**: en Holded (cuenta de IEE) → Ajustes → Desarrolladores → Credenciales, crea una clave con permisos de Contactos y Facturación, y ponla en Netlify como `HOLDED_API_KEY_IEE` (y, si usas la API v1, también `HOLDED_API_KEY_IEE_V1`). Redespliega.

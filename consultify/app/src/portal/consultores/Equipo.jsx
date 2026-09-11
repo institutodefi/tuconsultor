@@ -4,6 +4,7 @@ import { listTable } from '../../lib/data.js';
 import { NORMA_BY_ID } from '../../lib/calcEngine.js';
 import { ROL_LABEL } from '../../lib/permisos.js';
 import FichaEmpleado from './FichaEmpleado.jsx';
+import { Avatar } from '../../components/ImagenSubible.jsx';
 
 // El equipo se deriva de los ACCESOS (perfiles con login). Esta pestaña es de
 // solo lectura: para dar de alta, cambiar rol/nivel o quitar a alguien, se usa
@@ -81,6 +82,9 @@ export default function Equipo() {
                 <tr key={c.id} onClick={() => setFicha(c)}
                   className="cursor-pointer border-b border-navy-50 last:border-0 transition hover:bg-[#10394A]">
                   <td className="px-5 py-3">
+                    <div className="flex items-center gap-2.5">
+                    <Avatar src={c.foto_url} inicial={(c.nombre || c.email || '?').charAt(0)} tamano={32} />
+                    <div>
                     <div className="font-bold text-[#EAF4F7]">{nombreCompleto(c) || '—'}</div>
                     {/* El correo faltaba en quienes se invitaron y no completaron
                         ficha: `perfiles.email` quedaba vacío aunque en la cuenta
@@ -88,6 +92,8 @@ export default function Equipo() {
                         entonces, se dice en vez de dejar el hueco en blanco. */}
                     <div className="text-xs text-[#9FC0CB]">
                       {c.email || <span className="text-amber-200/70">sin correo en la ficha</span>}
+                    </div>
+                    </div>
                     </div>
                   </td>
                   <td className="px-3 py-3 text-[#B9D2DA]">{ROL_LABEL[c.rol] || c.rol || '—'}</td>

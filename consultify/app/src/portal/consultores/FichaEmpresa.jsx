@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { insertRow, updateRow, deleteRow, holdedFn, brevoFn, explicarErrorBd, listTable } from '../../lib/data.js';
 import {
   validarCif, normalizarCif, emailValido, semaforoEmpresa,
-  candidatasMatriz, ESTADOS_COMERCIALES,
+  candidatasMatriz, ESTADOS_COMERCIALES, nombreVisible,
 } from '../../lib/crm.js';
 import OrganigramaGrupo from '../../components/OrganigramaGrupo.jsx';
 import ContactosEmpresa from './ContactosEmpresa.jsx';
@@ -13,6 +13,7 @@ import { diagnosticarCrm } from '../../lib/diagnosticoCrm.js';
 import ContactosAlta from './ContactosAlta.jsx';
 import CarteraEmpresa from './CarteraEmpresa.jsx';
 import DocumentosCliente from '../../components/DocumentosCliente.jsx';
+import ImagenSubible from '../../components/ImagenSubible.jsx';
 import CertificadosCliente from '../../components/CertificadosCliente.jsx';
 import UsuariosCuenta from '../../components/UsuariosCuenta.jsx';
 import { buscarCliente, asegurarCliente } from '../../lib/clienteDeEmpresa.js';
@@ -434,7 +435,8 @@ export default function FichaEmpresa({
       if (id && contactosNuevos.length) {
         for (const c of contactosNuevos) {
           try {
-            let contactoId = contactos.find((x) => (x.email || '').toLowerCase() === c.email)?.id;
+            // Elegido de la base o copiado de otra empresa: se vincula la misma persona.
+            let contactoId = c.contacto_id || contactos.find((x) => (x.email || '').toLowerCase() === c.email)?.id;
             if (!contactoId) {
               contactoId = (await insertRow('contactos', {
                 nombre: c.nombre, apellidos: c.apellidos || null,
@@ -839,7 +841,7 @@ export default function FichaEmpresa({
           <Caja titulo="Contactos de la empresa" abiertaPorDefecto
             insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{cuantasPersonas || 'ninguno'}</span>}>
             <ContactosEmpresa
-              empresa={empresa} contactos={contactos} vinculos={vinculos}
+              empresa={empresa} empresas={empresas} contactos={contactos} vinculos={vinculos}
               puedeEditar={puedeEditar} onCambio={onCambio} onAbrirContacto={onAbrirContacto} desnudo
             />
           </Caja>
@@ -847,7 +849,7 @@ export default function FichaEmpresa({
           <Caja titulo="Contactos de la empresa" abiertaPorDefecto
             insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${contactosNuevos.length ? 'bg-brand-verde/15 text-brand-verdeTexto' : 'bg-white/5 text-[#9FC0CB]'}`}>
               {contactosNuevos.length || 'ninguno'}</span>}>
-            <ContactosAlta lista={contactosNuevos} setLista={setContactosNuevos} />
+            <ContactosAlta lista={contactosNuevos} setLista={setContactosNuevos} contactos={contactos} empresas={empresas} vinculos={vinculos} empresa={form} />
           </Caja>
         )}
 
@@ -916,6 +918,9 @@ export default function FichaEmpresa({
           <button onClick={onCerrar} className="mb-1.5 text-[11px] font-bold text-[#7FA7B4] hover:text-[#EAF4F7]">← Todas las empresas</button>
         )}
         <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-3">
+          <ImagenSubible tabla="empresas" id={empresa.id} campo="logo_url" valor={empresa.logo_url} tamano={64} forma="cuadrado"
+            inicial={(nombreVisible(empresa) || '?').charAt(0)} editable={!!puedeEditar} titulo="Logo de la empresa" onCambio={() => onCambio?.()} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`h-2 w-2 shrink-0 rounded-full ${s.clase}`} title={s.texto} />
@@ -937,6 +942,7 @@ export default function FichaEmpresa({
               {empresa.holded_id && <span className="chip !px-2 !py-0 bg-white/5 text-[10px] text-[#7FA7B4]">Holded</span>}
               {empresa.brevo_sincronizado_en && <span className="chip !px-2 !py-0 bg-white/5 text-[10px] text-[#7FA7B4]">Brevo</span>}
             </div>
+          </div>
           </div>
           {puedeEditar && (
             <div className="flex shrink-0 flex-wrap gap-1.5">
@@ -996,7 +1002,7 @@ export default function FichaEmpresa({
       <Caja titulo="Contactos de la empresa" abiertaPorDefecto
         insignia={<span className={`chip !px-1.5 !py-0 text-[10px] ${mios.length ? 'bg-white/5 text-[#9FC0CB]' : 'bg-red-500/15 text-red-300'}`}>{cuantasPersonas || 'ninguno'}</span>}>
         <ContactosEmpresa
-          empresa={empresa} contactos={contactos} vinculos={vinculos}
+          empresa={empresa} empresas={empresas} contactos={contactos} vinculos={vinculos}
           puedeEditar={puedeEditar} onCambio={onCambio} onAbrirContacto={onAbrirContacto} desnudo
         />
       </Caja>

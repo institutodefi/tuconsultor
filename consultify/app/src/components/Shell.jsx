@@ -5,7 +5,7 @@ import { ROL_LABEL, can } from '../lib/permisos.js';
 import { SELLO } from '../version.js';
 
 export default function Shell({ children }) {
-  const { user, role, realRole, logout, demo, verEconomico , verComo, resetVista } = useAuth();
+  const { user, role, realRole, logout, demo, verEconomico , verComo, resetVista, perfil } = useAuth();
   const [verRoles, setVerRoles] = useState(false);
   const navItem = ({ isActive }) =>
     (isActive
@@ -32,9 +32,11 @@ export default function Shell({ children }) {
           {demo && <span className="chip mb-3 w-full justify-center bg-brand-verde/15 text-brand-verdeTexto">Modo demo</span>}
           {user ? (
             <div className="rounded-2xl bg-[#10394A] p-3 text-center">
-              <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]">
-                {(user.email || '?').charAt(0).toUpperCase()}
-              </span>
+              {perfil?.foto_url
+                ? <img src={perfil.foto_url} alt="" className="mx-auto mb-2 h-10 w-10 rounded-full border border-[#1E5468] object-cover" />
+                : <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]">
+                  {(perfil?.nombre || user.email || '?').charAt(0).toUpperCase()}
+                </span>}
               <p className="truncate text-xs font-bold text-[#EAF4F7]">{user.email}</p>
               {/* Al pulsar el rol se despliegan los demás: superadministración
                   necesita moverse entre niveles para ver lo que ve cada quien,
