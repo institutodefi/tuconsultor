@@ -559,6 +559,7 @@ export default function Contactos() {
                   onBrevo={() => sincronizarBrevo(c)}
                   onEmpresa={(e) => { setForm(null); navigate({ pathname: '../empresas', search: `?e=${e.id}` }); }}
                   onRecargar={cargar}
+                  onPatch={(patch) => setForm((f) => (f && String(f.id) === String(c.id) ? { ...f, ...patch } : f))}
                   whatsapp={c.movil ? linkWhatsApp(c.movil, mensajeWA(c)) : ''}
                 />
               </div>
@@ -583,7 +584,7 @@ export default function Contactos() {
 // ════════════════════════════════════════════════════════════════════════════
 // Ficha desplegada bajo la fila del contacto
 // ════════════════════════════════════════════════════════════════════════════
-function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onBorrar, onBrevo, onEmpresa, onRecargar, whatsapp = '' }) {
+function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onBorrar, onBrevo, onEmpresa, onRecargar, onPatch, whatsapp = '' }) {
   const s = semaforoContacto(contacto, empresas.length);
   const puedeBrevo = emailValido(contacto.email) && contacto.consentimiento_marketing;
   return (
@@ -612,7 +613,7 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onB
             {contacto.brevo_sincronizado_en && <span className="chip mt-1 !py-0 bg-brand-verde/15 text-[10px] text-brand-verdeTexto">En Brevo</span>}
           </div>
           {/* Hasta cinco perfiles de LinkedIn por afinidad; se asocia el que sea a mano (v140). */}
-          <AsociarLinkedIn contacto={contacto} empresa={empresas[0] ? nombreVisible(empresas[0].e) : ''} puedeEditar={!!puedeEditar} onCambio={onRecargar} />
+          <AsociarLinkedIn contacto={contacto} empresa={empresas[0] ? nombreVisible(empresas[0].e) : ''} puedeEditar={!!puedeEditar} onCambio={onRecargar} onPatch={onPatch} />
           </div>
         </div>
         {puedeEditar && (

@@ -51,6 +51,7 @@ Reglas:
 - "candidatos": HASTA 5 personas que podrían ser la buscada, ordenadas de más a menos probable, incluida la principal en primer lugar. "afinidad" es 0-100 según coincidan nombre, empresa, cargo y ciudad con lo pedido; "motivo" dice en una frase por qué (p. ej. «mismo nombre y misma empresa» o «mismo nombre, otra empresa del sector»). Pon la más probable también en los campos principales.
 - Si no encuentras nada fiable, "encontrado": false y explica en "resumen" qué has probado.
 - "fuentes": las URL de donde sale cada dato. Sin fuente, no afirmes.
+- Si te dan la URL del perfil, léela (y la web de su empresa) y completa TODO lo que sea público: cargo actual, apellidos completos, ciudad, correo profesional si la empresa lo publica y un resumen de dos frases. Es para completar una ficha que ya existe, así que la precisión importa más que la cantidad.
 - Responde en español. Nombres con mayúsculas y minúsculas normales.`;
 
 export default async (req) => {
