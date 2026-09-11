@@ -13,3 +13,9 @@
 | `PROMPT_WEB_ORBITA.md` | El prompt para el agente del proyecto web | — |
 
 Pendiente de tu lado: URL/formulario de la CTA, fecha del artículo de lanzamiento, subir los reels a Supabase `videos/orbita/` cuando estén generados.
+
+## v279ao · campaña «ventajas» (desde el 14/09/2026)
+
+- `generador/banco_ventajas.py` — 10 ventajas × 3 formulaciones (V01A…V10C): portal único, no depende de una persona, siempre atendido, gestión del legado, seguridad de la información, respuestas inmediatas, dashboard de indicadores, documentación 24/7, respuesta 24/7, hiperaccesible.
+- `generador/gen_ventajas.py` — genera las 60 creatividades (`web/social-img/orbita/V??X_*.png`) y las filas del calendario: **cada día** LinkedIn Alejandro 08:45 (primera persona), LinkedIn empresa 19:00 e Instagram 19:00, del 14/09/2026 al 31/07/2027 (ids 885–1847). Las filas antiguas de Orbita (233–884) quedan sin fecha desde el 14/09.
+- El calendario ya no pasa por Google Sheets: ver `make/README.md`.

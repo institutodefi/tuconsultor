@@ -1,0 +1,1011 @@
+{
+ "name": "Publicador RRSS · Web (Orbita, blog, premios)",
+ "flow": [
+  {
+   "id": 1,
+   "module": "http:ActionSendData",
+   "version": 3,
+   "parameters": {
+    "handleErrors": true,
+    "useNewZLibDeCompress": true
+   },
+   "mapper": {
+    "url": "https://www.tuconsultor.com/api/publicaciones",
+    "method": "get",
+    "headers": [
+     {
+      "name": "x-publicaciones-token",
+      "value": "<PUBLICACIONES_TOKEN>"
+     }
+    ],
+    "qs": [
+     {
+      "name": "accion",
+      "value": "pendientes"
+     },
+     {
+      "name": "max",
+      "value": "10"
+     }
+    ],
+    "bodyType": "",
+    "parseResponse": true,
+    "serializeUrl": false,
+    "shareCookies": false,
+    "rejectUnauthorized": true,
+    "followRedirect": true,
+    "useQuerystring": false,
+    "gzip": true,
+    "useMtls": false,
+    "timeout": 60
+   },
+   "metadata": {
+    "designer": {
+     "x": 0,
+     "y": 300
+    },
+    "restore": {
+     "expect": {
+      "method": {
+       "mode": "chose",
+       "label": "GET"
+      },
+      "headers": {
+       "mode": "chose"
+      },
+      "qs": {
+       "mode": "chose"
+      },
+      "bodyType": {
+       "label": "Empty"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": 2,
+   "module": "builtin:BasicFeeder",
+   "version": 1,
+   "mapper": {
+    "array": "{{1.data.pendientes}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 300,
+     "y": 300
+    },
+    "restore": {
+     "expect": {
+      "array": {
+       "mode": "edit"
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": 3,
+   "module": "builtin:BasicRouter",
+   "version": 1,
+   "mapper": null,
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 300
+    }
+   },
+   "routes": [
+    {
+     "flow": [
+      {
+       "id": 11,
+       "module": "linkedin:CreateCompanyImagePost",
+       "version": 2,
+       "parameters": {
+        "__IMTCONN__": 9302040
+       },
+       "mapper": {
+        "organization": "urn:li:organization:83011863",
+        "method": "link",
+        "url": "{{2.imagen_url}}",
+        "content": "{{2.texto}}",
+        "visibility": "PUBLIC",
+        "feedDistribution": "MAIN_FEED",
+        "isReshareDisabledByAuthor": false
+       },
+       "metadata": {
+        "restore": {
+         "expect": {
+          "method": {
+           "label": "Upload by link"
+          },
+          "visibility": {
+           "mode": "chose",
+           "label": "Anyone"
+          },
+          "organization": {
+           "mode": "chose",
+           "label": "Tu Consultor"
+          },
+          "feedDistribution": {
+           "mode": "chose",
+           "label": "Main feed"
+          }
+         }
+        },
+        "designer": {
+         "x": 900,
+         "y": 0
+        }
+       },
+       "filter": {
+        "name": "LinkedIn empresa",
+        "conditions": [
+         [
+          {
+           "a": "{{2.red}}",
+           "b": "linkedin",
+           "o": "text:equal"
+          }
+         ]
+        ]
+       },
+       "onerror": [
+        {
+         "id": 12,
+         "module": "http:ActionSendData",
+         "version": 3,
+         "parameters": {
+          "handleErrors": false,
+          "useNewZLibDeCompress": true
+         },
+         "mapper": {
+          "url": "https://www.tuconsultor.com/api/publicaciones",
+          "method": "post",
+          "headers": [
+           {
+            "name": "x-publicaciones-token",
+            "value": "<PUBLICACIONES_TOKEN>"
+           }
+          ],
+          "qs": [],
+          "bodyType": "raw",
+          "contentType": "application/json",
+          "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":false,\"error\":\"{{replace(replace(error.message; \"\"\"\"; \"'\"); newline; \" \")}}\"}",
+          "parseResponse": true,
+          "serializeUrl": false,
+          "shareCookies": false,
+          "rejectUnauthorized": true,
+          "followRedirect": true,
+          "useQuerystring": false,
+          "gzip": true,
+          "useMtls": false,
+          "timeout": 60
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 150
+          },
+          "restore": {
+           "expect": {
+            "method": {
+             "mode": "chose",
+             "label": "POST"
+            },
+            "headers": {
+             "mode": "chose"
+            },
+            "qs": {
+             "mode": "chose"
+            },
+            "bodyType": {
+             "label": "Raw"
+            },
+            "contentType": {
+             "label": "JSON (application/json)"
+            }
+           }
+          }
+         }
+        },
+        {
+         "id": 13,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 150
+          }
+         }
+        }
+       ]
+      },
+      {
+       "id": 14,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+       },
+       "mapper": {
+        "url": "https://www.tuconsultor.com/api/publicaciones",
+        "method": "post",
+        "headers": [
+         {
+          "name": "x-publicaciones-token",
+          "value": "<PUBLICACIONES_TOKEN>"
+         }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":true,\"ref\":\"{{11.id}}\"}",
+        "parseResponse": true,
+        "serializeUrl": false,
+        "shareCookies": false,
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "timeout": 60
+       },
+       "metadata": {
+        "designer": {
+         "x": 1200,
+         "y": 0
+        },
+        "restore": {
+         "expect": {
+          "method": {
+           "mode": "chose",
+           "label": "POST"
+          },
+          "headers": {
+           "mode": "chose"
+          },
+          "qs": {
+           "mode": "chose"
+          },
+          "bodyType": {
+           "label": "Raw"
+          },
+          "contentType": {
+           "label": "JSON (application/json)"
+          }
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 21,
+       "module": "linkedin:ShareImage",
+       "version": 2,
+       "parameters": {
+        "__IMTCONN__": 9302040
+       },
+       "mapper": {
+        "method": "link",
+        "url": "{{2.imagen_url}}",
+        "content": "{{2.texto}}",
+        "visibility": "PUBLIC",
+        "feedDistribution": "MAIN_FEED",
+        "isReshareDisabledByAuthor": false
+       },
+       "metadata": {
+        "restore": {
+         "expect": {
+          "method": {
+           "label": "Upload by link"
+          },
+          "visibility": {
+           "mode": "chose",
+           "label": "Anyone"
+          }
+         }
+        },
+        "designer": {
+         "x": 900,
+         "y": 300
+        }
+       },
+       "filter": {
+        "name": "LinkedIn Alejandro",
+        "conditions": [
+         [
+          {
+           "a": "{{2.red}}",
+           "b": "linkedin_alejandro",
+           "o": "text:equal"
+          }
+         ]
+        ]
+       },
+       "onerror": [
+        {
+         "id": 22,
+         "module": "http:ActionSendData",
+         "version": 3,
+         "parameters": {
+          "handleErrors": false,
+          "useNewZLibDeCompress": true
+         },
+         "mapper": {
+          "url": "https://www.tuconsultor.com/api/publicaciones",
+          "method": "post",
+          "headers": [
+           {
+            "name": "x-publicaciones-token",
+            "value": "<PUBLICACIONES_TOKEN>"
+           }
+          ],
+          "qs": [],
+          "bodyType": "raw",
+          "contentType": "application/json",
+          "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":false,\"error\":\"{{replace(replace(error.message; \"\"\"\"; \"'\"); newline; \" \")}}\"}",
+          "parseResponse": true,
+          "serializeUrl": false,
+          "shareCookies": false,
+          "rejectUnauthorized": true,
+          "followRedirect": true,
+          "useQuerystring": false,
+          "gzip": true,
+          "useMtls": false,
+          "timeout": 60
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 450
+          },
+          "restore": {
+           "expect": {
+            "method": {
+             "mode": "chose",
+             "label": "POST"
+            },
+            "headers": {
+             "mode": "chose"
+            },
+            "qs": {
+             "mode": "chose"
+            },
+            "bodyType": {
+             "label": "Raw"
+            },
+            "contentType": {
+             "label": "JSON (application/json)"
+            }
+           }
+          }
+         }
+        },
+        {
+         "id": 23,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 450
+          }
+         }
+        }
+       ]
+      },
+      {
+       "id": 24,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+       },
+       "mapper": {
+        "url": "https://www.tuconsultor.com/api/publicaciones",
+        "method": "post",
+        "headers": [
+         {
+          "name": "x-publicaciones-token",
+          "value": "<PUBLICACIONES_TOKEN>"
+         }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":true,\"ref\":\"{{21.id}}\"}",
+        "parseResponse": true,
+        "serializeUrl": false,
+        "shareCookies": false,
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "timeout": 60
+       },
+       "metadata": {
+        "designer": {
+         "x": 1200,
+         "y": 300
+        },
+        "restore": {
+         "expect": {
+          "method": {
+           "mode": "chose",
+           "label": "POST"
+          },
+          "headers": {
+           "mode": "chose"
+          },
+          "qs": {
+           "mode": "chose"
+          },
+          "bodyType": {
+           "label": "Raw"
+          },
+          "contentType": {
+           "label": "JSON (application/json)"
+          }
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 31,
+       "module": "instagram-business:CreatePostPhoto",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 9302167
+       },
+       "mapper": {
+        "accountId": "17841451603796950",
+        "image_url": "{{2.imagen_url}}",
+        "caption": "{{2.texto}}"
+       },
+       "metadata": {
+        "restore": {
+         "expect": {
+          "accountId": {
+           "mode": "chose",
+           "label": "TuConsultor (Madrid) (@tuconsultor_com)"
+          }
+         }
+        },
+        "designer": {
+         "x": 900,
+         "y": 600
+        }
+       },
+       "filter": {
+        "name": "Instagram",
+        "conditions": [
+         [
+          {
+           "a": "{{2.red}}",
+           "b": "instagram",
+           "o": "text:equal"
+          }
+         ]
+        ]
+       },
+       "onerror": [
+        {
+         "id": 32,
+         "module": "http:ActionSendData",
+         "version": 3,
+         "parameters": {
+          "handleErrors": false,
+          "useNewZLibDeCompress": true
+         },
+         "mapper": {
+          "url": "https://www.tuconsultor.com/api/publicaciones",
+          "method": "post",
+          "headers": [
+           {
+            "name": "x-publicaciones-token",
+            "value": "<PUBLICACIONES_TOKEN>"
+           }
+          ],
+          "qs": [],
+          "bodyType": "raw",
+          "contentType": "application/json",
+          "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":false,\"error\":\"{{replace(replace(error.message; \"\"\"\"; \"'\"); newline; \" \")}}\"}",
+          "parseResponse": true,
+          "serializeUrl": false,
+          "shareCookies": false,
+          "rejectUnauthorized": true,
+          "followRedirect": true,
+          "useQuerystring": false,
+          "gzip": true,
+          "useMtls": false,
+          "timeout": 60
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 750
+          },
+          "restore": {
+           "expect": {
+            "method": {
+             "mode": "chose",
+             "label": "POST"
+            },
+            "headers": {
+             "mode": "chose"
+            },
+            "qs": {
+             "mode": "chose"
+            },
+            "bodyType": {
+             "label": "Raw"
+            },
+            "contentType": {
+             "label": "JSON (application/json)"
+            }
+           }
+          }
+         }
+        },
+        {
+         "id": 33,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 750
+          }
+         }
+        }
+       ]
+      },
+      {
+       "id": 34,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+       },
+       "mapper": {
+        "url": "https://www.tuconsultor.com/api/publicaciones",
+        "method": "post",
+        "headers": [
+         {
+          "name": "x-publicaciones-token",
+          "value": "<PUBLICACIONES_TOKEN>"
+         }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":true,\"ref\":\"{{31.id}}\"}",
+        "parseResponse": true,
+        "serializeUrl": false,
+        "shareCookies": false,
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "timeout": 60
+       },
+       "metadata": {
+        "designer": {
+         "x": 1200,
+         "y": 600
+        },
+        "restore": {
+         "expect": {
+          "method": {
+           "mode": "chose",
+           "label": "POST"
+          },
+          "headers": {
+           "mode": "chose"
+          },
+          "qs": {
+           "mode": "chose"
+          },
+          "bodyType": {
+           "label": "Raw"
+          },
+          "contentType": {
+           "label": "JSON (application/json)"
+          }
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 41,
+       "module": "instagram-business:CreateAReelPost",
+       "version": 1,
+       "parameters": {
+        "__IMTCONN__": 9302167
+       },
+       "mapper": {
+        "accountId": "17841451603796950",
+        "video_url": "{{2.video_url}}",
+        "caption": "{{2.texto}}",
+        "share_to_feed": true
+       },
+       "metadata": {
+        "restore": {
+         "expect": {
+          "accountId": {
+           "mode": "chose",
+           "label": "TuConsultor (Madrid) (@tuconsultor_com)"
+          }
+         }
+        },
+        "designer": {
+         "x": 900,
+         "y": 900
+        }
+       },
+       "filter": {
+        "name": "Instagram reel",
+        "conditions": [
+         [
+          {
+           "a": "{{2.red}}",
+           "b": "instagram_reel",
+           "o": "text:equal"
+          }
+         ]
+        ]
+       },
+       "onerror": [
+        {
+         "id": 42,
+         "module": "http:ActionSendData",
+         "version": 3,
+         "parameters": {
+          "handleErrors": false,
+          "useNewZLibDeCompress": true
+         },
+         "mapper": {
+          "url": "https://www.tuconsultor.com/api/publicaciones",
+          "method": "post",
+          "headers": [
+           {
+            "name": "x-publicaciones-token",
+            "value": "<PUBLICACIONES_TOKEN>"
+           }
+          ],
+          "qs": [],
+          "bodyType": "raw",
+          "contentType": "application/json",
+          "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":false,\"error\":\"{{replace(replace(error.message; \"\"\"\"; \"'\"); newline; \" \")}}\"}",
+          "parseResponse": true,
+          "serializeUrl": false,
+          "shareCookies": false,
+          "rejectUnauthorized": true,
+          "followRedirect": true,
+          "useQuerystring": false,
+          "gzip": true,
+          "useMtls": false,
+          "timeout": 60
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 1050
+          },
+          "restore": {
+           "expect": {
+            "method": {
+             "mode": "chose",
+             "label": "POST"
+            },
+            "headers": {
+             "mode": "chose"
+            },
+            "qs": {
+             "mode": "chose"
+            },
+            "bodyType": {
+             "label": "Raw"
+            },
+            "contentType": {
+             "label": "JSON (application/json)"
+            }
+           }
+          }
+         }
+        },
+        {
+         "id": 43,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1050
+          }
+         }
+        }
+       ]
+      },
+      {
+       "id": 44,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+       },
+       "mapper": {
+        "url": "https://www.tuconsultor.com/api/publicaciones",
+        "method": "post",
+        "headers": [
+         {
+          "name": "x-publicaciones-token",
+          "value": "<PUBLICACIONES_TOKEN>"
+         }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":true,\"ref\":\"{{41.id}}\"}",
+        "parseResponse": true,
+        "serializeUrl": false,
+        "shareCookies": false,
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "timeout": 60
+       },
+       "metadata": {
+        "designer": {
+         "x": 1200,
+         "y": 900
+        },
+        "restore": {
+         "expect": {
+          "method": {
+           "mode": "chose",
+           "label": "POST"
+          },
+          "headers": {
+           "mode": "chose"
+          },
+          "qs": {
+           "mode": "chose"
+          },
+          "bodyType": {
+           "label": "Raw"
+          },
+          "contentType": {
+           "label": "JSON (application/json)"
+          }
+         }
+        }
+       }
+      }
+     ]
+    },
+    {
+     "flow": [
+      {
+       "id": 51,
+       "module": "linkedin:createOrganizationVideoPost",
+       "version": 2,
+       "parameters": {
+        "__IMTCONN__": 9302040
+       },
+       "mapper": {
+        "organization": "urn:li:organization:83011863",
+        "method": "link",
+        "url": "{{2.video_url}}",
+        "title": "{{2.titulo}}",
+        "content": "{{2.texto}}",
+        "visibility": "PUBLIC"
+       },
+       "metadata": {
+        "restore": {
+         "expect": {
+          "method": {
+           "label": "Upload by link"
+          },
+          "visibility": {
+           "mode": "chose",
+           "label": "Anyone"
+          },
+          "organization": {
+           "mode": "chose",
+           "label": "Tu Consultor"
+          }
+         }
+        },
+        "designer": {
+         "x": 900,
+         "y": 1200
+        }
+       },
+       "filter": {
+        "name": "LinkedIn vídeo empresa",
+        "conditions": [
+         [
+          {
+           "a": "{{2.red}}",
+           "b": "linkedin_video",
+           "o": "text:equal"
+          }
+         ]
+        ]
+       },
+       "onerror": [
+        {
+         "id": 52,
+         "module": "http:ActionSendData",
+         "version": 3,
+         "parameters": {
+          "handleErrors": false,
+          "useNewZLibDeCompress": true
+         },
+         "mapper": {
+          "url": "https://www.tuconsultor.com/api/publicaciones",
+          "method": "post",
+          "headers": [
+           {
+            "name": "x-publicaciones-token",
+            "value": "<PUBLICACIONES_TOKEN>"
+           }
+          ],
+          "qs": [],
+          "bodyType": "raw",
+          "contentType": "application/json",
+          "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":false,\"error\":\"{{replace(replace(error.message; \"\"\"\"; \"'\"); newline; \" \")}}\"}",
+          "parseResponse": true,
+          "serializeUrl": false,
+          "shareCookies": false,
+          "rejectUnauthorized": true,
+          "followRedirect": true,
+          "useQuerystring": false,
+          "gzip": true,
+          "useMtls": false,
+          "timeout": 60
+         },
+         "metadata": {
+          "designer": {
+           "x": 900,
+           "y": 1350
+          },
+          "restore": {
+           "expect": {
+            "method": {
+             "mode": "chose",
+             "label": "POST"
+            },
+            "headers": {
+             "mode": "chose"
+            },
+            "qs": {
+             "mode": "chose"
+            },
+            "bodyType": {
+             "label": "Raw"
+            },
+            "contentType": {
+             "label": "JSON (application/json)"
+            }
+           }
+          }
+         }
+        },
+        {
+         "id": 53,
+         "module": "builtin:Ignore",
+         "version": 1,
+         "metadata": {
+          "designer": {
+           "x": 1200,
+           "y": 1350
+          }
+         }
+        }
+       ]
+      },
+      {
+       "id": 54,
+       "module": "http:ActionSendData",
+       "version": 3,
+       "parameters": {
+        "handleErrors": false,
+        "useNewZLibDeCompress": true
+       },
+       "mapper": {
+        "url": "https://www.tuconsultor.com/api/publicaciones",
+        "method": "post",
+        "headers": [
+         {
+          "name": "x-publicaciones-token",
+          "value": "<PUBLICACIONES_TOKEN>"
+         }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "data": "{\"accion\":\"marcar\",\"id\":\"{{2.id}}\",\"ok\":true,\"ref\":\"{{51.id}}\"}",
+        "parseResponse": true,
+        "serializeUrl": false,
+        "shareCookies": false,
+        "rejectUnauthorized": true,
+        "followRedirect": true,
+        "useQuerystring": false,
+        "gzip": true,
+        "useMtls": false,
+        "timeout": 60
+       },
+       "metadata": {
+        "designer": {
+         "x": 1200,
+         "y": 1200
+        },
+        "restore": {
+         "expect": {
+          "method": {
+           "mode": "chose",
+           "label": "POST"
+          },
+          "headers": {
+           "mode": "chose"
+          },
+          "qs": {
+           "mode": "chose"
+          },
+          "bodyType": {
+           "label": "Raw"
+          },
+          "contentType": {
+           "label": "JSON (application/json)"
+          }
+         }
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "metadata": {
+  "version": 1,
+  "scenario": {
+   "roundtrips": 1,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "autoCommitTriggerLast": true,
+   "sequential": false,
+   "confidential": false,
+   "dataloss": false,
+   "dlq": false,
+   "freshVariables": false
+  },
+  "designer": {
+   "orphans": []
+  }
+ }
+}

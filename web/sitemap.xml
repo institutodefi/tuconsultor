@@ -2938,4 +2938,16 @@
     <xhtml:link rel="alternate" hreflang="ar" href="https://www.tuconsultor.com/ar/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.tuconsultor.com/"/>
   </url>
+  <url>
+    <loc>https://www.tuconsultor.com/orbita/</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.tuconsultor.com/enlaces/</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+  </url>
 </urlset>

@@ -5,6 +5,7 @@ import Equipo from './consultores/Equipo.jsx';
 import Empresas from './consultores/Empresas.jsx';
 import Contactos from './consultores/Contactos.jsx';
 import Ofertas from './consultores/Ofertas.jsx';
+import Publicaciones from './consultores/Publicaciones.jsx';
 import ProyectoCliente from './cliente/ProyectoCliente.jsx';
 import ProyectosConfig from './consultores/ProyectosConfig.jsx';
 import Agenda from './consultores/Agenda.jsx';
@@ -38,6 +39,7 @@ const Icon = ({ name, className = 'h-5 w-5' }) => {
     'file-text': <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></>,
     'shield-check': <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></>,
     'users': <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    'megaphone': <><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" /><path d="M14 8.5a4 4 0 0 1 0 7M17 6a7 7 0 0 1 0 12" /></>,
     'receipt': <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" /><path d="M8 7h8M8 11h8M8 15h5" /></>,
     'folder-kanban': <><path d="M4 20a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z" /><path d="M8 10v4M12 10v2M16 10v6" /></>,
     'user': <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></>,
@@ -224,6 +226,7 @@ export default function ConsultorPortal() {
               <Route path="empresas" element={<Guard ok={verCrm}><Empresas /></Guard>} />
               <Route path="contactos" element={<Guard ok={verCrm}><Contactos /></Guard>} />
               <Route path="ofertas" element={<Guard ok={verClientes}><Ofertas /></Guard>} />
+              <Route path="publicaciones" element={<Guard ok={['superadmin', 'admin', 'gestion'].includes(role)}><Publicaciones /></Guard>} />
               <Route path="*" element={<Navigate to="." replace />} />
             </Routes>
           </main>

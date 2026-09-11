@@ -104,6 +104,8 @@ export const GRUPOS_PORTAL = [
       // define cada modelo para saber qué les toca hacer. Editarlo es otra
       // cosa: ver `can.editarCatalogoTareas`.
       { to: 'sistemas', label: 'Sistemas de gestión', icon: 'shield-check', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      // Calendario de redes (v139): lo que va a salir, lo que salió y lo que falló.
+      { to: 'publicaciones', label: 'Publicaciones en redes', icon: 'megaphone', roles: ['superadmin', 'admin', 'gestion'] },
     ],
   },
   {
