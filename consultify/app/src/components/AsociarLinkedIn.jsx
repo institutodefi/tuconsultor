@@ -115,7 +115,6 @@ export default function AsociarLinkedIn({ contacto, empresa = '', puedeEditar = 
         <button type="button" onClick={buscar} disabled={ocupado} className="btn-ghost !px-2.5 !py-1 text-[11.5px] disabled:opacity-50" title="Busca en LinkedIn y la web con el nombre, la empresa y el cargo de esta ficha y propone hasta cinco perfiles">
           {ocupado ? 'Buscando…' : contacto.linkedin_url ? '✦ Buscar otro perfil en LinkedIn' : '✦ Buscar su perfil en LinkedIn'}
         </button>
-        {contacto.linkedin_url && !abierto && <a href={contacto.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-[11.5px] font-bold text-[#9FC0CB] hover:text-[#EAF4F7]">Perfil asociado ↗</a>}
         {abierto && !ocupado && <button type="button" onClick={() => { setAbierto(false); setCandidatos(null); }} className="text-[11px] font-bold text-[#7FA7B4]">cerrar</button>}
       </div>
       {error && <p className="mt-1.5 text-[11.5px] font-bold text-red-300">{error}</p>}

@@ -12,6 +12,7 @@ import { puedeEditarContactos } from '../../lib/crm.js';
 import { linkWhatsApp } from '../../lib/telefono.js';
 import BuscadorContactoIA from '../../components/BuscadorContactoIA.jsx';
 import AsociarLinkedIn from '../../components/AsociarLinkedIn.jsx';
+import VistaPerfilLinkedIn from '../../components/VistaPerfilLinkedIn.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONTACTOS · las personas del CRM.
@@ -614,6 +615,7 @@ function FichaContacto({ contacto, empresas, puedeEditar, puedeBorrar, sync, onB
           </div>
           {/* Hasta cinco perfiles de LinkedIn por afinidad; se asocia el que sea a mano (v140). */}
           <AsociarLinkedIn contacto={contacto} empresa={empresas[0] ? nombreVisible(empresas[0].e) : ''} puedeEditar={!!puedeEditar} onCambio={onRecargar} onPatch={onPatch} />
+          <VistaPerfilLinkedIn contacto={contacto} puedeEditar={!!puedeEditar} onCambio={onRecargar} onPatch={onPatch} />
           </div>
         </div>
         {puedeEditar && (
