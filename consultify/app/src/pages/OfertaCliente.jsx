@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { RGPD_TEXTO, RGPD_CASILLAS } from '../lib/rgpd.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { eurES } from '../lib/formato.js';
+import VistaOferta from '../components/VistaOferta.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // LA OFERTA DESDE EL CORREO · página pública que abre el cliente (v138)
@@ -43,6 +44,7 @@ export default function OfertaCliente() {
   const [ocupado, setOcupado] = useState(false);
   const [hecho, setHecho] = useState(null);      // {estado, tieneCuenta}
   const [acceso, setAcceso] = useState(null);    // resultado de pedir acceso
+  const [completa, setCompleta] = useState(false);   // la propuesta entera, en pantalla (v141)
   const intentado = useRef(false);
 
   useEffect(() => {
@@ -124,11 +126,16 @@ export default function OfertaCliente() {
                 </p>
                 <p className="mt-0.5 text-[11px] text-[#7FA7B4]">{LEYENDA_IMPUESTOS}{o.valida_hasta ? ` · Válida hasta el ${fecha(o.valida_hasta)}` : ''}</p>
               </div>
-              {o.url_pdf && <a href={o.url_pdf} target="_blank" rel="noopener" className="btn-ghost !px-3 !py-1.5 text-[12.5px]">📄 Ver la propuesta (PDF)</a>}
+              <div className="flex flex-wrap gap-2">
+                {o.documento?.r && <button type="button" onClick={() => setCompleta((v) => !v)} className="btn-orange !px-3 !py-1.5 text-[12.5px]">{completa ? 'Ocultar la propuesta' : '◉ Ver la propuesta completa'}</button>}
+                {o.url_pdf && <a href={o.url_pdf} target="_blank" rel="noopener" className="btn-ghost !px-3 !py-1.5 text-[12.5px]">📄 PDF</a>}
+              </div>
             </div>
             {o.notas && <p className="mt-3 whitespace-pre-line rounded-lg bg-[#0D3242] px-3 py-2 text-[12.5px] leading-relaxed text-[#B9D2DA]">{o.notas}</p>}
             {(o.fecha_inicio || o.fecha_fin) && <p className="mt-2 text-[12px] text-[#9FC0CB]">{o.fecha_inicio ? `Inicio previsto: ${fecha(o.fecha_inicio)}` : ''}{o.fecha_fin ? ` · Fin: ${fecha(o.fecha_fin)}` : ''}</p>}
           </div>
+          {/* La propuesta entera, sección por sección: lo mismo que hay en el PDF (v141). */}
+          {completa && o.documento?.r && <div className="mt-4"><VistaOferta documento={o.documento} /></div>}
 
           {hecho ? (
             <div className="card mt-4">

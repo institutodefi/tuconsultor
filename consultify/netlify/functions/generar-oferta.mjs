@@ -11,7 +11,7 @@
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import PptxGenJS from 'pptxgenjs';
-import { CATALOGO_ANEXO } from './catalogo-anexo.mjs';
+import { tareasPorBloque, aplicarOverride, enriquecer, paraCliente } from '../../app/src/lib/documentoOferta.js';
 // Único generador del PDF de oferta. La variante anterior («Knowledgefy») se
 // archivó en `_archivo/` el 26/08/2026: llevaba tiempo sin usarse y su texto
 // legal ya había divergido del que se emite. Si hace falta otro formato, se
@@ -23,35 +23,6 @@ import { PIE_TUCONSULTOR, PIE_CONSULTIFY, PIE_ORBITA } from './assets-oferta.mjs
 import { LOGO_TUCONSULTOR_BLANCO } from './logos-oferta.mjs';
 import { HEX, EMISOR, condiciones, REQUISITOS_LEGALES, clausulas, propuesta, textoDedicacion, fmtEur, fmtEur0, fechaLarga, nombresDeNormas, fasesDeLosPlanes, describirAjuste, emisorDe } from './contenido-oferta.mjs';
 
-// Mapa de prefijo de proceso → nombre de bloque legible (para agrupar el Anexo I).
-const BLOQUES = {
-  PE1: 'Planificación estratégica', PE2: 'Evaluación del desempeño', PE3: 'Mejora continua',
-  PE4: 'Gestión de la cartera de innovación', PE5: 'Gobernanza de IA',
-  PA1: 'Gestión de personas', PA2: 'Gestión medioambiental', PA3: 'Gestión del conocimiento e información',
-  PA4: 'Gestión de infraestructuras y activos', PA5: 'Gestión de seguridad de la información',
-  PA6: 'Gestión de partes subcontratadas', PA7: 'Gestión económica y administrativa',
-  PA8: 'Gestión de PI y vigilancia', PA9: 'Gestión de alianzas', PA10: 'Gestión de datos para IA',
-  PA11: 'Información a partes interesadas', PA12: 'Uso responsable de IA', PA13: 'Relaciones con terceros',
-  PA19: 'Gestión de la privacidad',
-  PI1: 'Proceso de innovación', PI2: 'Gestión de iniciativas de innovación', PI3: 'Ciclo de vida del sistema de IA',
-  PR1: 'Incorporación de usuarios', PR2: 'Atención al usuario', PR3: 'Baja y servicios generales',
-};
-// Agrupa los subprocesos del modelo (solo los que aplican a las normas elegidas) por bloque legible.
-function tareasPorBloque(normaIds, modeloId) {
-  const filas = CATALOGO_ANEXO[modeloId] || CATALOGO_ANEXO['Implantación'] || [];
-  const grupos = new Map();
-  for (const f of filas) {
-    const aplica = f.normas.some((id) => normaIds.includes(id));
-    if (!aplica) continue;
-    const pref = (f.proc.split(' ')[0] || '').toUpperCase();
-    const bloque = BLOQUES[pref] || f.proc;
-    if (!grupos.has(bloque)) grupos.set(bloque, []);
-    // Limpiar el nombre del subproceso (quitar prefijo Sx y código) para legibilidad
-    const limpio = f.sub.replace(/^S\d+\s+/, '').replace(/\s*\(.*?\)\s*$/, '').trim();
-    grupos.get(bloque).push(limpio);
-  }
-  return [...grupos.entries()].map(([bloque, subs]) => ({ bloque, subs }));
-}
 
 // ═══════════════════ MOTOR DE CÁLCULO · UNO SOLO ═══════════════════════════
 // Antes había aquí una RÉPLICA de app/src/lib/calcEngine.js, con la advertencia
@@ -81,22 +52,6 @@ const ORANGE = rgb(0.961, 0.651, 0.137); // #F5A623
 const MUTED = rgb(0.357, 0.42, 0.525);
 const HOY = () => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
 
-/** Suma meses a una fecha ISO respetando el fin de mes (31 ene + 1 = 28 feb). */
-function sumarMesesISO(fechaISO, meses, masUnDia = false) {
-  if (!fechaISO) return null;
-  const d = new Date(`${String(fechaISO).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  const dia = d.getDate();
-  d.setMonth(d.getMonth() + meses);
-  if (d.getDate() < dia) d.setDate(0);      // 31 ene → 28 feb
-  if (masUnDia) d.setDate(d.getDate() + 1);
-  // Se formatea en local: la fecha se creó al mediodía justamente para que
-  // `toISOString` no cambie de día, pero se deja explícito para no depender de
-  // ese detalle.
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 async function generarPDF(r, cli, anexo) {
   // Delega en documento-oferta-premium.mjs, que monta el documento desde cero
@@ -578,90 +533,12 @@ export default async (req) => {
   // de datos y las aplica el navegador). Si el cliente nos manda su resultado,
   // manda el suyo: así el documento nunca contradice el precio que se vio en
   // pantalla. Recalculamos IVA, total y fraccionamiento sobre el precio final.
-  const ov = body.override;
-  if (ov && Number.isFinite(Number(ov.precioCatalogo))) {
-    r.precioBase = Number(ov.precioBase ?? r.precioCatalogo);
-    r.precioCatalogo = Number(ov.precioCatalogo);
-    if (ov.horas) r.horas = ov.horas;
-    if (Number.isFinite(Number(ov.hTotal))) r.hTotal = Number(ov.hTotal);
-    r.reglasAplicadas = Array.isArray(ov.reglas) ? ov.reglas : [];
-    const r2 = (x) => Math.round(x * 100) / 100;
-    r.iva = r2(r.precioCatalogo * IVA_MOTOR);
-    r.totalConIva = r2(r.precioCatalogo + r.iva);
-
-    // Las formas de pago TAMBIÉN se rehacen. Antes no se tocaban y se quedaban
-    // con el precio anterior: el documento acababa con el importe de un cálculo
-    // y las cuotas de otro. Es lo que hizo que una oferta llevara 11.650 € de
-    // total y 4.200 € de importe en la misma página.
-    if (r.formasPago && !r.formasPago.dos) {
-      // Apoyo: un solo pago, igual al importe de la bolsa.
-      const base = r.precioCatalogo;
-      r.formasPago = { ...r.formasPago, unico: { ...r.formasPago.unico, sinIva: base, iva: r2(base * IVA_MOTOR), total: r2(base * (1 + IVA_MOTOR)), ahorro: 0 } };
-    }
-    if (r.formasPago && r.formasPago.dos) {
-      const base = r.precioCatalogo;
-      const dto = r.formasPago.descuentoUnico ?? 0.05;
-      const unicoSinIva = r2(base * (1 - dto));
-      const cuota = r2(base / 2);
-      r.formasPago = {
-        ...r.formasPago,
-        unico: { ...r.formasPago.unico, sinIva: unicoSinIva, iva: r2(unicoSinIva * IVA_MOTOR),
-                 total: r2(unicoSinIva * (1 + IVA_MOTOR)), ahorro: r2(base - unicoSinIva) },
-        dos: { ...r.formasPago.dos, sinIva: base, iva: r2(base * IVA_MOTOR),
-               total: r2(base * (1 + IVA_MOTOR)),
-               cuota1: r2(cuota * (1 + IVA_MOTOR)),
-               cuota2: r2(base * (1 + IVA_MOTOR) - r2(cuota * (1 + IVA_MOTOR))),
-               // Cuotas sin impuestos: es lo que se imprime en la oferta.
-               cuota1SinIva: cuota,
-               cuota2SinIva: r2(base - cuota) },
-      };
-    }
-    if (r.fraccionado) {
-      const totalConIvaFrac = r2(r.precioCatalogo * (1 + IVA_MOTOR));
-      const c1 = r2(totalConIvaFrac / 2);
-      const c1Sin = r2(r.precioCatalogo / 2);
-      r.fraccionado = { ...r.fraccionado, totalSinIva: r.precioCatalogo, totalConIva: totalConIvaFrac,
-                        cuota1: c1, cuota2: r2(totalConIvaFrac - c1), cuota3: 0,
-                        cuota1SinIva: c1Sin, cuota2SinIva: r2(r.precioCatalogo - c1Sin) };
-    }
-  }
-  r.disclaimer = body.disclaimer || DISCLAIMER_OFERTA;
-  r.formaPagoElegida = body.forma_pago || null;          // 'unico' | 'dos'
-  r.notas = body.notas_oferta || body.notas || null;     // solo las que ve el cliente
-  r.fasesPlan = body.fasesPlan || body.fases_plan || null;  // fases contratadas de cada plan
-  r.emisora_id = body.emisora_id || 'trescore';            // sociedad que emite
-  r.modeloMantenimiento = body.modelo_mantenimiento || null;
-  // Enriquecer el resultado con nombres de norma y meses para el documento.
-  // Se escriben las dos variantes del nombre: hubo documentos que leían una y
-  // otros la otra, y la portada acabó enseñando el identificador interno.
-  r.normaNombres = normas.map((id) => (NORMA_BY_ID[id]?.nombre || id));
-  r.normasNombres = r.normaNombres;
-  // Duración en meses. El fallback de 3 estaba pensado para Implantación y se
-  // aplicaba también a los recurrentes: el cuadro de facturación salía con tres
-  // cuotas en un contrato de doce. En recurrentes el fallback es la permanencia
-  // del modelo, doce meses.
-  const esRecurrente = r.tipo === 'mes' && modelo !== 'Implantación';
-  r.meses = Math.max(parseInt(meses, 10) || (r.fraccionado?.meses) || (esRecurrente ? 12 : 3), 1);
-
-  // ── Fechas del encargo ──
-  // Sin esto, `cuadroFacturacion` no recibía fecha de firma y arrancaba el
-  // calendario en la fecha de HOY: una oferta emitida en agosto para un
-  // servicio que empieza en octubre facturaba desde agosto.
-  r.fecha_inicio = body.fecha_inicio || null;
-  r.fecha_certificacion = body.fecha_certificacion || null;
-  // Fecha de emisión: la del documento y el arranque de los 30 días de validez.
-  // Sin esto el PDF se fechaba con el día en que se generaba, así que regenerar
-  // una oferta de marzo en agosto la fechaba en agosto y reabría el plazo.
-  r.fecha_emision = body.fecha_emision || null;
-  // Primer pago: por defecto el mes de inicio del proyecto. De aquí arranca el
-  // cuadro de facturación.
-  r.fecha_primer_pago = body.fecha_primer_pago || body.fecha_inicio || null;
-  // Fin de contrato, independiente de la certificación. Si no llega, se deriva
-  // a doce meses del inicio: es la permanencia del modelo.
-  // Doce meses y un día en los recurrentes: con el fin en el mismo día del mes
-  // el contrato se queda a un día de los doce completos y el plazo sale de once.
-  r.fecha_fin = body.fecha_fin
-    || (body.fecha_inicio ? sumarMesesISO(body.fecha_inicio, 12, r.tipo === 'mes' && modelo !== 'Implantación') : null);
+  // El precio que se vio en pantalla manda; y todo lo que el documento
+  // necesita (fechas, notas, emisora, forma de pago) se monta con el MISMO
+  // código que usa la vista previa de Órbita (app/src/lib/documentoOferta.js):
+  // así lo que ve el cliente es lo que vio el equipo antes de generarla.
+  aplicarOverride(r, body.override);
+  enriquecer(r, { ...body, normas, modelo, meses });
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
   const anexo = tareasPorBloque(normas, modelo);
 
@@ -706,6 +583,8 @@ export default async (req) => {
   const stamp = Date.now();
   const carpeta = `${new Date().toISOString().slice(0, 7)}`; // YYYY-MM
 
+  r.numero = numeroOferta;
+  const documento = paraCliente({ r, cli, anexo });
   try {
     const [pdfBuf, pptxBuf] = await Promise.all([generarPDF(r, cli, anexo), generarPPTX(r, cli, anexo)]);
     const [url_pdf, url_pptx] = await Promise.all([
@@ -720,6 +599,9 @@ export default async (req) => {
         headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
         body: JSON.stringify({
           url_pdf, url_pptx, numero_oferta: numeroOferta,
+          // La copia exacta de lo que se imprimió, sin la lógica: es lo que
+          // enseña Órbita al cliente (v141).
+          documento, documento_en: new Date().toISOString(),
           ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
           ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),
         }),
@@ -776,6 +658,7 @@ export default async (req) => {
               forma_pago: body.forma_pago || null,
               emisora_id: r.emisora_id,
               modelo_mantenimiento: body.modelo_mantenimiento || null,
+              documento, documento_en: new Date().toISOString(),
               ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
               ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),
             }),

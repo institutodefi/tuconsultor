@@ -33,7 +33,7 @@ async function sb(path, { method = 'GET', body, headers = {} } = {}) {
 }
 const leer = async (path) => { const r = await sb(path); return r.ok ? r.json() : []; };
 
-const CAMPOS = 'id,numero_oferta,empresa,nombre,contacto_nombre,contacto_apellidos,email,cif,normas,modelo,precio,tipo,meses,notas_oferta,url_pdf,estado,fecha_emision,valida_hasta,fecha_inicio,fecha_fin,forma_pago,comercial,motivo_rechazo,aceptada_en,rechazada_en,contacto_id,empresa_id,emisora_id,sedes,token_acceso';
+const CAMPOS = 'id,numero_oferta,empresa,nombre,contacto_nombre,contacto_apellidos,email,cif,normas,modelo,precio,tipo,meses,notas_oferta,url_pdf,estado,fecha_emision,valida_hasta,fecha_inicio,fecha_fin,forma_pago,comercial,motivo_rechazo,aceptada_en,rechazada_en,contacto_id,empresa_id,emisora_id,sedes,token_acceso,documento,documento_en';
 
 async function ofertaPorToken(token) {
   if (!/^[0-9a-f-]{36}$/i.test(String(token || ''))) return null;
@@ -78,6 +78,9 @@ function vista(o, extra = {}) {
     normas, modelo: o.modelo, precio: o.precio, tipo: o.tipo, meses: o.meses, notas: o.notas_oferta, url_pdf: o.url_pdf,
     estado: caducada(o) ? 'caducada' : o.estado, fecha_emision: o.fecha_emision, valida_hasta: o.valida_hasta, fecha_inicio: o.fecha_inicio, fecha_fin: o.fecha_fin,
     forma_pago: o.forma_pago, comercial: o.comercial, aceptada_en: o.aceptada_en, rechazada_en: o.rechazada_en, motivo_rechazo: o.motivo_rechazo,
+    // La copia exacta del documento emitido, sin la lógica (v141): es lo que
+    // enseña la página del enlace en «Ver la propuesta completa».
+    documento: o.documento || null,
     ...extra,
   };
 }

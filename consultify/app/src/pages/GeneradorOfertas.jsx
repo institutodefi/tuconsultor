@@ -15,6 +15,8 @@ import { COMPLEJIDADES, totalEquipo } from '../lib/proyecto.js';
 import { linkWhatsApp } from '../lib/telefono.js';
 import { useAuth } from '../lib/auth.jsx';
 import { RGPD_TEXTO, RGPD_CASILLAS } from '../lib/rgpd.js';
+import { SITUACIONES, situacionDeModelo, montarDocumento, logicaDe } from '../lib/documentoOferta.js';
+import VisorOferta from '../components/VisorOferta.jsx';
 
 // Generador de ofertas: selección de normas + modelo + datos del cliente,
 // precio en vivo (siempre sin impuestos) y exportación a PDF/PPTX vía la función serverless.
@@ -22,6 +24,17 @@ export default function GeneradorOfertas({ publico = false }) {
   const { user } = useAuth();
   const [sel, setSel] = useState(['9001']);          // 9001 premarcada, pero se puede quitar
   const [modelo, setModelo] = useState('Implicación');
+  // ── Situación de partida (v141) ──
+  // Tres puertas: desde cero (Implantación), ya certificado (los tres modelos
+  // de cuota) y urgente (Apoyo, nunca a más de tres meses). Acota los modelos
+  // que se enseñan; el modelo concreto se elige después.
+  const [situacion, setSituacion] = useState(situacionDeModelo('Implicación'));
+  const elegirSituacion = (id) => {
+    setSituacion(id);
+    const s = SITUACIONES.find((x) => x.id === id);
+    if (s && !s.modelos.includes(modelo)) setModelo(s.modelos.includes('Implicación') ? 'Implicación' : s.modelos[0]);
+  };
+  const [vista, setVista] = useState(false);   // el visor de la oferta, antes de generarla
   // Fechas en vez de meses: nadie sabe de memoria si su proyecto son ocho meses
   // o diez, pero todo el mundo sabe cuándo tiene la auditoría.
   //
@@ -308,6 +321,7 @@ export default function GeneradorOfertas({ publico = false }) {
         forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
         pago_adelantado: !!adelantado,
         modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+        situacion: situacion || null,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
       });
     } catch (e) {
@@ -384,6 +398,7 @@ export default function GeneradorOfertas({ publico = false }) {
           forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
           pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+          situacion: situacion || null,
           email: cli.email, presupuesto_id: fila?.id,
           // RGPD marcado al pedirla (v138): queda en el contacto del CRM y en Brevo.
           rgpd: publico && consent, marketing: publico && marketing,
@@ -797,9 +812,31 @@ export default function GeneradorOfertas({ publico = false }) {
 
           {/* 2 · Modelo */}
           <section className="card">
-            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#F9A83A]">2 · Modelo de servicio</h2>
+            <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#F9A83A]">2 · Situación y modelo de servicio</h2>
+            {/* ── La puerta de entrada (v141) ──
+                Antes se elegía directamente entre cinco modelos y había que
+                saber de antemano cuál encajaba. Ahora se parte de la situación
+                de la organización y los modelos que no aplican no se enseñan. */}
+            <div className="mb-4 grid gap-2 sm:grid-cols-3">
+              {SITUACIONES.map((st) => {
+                const on = situacion === st.id;
+                return (
+                  <button key={st.id} type="button" onClick={() => elegirSituacion(st.id)} title={st.ayuda}
+                    className={`rounded-xl border-[1.5px] p-3 text-left transition ${on ? 'border-brand-orange bg-brand-orange/15' : 'border-[#1E5468] bg-[#0D3242] hover:border-brand-verde'}`}>
+                    <span className={`block text-[13.5px] font-extrabold ${on ? 'text-brand-orange' : 'text-[#EAF4F7]'}`}>{on ? '✓ ' : ''}{st.titulo}</span>
+                    <span className="mt-0.5 block text-[11px] font-bold text-[#9FC0CB]">{st.sub}</span>
+                    <span className="mt-1 block text-[11px] leading-snug text-[#7FA7B4]">{st.ayuda}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {situacion === 'urgente' && (
+              <p className="mb-3 rounded-lg bg-brand-orange/10 px-3 py-2 text-[12px] leading-relaxed text-brand-orange">
+                Apoyo es para llegar a una auditoría que ya está a la vista: <b>nunca a más de tres meses</b>. Declara la fecha de certificación (o fija el fin de la bolsa) y, si queda más lejos, la oferta es de mantenimiento o de implantación.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              {MODELO_IDS.map(mid => {
+              {MODELO_IDS.filter((mid) => !situacion || SITUACIONES.find((x) => x.id === situacion)?.modelos.includes(mid)).map(mid => {
                 const on = modelo === mid;
                 // Un modelo que no cabe se deshabilita y DICE por qué al pasar
                 // por encima. Dejarlo elegible para luego dar un error al
@@ -1180,6 +1217,11 @@ export default function GeneradorOfertas({ publico = false }) {
                 )}
 
                 <div className="mt-4 flex gap-2">
+                  <button type="button" onClick={() => setVista(true)} disabled={!res}
+                    title="Ver la oferta completa, tal y como la recibirá el cliente, antes de generarla"
+                    className="rounded-xl border border-white/25 px-3 py-3 text-sm font-extrabold text-white transition hover:border-brand-orange disabled:opacity-50">
+                    ◉ Previsualizar
+                  </button>
                   <button onClick={() => generar('pdf')}
                     disabled={estado === 'gen' || plazoMal || (!publico && !aprobador)}
                     title={!publico && !aprobador ? 'Elige quién aprueba el precio' : ''}
@@ -1230,6 +1272,40 @@ export default function GeneradorOfertas({ publico = false }) {
           </div>
         </aside>
       </div>
+
+      {/* ── El visor: la oferta completa antes de generarla (v141) ──
+          Monta el documento con el MISMO código que el servidor (montarDocumento)
+          y lo enseña con el mismo componente que ve el cliente. Desde aquí se
+          genera, y al generar salen los enlaces sin cerrar la ventana. */}
+      {vista && res && (() => {
+        const contactoCompleto = `${cli.nombre} ${cli.apellidos}`.trim();
+        const doc = montarDocumento({
+          r: res, normas: sel, modelo, meses: res.meses,
+          empresa: cli.empresa, contacto: contactoCompleto, cif: cli.cif, cargo: cli.cargo, email: cli.email, telefono: cli.telefono, direccion: cli.direccion,
+          ref: estado?.numero || 'borrador', comercial: 'Alejandro', canal: publico ? 'web' : 'interno',
+          fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null, fecha_fin: fechaFin || null, fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
+          complejidad, sedes, fasesPlan, emisora_id: emisora, notas_oferta: notas || null,
+          forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
+          pago_adelantado: !!adelantado, modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+          disclaimer: DISCLAIMER_OFERTA, situacion,
+        });
+        const puedeGenerar = !(estado === 'gen' || plazoMal || (!publico && !aprobador));
+        return (
+          <VisorOferta documento={doc} logica={publico ? null : logicaDe(res)} notasInternas={publico ? null : (notasInternas || null)}
+            soloCliente={publico} onCerrar={() => setVista(false)}
+            titulo={publico ? 'Así quedará tu propuesta' : `Vista previa · ${cli.empresa || 'sin empresa'}`}
+            subtitulo={publico ? 'Es una estimación con los datos que has puesto; el equipo la revisa antes de la definitiva.' : (estado?.ok ? `Oferta ${estado.numero} generada` : 'Todavía no se ha generado: revisa y, si está bien, genérala desde aquí.')}
+            mensaje={error ? <span className="text-[11.5px] font-bold text-red-300">{error}</span> : estado?.ok && !estado.parcial ? <span className="flex flex-wrap items-center gap-2 text-[11.5px] font-bold text-emerald-300">✓ {estado.numero}{estado.url_pdf && <a href={estado.url_pdf} target="_blank" rel="noreferrer" className="underline">PDF</a>}{estado.url_pptx && <a href={estado.url_pptx} target="_blank" rel="noreferrer" className="underline">PowerPoint</a>}</span> : estado?.ok ? <span className="text-[11.5px] font-bold text-emerald-300">✓ {estado.numero} registrada</span> : null}
+            acciones={!estado?.ok && (
+              <button type="button" onClick={() => generar('pdf')} disabled={!puedeGenerar}
+                title={!publico && !aprobador ? 'Elige quién aprueba el precio' : plazoMal ? 'El plazo no encaja con el modelo' : ''}
+                className="btn-orange !px-4 !py-1.5 text-[12.5px] disabled:opacity-50">
+                {estado === 'gen' ? 'Generando…' : publico ? 'Recibir mi propuesta' : 'Generar esta oferta'}
+              </button>
+            )}
+          />
+        );
+      })()}
     </div>
   );
 }

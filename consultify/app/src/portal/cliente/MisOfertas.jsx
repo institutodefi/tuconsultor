@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase, DEMO } from '../../lib/supabase.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../../lib/impuestos.js';
 import { eurES } from '../../lib/formato.js';
+import VistaOferta from '../../components/VistaOferta.jsx';
 
 // ════════════════════════════════════════════════════════════════════════════
 // MIS PROPUESTAS · el cliente acepta o rechaza
@@ -29,6 +30,7 @@ export default function MisOfertas({ ofertas, contratos = [], onCambio, destacad
   const [motivo, setMotivo] = useState('');
   const [msg, setMsg] = useState(null);
   const [ocupado, setOcupado] = useState(null);
+  const [completa, setCompleta] = useState(null);   // id de la propuesta abierta entera (v141)
 
   async function cambiar(oferta, estado, porQue) {
     setOcupado(oferta.id); setMsg(null);
@@ -122,6 +124,9 @@ export default function MisOfertas({ ofertas, contratos = [], onCambio, destacad
             })()}
 
             <div className="mt-3 flex flex-wrap gap-2">
+              {o.documento?.r && (
+                <button type="button" onClick={() => setCompleta(completa === o.id ? null : o.id)} className="btn-orange !px-3 !py-1.5 text-xs">{completa === o.id ? 'Ocultar la propuesta' : '◉ Ver la propuesta completa'}</button>
+              )}
               {o.url_pdf && (
                 <a href={o.url_pdf} target="_blank" rel="noopener" className="btn-ghost !px-3 !py-1.5 text-xs">Ver la propuesta (PDF)</a>
               )}
@@ -129,6 +134,9 @@ export default function MisOfertas({ ofertas, contratos = [], onCambio, destacad
                 <a href={o.url_pptx} target="_blank" rel="noopener" className="btn-ghost !px-3 !py-1.5 text-xs">Presentación</a>
               )}
             </div>
+
+            {/* La propuesta entera, tal y como se imprimió (v141). */}
+            {completa === o.id && o.documento?.r && <div className="mt-3"><VistaOferta documento={o.documento} /></div>}
 
             {decidible && rechazando !== o.id && (
               <div className="mt-3 flex flex-wrap gap-2 border-t border-[#153F52] pt-3">

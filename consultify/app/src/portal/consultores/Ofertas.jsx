@@ -15,6 +15,8 @@ import ImportarContacto from '../../components/ImportarContacto.jsx';
 import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
 import InformeRentabilidad from '../../components/InformeRentabilidad.jsx';
 import { normalizarCif, puedeEditarContactos } from '../../lib/crm.js';
+import { montarDocumento, logicaDe, SITUACION_BY_ID } from '../../lib/documentoOferta.js';
+import VisorOferta from '../../components/VisorOferta.jsx';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
 function fFecha(f) {
@@ -61,10 +63,16 @@ export default function Ofertas() {
   const [contratos, setContratos] = useState([]);
   const [etapa, setEtapa] = useState(null);              // filtro del embudo
 
+  // Los ajustes de cada oferta viven en su tabla (v74). Se cuelgan de la fila
+  // para que regenerar y previsualizar los tengan: sin esto, una oferta con
+  // un 2x1 en sedes se regeneraba sin él.
   const cargar = () => Promise.all([
-    listAll('presupuestos', 'creado').then(setRows).catch(() => setRows([])),
+    Promise.all([listAll('presupuestos', 'creado'), listAll('presupuesto_ajustes', 'orden').catch(() => [])])
+      .then(([ps, aj]) => setRows((ps || []).map((p) => ({ ...p, ajustes: (aj || []).filter((a) => String(a.presupuesto_id) === String(p.id)) }))))
+      .catch(() => setRows([])),
     listAll('contratos', 'creado').then(setContratos).catch(() => setContratos([])),
   ]);
+  const [visor, setVisor] = useState(null);   // id de la oferta abierta en el visor (v141)
   useEffect(() => { cargar(); }, []);
 
   // Abrir la edición completa de una oferta. Lo llaman el lápiz de la tabla y
@@ -124,6 +132,7 @@ export default function Ofertas() {
         });
         if (hoy && Math.abs(hoy.precioCatalogo - Number(r.precio)) > 0.5) {
           setAvisoPrecio({ oferta: r, guardado: Number(r.precio), hoy: hoy.precioCatalogo });
+          setVisor(null);   // el aviso está detrás del visor: se cierra para verlo
           return;   // no se regenera hasta que se decida cuál de los dos
         }
       } catch { /* si no se puede comparar, se sigue con el guardado */ }
@@ -967,6 +976,7 @@ export default function Ofertas() {
                     )}
                   </td>
                   <td className="py-2 text-right whitespace-nowrap">
+                    <button onClick={() => setVisor(r.id)} className="mr-2 text-xs font-bold text-[#CFE3E9] hover:text-[#F9A83A]" title="Ver la oferta completa tal y como la ve el cliente, y con la lógica al lado. Desde ahí se puede hacer todo.">◉ Ver</button>
                     {(r.url_pdf || r.url_pptx) ? (
                       <span className="inline-flex gap-2 items-center">
                         {r.url_pdf && <a href={r.url_pdf} target="_blank" rel="noreferrer" className="font-bold text-[#F9A83A] hover:underline">PDF</a>}
@@ -995,6 +1005,58 @@ export default function Ofertas() {
             <p className="mt-2 text-[11px] font-medium text-[#7FA7B4]">{LEYENDA_IMPUESTOS}</p>
         </div>
       )}
+
+      {/* ── El visor (v141): la oferta como la ve el cliente, con la lógica al
+          lado, y todas las acciones sin volver a la tabla. Si la oferta ya se
+          generó, se enseña la copia exacta que se imprimió (`documento`); si
+          no, se monta en vivo con los mismos parámetros que se guardaron. */}
+      {visor && (() => {
+        const r = rows.find((x) => String(x.id) === String(visor));
+        if (!r) return null;
+        const cuerpo = {
+          normas: r.normas || [], modelo: r.modelo, meses: r.meses, complejidad: r.complejidad, sedes: r.sedes,
+          fases_plan: r.fases_plan || null, ajustes: r.ajustes || [], precios_sistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
+          aplicar_reglas: r.aplicar_reglas !== false, pago_adelantado: !!r.pago_adelantado,
+          reparto_niveles: r.reparto_niveles || (r.canal === 'web' ? null : repartoPorDefecto(r.complejidad || 'media')),
+          empresa: r.empresa || '', contacto: r.nombre || '', cif: r.cif || '', cargo: r.cargo || '', email: r.email || '', telefono: r.telefono || '',
+          ref: r.numero_oferta || '', comercial: r.comercial || 'Alejandro', canal: r.canal || 'interno',
+          fecha_emision: r.fecha_emision || null, fecha_inicio: r.fecha_inicio || null, fecha_fin: r.fecha_fin || null,
+          fecha_primer_pago: r.fecha_primer_pago || r.fecha_inicio || null, fecha_certificacion: r.fecha_certificacion || null,
+          emisora_id: r.emisora_id || 'trescore', notas_oferta: r.notas_oferta || null, forma_pago: r.forma_pago || null,
+          modelo_mantenimiento: r.modelo_mantenimiento || null, situacion: r.situacion || null,
+          ...(r.numero_oferta && Number.isFinite(Number(r.precio)) ? { override: { precioCatalogo: Number(r.precio) } } : {}),
+        };
+        let vivo = null;
+        try { vivo = montarDocumento(cuerpo); } catch { vivo = null; }
+        const doc = r.documento?.r ? r.documento : vivo;
+        const desfase = r.documento?.r && vivo && Math.abs(Number(vivo.r.precioCatalogo) - Number(r.documento.r.precioCatalogo)) > 0.5;
+        const estado = r.estado || 'emitida';
+        const tieneDocs = !!(r.url_pdf || r.url_pptx);
+        return (
+          <VisorOferta documento={doc} logica={vivo ? logicaDe(vivo.r) : null} notasInternas={r.notas_internas || null}
+            onCerrar={() => setVisor(null)}
+            titulo={`Oferta ${r.numero_oferta || 'sin número'} · ${r.empresa || ''}`}
+            subtitulo={`${estado}${r.situacion && SITUACION_BY_ID[r.situacion] ? ` · ${SITUACION_BY_ID[r.situacion].titulo}` : ''}${r.documento_en ? ` · documento emitido el ${new Date(r.documento_en).toLocaleDateString('es-ES')}` : ' · sin documento generado: lo que ves se monta en vivo con lo guardado'}`}
+            cabecera={<>
+              {desfase && <p className="mb-2 rounded-lg bg-brand-orange/10 px-3 py-2 text-[11.5px] font-bold text-brand-orange">Lo que ves es lo emitido ({fmtEUR(r.documento.r.precioCatalogo)}). Con lo guardado hoy en el CRM saldría {fmtEUR(vivo.r.precioCatalogo)}: si se ha cambiado algo, regenera los documentos.</p>}
+              <div className="flex flex-wrap items-start gap-3 rounded-xl border border-[#1E5468] bg-[#0D3242] px-3 py-2">
+                <div className="min-w-0 flex-1"><ContratoDeOferta oferta={r} contrato={contratos.find((c) => String(c.presupuesto_id) === String(r.id) && c.estado !== 'anulado')} onCambio={cargar} /></div>
+                <div className="min-w-0"><ContactoDeOferta oferta={r} puedeEditar={puedeEditar} onCambio={cargar} /></div>
+              </div>
+            </>}
+            mensaje={msg ? <span className="text-[11.5px] font-bold text-[#CFE3E9]">{msg}</span> : null}
+            acciones={<>
+              <button onClick={() => { setVisor(null); abrirEdicion(r); }} className="btn-ghost !px-3 !py-1.5 text-[12px]">✎ Editar</button>
+              {r.url_pdf && <a href={r.url_pdf} target="_blank" rel="noreferrer" className="btn-ghost !px-3 !py-1.5 text-[12px]">PDF</a>}
+              {r.url_pptx && <a href={r.url_pptx} target="_blank" rel="noreferrer" className="btn-ghost !px-3 !py-1.5 text-[12px]">PPT</a>}
+              <button onClick={async () => { setMsg(null); await generar(r); }} disabled={genId === r.id} className="btn-ghost !px-3 !py-1.5 text-[12px] disabled:opacity-50">{genId === r.id ? 'Generando…' : tieneDocs ? '↻ Regenerar' : 'Generar documentos'}</button>
+              {r.token_acceso && <button onClick={() => copiarEnlace(r)} className="btn-ghost !px-3 !py-1.5 text-[12px]" title="Enlace personal con el que el cliente ve y acepta la oferta">⧉ Enlace</button>}
+              <button onClick={() => enviar(r)} disabled={genId === r.id || !r.email || !r.url_pdf} className="btn-orange !px-3 !py-1.5 text-[12px] disabled:opacity-40" title={r.email ? (r.url_pdf ? `Enviar a ${r.email}` : 'Genera primero los documentos') : 'Sin email de cliente'}>✉ Enviar al cliente</button>
+              {puedeBorrar && <button onClick={() => { setVisor(null); borrar(r); }} disabled={genId === r.id} className="text-[12px] font-bold text-red-400 hover:text-red-300 disabled:opacity-40">🗑</button>}
+            </>}
+          />
+        );
+      })()}
 
       {/* Modal: editar normas de una oferta y regenerar */}
       {editNormas && (
