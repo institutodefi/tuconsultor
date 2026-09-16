@@ -3,6 +3,7 @@
 // la paleta clara antigua; si algún día se reactiva, hay que adaptarlo al tema
 // oscuro de Órbita y añadirle el «desde» y el disclaimer de lib/legal.js.
 import { useMemo, useState } from 'react';
+import Plegable from '../components/Plegable.jsx';
 import { NORMAS, MODELOS, MODELO_IDS, calcular, compararModelos, fmtEUR, ACOMPANAMIENTO_AUDITORIA_DIA } from '../lib/calcEngine.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
 import { insertRow, siguienteNumeroOferta } from '../lib/data.js';
@@ -101,7 +102,7 @@ export default function Calculadora() {
         ))}
       </ol>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_308px] items-start">
         <div>
           {paso === 0 && (
             <section>
@@ -255,7 +256,7 @@ export default function Calculadora() {
 
         {/* Panel de precio en vivo */}
         <aside className="lg:sticky lg:top-24 h-fit">
-          <div className="rounded-[22px] bg-navy-900 p-6 text-white shadow-xl">
+          <div className="space-y-2.5 rounded-[18px] bg-navy-900 p-4 text-white shadow-xl">
             <p className="eyebrow !text-brand-orange">Tu precio en vivo</p>
             {res ? (
               <>
@@ -285,10 +286,12 @@ export default function Calculadora() {
             ) : (
               <p className="mt-3 font-semibold text-white/60">Selecciona al menos una norma para ver el precio.</p>
             )}
-            <div className="mt-5 border-t border-white/15 pt-4 text-xs font-medium leading-relaxed text-white/50">
-              Precio de catálogo. Suelo de 350 €/mes en modelos recurrentes. Apoyo solo con tres meses o menos hasta la certificación.
-              <span className="mt-2 block font-semibold text-white/65">{LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.</span>
-            </div>
+            <Plegable tono="panel" denso id="calc.avisos" inicial={false} titulo="Cómo se calcula e impuestos">
+              <div className="text-[11px] font-medium leading-relaxed text-white/50">
+                Precio de catálogo. Suelo de 350 €/mes en modelos recurrentes. Apoyo solo con tres meses o menos hasta la certificación.
+                <span className="mt-2 block font-semibold text-white/65">{LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.</span>
+              </div>
+            </Plegable>
           </div>
         </aside>
       </div>

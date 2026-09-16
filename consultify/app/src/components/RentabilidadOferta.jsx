@@ -22,7 +22,7 @@ const TONO = {
 const pct = (x) => `${Math.round((x || 0) * 100)} %`;
 const h = (n) => `${numeroES(n, null)} h`;
 
-export default function RentabilidadOferta({ r, esMes = false, compacto = false }) {
+export default function RentabilidadOferta({ r, esMes = false, compacto = false, enPlegable = false }) {
   if (!r) return null;
   const T = TONO[r.encaja] || { chip: 'bg-white/10 text-white/70', etq: '—' };
   const u = esMes ? '/mes' : '';
@@ -31,10 +31,16 @@ export default function RentabilidadOferta({ r, esMes = false, compacto = false 
   const sobra = r.diferencia >= 0;
   const signo = (n) => (n >= 0 ? '+' : '−');
 
+  // Dentro de un plegable el marco y el título ya los pone el plegable:
+  // repetirlos era una caja dentro de otra con el mismo rótulo.
+  const Marco = enPlegable
+    ? ({ children }) => <div>{children}</div>
+    : ({ children }) => <div className="mt-3 rounded-2xl bg-white/10 p-3">{children}</div>;
+
   return (
-    <div className="mt-3 rounded-2xl bg-white/10 p-3">
+    <Marco>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">Rentabilidad · uso interno</p>
+        {!enPlegable && <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">Rentabilidad · uso interno</p>}
         <span className={`chip !px-2 !py-0.5 text-[10.5px] font-extrabold ${T.chip}`}>
           {T.etq}{r.margenReal != null ? ` · margen ${pct(r.margenReal)}` : ''}
         </span>
@@ -164,6 +170,6 @@ export default function RentabilidadOferta({ r, esMes = false, compacto = false 
         Margen = (cobrado − coste) ÷ coste; objetivo {pct(r.margenObjetivo)}. A cobrar/h = tarifa del nivel × (1 + margen objetivo).
         {r.manual ? ' Reparto manual.' : ' Reparto automático por norma.'}
       </p>
-    </div>
+    </Marco>
   );
 }

@@ -16,6 +16,7 @@ import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
 import InformeRentabilidad from '../../components/InformeRentabilidad.jsx';
 import { normalizarCif, puedeEditarContactos } from '../../lib/crm.js';
 import { montarDocumento, logicaDe, SITUACION_BY_ID } from '../../lib/documentoOferta.js';
+import { cargarCatalogoVivo } from '../../lib/catalogoVivo.js';
 import VisorOferta from '../../components/VisorOferta.jsx';
 
 /** dd/mm/aa, corto, para que quepan tres fechas en una celda. */
@@ -73,6 +74,10 @@ export default function Ofertas() {
     listAll('contratos', 'creado').then(setContratos).catch(() => setContratos([])),
   ]);
   const [visor, setVisor] = useState(null);   // id de la oferta abierta en el visor (v141)
+  // El Anexo I se monta con el catálogo real de la base (v145): la copia
+  // estática no tiene los planes, y las ofertas de plan salían sin anexo.
+  const [catalogoVivo, setCatalogoVivo] = useState(null);
+  useEffect(() => { let vivo = true; cargarCatalogoVivo().then((f) => { if (vivo) setCatalogoVivo(f); }); return () => { vivo = false; }; }, []);
   useEffect(() => { cargar(); }, []);
 
   // Abrir la edición completa de una oferta. Lo llaman el lápiz de la tabla y
@@ -165,6 +170,7 @@ export default function Ofertas() {
           aplicar_reglas: r.aplicar_reglas !== false,
           pago_adelantado: !!r.pago_adelantado,
           jornadas_auditoria: r.jornadas_auditoria || 0,
+          catalogo: catalogoVivo,
           // Reparto manual de la carga por nivel (v119): el servidor calcula
           // con el mismo reparto que se guardó.
           // Las antiguas sin reparto toman el de su dificultad (la web sigue en automático).

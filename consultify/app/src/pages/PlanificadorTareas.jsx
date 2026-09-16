@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Plegable from '../components/Plegable.jsx';
 import { listTable } from '../lib/data.js';
 import { NORMAS, MODELO_IDS } from '../lib/calcEngine.js';
 import { CATALOGO_TAREAS } from '../lib/tareas.js';
@@ -131,7 +132,7 @@ export default function PlanificadorTareas() {
 
       {err && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">{err}</p>}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px] items-start">
         <div>
           {/* Paso 0 · Sistemas */}
           {paso === 0 && (
@@ -288,7 +289,7 @@ export default function PlanificadorTareas() {
 
         {/* Panel resumen */}
         <aside className="lg:sticky lg:top-24 h-fit">
-          <div className="rounded-[22px] bg-navy-900 p-6 text-white shadow-xl">
+          <div className="space-y-2.5 rounded-[18px] bg-navy-900 p-4 text-white shadow-xl">
             <p className="eyebrow !text-brand-orange">Resumen del proyecto</p>
             <p className="mt-3 text-4xl font-extrabold tracking-tight">{fmtH(totalProyecto)}</p>
             <p className="mt-1 text-sm font-semibold text-white/70">horas totales del proyecto</p>
@@ -297,9 +298,11 @@ export default function PlanificadorTareas() {
               <p>{tareas.length} tarea{tareas.length !== 1 ? 's' : ''} · {fmtH(totalTareas)}</p>
               <p>Coordinación: {fmtH(coordinacion)} ({meses || 1} mes{(meses || 1) > 1 ? 'es' : ''})</p>
             </div>
-            <div className="mt-5 border-t border-white/15 pt-4 text-xs font-medium leading-relaxed text-white/50">
-              Horas base del proyecto, repartidas por fases entre los meses. La reducción por integración se aplica por tarea. Coordinación = 0,5 h × sistema × mes.
-            </div>
+            <Plegable tono="panel" denso id="plan.nota" inicial={false} titulo="De dónde salen estas horas">
+              <p className="text-[11px] font-medium leading-relaxed text-white/50">
+                Horas base del proyecto, repartidas por fases entre los meses. La reducción por integración se aplica por tarea. Coordinación = 0,5 h × sistema × mes.
+              </p>
+            </Plegable>
           </div>
         </aside>
       </div>

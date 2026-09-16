@@ -542,7 +542,33 @@ export default async (req) => {
   aplicarOverride(r, body.override);
   enriquecer(r, { ...body, normas, modelo, meses });
   // Anexo I: tareas por bloque (solo las que aplican a las normas elegidas).
-  const anexo = tareasPorBloque(normas, modelo);
+  // Del catálogo VIVO (v145): el fichero estático se había quedado sin los
+  // planes y sin el kickoff, y las ofertas de plan salían con el anexo vacío.
+  // Si la lectura falla, `tareasPorBloque` cae al estático y la oferta sale
+  // igual: un anexo es demasiado importante para que lo tumbe un timeout.
+  //
+  // Se piden solo las normas de ESTA oferta. La tabla pasa de mil seiscientas
+  // filas y PostgREST devuelve mil como mucho: traerla entera habría cortado
+  // justo las últimas normas, que es el mismo fallo que ya se arregló una vez
+  // en `listTable`. Filtrando por norma nunca se llega al tope.
+  let catalogoVivo = null;
+  try {
+    // Los ids son alfanuméricos con guion (`igualdad-seg`, `une158101`), así
+    // que la lista va tal cual: escaparla rompería el separador de PostgREST.
+    const enNormas = (normas || []).map((n) => String(n).replace(/[^a-zA-Z0-9_-]/g, '')).filter(Boolean).join(',');
+    if (enNormas) {
+      const rc = await fetch(
+        `${base}/rest/v1/tareas_catalogo`
+        + `?select=norma_id,modelo,proceso,subproceso,titulo,orden`
+        + `&norma_id=in.(${enNormas})&order=orden&limit=1000`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+      if (rc.ok) {
+        const filas = await rc.json();
+        catalogoVivo = Array.isArray(filas) && filas.length ? filas : null;
+      }
+    }
+  } catch { catalogoVivo = null; }
+  const anexo = tareasPorBloque(normas, modelo, catalogoVivo);
 
   // Número de oferta correlativo (OFE-AAAA-NNN): si no viene dado, lo pedimos
   // a la secuencia atómica en Postgres vía RPC.

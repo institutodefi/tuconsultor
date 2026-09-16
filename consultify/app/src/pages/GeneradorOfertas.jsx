@@ -17,9 +17,44 @@ import { useAuth } from '../lib/auth.jsx';
 import { RGPD_TEXTO, RGPD_CASILLAS } from '../lib/rgpd.js';
 import { SITUACIONES, situacionDeModelo, montarDocumento, logicaDe } from '../lib/documentoOferta.js';
 import VisorOferta from '../components/VisorOferta.jsx';
+import Plegable, { usarPlegado } from '../components/Plegable.jsx';
+import { tipoDeAlcance } from '../lib/contenidoOferta.js';
+import { cargarCatalogoVivo } from '../lib/catalogoVivo.js';
 
 // Generador de ofertas: selección de normas + modelo + datos del cliente,
 // precio en vivo (siempre sin impuestos) y exportación a PDF/PPTX vía la función serverless.
+
+/**
+ * Un ámbito del catálogo de normas, plegable.
+ *
+ * Se abre solo cuando hay algo elegido dentro —si has marcado la 14001, no
+ * tiene sentido esconderte «Medio ambiente»— y, si no, recuerda lo que
+ * decidiste la última vez. La cuenta va en la cabecera para que plegado siga
+ * diciendo lo que hay dentro.
+ */
+function AmbitoNormas({ g, sel, children }) {
+  const elegidas = g.normas.filter((n) => sel.includes(n.id)).length;
+  const [abierto, alternar] = usarPlegado(`gen.ambito.${g.id}`, elegidas > 0);
+  const desplegado = abierto || elegidas > 0;
+  return (
+    <div className="mb-2">
+      <button type="button" onClick={alternar} aria-expanded={desplegado}
+        className="flex w-full items-center gap-1.5 rounded-lg px-1 py-1 text-left transition hover:bg-white/[0.04]">
+        <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#7FA7B4]">{g.nombre}</span>
+        {elegidas > 0 && (
+          <span className="rounded bg-brand-verde/20 px-1.5 py-px text-[9.5px] font-bold text-brand-verdeTexto">{elegidas}</span>
+        )}
+        <span className="ml-auto text-[9.5px] font-bold text-[#4E7E8F]">{!desplegado && `${g.normas.length}`}</span>
+        <svg className={`h-3 w-3 shrink-0 text-[#4E7E8F] transition-transform duration-200 ${desplegado ? 'rotate-180' : ''}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {desplegado && <div className="mt-1.5">{children}</div>}
+    </div>
+  );
+}
+
 export default function GeneradorOfertas({ publico = false }) {
   const { user } = useAuth();
   const [sel, setSel] = useState(['9001']);          // 9001 premarcada, pero se puede quitar
@@ -184,6 +219,15 @@ export default function GeneradorOfertas({ publico = false }) {
       });
   }, [publico]);
   const [modeloDespues, setModeloDespues] = useState('Implicación');  // mantenimiento al terminar
+  // Un plan de igualdad o de diversidad no se mantiene con una cuota mensual:
+  // se elabora, se registra y se revisa en sus plazos. Cuando lo contratado son
+  // solo planes, no hay «mantenimiento al terminar» que ofrecer ni que escribir.
+  const soloPlanes = tipoDeAlcance({ normas: sel }) === 'plan';
+  // El Anexo I de la vista previa se monta con el catálogo real de la base,
+  // igual que hace el servidor al generar: si aquí usáramos la copia estática,
+  // la previsualización enseñaría un anexo distinto del que recibe el cliente.
+  const [catalogoVivo, setCatalogoVivo] = useState(null);
+  useEffect(() => { let vivo = true; cargarCatalogoVivo().then((f) => { if (vivo) setCatalogoVivo(f); }); return () => { vivo = false; }; }, []);
 
   // Las reglas comerciales se leen en vivo: la oferta es dinámica y cambia con
   // lo que esté vigente el día en que se calcula.
@@ -326,7 +370,7 @@ export default function GeneradorOfertas({ publico = false }) {
         notas_oferta: notas || null, notas_internas: notasInternas || null,
         forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
         pago_adelantado: !!adelantado,
-        modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+        modelo_mantenimiento: (modelo === 'Implantación' && !soloPlanes) ? modeloDespues : null,
         situacion: situacion || null, jornadas_auditoria: jornadasAuditoria || 0,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
       });
@@ -403,7 +447,7 @@ export default function GeneradorOfertas({ publico = false }) {
           precio_catalogo: res?.precioAntesDeAjustes ?? null, ajuste_oferta: res?.ajusteOferta ?? 0,
           forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
           pago_adelantado: !!adelantado,
-          modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+          modelo_mantenimiento: (modelo === 'Implantación' && !soloPlanes) ? modeloDespues : null,
           situacion: situacion || null, jornadas_auditoria: jornadasAuditoria || 0,
           email: cli.email, presupuesto_id: fila?.id,
           // RGPD marcado al pedirla (v138): queda en el contacto del CRM y en Brevo.
@@ -483,7 +527,7 @@ export default function GeneradorOfertas({ publico = false }) {
         <p className="mt-2 text-sm font-medium text-[#9FC0CB]">Elige normas y modelo, mira el precio en vivo y {publico ? 'recibe tu propuesta personalizada.' : 'exporta la oferta en PDF y PowerPoint.'}</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
+      <div className="grid gap-5 lg:grid-cols-[1fr_308px] items-start">
         <div className="space-y-5">
           {/* 1 · Normas */}
           <section className="card">
@@ -491,16 +535,11 @@ export default function GeneradorOfertas({ publico = false }) {
             {/* Agrupados por ámbito (v143): diecisiete sistemas en una rejilla
                 plana no se leen. Quien oferta busca «lo de medio ambiente» o
                 «lo de ciber», no una norma por su número. */}
+            {/* Plegados (v145): diecisiete normas abiertas a la vez son una
+                pantalla de scroll antes de llegar al modelo. Un ámbito se abre
+                solo si tiene algo elegido; el resto, a un clic. */}
             {normasPorAmbito().map((g) => (
-              <div key={g.id} className="mb-3">
-                <p className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#7FA7B4]">
-                  {g.nombre}
-                  {g.normas.some((n) => sel.includes(n.id)) && (
-                    <span className="ml-1.5 rounded bg-brand-verde/20 px-1.5 py-px text-[9.5px] text-brand-verdeTexto">
-                      {g.normas.filter((n) => sel.includes(n.id)).length}
-                    </span>
-                  )}
-                </p>
+              <AmbitoNormas key={g.id} g={g} sel={sel}>
                 <div className="grid gap-2.5 sm:grid-cols-2">
               {g.normas.map(n => {
                 const on = sel.includes(n.id);
@@ -523,7 +562,7 @@ export default function GeneradorOfertas({ publico = false }) {
                 );
               })}
                 </div>
-              </div>
+              </AmbitoNormas>
             ))}
             <div className="grid gap-2.5 sm:grid-cols-2">
               {/* Otra norma · pide info → abre el formulario de solicitud */}
@@ -719,7 +758,7 @@ export default function GeneradorOfertas({ publico = false }) {
                   </p>
                 </div>
 
-                {modelo === 'Implantación' && (
+                {modelo === 'Implantación' && !soloPlanes && (
                   <div>
                     <label className="label" htmlFor="g-despues">Mantenimiento al terminar</label>
                     <select id="g-despues" className="input !py-1.5 !text-[13px]" value={modeloDespues}
@@ -965,7 +1004,7 @@ export default function GeneradorOfertas({ publico = false }) {
 
         {/* Panel precio */}
         <aside className="lg:sticky lg:top-24 h-fit">
-          <div className="rounded-[22px] bg-navy-900 p-6 text-white shadow-xl">
+          <div className="space-y-2.5 rounded-[18px] bg-navy-900 p-4 text-white shadow-xl">
             <p className="eyebrow !text-brand-orange">Precio en vivo</p>
             {!res ? (
               <p className="mt-3 font-semibold text-white/60">Selecciona al menos una norma.</p>
@@ -1067,11 +1106,11 @@ export default function GeneradorOfertas({ publico = false }) {
                     oferta ni a la factura. Va aparte de la cuota a propósito:
                     es un cargo único, se preste el servicio que se preste. */}
                 {(!publico || res.auditoria) && (
-                  <div className="mt-3 rounded-2xl border border-white/15 p-3">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">
-                      {res.auditoria?.enPrecio ? 'Jornadas contratadas' : 'Servicio adicional'}
-                    </p>
-                    <label className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-white/85">
+                  <Plegable tono="panel" denso id="gen.auditoria" inicial={false}
+                    forzado={res.auditoria ? true : null}
+                    titulo={res.auditoria?.enPrecio ? 'Jornadas contratadas' : 'Auditoría externa · opcional'}
+                    resumen={res.auditoria ? fmtEUR(res.auditoria.importe) : null}>
+                    <label className="flex flex-wrap items-center gap-2 text-[12.5px] text-white/85">
                       <span className="flex-1">Acompañamiento a la auditoría externa</span>
                       <input type="number" min="0" max="60" step="1" value={jornadasAuditoria}
                         onChange={(e) => setJornadasAuditoria(Math.max(0, Math.min(60, parseInt(e.target.value, 10) || 0)))}
@@ -1089,17 +1128,17 @@ export default function GeneradorOfertas({ publico = false }) {
                         Un consultor presente el día de la auditoría. Déjalo en cero si no se contrata.
                       </p>
                     )}
-                  </div>
+                  </Plegable>
                 )}
 
                 {/* ── Cómo se forma la cuota ──
                     Sin este desglose, un cliente que pregunta «¿y si quito la
                     14001?» obliga a rehacer la oferta para responder. */}
                 {res.volumen && (
-                  <div className="space-y-1.5 rounded-2xl bg-white/10 p-3">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">
-                      Cómo se forma la cuota
-                    </p>
+                  <Plegable tono="panel" id="gen.cuota" inicial={false} denso
+                    titulo="Cómo se forma la cuota"
+                    resumen={`${res.desgloseSistemas.length} ${res.desgloseSistemas.length === 1 ? 'sistema' : 'sistemas'}`}>
+                    <div className="space-y-1.5">
                     {res.desgloseSistemas.map((s) => (
                       <p key={s.id} className="flex justify-between gap-2 text-[12px]">
                         <span className="text-white/75">
@@ -1138,7 +1177,8 @@ export default function GeneradorOfertas({ publico = false }) {
                       Mínimo {fmtEUR(res.volumen.suelo)} por sistema. Descuento por volumen: 5 % con 2, 10 % con 3,
                       15 % con 4 o más. Nunca más del {res.volumen.tope} %.
                     </p>
-                  </div>
+                    </div>
+                  </Plegable>
                 )}
 
                 {/* El precio de cada norma es un punto de partida, no una
@@ -1158,17 +1198,23 @@ export default function GeneradorOfertas({ publico = false }) {
 
                 {/* ¿Encaja este precio con lo que cuesta hacerlo? Solo para el
                     equipo: al cliente no se le enseña el margen. */}
+                {/* La rentabilidad es la mitad de la columna y solo se mira al
+                    cerrar el precio. Plegada deja el margen a la vista, que es
+                    el dato por el que se abre. */}
                 {!publico && res.rentabilidad && (
-                  <RentabilidadOferta r={res.rentabilidad} esMes={esMes} />
+                  <Plegable tono="panel" denso id="gen.rentabilidad" inicial={false}
+                    titulo="Rentabilidad · uso interno"
+                    resumen={res.rentabilidad.margenReal != null ? `margen ${Math.round(res.rentabilidad.margenReal * 100)} %` : null}>
+                    <RentabilidadOferta r={res.rentabilidad} esMes={esMes} enPlegable />
+                  </Plegable>
                 )}
 
                 {/* Reglas comerciales aplicadas a esta oferta */}
                 {res.reglas?.length > 0 && (
-                  <div className="mt-3 rounded-xl bg-brand-verde/15 p-3">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-verdeTexto">
-                      {publico ? 'Ventajas aplicadas' : 'Reglas comerciales aplicadas'}
-                    </p>
-                    <ul className="mt-1.5 space-y-1">
+                  <Plegable tono="panel" id="gen.reglas" inicial={false} denso
+                    titulo={publico ? 'Ventajas aplicadas' : 'Reglas comerciales aplicadas'}
+                    resumen={res.reglas.length}>
+                    <ul className="space-y-1">
                       {res.reglas.map((t, i) => (
                         <li key={i} className="text-[11.5px] leading-snug text-white/85">
                           <b className="text-white">{t.nombre}</b> · {t.efecto}
@@ -1181,12 +1227,12 @@ export default function GeneradorOfertas({ publico = false }) {
                         {esMes ? '/mes' : ''} (tarifa {fmtEUR(res.precioBase)}{esMes ? '/mes' : ''})
                       </p>
                     )}
-                  </div>
+                  </Plegable>
                 )}
 
                 {/* Plan de pagos según modelo */}
-                <div className="mt-4 rounded-xl bg-white/10 p-3 text-xs leading-relaxed text-white/85">
-                  <p className="font-extrabold text-white/90 mb-1">Forma de pago</p>
+                <Plegable tono="panel" id="gen.plandepagos" inicial={false} denso titulo="Cómo se factura">
+                  <div className="space-y-1 text-[11.5px] leading-relaxed text-white/85">
                   {esApoyo && <p>Bolsa de horas para la recta final: solo con {res.maxMeses} meses o menos hasta la certificación. Un solo pago a la firma. Acompañamiento a auditoría aparte (600 €/jornada).</p>}
                   {/* Las tres cuotas desaparecieron en la v99: la implantación
                       solo admite pago único o dos cuotas, y eso ya lo enseña el
@@ -1196,7 +1242,8 @@ export default function GeneradorOfertas({ publico = false }) {
                     <p>{res.formasPago.nota} Puedes elegir arriba cuál de las dos aplicar.</p>
                   )}
                   {esMes && <p>{adelantado ? `Pago único al inicio: ${adelantado.mesesServicio} meses de servicio por ${adelantado.mesesCobrados} mensualidades. Permanencia 12 meses.` : 'Cuota mensual recurrente. Permanencia mínima 12 meses.'}</p>}
-                </div>
+                  </div>
+                </Plegable>
 
                 {/* Datos del cliente, dentro del panel para no perder al usuario */}
                 <div className="mt-4 border-t border-white/15 pt-4">
@@ -1316,15 +1363,17 @@ export default function GeneradorOfertas({ publico = false }) {
                 )}
               </>
             )}
-            <div className="mt-5 border-t border-white/15 pt-4 text-[11px] font-medium leading-relaxed text-white/60">
-              <p className="rounded-lg bg-white/5 p-2.5 text-white/70">
-                <b className="block text-white/85">Aviso sobre esta oferta</b>
-                {publico ? DISCLAIMER_OFERTA : DISCLAIMER_CORTO}
-              </p>
-              <p className="mt-2 font-semibold text-white/60">
-                {LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.
-              </p>
-            </div>
+            {/* El aviso legal y la leyenda de impuestos ocupaban un tercio de la
+                columna y nadie los lee dos veces. Siguen a un clic, y el título
+                dice lo que hay dentro. */}
+            <Plegable tono="panel" id="gen.avisos" inicial={false} denso titulo="Aviso legal e impuestos">
+              <div className="text-[11px] font-medium leading-relaxed text-white/60">
+                <p className="text-white/70">{publico ? DISCLAIMER_OFERTA : DISCLAIMER_CORTO}</p>
+                <p className="mt-2 font-semibold text-white/60">
+                  {LEYENDA_IMPUESTOS} El impuesto aplicable (IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura.
+                </p>
+              </div>
+            </Plegable>
           </div>
         </aside>
       </div>
@@ -1342,8 +1391,9 @@ export default function GeneradorOfertas({ publico = false }) {
           fecha_emision: hoyISO(), fecha_inicio: fechaInicio || null, fecha_fin: fechaFin || null, fecha_primer_pago: fechaInicio || null, fecha_certificacion: fechaCert || null,
           complejidad, sedes, fasesPlan, emisora_id: emisora, notas_oferta: notas || null,
           forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
-          pago_adelantado: !!adelantado, modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
+          pago_adelantado: !!adelantado, modelo_mantenimiento: (modelo === 'Implantación' && !soloPlanes) ? modeloDespues : null,
           disclaimer: DISCLAIMER_OFERTA, situacion, jornadas_auditoria: jornadasAuditoria || 0,
+          catalogo: catalogoVivo,
         });
         const puedeGenerar = !(estado === 'gen' || plazoMal || (!publico && !aprobador));
         return (

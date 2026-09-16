@@ -97,9 +97,16 @@ export function condiciones(r) {
       + '(IVA, IGIC o IPSI) se determina según el domicilio fiscal del cliente y se repercute en factura. En '
       + 'operaciones intracomunitarias con NIF-IVA válido en VIES se aplica la inversión del sujeto pasivo.',
     'Validez de la oferta: 30 días naturales desde su fecha de emisión.',
-    'No incluye las tasas de la entidad de certificación ni los gastos de desplazamiento fuera de la Comunidad de Madrid.',
-    ...(r?.modeloMantenimiento
-      ? [`Al finalizar la implantación, el sistema pasa al modelo de mantenimiento ${r.modeloMantenimiento}, que se contrata aparte.`]
+    // Un plan de igualdad o de diversidad no se certifica: no hay entidad de
+    // certificación a la que pagar tasas. Decirlo en su oferta sobra y confunde.
+    tipoDeAlcance(r) === 'plan'
+      ? 'No incluye los gastos de desplazamiento fuera de la Comunidad de Madrid.'
+      : 'No incluye las tasas de la entidad de certificación ni los gastos de desplazamiento fuera de la Comunidad de Madrid.',
+    // El mantenimiento posterior es para sistemas de gestión, que se auditan
+    // todos los años. Un plan se registra y se revisa en sus propios plazos: no
+    // hay mensualidad que anunciar al final de la implantación.
+    ...(r?.modeloMantenimiento && tipoDeAlcance(r) !== 'plan'
+      ? [`Al finalizar la implantación, ${objetoDelAlcance(r)} pasa al modelo de mantenimiento ${r.modeloMantenimiento}, que se contrata aparte.`]
       : []),
     r?.disclaimer || '',
   ].filter(Boolean);
@@ -139,8 +146,16 @@ export function clausulas(r) {
            mixto:   'lo contratado queda listo para su certificación o su registro, según corresponda a cada elemento',
          }[tipoDeAlcance(r)] + '. No es una cuota indefinida.'
        : 'Es un modelo de acompañamiento recurrente, con una dedicación mensual pactada y permanencia mínima de doce meses.')],
-    ['2 · El modelo se basa en horas al mes y en tareas',
-     'Lo que se contrata son dos cosas a la vez: una dedicación expresada en horas al mes y un conjunto de tareas concretas, las del Anexo I. Las horas dimensionan el esfuerzo; las tareas definen el resultado. Ninguna de las dos por separado describe el servicio.'],
+    // La implantación es un proyecto cerrado, no una cuota: hablar de «horas al
+    // mes» en su oferta hace pensar en una mensualidad que no existe.
+    esImpl
+      ? ['2 · El modelo se basa en horas de proyecto y en tareas',
+         `Lo que se contrata son dos cosas a la vez: una dedicación total de ${Number(r?.hTotal) || 0} horas para todo el proyecto`
+         + `${r?.meses ? `, distribuidas a lo largo de los ${r.meses} meses de cronograma` : ''}, y un conjunto de tareas `
+         + 'concretas, las del Anexo I. Las horas dimensionan el esfuerzo; las tareas definen el resultado. Ninguna de las '
+         + 'dos por separado describe el servicio. No hay cuota mensual: el precio es el del proyecto.']
+      : ['2 · El modelo se basa en horas al mes y en tareas',
+         'Lo que se contrata son dos cosas a la vez: una dedicación expresada en horas al mes y un conjunto de tareas concretas, las del Anexo I. Las horas dimensionan el esfuerzo; las tareas definen el resultado. Ninguna de las dos por separado describe el servicio.'],
     ['3 · Cumplidas las tareas y los objetivos, no hay obligación de más horas',
      'Cuando las tareas del periodo están hechas y los objetivos alcanzados, el trabajo del periodo está completo. '
      + 'No existe obligación de consumir horas restantes en trabajo adicional. Lo que sí se mantiene es la asistencia '

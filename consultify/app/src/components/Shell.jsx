@@ -3,14 +3,20 @@ import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { ROL_LABEL, can } from '../lib/permisos.js';
 import { SELLO } from '../version.js';
+import { usarPlegado } from './Plegable.jsx';
 
 export default function Shell({ children }) {
   const { user, role, realRole, logout, demo, verEconomico , verComo, resetVista, perfil } = useAuth();
   const [verRoles, setVerRoles] = useState(false);
+  // La barra se puede encoger a un carril de iconos. Con la barra de Orbita
+  // (248 px) más el menú del portal, en un portátil quedaban menos de mil
+  // píxeles para el trabajo de verdad; y esta barra tiene tres enlaces.
+  const [ancha, alternarAncha] = usarPlegado('shell.barra', true);
+  const ANCHO = ancha ? 208 : 60;
   const navItem = ({ isActive }) =>
     (isActive
-      ? 'rounded-xl px-4 py-2.5 bg-brand-verde/15 text-brand-verdeTexto font-bold'
-      : 'rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]');
+      ? `rounded-lg py-2 bg-brand-verde/15 text-brand-verdeTexto font-bold ${ancha ? 'px-3' : 'px-0 text-center'}`
+      : `rounded-lg py-2 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7] ${ancha ? 'px-3' : 'px-0 text-center'}`);
 
   const esEquipo = can.esEquipo(role);
   const esCliente = role === 'cliente';
@@ -18,31 +24,41 @@ export default function Shell({ children }) {
   return (
     <div className="min-h-screen md:flex">
       {/* ── Barra lateral Orbita (manual A5: 248px, #061F2B, logo vertical) ── */}
-      <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 z-40 w-[248px] bg-[#061F2B] border-r border-white/10">
-        <a href="/app/" className="flex justify-center pt-8 pb-6">
-          <img src="/app/marca/orbita-vertical-anim.svg" alt="Orbita.PMTools" className="tc-logo-animado w-40 h-auto" />
+      <aside style={{ width: ANCHO }}
+        className="hidden md:flex md:flex-col fixed inset-y-0 left-0 z-40 bg-[#061F2B] border-r border-white/10 transition-[width] duration-200">
+        <a href="/app/" className={`flex justify-center ${ancha ? 'pt-6 pb-4' : 'pt-4 pb-3'}`}>
+          <img src={ancha ? '/app/marca/orbita-vertical-anim.svg' : '/app/marca/orbita-isotipo-anim.svg'}
+            alt="Orbita.PMTools" className={`tc-logo-animado h-auto ${ancha ? 'w-28' : 'w-9'}`} />
         </a>
-        <nav className="flex flex-col gap-1 px-4 text-sm font-semibold">
-          <a href="/" className="rounded-xl px-4 py-2.5 text-[#9FC0CB] transition hover:bg-white/5 hover:text-[#EAF4F7]">Web</a>
-          {(!user || verEconomico) && <NavLink to="/calculadora" className={navItem}>Calcula tu oferta</NavLink>}
-          {user && esCliente && <NavLink to="/clientes" className={navItem}>Zona clientes</NavLink>}
-          {user && esEquipo && <NavLink to="/consultores" className={navItem}>Orbita.PMTools</NavLink>}
+        <nav className={`flex flex-col gap-0.5 text-[13px] font-semibold ${ancha ? 'px-3' : 'px-2'}`}>
+          <a href="/" title="Web" className={navItem({ isActive: false })}>{ancha ? 'Web' : '↗'}</a>
+          {(!user || verEconomico) && <NavLink to="/calculadora" title="Calcula tu oferta" className={navItem}>{ancha ? 'Calcula tu oferta' : '€'}</NavLink>}
+          {user && esCliente && <NavLink to="/clientes" title="Zona clientes" className={navItem}>{ancha ? 'Zona clientes' : '◫'}</NavLink>}
+          {user && esEquipo && <NavLink to="/consultores" title="Orbita.PMTools" className={navItem}>{ancha ? 'Orbita.PMTools' : '◉'}</NavLink>}
         </nav>
-        <div className="mt-auto px-4 pb-6">
-          {demo && <span className="chip mb-3 w-full justify-center bg-brand-verde/15 text-brand-verdeTexto">Modo demo</span>}
+        {/* Encoger la barra: el gesto vive donde está la barra, no en un ajuste. */}
+        <button onClick={alternarAncha} aria-expanded={ancha}
+          aria-label={ancha ? 'Encoger la barra lateral' : 'Ampliar la barra lateral'}
+          title={ancha ? 'Encoger la barra' : 'Ampliar la barra'}
+          className={`mt-3 flex items-center gap-1.5 self-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#5E8C9C] transition hover:bg-white/5 hover:text-[#9FC0CB] ${ancha ? '' : 'px-1.5'}`}>
+          <span className={`transition-transform duration-200 ${ancha ? '' : 'rotate-180'}`}>◄</span>
+          {ancha && 'Encoger'}
+        </button>
+        <div className={`mt-auto pb-5 ${ancha ? 'px-3' : 'px-2'}`}>
+          {demo && ancha && <span className="chip mb-2 w-full justify-center bg-brand-verde/15 text-brand-verdeTexto !py-0.5 !text-[10px]">Modo demo</span>}
           {user ? (
-            <div className="rounded-2xl bg-[#10394A] p-3 text-center">
+            <div className={`rounded-xl bg-[#10394A] text-center ${ancha ? 'p-2.5' : 'p-1.5'}`}>
               {perfil?.foto_url
-                ? <img src={perfil.foto_url} alt="" className="mx-auto mb-2 h-10 w-10 rounded-full border border-[#1E5468] object-cover" />
-                : <span className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-verde text-sm font-extrabold text-[#061F2B]">
+                ? <img src={perfil.foto_url} alt="" className={`mx-auto rounded-full border border-[#1E5468] object-cover ${ancha ? 'mb-1.5 h-9 w-9' : 'mb-1 h-7 w-7'}`} />
+                : <span className={`mx-auto flex items-center justify-center rounded-full bg-brand-verde font-extrabold text-[#061F2B] ${ancha ? 'mb-1.5 h-9 w-9 text-sm' : 'mb-1 h-7 w-7 text-[11px]'}`}>
                   {(perfil?.nombre || user.email || '?').charAt(0).toUpperCase()}
                 </span>}
-              <p className="truncate text-xs font-bold text-[#EAF4F7]">{user.email}</p>
+              {ancha && <p className="truncate text-[11px] font-bold text-[#EAF4F7]">{user.email}</p>}
               {/* Al pulsar el rol se despliegan los demás: superadministración
                   necesita moverse entre niveles para ver lo que ve cada quien,
                   y también desde la zona de clientes. Quien no es superadmin ve
                   su rol como una etiqueta y no pasa nada más. */}
-              {realRole === 'superadmin' ? (
+              {!ancha ? null : realRole === 'superadmin' ? (
                 <>
                   <button onClick={() => setVerRoles((v) => !v)}
                     className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#061F2B] px-2 py-0.5 text-[11px] font-bold text-[#B9D2DA] transition hover:text-[#EAF4F7]"
@@ -70,10 +86,10 @@ export default function Shell({ children }) {
                   {ROL_LABEL[role] || role}
                 </span>
               )}
-              <button onClick={logout} className="btn-ghost mt-3 w-full !py-2">Salir</button>
+              <button onClick={logout} className="btn-ghost mt-2 w-full !py-1.5 !text-[12px]">{ancha ? 'Salir' : '⏻'}</button>
             </div>
           ) : (
-            <Link to="/acceso" className="btn-primary w-full">Acceder</Link>
+            <Link to="/acceso" className="btn-primary w-full !py-2 !text-[13px]">{ancha ? 'Acceder' : '→'}</Link>
           )}
         </div>
       </aside>
@@ -94,7 +110,8 @@ export default function Shell({ children }) {
         </div>
       </header>
 
-      <div className="flex min-h-screen flex-1 flex-col md:ml-[248px]">
+      <div style={{ ['--barra']: `${ANCHO}px` }}
+        className="flex min-h-screen flex-1 flex-col transition-[margin] duration-200 md:ml-[var(--barra)]">
         <main className="flex-1">{children}</main>
         <footer className="border-t border-white/10 bg-[#061F2B] py-8 text-center text-xs text-[#9FC0CB]">
         <img src="/app/marca/orbita-horizontal.svg" alt="Orbita.PMTools" className="mx-auto mb-3 h-8 w-auto opacity-90" />

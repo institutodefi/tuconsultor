@@ -28,6 +28,7 @@ import ControlHoras from './consultores/ControlHoras.jsx';
 import GeneradorOfertas from '../pages/GeneradorOfertas.jsx';
 import BarraVerComo from '../components/BarraVerComo.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { usarPlegado } from '../components/Plegable.jsx';
 import { gruposParaRol, can } from '../lib/permisos.js';
 import Inicio from './consultores/Inicio.jsx';
 
@@ -71,66 +72,132 @@ function Guard({ ok, children }) {
 // el estado de lo que haya dentro.
 function NavItems({ onNavigate, grupos }) {
   const loc = useLocation();
+  // La ruta activa manda sobre la memoria: si estás dentro de un grupo, ese
+  // grupo se abre aunque lo dejaras cerrado ayer. Lo contrario —esconderte la
+  // sección en la que estás— sería un menú que te miente.
+  const activoEn = (g) => g.items.some((t) => {
+    const base = t.to.split('?')[0];
+    const ruta = loc.pathname.replace(/\/+$/, '');
+    if (base === '') return /\/consultores$/.test(ruta);
+    return ruta.endsWith(`/${base}`) || ruta.includes(`/${base}/`)
+      || (t.hijos || []).some((h) => ruta.endsWith(`/${h.to.split('?')[0]}`));
+  });
+
   return (
-    <nav className="flex flex-col gap-5">
+    <nav className="flex flex-col gap-1.5">
       {grupos.map((g, gi) => (
-        <div key={gi}>
-          {g.label && (
-            <p className="px-3 mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#7FA7B4]">{g.label}</p>
-          )}
-          <div className="flex flex-col gap-0.5">
-            {g.items.map((t) => (
-              <div key={t.to}>
-              <NavLink
-                to={t.to}
-                end={t.to === ''}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${
-                    isActive
-                      ? 'bg-brand-orange/15 text-[#EAF4F7] ring-1 ring-brand-orange/40'
-                      : 'text-[#9FC0CB] hover:bg-[#0D3242] hover:text-[#EAF4F7]'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon name={t.icon} className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#F9A83A]' : 'text-[#7FA7B4] group-hover:text-[#9FC0CB]'}`} />
-                    <span className="truncate">{t.label}</span>
-                  </>
-                )}
-              </NavLink>
-                {/* Subentradas: se muestran cuando la sección está activa,
-                    para no convertir la barra en una lista de veinte enlaces. */}
-                {t.hijos && t.hijos.length > 0 && (
-                  <div className="ml-8 mt-0.5 flex flex-col gap-0.5 border-l border-[#1E5468] pl-3">
-                    {t.hijos.map((h) => {
-                      // Con filtro en la ruta («empresas?filtro=cliente») la
-                      // activa es la que coincide también en el filtro.
-                      const conFiltro = h.to.includes('?');
-                      const hermanosConFiltro = t.hijos.some((x) => x.to.includes('?') && x.to.split('?')[0] === h.to.split('?')[0]);
-                      const activaPorFiltro = (isActive) => {
-                        if (!conFiltro && !hermanosConFiltro) return isActive;
-                        const [ruta, q] = h.to.split('?');
-                        return isActive && (q ? loc.search.includes(q) : !loc.search.includes('filtro=')) && loc.pathname.endsWith(ruta);
-                      };
-                      return (
-                      <NavLink key={h.to} to={h.to} end onClick={onNavigate}
-                        className={({ isActive }) =>
-                          `truncate rounded-lg px-2 py-1.5 text-[12.5px] font-semibold transition ${
-                            activaPorFiltro(isActive) ? 'text-[#F9A83A]' : 'text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
-                        {h.label}
-                      </NavLink>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <GrupoNav key={gi} grupo={g} indice={gi} activo={activoEn(g)} onNavigate={onNavigate} loc={loc} />
       ))}
     </nav>
+  );
+}
+
+/** Un grupo del menú. Con etiqueta se pliega; sin ella (Inicio) va suelto. */
+function GrupoNav({ grupo: g, indice, activo, onNavigate, loc }) {
+  const [abierto, alternar] = usarPlegado(g.label ? `nav.${g.label}` : null, false);
+  // Sin etiqueta no hay nada que plegar: es el enlace de Inicio.
+  const desplegado = !g.label || activo || abierto;
+
+  return (
+    <div>
+      {g.label && (
+        <button type="button" onClick={alternar} aria-expanded={desplegado}
+          className="flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-left transition hover:bg-white/[0.04]">
+          <span className="min-w-0 flex-1 text-[9.5px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#7FA7B4]">{g.label}</span>
+          {/* Plegado, un punto avisa de que la sección activa está ahí dentro. */}
+          {!desplegado && activo && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange" />}
+          <svg className={`h-3 w-3 shrink-0 text-[#4E7E8F] transition-transform duration-200 ${desplegado ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+      )}
+      {desplegado && (
+        <div className="mt-0.5 flex flex-col gap-0.5">
+          {g.items.map((t) => (
+            <EntradaNav key={t.to} t={t} onNavigate={onNavigate} loc={loc} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EntradaNav({ t, onNavigate, loc }) {
+  // Las subentradas solo se abren bajo la sección en la que estás. Antes se
+  // enseñaban las de todas las secciones a la vez y el menú medía más que la
+  // pantalla: treinta enlaces para elegir uno.
+  const base = t.to.split('?')[0];
+  const ruta = loc.pathname.replace(/\/+$/, '');
+  const dentro = base !== '' && (ruta.endsWith(`/${base}`) || ruta.includes(`/${base}/`)
+    || (t.hijos || []).some((h) => ruta.endsWith(`/${h.to.split('?')[0]}`)));
+
+  const tieneHijos = !!(t.hijos && t.hijos.length);
+  // Las subentradas se abren solas en la sección donde estás, y con la flecha
+  // desde cualquier otra: «Generador de ofertas» es una tarea de cada día y no
+  // puede exigir pasar antes por «Ofertas» para verla.
+  const [abierto, alternar] = usarPlegado(tieneHijos ? `nav.sub.${t.to}` : null, false);
+  const verHijos = tieneHijos && (dentro || abierto);
+
+  return (
+    <div>
+      <div className={`group flex items-center rounded-lg pr-1 transition ${
+        dentro ? '' : 'hover:bg-[#0D3242]'}`}>
+        <NavLink
+          to={t.to}
+          end={t.to === ''}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold transition ${
+              isActive
+                ? 'bg-brand-orange/15 text-[#EAF4F7] ring-1 ring-brand-orange/40'
+                : 'text-[#9FC0CB] group-hover:text-[#EAF4F7]'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <Icon name={t.icon} className={`h-4 w-4 shrink-0 ${isActive ? 'text-[#F9A83A]' : 'text-[#7FA7B4] group-hover:text-[#9FC0CB]'}`} />
+              <span className="truncate">{t.label}</span>
+            </>
+          )}
+        </NavLink>
+        {tieneHijos && !dentro && (
+          <button type="button" onClick={alternar} aria-expanded={verHijos}
+            aria-label={`${verHijos ? 'Ocultar' : 'Ver'} las secciones de ${t.label}`}
+            className="flex shrink-0 items-center gap-1 rounded px-1 py-1 text-[9px] font-extrabold text-[#4E7E8F] transition hover:text-[#9FC0CB]">
+            {t.hijos.length}
+            <svg className={`h-2.5 w-2.5 transition-transform duration-200 ${verHijos ? 'rotate-180' : ''}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {verHijos && (
+        <div className="ml-6 mt-0.5 flex flex-col gap-0.5 border-l border-[#1E5468] pl-2.5">
+          {t.hijos.map((h) => {
+            // Con filtro en la ruta («empresas?filtro=cliente») la activa es la
+            // que coincide también en el filtro.
+            const conFiltro = h.to.includes('?');
+            const hermanosConFiltro = t.hijos.some((x) => x.to.includes('?') && x.to.split('?')[0] === h.to.split('?')[0]);
+            const activaPorFiltro = (isActive) => {
+              if (!conFiltro && !hermanosConFiltro) return isActive;
+              const [r, q] = h.to.split('?');
+              return isActive && (q ? loc.search.includes(q) : !loc.search.includes('filtro=')) && loc.pathname.endsWith(r);
+            };
+            return (
+              <NavLink key={h.to} to={h.to} end onClick={onNavigate}
+                className={({ isActive }) =>
+                  `truncate rounded-md px-2 py-1 text-[12px] font-semibold transition ${
+                    activaPorFiltro(isActive) ? 'text-[#F9A83A]' : 'text-[#7FA7B4] hover:text-[#EAF4F7]'}`}>
+                {h.label}
+              </NavLink>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -168,12 +235,12 @@ export default function ConsultorPortal() {
           </div>
         )}
 
-        <div className="flex gap-6">
+        <div className="flex gap-5">
           {/* Sidebar fija (desktop) */}
-          <aside className="hidden lg:block w-60 shrink-0">
+          <aside className="hidden lg:block w-[196px] shrink-0">
             <div className="sticky top-24">
-              <p className="eyebrow px-3">Operaciones</p>
-              <h1 className="mt-1 mb-6 px-3 text-2xl font-extrabold tracking-tight">Orbita.PMTools</h1>
+              <p className="eyebrow px-2.5 !text-[9px]">Operaciones</p>
+              <h1 className="mt-0.5 mb-4 px-2.5 text-[17px] font-extrabold leading-tight tracking-tight">Orbita.PMTools</h1>
               <NavItems grupos={grupos} />
             </div>
           </aside>

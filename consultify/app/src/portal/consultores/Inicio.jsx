@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listTable } from '../../lib/data.js';
+import { usarPlegado } from '../../components/Plegable.jsx';
 import { useAuth } from '../../lib/auth.jsx';
 import { can } from '../../lib/permisos.js';
 import MisProyectos from '../../components/MisProyectos.jsx';
@@ -107,19 +108,35 @@ export default function Inicio() {
   const tituloDe = (s) => datos?.ts.find((t) => String(t.id) === String(s.cliente_tarea_id))?.titulo
     || datos?.ti.find((t) => String(t.id) === String(s.tarea_interna_id))?.titulo || 'Tarea';
   const accesos = accesosDe(role);
+  const [accesosAbiertos, alternarAccesos] = usarPlegado('inicio.accesos', false);
 
   return (
     <div className="space-y-6">
-      {/* ── Accesos directos, arriba y pequeños ──
-          Son el menú de trabajo de cada rol: una fila de chips, no una
-          parrilla de tarjetas que empujaba lo importante fuera de la vista. */}
-      <div className="flex flex-wrap gap-1.5">
-        {accesos.map((a) => (
-          <Link key={a.to} to={a.to} title={a.nota}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2.5 py-1 text-[12px] font-bold text-[#CFE3E9] transition hover:border-brand-orange/60 hover:text-brand-orange">
-            <span aria-hidden="true" className="text-[13px]">{a.icono}</span>{a.etq}
-          </Link>
-        ))}
+      {/* ── Accesos directos ──
+          Son el menú de trabajo de cada rol. Con doce accesos ocupaban dos
+          líneas enteras y empujaban el saludo y la jornada fuera de la vista,
+          justo lo que se viene a mirar. Ahora se pliegan: quien los use a
+          diario los deja abiertos y quien no, recupera la pantalla. */}
+      <div>
+        <button type="button" onClick={alternarAccesos} aria-expanded={accesosAbiertos}
+          className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-[#7FA7B4] transition hover:bg-white/[0.04] hover:text-[#9FC0CB]">
+          Accesos rápidos
+          <span className="rounded-full bg-[#0D3242] px-1.5 text-[9px] text-[#9FC0CB]">{accesos.length}</span>
+          <svg className={`h-3 w-3 transition-transform duration-200 ${accesosAbiertos ? 'rotate-180' : ''}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {accesosAbiertos && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {accesos.map((a) => (
+              <Link key={a.to} to={a.to} title={a.nota}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2 py-0.5 text-[11.5px] font-bold text-[#CFE3E9] transition hover:border-brand-orange/60 hover:text-brand-orange">
+                <span aria-hidden="true" className="text-[12px]">{a.icono}</span>{a.etq}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

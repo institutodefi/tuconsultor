@@ -14,7 +14,7 @@
 //     (reglas, horas por nivel, márgenes, notas internas, motivos de ajuste).
 //   · logicaDe(r)                    → lo que solo ve el equipo, ordenado.
 // ════════════════════════════════════════════════════════════════════════════
-import { calcular, NORMA_BY_ID, IVA } from './calcEngine.js';
+import { calcular, NORMA_BY_ID, IVA, mismoModelo } from './calcEngine.js';
 import { DISCLAIMER_OFERTA } from './legal.js';
 import { CATALOGO_ANEXO } from './catalogoAnexo.js';
 
@@ -32,18 +32,56 @@ export const BLOQUES = {
   PR1: 'Incorporación de usuarios', PR2: 'Atención al usuario', PR3: 'Baja y servicios generales',
 };
 
-/** Anexo I: subprocesos del modelo que aplican a las normas elegidas, por bloque. */
-export function tareasPorBloque(normaIds, modeloId) {
-  const filas = CATALOGO_ANEXO[modeloId] || CATALOGO_ANEXO['Implantación'] || [];
+/**
+ * Anexo I: subprocesos del modelo que aplican a las normas elegidas, por bloque.
+ *
+ * ── Por qué acepta el catálogo vivo (v145) ──
+ * El anexo salía SIEMPRE de `catalogoAnexo.js`, un fichero generado a mano que
+ * se quedó atrás: no tenía los planes (igualdad, diversidad) ni la tarea de
+ * kickoff. Una oferta de Plan de Diversidad salía con el Anexo I VACÍO, cuando
+ * en la base sus tareas existían desde el principio. Ahora, si quien monta el
+ * documento puede leer `tareas_catalogo` —el navegador con su sesión, la
+ * función de Netlify con la clave de servicio—, el anexo sale de ahí y no
+ * puede volver a divergir. El fichero estático queda como red de seguridad.
+ *
+ * @param catalogoVivo  filas de `tareas_catalogo` [{norma_id, modelo, proceso, subproceso, orden}]
+ */
+export function tareasPorBloque(normaIds, modeloId, catalogoVivo = null) {
+  const ids = normaIds || [];
+  // El modelo «Auditoría» no implanta nada: solo son jornadas. Un anexo de
+  // tareas de implantación ahí sería sencillamente falso.
+  if (modeloId === 'Auditoría') return [];
+
+  // El respaldo es POR NORMA, no por oferta. Con «o todo vivo o todo estático»,
+  // una oferta mixta (un sistema que sí está en la base y otro que no) perdía
+  // las tareas del segundo sin avisar. Cada norma se resuelve por su cuenta.
+  const vivas = Array.isArray(catalogoVivo)
+    ? catalogoVivo.filter((f) => mismoModelo(f.modelo, modeloId) && ids.includes(f.norma_id))
+    : [];
+  const conVivas = new Set(vivas.map((f) => f.norma_id));
+  const huerfanas = ids.filter((id) => !conVivas.has(id));
+  const filas = [
+    ...vivas
+      .slice()
+      .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0))
+      .map((f) => ({ proc: f.proceso || '', sub: f.subproceso || f.titulo || '', normas: [f.norma_id] })),
+    ...(huerfanas.length
+      ? (CATALOGO_ANEXO[modeloId] || CATALOGO_ANEXO['Implantación'] || [])
+          .filter((f) => f.normas.some((id) => huerfanas.includes(id)))
+      : []),
+  ];
+
   const grupos = new Map();
   for (const f of filas) {
-    if (!f.normas.some((id) => (normaIds || []).includes(id))) continue;
+    if (!f.sub || !f.normas.some((id) => ids.includes(id))) continue;
     const pref = (f.proc.split(' ')[0] || '').toUpperCase();
-    const bloque = BLOQUES[pref] || f.proc;
-    if (!grupos.has(bloque)) grupos.set(bloque, []);
-    grupos.get(bloque).push(f.sub.replace(/^S\d+\s+/, '').replace(/\s*\(.*?\)\s*$/, '').trim());
+    const bloque = BLOQUES[pref] || f.proc || 'Tareas';
+    if (!grupos.has(bloque)) grupos.set(bloque, new Set());
+    // Con el catálogo vivo hay una fila por norma: el mismo subproceso llega
+    // repetido tantas veces como sistemas lo compartan. Se enseña una vez.
+    grupos.get(bloque).add(f.sub.replace(/^S\d+\s+/, '').replace(/\s*\(.*?\)\s*$/, '').trim());
   }
-  return [...grupos.entries()].map(([bloque, subs]) => ({ bloque, subs }));
+  return [...grupos.entries()].map(([bloque, subs]) => ({ bloque, subs: [...subs] }));
 }
 
 /** Suma meses a una fecha ISO respetando el fin de mes (31 ene + 1 = 28 feb). */
@@ -154,7 +192,7 @@ export function montarDocumento(body = {}) {
     ref: r.numero, comercial: body.comercial || 'Alejandro', direccion: body.direccion || '', email: body.email || '',
     telefono: body.telefono || null,
   };
-  return { r, cli, anexo: tareasPorBloque(normas, modelo) };
+  return { r, cli, anexo: tareasPorBloque(normas, modelo, body.catalogo || null) };
 }
 
 // ── Lo que el cliente ve ────────────────────────────────────────────────────
