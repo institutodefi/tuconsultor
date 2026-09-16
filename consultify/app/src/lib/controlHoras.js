@@ -131,12 +131,19 @@ export function horasSugeridasEquipo(totalHoras, reparto, miembros = []) {
  *   2. Si el proyecto tiene reparto por nivel (de la oferta), por niveles.
  *   3. Si no, a partes iguales entre quienes ejecutan.
  */
-export function cuotasEquipo(miembros, reparto = null) {
+export function cuotasEquipo(miembros, reparto = null, totalHoras = 0) {
   if (!miembros.length) return {};
   const totalAsig = miembros.reduce((a, m) => a + m.horas_asignadas, 0);
   if (totalAsig > 0) {
     const out = {};
-    for (const m of miembros) if (m.horas_asignadas > 0) out[m.perfil_id] = (out[m.perfil_id] || 0) + m.horas_asignadas / totalAsig;
+    // Quien tiene horas, en proporción a ellas. Quien no las tiene se reparte
+    // lo que quede del total del proyecto (v142): antes se quedaba a cero en
+    // cuanto a otra persona se le escribían horas.
+    const sinAsignar = miembros.filter((m) => !(m.horas_asignadas > 0) && m.papel !== 'responsable');
+    const resto = Math.max(0, num(totalHoras) - totalAsig);
+    const base = totalAsig + (sinAsignar.length ? resto : 0);
+    for (const m of miembros) if (m.horas_asignadas > 0) out[m.perfil_id] = (out[m.perfil_id] || 0) + m.horas_asignadas / base;
+    if (sinAsignar.length && resto > 0) for (const m of sinAsignar) out[m.perfil_id] = (out[m.perfil_id] || 0) + (resto / sinAsignar.length) / base;
     return out;
   }
   return horasSugeridasEquipo(1, reparto, miembros).fracciones;
@@ -186,8 +193,12 @@ export function controlHoras(d) {
   const cuotasPorProyecto = {};
   for (const p of proyectos) {
     equipoPorProyecto[S(p.id)] = equipoDe(p, d.equipo, d.consultores);
-    cuotasPorProyecto[S(p.id)] = cuotasEquipo(equipoPorProyecto[S(p.id)], p.reparto_niveles);
   }
+  // Las horas del proyecto (suma de sus tareas) antes de repartirlas: hacen
+  // falta para dar a quien no tiene horas asignadas lo que queda.
+  const horasPorProyecto = {};
+  for (const t of tareas) { const pid = S(t.proyecto_id); if (pid) horasPorProyecto[pid] = (horasPorProyecto[pid] || 0) + num(t.horas); }
+  for (const p of proyectos) cuotasPorProyecto[S(p.id)] = cuotasEquipo(equipoPorProyecto[S(p.id)], p.reparto_niveles, horasPorProyecto[S(p.id)] || 0);
   const tareasPorProyecto = {};
   for (const t of tareas) {
     const pid = S(t.proyecto_id);

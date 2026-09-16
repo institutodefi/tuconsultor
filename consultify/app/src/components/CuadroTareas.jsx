@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { horasTeoricasTarea } from '../lib/tareasHoras.js';
 import { listTable } from '../lib/data.js';
 import { useAuth } from '../lib/auth.jsx';
 import { can } from '../lib/permisos.js';
@@ -73,15 +74,7 @@ export default function CuadroTareas({ proyectoId = null, titulo = 'Cuadro de ta
     const idsP = new Set(proyectos.map((p) => String(p.id)));
 
     // Horas teóricas: del catálogo, por enlace directo o por coincidencia.
-    const teoricasDe = (t) => {
-      const c = (t.catalogo_id && d.catalogo.find((x) => String(x.id) === String(t.catalogo_id)))
-        || d.catalogo.find((x) => String(x.norma_id) === String(t.norma_id)
-          && mismoModelo(x.modelo, t.modelo)
-          && String(x.subproceso || '') === String(t.subproceso || '')
-          && String(x.proceso || '') === String(t.proceso || ''));
-      const n = Number(c?.horas_base) || 0;
-      return n > 0 ? n : (Number(t.horas) || 0);
-    };
+    const teoricasDe = (t) => horasTeoricasTarea(t, d.catalogo);   // con la parte, si está dividida (v142)
 
     const tareas = d.tareas.filter((t) => idsP.has(String(t.proyecto_id)));
     const porTarea = {};

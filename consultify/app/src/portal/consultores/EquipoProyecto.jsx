@@ -103,6 +103,30 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0, rep
     try { await updateRow('proyecto_equipo', e.id, { horas_asignadas: h }); await cargar(); }
     catch (x) { setMsg({ err: true, t: explicarErrorBd(x, 'proyecto_equipo') }); }
   }
+  // ── Porcentaje por persona (v142) ──
+  // El reparto por nivel reparte a partes iguales entre quienes comparten
+  // nivel: con dos J2 no había forma de decir «una el 60 % y otra el 40 %».
+  // El porcentaje se traduce a horas asignadas, que es lo que manda.
+  async function cambiarPct(e, v) {
+    const pct = Math.max(0, Math.min(100, Number(String(v).replace(',', '.')) || 0));
+    if (!horasComprometidas) { setMsg({ err: true, t: 'El proyecto no tiene horas comprometidas: escribe las horas directamente.' }); return; }
+    await cambiarHoras(e, Math.round(horasComprometidas * pct) / 100);
+  }
+  // Horas efectivas de cada persona: las asignadas; si no tiene, lo que quede
+  // del total repartido entre los que tampoco tienen (si alguien ya tiene
+  // horas), o las sugeridas por nivel (si nadie las tiene).
+  const horasEfectivas = (e) => {
+    if (Number(e.horas_asignadas) > 0) return Number(e.horas_asignadas);
+    const conHoras = (equipo || []).filter((x) => Number(x.horas_asignadas) > 0);
+    if (conHoras.length) {
+      const sin = (equipo || []).filter((x) => !(Number(x.horas_asignadas) > 0) && x.papel !== 'responsable');
+      const resto = Math.max(0, horasComprometidas - conHoras.reduce((a, x) => a + Number(x.horas_asignadas), 0));
+      return sin.some((x) => x.id === e.id) ? Math.round((resto / sin.length) * 10) / 10 : 0;
+    }
+    return sugeridas?.horas[String(e.perfil_id)] || 0;
+  };
+  const pctDe = (e) => (horasComprometidas > 0 ? Math.round((horasEfectivas(e) / horasComprometidas) * 1000) / 10 : null);
+  const pctTotal = horasComprometidas > 0 ? Math.round(((equipo || []).reduce((a, e) => a + horasEfectivas(e), 0) / horasComprometidas) * 1000) / 10 : null;
 
 
   async function anadir() {
@@ -228,11 +252,20 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0, rep
               )}
               <span className="flex-1" />
               {puedeAsignar ? (
-                <label className="flex items-center gap-1 text-[10.5px] text-[#7FA7B4]" title="Horas de este proyecto que le tocan. Mandan sobre el reparto por nivel.">
-                  <input type="number" min="0" step="0.5" className="input !w-20 !px-1.5 !py-0.5 text-right !text-[12px]" defaultValue={e.horas_asignadas || ''} placeholder={sugeridas?.horas[String(e.perfil_id)] ? String(sugeridas.horas[String(e.perfil_id)]) : '0'}
-                    key={`${e.id}-${e.horas_asignadas}`} onBlur={(ev) => { if (String(ev.target.value) !== String(e.horas_asignadas ?? '')) cambiarHoras(e, ev.target.value); }} disabled={ocupado} />
-                  h
-                </label>
+                <span className="flex items-center gap-2">
+                  {horasComprometidas > 0 && (
+                    <label className="flex items-center gap-1 text-[10.5px] text-[#7FA7B4]" title="Qué parte de la carga del proyecto lleva esta persona. Se convierte en horas asignadas, que mandan sobre el reparto por nivel (así dos personas del mismo nivel pueden llevar partes distintas).">
+                      <input type="number" min="0" max="100" step="5" className="input !w-16 !px-1.5 !py-0.5 text-right !text-[12px]" defaultValue={Number(e.horas_asignadas) > 0 ? pctDe(e) : ''} placeholder={pctDe(e) != null ? String(pctDe(e)) : '0'}
+                        key={`p-${e.id}-${e.horas_asignadas}`} onBlur={(ev) => { if (ev.target.value !== '' && Number(ev.target.value) !== pctDe(e)) cambiarPct(e, ev.target.value); }} disabled={ocupado} />
+                      %
+                    </label>
+                  )}
+                  <label className="flex items-center gap-1 text-[10.5px] text-[#7FA7B4]" title="Horas de este proyecto que le tocan. Mandan sobre el reparto por nivel.">
+                    <input type="number" min="0" step="0.5" className="input !w-20 !px-1.5 !py-0.5 text-right !text-[12px]" defaultValue={e.horas_asignadas || ''} placeholder={String(horasEfectivas(e) || 0)}
+                      key={`${e.id}-${e.horas_asignadas}`} onBlur={(ev) => { if (String(ev.target.value) !== String(e.horas_asignadas ?? '')) cambiarHoras(e, ev.target.value); }} disabled={ocupado} />
+                    h
+                  </label>
+                </span>
               ) : (
                 (Number(e.horas_asignadas) > 0 || sugeridas?.horas[String(e.perfil_id)]) ? <span className="text-[11px] text-[#9FC0CB]">{Number(e.horas_asignadas) > 0 ? `${e.horas_asignadas} h` : `≈ ${sugeridas.horas[String(e.perfil_id)]} h`}</span> : null
               )}
@@ -245,6 +278,11 @@ export default function EquipoProyecto({ proyectoId, horasComprometidas = 0, rep
         </ul>
       )}
 
+      {puedeAsignar && equipo.length > 1 && pctTotal != null && (
+        <p className={`text-[11px] font-bold ${Math.abs(pctTotal - 100) <= 1 ? 'text-[#7FA7B4]' : 'text-amber-200'}`}>
+          Entre todos: {pctTotal} % de las {horasComprometidas} h{Math.abs(pctTotal - 100) > 1 ? ' · lo suyo es que sume 100' : ''}. Escribe el % o las horas de cada persona: con dos del mismo nivel, es la forma de darles partes distintas.
+        </p>
+      )}
       {puedeAsignar && libres.length > 0 && (
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[#1E5468] bg-[#0D3242] px-2.5 py-2">
           <select className="input !h-8 !w-auto !py-0 !text-[12.5px]" value={nuevo.perfil_id}

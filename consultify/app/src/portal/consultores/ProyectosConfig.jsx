@@ -22,6 +22,8 @@ import { subtareasBasePara } from '../../lib/subtareasBase.js';
 // La sigla del cliente: la misma que usan los códigos de proyecto, para que
 // «CECE» signifique lo mismo en el proyecto y en cada una de sus tareas.
 import { siglaCliente } from '../../lib/codigos.js';
+import DividirTarea from '../../components/DividirTarea.jsx';
+import { horasTeoricasTarea, etiquetaParte } from '../../lib/tareasHoras.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -325,19 +327,10 @@ export default function Proyectos() {
    * Si la tarea no se encuentra en el catálogo —se borró, o cambió de nombre—
    * se cae a la copia: es peor no tener referencia que tener una antigua.
    */
-  const horasTeoricas = useCallback((t) => {
-    // Primero por enlace directo: `catalogo_id` sobrevive a que alguien
-    // renombre el código o el título de la tarea, que es justo lo que se hace
-    // al planificar un proyecto de 65 tareas.
-    const c = (t.catalogo_id && (catalogo || []).find((x) => String(x.id) === String(t.catalogo_id)))
-      || (catalogo || []).find((x) =>
-      String(x.norma_id) === String(t.norma_id)
-      && mismoModelo(x.modelo, t.modelo || modelo)
-      && String(x.subproceso || '') === String(t.subproceso || '')
-      && String(x.proceso || '') === String(t.proceso || ''));
-    const delCatalogo = Number(c?.horas_base) || 0;
-    return delCatalogo > 0 ? delCatalogo : (Number(t.horas) || 0);
-  }, [catalogo, modelo]);
+  // Del catálogo por `catalogo_id` (sobrevive a renombrar), o por coincidencia;
+  // y multiplicadas por la parte si la tarea está dividida (v142). Un solo
+  // cálculo para toda la app: lib/tareasHoras.js.
+  const horasTeoricas = useCallback((t) => horasTeoricasTarea(t, catalogo || [], modelo), [catalogo, modelo]);
 
   /**
    * El título de una tarea al volcarla.
@@ -494,6 +487,37 @@ export default function Proyectos() {
     await updateRow('cliente_tareas', t.id, upd);
     setTareas(ts => ts.map(x => x.id === t.id ? { ...x, ...upd } : x));
     try { await sincronizarTareaAgenda(conCod({ ...t, ...upd }), proyecto?.consultor_1_id || null, equipo); } catch { /* noop */ }
+  }
+
+  // ── Dividir una tarea entre varias personas (v142) ──
+  const [dividiendo, setDividiendo] = useState(null);
+  async function dividirTarea(t, plan) {
+    const [orig, ...resto] = plan;
+    await updateRow('cliente_tareas', t.id, { consultor_id: orig.consultor_id, horas: orig.horas, parte: orig.parte, codigo: orig.codigo || t.codigo, editada_manual: true });
+    const { id, creado, updated_at, created_at, ...base } = t;
+    for (const [i, p] of resto.entries()) {
+      await insertRow('cliente_tareas', {
+        ...base, consultor_id: p.consultor_id, horas: p.horas, parte: p.parte, codigo: p.codigo || t.codigo,
+        dividida_de: t.dividida_de || t.id, orden: (Number(t.orden) || 0) + (i + 1) * 0.001, editada_manual: true,
+        bloques_ejecucion: [], seguimientos: [], fecha_real: null, hecha: false, horas_reales: null,
+        subtareas: Array.isArray(t.subtareas) ? t.subtareas.map((x) => ({ ...x, hecha: false, hecho: false })) : [],
+      });
+    }
+    const all = await listTable('cliente_tareas'); setTareas(all);
+    setMsg(`Tarea dividida en ${plan.length} partes.`);
+  }
+  async function deshacerDivision(t) {
+    const raiz = String(t.dividida_de || t.id);
+    const partes = tareas.filter((x) => String(x.id) === raiz || String(x.dividida_de) === raiz);
+    const conSesiones = partes.filter((x) => sesiones.some((s) => String(s.cliente_tarea_id) === String(x.id) && s.estado !== 'anulada'));
+    const original = partes.find((x) => String(x.id) === raiz) || t;
+    const quitar = partes.filter((x) => String(x.id) !== String(original.id) && !conSesiones.some((c) => c.id === x.id));
+    if (conSesiones.some((x) => String(x.id) !== String(original.id))) { setMsg('Alguna parte ya tiene sesiones programadas: anúlalas antes de juntar.'); return; }
+    if (!window.confirm(`¿Juntar las ${partes.length} partes en una sola tarea de ${horasTeoricas({ ...original, parte: 1 })} h?`)) return;
+    for (const x of quitar) await deleteRow('cliente_tareas', x.id);
+    await updateRow('cliente_tareas', original.id, { parte: 1, horas: partes.reduce((a, x) => a + (Number(x.horas) || 0), 0), codigo: String(original.codigo || '').replace(/\.\d+$/, '') || original.codigo });
+    const all = await listTable('cliente_tareas'); setTareas(all);
+    setMsg('Partes juntadas en una sola tarea.');
   }
 
   async function patchTarea(t, campos) {
@@ -781,6 +805,10 @@ export default function Proyectos() {
           activos, así que un proyecto pausado o cerrado no aparecía por ninguna
           de las dos vías. */}
 
+      {dividiendo && (
+        <DividirTarea tarea={dividiendo} titulo={tituloTarea(dividiendo)} teoricas={horasTeoricas(dividiendo)} gente={genteProyecto}
+          onCerrar={() => setDividiendo(null)} onDividir={(plan) => dividirTarea(dividiendo, plan)} />
+      )}
       {abierta && (
         <SesionesTarea
           tarea={{
@@ -1106,10 +1134,13 @@ export default function Proyectos() {
                   </span>
                 </div>
               </div>
-              <p className="mt-1 text-xs font-medium text-[#9FC0CB]">
-                Pulsa las horas de una tarea para programarla en una o varias sesiones.
-                Las horas comprometidas vienen del modelo y no se editan.
-              </p>
+              {/* Cómo funciona, en tres frases. Sin esto, «no es muy intuitivo»
+                  y nadie sabía que una tarea se puede partir entre personas. */}
+              <div className="mt-2 grid gap-1.5 rounded-xl border border-[#1E5468] bg-[#0B2E3D] px-3 py-2 text-[12px] text-[#CFE3E9] sm:grid-cols-3">
+                <p><b className="text-brand-orange">1 · Responsable.</b> Cada tarea tiene una persona que responde de ella (el desplegable). Solo gente del equipo del proyecto.</p>
+                <p><b className="text-brand-orange">2 · ✂ Dividir.</b> Si la van a hacer varias personas, se parte en trozos con sus horas: cada trozo tiene su responsable y su control.</p>
+                <p><b className="text-brand-orange">3 · Calendario.</b> Ahí se ponen las sesiones (fecha, horas, quién). Las horas teóricas vienen del modelo y no se editan.</p>
+              </div>
 
               {/* Filtros de tareas distribuidas */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1190,6 +1221,7 @@ export default function Proyectos() {
                               que garantiza que las horas se comparan contra la
                               tarea correcta aunque el nombre haya cambiado. */}
                           <span className="block px-1 text-[10.5px] text-[#5E8494]">
+                            {etiquetaParte(t) && <span className="mr-1 rounded bg-brand-orange/15 px-1 font-bold text-brand-orange" title="Parte de una tarea dividida entre varias personas">parte · {etiquetaParte(t)}</span>}
                             {t.norma_id}
                             {t.titulo_origen && t.titulo_origen !== t.titulo ? ` · ${t.titulo_origen}` : ''}
                             {!t.catalogo_id && (
@@ -1253,6 +1285,12 @@ export default function Proyectos() {
                             title="Ver y programar las sesiones de esta tarea, y su checklist">
                             Calendario
                           </button>
+                          {genteProyecto.length >= 2 && !t.hecha && (
+                            <button type="button" onClick={() => setDividiendo(t)} className="mt-1 block w-full text-right text-[10.5px] font-bold text-[#9FC0CB] hover:text-brand-orange" title="Repartir esta tarea entre varias personas, cada una con sus horas">✂ Dividir</button>
+                          )}
+                          {(etiquetaParte(t) || tareasProyecto.some((x) => String(x.dividida_de) === String(t.id))) && (
+                            <button type="button" onClick={() => deshacerDivision(t)} className="mt-0.5 block w-full text-right text-[10.5px] font-bold text-[#7FA7B4] hover:text-red-300" title="Volver a juntar las partes en una sola tarea">juntar partes</button>
+                          )}
                           {etiquetaChecklist(t.subtareas) && (
                             <span className={`mt-1 block text-[10.5px] font-bold ${progresoChecklist(t.subtareas).completa ? 'text-emerald-300' : 'text-[#9FC0CB]'}`}
                               title="Subtareas hechas de esta tarea">☑ {etiquetaChecklist(t.subtareas)}</span>

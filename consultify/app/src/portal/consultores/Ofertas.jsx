@@ -496,11 +496,19 @@ export default function Ofertas() {
 
   if (!rows) return <p className="font-semibold text-[#9FC0CB]">Cargando ofertas…</p>;
 
-  const filtro = q.trim().toLowerCase();
+  // Búsqueda sin tildes ni mayúsculas, y por todo lo que se sabe de la oferta:
+  // número, empresa, CIF, persona, correo, comercial, modelo, normas y estado.
+  // Antes solo miraba cinco campos y distinguía «Andrés» de «andres», así que
+  // «no funcionaba» según con qué se buscara. Varias palabras: todas tienen
+  // que aparecer, en cualquier orden.
+  const plano = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const palabras = plano(q).split(/\s+/).filter(Boolean);
+  const textoDe = (r) => plano([r.numero_oferta, r.empresa, r.cif, r.nombre, r.contacto_nombre, r.contacto_apellidos, r.email, r.comercial, r.modelo, r.estado,
+    (r.normas || []).map((id) => NORMA_BY_ID[id]?.nombre || id).join(' ')].filter(Boolean).join(' '));
+  const filtro = palabras.length > 0;
   const lista = rows
     .filter((r) => !etapa || etapaDe(r, contratos) === etapa)
-    .filter((r) => !filtro ||
-      [r.numero_oferta, r.empresa, r.nombre, r.comercial, r.modelo].filter(Boolean).join(' ').toLowerCase().includes(filtro));
+    .filter((r) => { if (!filtro) return true; const t = textoDe(r); return palabras.every((w) => t.includes(w)); });
 
   return (
     <div>
@@ -511,7 +519,10 @@ export default function Ofertas() {
           <p className="mt-1 max-w-2xl text-[11.5px] font-medium leading-relaxed text-[#7FA7B4]">{DISCLAIMER_CORTO} Todas las ofertas emitidas incluyen este aviso en el PDF y en el PowerPoint.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <input className="input max-w-xs" placeholder="Buscar nº, cliente, comercial…" value={q} onChange={e => setQ(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <input className="input max-w-xs" placeholder="Buscar nº, empresa, CIF, persona, norma…" value={q} onChange={e => setQ(e.target.value)} />
+            {filtro && <span className="whitespace-nowrap text-[11.5px] font-bold text-[#9FC0CB]">{lista.length} de {rows.length}{etapa ? ' (con el filtro de etapa)' : ''} · <button type="button" onClick={() => { setQ(''); setEtapa(null); }} className="text-brand-orange hover:underline">limpiar</button></span>}
+          </div>
           <button onClick={regenerarVivas} disabled={!!bloque || !!genId}
             className="btn-ghost !px-3 !py-1 text-[11.5px] disabled:opacity-50"
             title="Vuelve a generar el PDF y el PPT de todas las ofertas vivas con la versión actual del documento, cada una con su precio y su número">

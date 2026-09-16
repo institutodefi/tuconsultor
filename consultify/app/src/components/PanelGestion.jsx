@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { horasTeoricasTarea } from '../lib/tareasHoras.js';
 import { Link } from 'react-router-dom';
 import { listTable } from '../lib/data.js';
 import { mismoModelo } from '../lib/calcEngine.js';
@@ -79,14 +80,7 @@ export default function PanelGestion() {
     const enJuego = emitidas.reduce((a, o) => a + (Number(o.precio) || 0), 0);
 
     // ── 2 · Proyectos y horas ──
-    const teoricasDe = (t) => {
-      const c = (t.catalogo_id && d.tareas_catalogo.find((x) => String(x.id) === String(t.catalogo_id)))
-        || d.tareas_catalogo.find((x) => String(x.norma_id) === String(t.norma_id)
-          && mismoModelo(x.modelo, t.modelo)
-          && String(x.subproceso || '') === String(t.subproceso || ''));
-      const n = Number(c?.horas_base) || 0;
-      return n > 0 ? n : (Number(t.horas) || 0);
-    };
+    const teoricasDe = (t) => horasTeoricasTarea(t, d.tareas_catalogo);   // con la parte, si está dividida (v142)
     const proyectos = d.proyectos_cliente;
     const activos = proyectos.filter((p) => (p.estado || 'activo') === 'activo');
     const vivas = d.tarea_sesiones.filter((s) => s.estado !== 'anulada');
