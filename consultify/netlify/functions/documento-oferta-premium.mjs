@@ -603,6 +603,26 @@ export async function generarPDFOferta(r, cli, anexo) {
     }
   }
 
+  // ── 5b · Servicios adicionales · jornadas de auditoría (v143) ──
+  // Se factura aparte de la cuota o del proyecto: es un cargo único. En el
+  // modelo «Auditoría» ya va en el importe de arriba y no se repite aquí.
+  if (r.auditoria && !r.auditoria.enPrecio) {
+    seccion('Servicios adicionales', 14);
+    asegurar(10);
+    const alto = U * 7;
+    const top = cursor + U * 1.2;
+    p.drawRectangle({ x: MG, y: top - alto, width: ANCHO, height: alto, color: SUAVE });
+    p.drawRectangle({ x: MG, y: top - alto, width: U * 0.5, height: alto, color: TEAL });
+    p.drawText('ACOMPAÑAMIENTO A LA AUDITORÍA EXTERNA', { x: MG + U * 2, y: top - U * 1.8, size: 7.5, font: med, color: APAGADO, characterSpacing: 1.3 });
+    const imp = eur(r.auditoria.importe);
+    p.drawText(imp, { x: MG + U * 2, y: top - U * 4.2, size: 20, font: bold, color: TINTA });
+    p.drawText(`${r.auditoria.jornadas} ${r.auditoria.jornadas === 1 ? 'jornada' : 'jornadas'} × ${eur(r.auditoria.precioDia)} · sin impuestos`,
+      { x: MG + U * 2 + bold.widthOfTextAtSize(imp, 20) + U, y: top - U * 4, size: 9, font: reg, color: APAGADO });
+    p.drawText(`Un consultor presente el día de la auditoría. Se factura aparte de ${esMes ? 'la cuota' : 'el importe del proyecto'}, en el mes en que se preste. Resérvalo con 15 días.`,
+      { x: MG + U * 2, y: top - U * 6, size: 8.5, font: reg, color: APAGADO });
+    cursor = top - alto - U * 1.5;
+  }
+
   // ── 6 · Condiciones ──
   seccion('Condiciones', 14);
   const condiciones = condicionesComunes(r);

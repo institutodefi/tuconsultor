@@ -10,7 +10,7 @@
 // Quién puede llamar: Make con el token (PUBLICACIONES_TOKEN, en cabecera
 // `x-publicaciones-token` o en ?token=) o el equipo con su sesión de Órbita.
 // ════════════════════════════════════════════════════════════════════════════
-import { sb, sincronizarDesdeWeb } from './publicaciones-lib.mjs';
+import { sb, sincronizarDesdeWeb, consultaEnlaces } from './publicaciones-lib.mjs';
 
 const env = (n) => process.env[n] || '';
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -42,10 +42,14 @@ export default async (req) => {
 
   // ── Pública: los enlaces de los últimos días, para /enlaces/ (la «bio» de Instagram) ──
   if (accion === 'enlaces') {
-    const desde = new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10);
-    const r = await sb(`/rest/v1/publicaciones?red=eq.instagram&fecha=gte.${desde}&fecha=not.is.null&select=id,fecha,hora,texto,imagen_url,enlace,campana,publicado_en&order=fecha.desc,hora.desc&limit=40`);
-    const filas = r.ok ? await r.json() : [];
+    // ── El tope de arriba es imprescindible ──
+    // Sin `lte.hoy` la consulta traía las 40 filas MÁS FUTURAS (el calendario
+    // llega a julio de 2027), el bucle las descartaba todas por ser de mañana
+    // en adelante y la lista salía vacía siempre. Se acota al pasado reciente
+    // en la propia consulta, que además es lo que hay que leer.
     const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+    const r = await sb(consultaEnlaces(hoy));
+    const filas = r.ok ? await r.json() : [];
     const vistos = new Set(); const out = [];
     for (const f of filas) {
       if (f.fecha > hoy || !f.enlace) continue;               // lo de mañana no se enseña

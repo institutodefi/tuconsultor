@@ -144,6 +144,7 @@ export function montarDocumento(body = {}) {
     aplicarReglas: body.aplicar_reglas !== false,
     pagoAdelantado: body.pago_adelantado === true,
     complejidad: body.complejidad, sedes: body.sedes,
+    jornadasAuditoria: body.jornadas_auditoria ?? body.jornadasAuditoria ?? 0,
   });
   if (!r) return null;
   r = aplicarOverride(r, body.override);
@@ -163,7 +164,7 @@ export function montarDocumento(body = {}) {
 const CAMPOS_CLIENTE = [
   'modelo', 'tipo', 'meses', 'normas', 'normaNombres', 'normasNombres', 'nSistemas',
   'precioCatalogo', 'precioAntesDeAjustes', 'ajusteOferta', 'iva', 'totalConIva',
-  'adelantado', 'pagoAdelantado', 'formasPago', 'formaPagoElegida', 'fraccionado',
+  'adelantado', 'pagoAdelantado', 'formasPago', 'formaPagoElegida', 'fraccionado', 'auditoria',
   'hTotal', 'dedicacion', 'tiene9001', 'complejidad', 'sedes', 'planes', 'fasesPlan',
   'fecha_emision', 'fecha_inicio', 'fecha_fin', 'fecha_certificacion', 'fecha_primer_pago',
   'notas', 'canal', 'disclaimer', 'emisora_id', 'modeloMantenimiento', 'numero', 'situacion',
@@ -208,6 +209,8 @@ export const SITUACIONES = [
     ayuda: 'El sistema existe y hay que mantenerlo vivo: acompañamiento recurrente con dedicación mensual y permanencia de doce meses.' },
   { id: 'urgente', titulo: 'Ya tengo, pero es urgente', sub: 'Apoyo · nunca a más de 3 meses', modelos: ['Apoyo'],
     ayuda: 'Auditoría a la vista y hay que llegar: bolsa de horas para la recta final. Solo con tres meses o menos hasta la certificación.' },
+  { id: 'auditoria', titulo: 'Solo la auditoría', sub: 'Acompañamiento por jornadas', modelos: ['Auditoría'],
+    ayuda: 'No se contrata implantación ni mantenimiento: solo que estemos el día de la auditoría externa. Se cobra por jornadas, en un pago único.' },
 ];
 export const SITUACION_BY_ID = Object.fromEntries(SITUACIONES.map((s) => [s.id, s]));
 export const situacionDeModelo = (m) => SITUACIONES.find((s) => s.modelos.includes(m))?.id || null;

@@ -59,3 +59,12 @@ export function planDivision(t, teoricas, repartos) {
     };
   });
 }
+
+// ── Escala de niveles (v144) ──────────────────────────────────────────────
+// Para saber si quien lleva una tarea da el nivel que esa tarea pide. El
+// kickoff pide Senior: un J1 no se sienta a solas con la dirección del
+// cliente el primer día. Sin nivel asignado a la persona, no cumple nada:
+// más vale el aviso que una falsa tranquilidad.
+export const ORDEN_NIVEL = { J1: 1, J2: 2, J3: 3, Senior: 4 };
+export const cumpleNivel = (nivelPersona, nivelPedido) =>
+  !nivelPedido || (ORDEN_NIVEL[nivelPersona] || 0) >= (ORDEN_NIVEL[nivelPedido] || 0);

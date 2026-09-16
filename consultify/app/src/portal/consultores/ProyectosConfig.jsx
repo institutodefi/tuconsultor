@@ -23,7 +23,7 @@ import { subtareasBasePara } from '../../lib/subtareasBase.js';
 // «CECE» signifique lo mismo en el proyecto y en cada una de sus tareas.
 import { siglaCliente } from '../../lib/codigos.js';
 import DividirTarea from '../../components/DividirTarea.jsx';
-import { horasTeoricasTarea, etiquetaParte } from '../../lib/tareasHoras.js';
+import { horasTeoricasTarea, etiquetaParte, ORDEN_NIVEL } from '../../lib/tareasHoras.js';
 
 const MODELOS = ['Apoyo', 'Relación', 'Implicación', 'Compromiso', 'Implantación'];
 const fmtH = (h) => `${(Math.round((h || 0) * 100) / 100).toLocaleString('es-ES')} h`;
@@ -649,7 +649,7 @@ export default function Proyectos() {
           bloques_ejecucion: [], seguimientos: [],
           fecha_real: null, hecha: false,
           // Definición y checklist del catálogo (v121).
-          definicion: c.definicion || null, subtareas: c.subtareas || [],
+          definicion: c.definicion || null, subtareas: c.subtareas || [], nivel: c.nivel || null,
         });
         n += 1;
       } catch { /* una que falle no debe cortar el resto */ }
@@ -689,7 +689,7 @@ export default function Proyectos() {
         horas: c.horas, bloque: c.bloque, tipo: tipoTarea(c),
         integrada: false, normas_integradas: [c.norma_id],
         consultor_id: proyecto.consultor_1_id || null, orden: i, num_tarea: i + 1,
-        definicion: c.definicion || null, subtareas: c.subtareas || [],
+        definicion: c.definicion || null, subtareas: c.subtareas || [], nivel: c.nivel || null,
       }));
 
       // Distribuir fechas respetando el tope de fecha_inicio + meses.
@@ -1237,6 +1237,21 @@ export default function Proyectos() {
                             alguien de fuera tiene que hacerla, primero se le
                             mete en el equipo. */}
                         <td className="py-1.5 pl-3 align-top">
+                          {/* ── Nivel exigido (v144) ──
+                              Hay tareas que no puede llevar cualquiera: el
+                              kickoff lo hace un jefe de proyecto o un senior.
+                              Se avisa, no se bloquea: quien planifica decide,
+                              pero con el dato delante. */}
+                          {t.nivel && (() => {
+                            const quien = genteProyecto.find((g) => String(g.id) === String(t.consultor_id));
+                            const cumple = !t.consultor_id || ORDEN_NIVEL[quien?.nivel] >= ORDEN_NIVEL[t.nivel];
+                            return (
+                              <span className={`mb-1 block text-[10px] font-bold ${cumple ? 'text-[#7FA7B4]' : 'text-amber-200'}`}
+                                title={cumple ? `Esta tarea pide ${t.nivel} o superior` : `Esta tarea pide ${t.nivel} o superior y ${quien?.nombre || 'el responsable'} es ${quien?.nivel || 'de nivel sin definir'}`}>
+                                {cumple ? `pide ${t.nivel}` : `⚠ pide ${t.nivel}`}
+                              </span>
+                            );
+                          })()}
                           <select className="input !w-full !py-1 !text-[12px]" value={t.consultor_id || ''}
                             onChange={(e) => patchTarea(t, { consultor_id: e.target.value || null })}
                             title="Responsable de la tarea (gente del proyecto)">

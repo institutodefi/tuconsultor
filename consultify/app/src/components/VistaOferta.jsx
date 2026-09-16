@@ -245,6 +245,24 @@ export default function VistaOferta({ documento, compacto = false }) {
           </>
         ) : null}
 
+        {/* ══ Servicios adicionales (v143) ══
+            El acompañamiento a la auditoría externa se contrata por jornadas y
+            se factura aparte de la cuota o del proyecto. En el modelo
+            «Auditoría» es lo único que se contrata y ya va en el importe. */}
+        {r.auditoria && !r.auditoria.enPrecio && (
+          <>
+            <Seccion>Servicios adicionales</Seccion>
+            <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3 border-l-4 px-4 py-3" style={{ background: C.suave, borderColor: C.teal }}>
+              <div>
+                <p className="text-[13px] font-bold">Acompañamiento a la auditoría externa</p>
+                <p className="text-[11.5px]" style={{ color: C.apagado }}>{r.auditoria.jornadas} {r.auditoria.jornadas === 1 ? 'jornada' : 'jornadas'} × {eur(r.auditoria.precioDia)} · un consultor presente el día de la auditoría</p>
+              </div>
+              <p className="text-[20px] font-extrabold">{eur(r.auditoria.importe)} <span className="text-[10px] font-normal" style={{ color: C.apagado }}>sin impuestos</span></p>
+              <p className="w-full text-[11px]" style={{ color: C.apagado }}>Se factura aparte de {esMes ? 'la cuota' : 'el importe del proyecto'}, en el mes en que se preste. Resérvalo con al menos 15 días.</p>
+            </div>
+          </>
+        )}
+
         {/* ══ Condiciones ══ */}
         <Seccion>Condiciones</Seccion>
         <ul className="mt-3 space-y-1.5">
@@ -339,7 +357,7 @@ export function PanelLogicaOferta({ logica, notasInternas = null, esMes = false,
           <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#9FC0CB]">Cómo se forma la cuota</p>
           {L.desgloseSistemas.map((s) => <p key={s.id} className="flex justify-between"><span>{s.nombre}{s.manual ? ' · pactado' : ''}{s.suelo ? ' · mínimo' : ''}</span><b className="text-[#EAF4F7]">{eur(s.precio)}</b></p>)}
           {L.volumen && <>
-            {L.volumen.importePresencial > 0 && <p className="flex justify-between"><span>Horas presenciales</span><b className="text-[#EAF4F7]">{eur(L.volumen.importePresencial)}</b></p>}
+            {L.volumen.presencialIncluido > 0 && <p className="text-[11px] text-[#7FA7B4]">Incluye {eur(L.volumen.presencialIncluido)} de horas presenciales, repartidos entre los sistemas: no se cobran aparte.</p>}
             <p className="flex justify-between border-t border-white/10 pt-1"><span>Subtotal</span><b className="text-[#EAF4F7]">{eur(L.volumen.subtotal)}</b></p>
             {L.volumen.pct > 0 && <p className="flex justify-between text-brand-verdeTexto"><span>Descuento por {L.volumen.nSistemas} sistemas · {L.volumen.pct} %</span><b>−{eur(L.volumen.importeDto)}</b></p>}
           </>}

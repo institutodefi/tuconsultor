@@ -15,6 +15,21 @@ export async function sb(path, { method = 'GET', body, headers = {} } = {}) {
   });
 }
 
+
+/**
+ * Consulta de la publicación del día para `/enlaces/` (v143).
+ *
+ * El TOPE SUPERIOR no es opcional: el calendario llega a 2027 y, sin `lte`,
+ * PostgREST devolvía las 40 filas más futuras y la lista salía vacía siempre.
+ */
+export function consultaEnlaces(hoy, dias = 10, limite = 40) {
+  const desde = new Date(`${hoy}T12:00:00Z`).getTime() - dias * 864e5;
+  const d = new Date(desde).toISOString().slice(0, 10);
+  return `/rest/v1/publicaciones?red=eq.instagram&fecha=gte.${d}&fecha=lte.${hoy}`
+    + `&select=id,fecha,hora,texto,imagen_url,enlace,campana,publicado_en`
+    + `&order=fecha.desc,hora.desc&limit=${limite}`;
+}
+
 /** CSV RFC 4180: campos entre comillas pueden llevar comas, comillas dobladas y saltos de línea. */
 export function parsearCsv(texto) {
   const filas = []; let fila = []; let campo = ''; let enComillas = false;

@@ -524,6 +524,8 @@ export default async (req) => {
     repartoNiveles: body.repartoNiveles || body.reparto_niveles || null,
     aplicarReglas: body.aplicar_reglas !== false,
     pagoAdelantado: body.pago_adelantado === true,
+    // Jornadas de acompañamiento a auditoría (v143): extra de la oferta.
+    jornadasAuditoria: body.jornadas_auditoria ?? body.jornadasAuditoria ?? 0,
   });
   if (r) r.canal = canal;
   if (!r) return Response.json({ ok: false, error: 'Normas o modelo no válidos' }, { status: 400 });
@@ -658,6 +660,7 @@ export default async (req) => {
               forma_pago: body.forma_pago || null,
               emisora_id: r.emisora_id,
               modelo_mantenimiento: body.modelo_mantenimiento || null,
+              jornadas_auditoria: Number(body.jornadas_auditoria) || 0,
               documento, documento_en: new Date().toISOString(),
               ...(alta?.empresa_id ? { empresa_id: alta.empresa_id } : {}),
               ...(alta?.contacto_id ? { contacto_id: alta.contacto_id } : {}),

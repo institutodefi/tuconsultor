@@ -18,6 +18,6 @@ t.push(L.ajustes[0].motivo === 'cliente antiguo · no decirlo' && Array.isArray(
 // Override: el precio emitido manda y las formas de pago se rehacen
 const impl = montarDocumento({ normas: ['9001'], modelo: 'Implantación', meses: 6, fecha_inicio: '2026-10-01', override: { precioCatalogo: 10000 } });
 t.push(impl.r.precioCatalogo === 10000 && impl.r.formasPago.dos.sinIva === 10000 && impl.r.formasPago.unico.sinIva === 9500 && impl.r.fraccionado.totalSinIva === 10000);
-t.push(tareasPorBloque(['9001'], 'Apoyo').length > 0 && SITUACIONES.length === 3 && situacionDeModelo('Apoyo') === 'urgente' && situacionDeModelo('Relación') === 'certificado' && situacionDeModelo('Implantación') === 'desde_cero');
+t.push(tareasPorBloque(['9001'], 'Apoyo').length > 0 && SITUACIONES.length === 4 && situacionDeModelo('Apoyo') === 'urgente' && situacionDeModelo('Relación') === 'certificado' && situacionDeModelo('Implantación') === 'desde_cero');
 console.log(t.every(Boolean) ? `OK · ${t.length} comprobaciones` : `FALLO · ${t.map((x, i) => (x ? '' : i)).filter((x) => x !== '').join(',')}`);
 process.exit(t.every(Boolean) ? 0 : 1);

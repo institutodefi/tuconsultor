@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { NORMAS, MODELOS, MODELO_IDS, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto, catalogoHorasDesdeFilas, repartoPorDefecto, REPARTO_POR_DIFICULTAD } from '../lib/calcEngine.js';
+import { NORMAS, MODELOS, MODELO_IDS, normasPorAmbito, ACOMPANAMIENTO_AUDITORIA_DIA, calcular, fmtEUR, NIVELES, normalizarReparto, equipoDesdeReparto, catalogoHorasDesdeFilas, repartoPorDefecto, REPARTO_POR_DIFICULTAD } from '../lib/calcEngine.js';
 import RentabilidadOferta from '../components/RentabilidadOferta.jsx';
 import { precioClienteAntiguo, sueloSistema } from '../lib/reglasComerciales.js';
 import { LEYENDA_IMPUESTOS, SUFIJO_SIN_IMPUESTOS } from '../lib/impuestos.js';
@@ -33,6 +33,7 @@ export default function GeneradorOfertas({ publico = false }) {
     setSituacion(id);
     const s = SITUACIONES.find((x) => x.id === id);
     if (s && !s.modelos.includes(modelo)) setModelo(s.modelos.includes('Implicación') ? 'Implicación' : s.modelos[0]);
+    if (id === 'auditoria' && jornadasAuditoria < 1) setJornadasAuditoria(1);
   };
   const [vista, setVista] = useState(false);   // el visor de la oferta, antes de generarla
   // Fechas en vez de meses: nadie sabe de memoria si su proyecto son ocho meses
@@ -151,6 +152,10 @@ export default function GeneradorOfertas({ publico = false }) {
   // Modelos de cuota: cada mes, o el año por adelantado (12 meses de servicio
   // por 11 mensualidades). Cambia lo que se factura, no lo que se hace.
   const [pagoMes, setPagoMes] = useState('mensual');        // 'mensual' | 'adelantado'
+  // ── Jornadas de acompañamiento a la auditoría externa (v143) ──
+  // Servicio extra que se elige: 600 €/jornada, aparte de la cuota. Con el
+  // modelo «Auditoría» es lo único que se contrata.
+  const [jornadasAuditoria, setJornadasAuditoria] = useState(0);
   // Horas planificadas por norma y modelo (tabla de Sistemas de gestión), para
   // la rentabilidad: lo que hay que echar de verdad. Solo en el generador interno.
   const [catalogoHoras, setCatalogoHoras] = useState(null);
@@ -232,10 +237,11 @@ export default function GeneradorOfertas({ publico = false }) {
       preciosSistema: clienteAntiguo ? preciosSistema : null,
       repartoNiveles: repartoAplicado,
       pagoAdelantado: pagoMes === 'adelantado',
+      jornadasAuditoria,
       catalogoHoras,
     }),
     [sel, modelo, mesesContrato, tiene9001, reglas, aplicarReglas, publico, complejidad, sedes,
-     fasesPlan, ajustes, clienteAntiguo, preciosSistema, repartoAplicado, pagoMes, catalogoHoras],
+     fasesPlan, ajustes, clienteAntiguo, preciosSistema, repartoAplicado, pagoMes, catalogoHoras, jornadasAuditoria],
   );
   // Equipo interno: se deduce del reparto por nivel (una persona por nivel
   // con carga). No se enseña ni cambia el precio; se guarda con la oferta y
@@ -321,7 +327,7 @@ export default function GeneradorOfertas({ publico = false }) {
         forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
         pago_adelantado: !!adelantado,
         modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
-        situacion: situacion || null,
+        situacion: situacion || null, jornadas_auditoria: jornadasAuditoria || 0,
         ...(user?.id && user.id !== 'demo' ? { user_id: user.id } : {}),
       });
     } catch (e) {
@@ -398,7 +404,7 @@ export default function GeneradorOfertas({ publico = false }) {
           forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
           pago_adelantado: !!adelantado,
           modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
-          situacion: situacion || null,
+          situacion: situacion || null, jornadas_auditoria: jornadasAuditoria || 0,
           email: cli.email, presupuesto_id: fila?.id,
           // RGPD marcado al pedirla (v138): queda en el contacto del CRM y en Brevo.
           rgpd: publico && consent, marketing: publico && marketing,
@@ -482,8 +488,21 @@ export default function GeneradorOfertas({ publico = false }) {
           {/* 1 · Normas */}
           <section className="card">
             <h2 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-[#F9A83A]">1 · Normas a implantar</h2>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {NORMAS.map(n => {
+            {/* Agrupados por ámbito (v143): diecisiete sistemas en una rejilla
+                plana no se leen. Quien oferta busca «lo de medio ambiente» o
+                «lo de ciber», no una norma por su número. */}
+            {normasPorAmbito().map((g) => (
+              <div key={g.id} className="mb-3">
+                <p className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wider text-[#7FA7B4]">
+                  {g.nombre}
+                  {g.normas.some((n) => sel.includes(n.id)) && (
+                    <span className="ml-1.5 rounded bg-brand-verde/20 px-1.5 py-px text-[9.5px] text-brand-verdeTexto">
+                      {g.normas.filter((n) => sel.includes(n.id)).length}
+                    </span>
+                  )}
+                </p>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+              {g.normas.map(n => {
                 const on = sel.includes(n.id);
                 const base = n.id === '9001';
                 const baseFuera = base && !on;   // premarcada pero desmarcada a mano
@@ -503,6 +522,10 @@ export default function GeneradorOfertas({ publico = false }) {
                   </button>
                 );
               })}
+                </div>
+              </div>
+            ))}
+            <div className="grid gap-2.5 sm:grid-cols-2">
               {/* Otra norma · pide info → abre el formulario de solicitud */}
             {/* Aviso de que falta el sistema base. No bloquea: informa. */}
             {!sel.includes('9001') && (
@@ -1038,6 +1061,37 @@ export default function GeneradorOfertas({ publico = false }) {
                   </div>
                 )}
 
+                {/* ── Servicios adicionales · jornadas de auditoría (v143) ──
+                    El acompañamiento a la auditoría externa se contrataba «de
+                    palabra»: no había dónde anotarlo y no llegaba ni a la
+                    oferta ni a la factura. Va aparte de la cuota a propósito:
+                    es un cargo único, se preste el servicio que se preste. */}
+                {(!publico || res.auditoria) && (
+                  <div className="mt-3 rounded-2xl border border-white/15 p-3">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-orange">
+                      {res.auditoria?.enPrecio ? 'Jornadas contratadas' : 'Servicio adicional'}
+                    </p>
+                    <label className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-white/85">
+                      <span className="flex-1">Acompañamiento a la auditoría externa</span>
+                      <input type="number" min="0" max="60" step="1" value={jornadasAuditoria}
+                        onChange={(e) => setJornadasAuditoria(Math.max(0, Math.min(60, parseInt(e.target.value, 10) || 0)))}
+                        className="w-16 rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-right text-sm font-bold text-white focus:border-brand-orange focus:outline-none" />
+                      <span className="text-[11px] text-white/60">jornadas × {fmtEUR(ACOMPANAMIENTO_AUDITORIA_DIA)}</span>
+                    </label>
+                    {res.auditoria ? (
+                      <p className="mt-1.5 text-[11.5px] font-bold text-brand-verdeTexto">
+                        {fmtEUR(res.auditoria.importe)} {res.auditoria.enPrecio
+                          ? '· es el importe de esta oferta'
+                          : `· se factura aparte de ${esMes ? 'la cuota' : 'el proyecto'}`}
+                      </p>
+                    ) : (
+                      <p className="mt-1.5 text-[11px] leading-snug text-white/50">
+                        Un consultor presente el día de la auditoría. Déjalo en cero si no se contrata.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* ── Cómo se forma la cuota ──
                     Sin este desglose, un cliente que pregunta «¿y si quito la
                     14001?» obliga a rehacer la oferta para responder. */}
@@ -1059,10 +1113,12 @@ export default function GeneradorOfertas({ publico = false }) {
                         </span>
                       </p>
                     ))}
-                    {res.volumen.importePresencial > 0 && (
-                      <p className="flex justify-between gap-2 text-[12px]">
-                        <span className="text-white/75">Horas presenciales</span>
-                        <span className="font-bold text-white">{fmtEUR(res.volumen.importePresencial)}</span>
+                    {/* Las presenciales YA están dentro del precio de cada
+                        sistema (v143): no se cobran aparte. Se dice, pero no
+                        como una línea que parezca opcional. */}
+                    {!publico && res.volumen.presencialIncluido > 0 && (
+                      <p className="text-[10.5px] leading-snug text-white/45">
+                        Incluye {fmtEUR(res.volumen.presencialIncluido)} de horas presenciales, repartidos entre los sistemas.
                       </p>
                     )}
                     <p className="flex justify-between gap-2 border-t border-white/15 pt-1.5 text-[12px]">
@@ -1287,7 +1343,7 @@ export default function GeneradorOfertas({ publico = false }) {
           complejidad, sedes, fasesPlan, emisora_id: emisora, notas_oferta: notas || null,
           forma_pago: res?.formasPago ? (res.formasPago.soloUnico ? 'unico' : formaPago) : null,
           pago_adelantado: !!adelantado, modelo_mantenimiento: modelo === 'Implantación' ? modeloDespues : null,
-          disclaimer: DISCLAIMER_OFERTA, situacion,
+          disclaimer: DISCLAIMER_OFERTA, situacion, jornadas_auditoria: jornadasAuditoria || 0,
         });
         const puedeGenerar = !(estado === 'gen' || plazoMal || (!publico && !aprobador));
         return (

@@ -164,6 +164,7 @@ export default function Ofertas() {
           precios_sistema: r.cliente_antiguo ? (r.precios_sistema || null) : null,
           aplicar_reglas: r.aplicar_reglas !== false,
           pago_adelantado: !!r.pago_adelantado,
+          jornadas_auditoria: r.jornadas_auditoria || 0,
           // Reparto manual de la carga por nivel (v119): el servidor calcula
           // con el mismo reparto que se guardó.
           // Las antiguas sin reparto toman el de su dificultad (la web sigue en automático).
@@ -271,6 +272,7 @@ export default function Ofertas() {
         fasesPlan: e.fases_plan || undefined, ajustes: e.ajustes || [],
         preciosSistema: e.cliente_antiguo ? (e.precios_sistema || null) : null,
         aplicarReglas: e.aplicar_reglas !== false,
+        jornadasAuditoria: e.jornadas_auditoria || 0,
       });
 
       // ── El precio de una oferta EMITIDA no se pisa al guardar ──
@@ -343,6 +345,7 @@ export default function Ofertas() {
             ajustes: e.ajustes || [],
             precios_sistema: patch.precios_sistema,
             pago_adelantado: patch.pago_adelantado,
+            jornadas_auditoria: e.jornadas_auditoria || 0,
             // Y el override cierra el asunto: manda el precio que se guardó.
             override: {
               precioCatalogo: precioFinal,
@@ -459,6 +462,7 @@ export default function Ofertas() {
         preciosSistema: edicion.cliente_antiguo ? (edicion.precios_sistema || null) : null,
         aplicarReglas: edicion.aplicar_reglas !== false,
         pagoAdelantado: !!edicion.pago_adelantado,
+        jornadasAuditoria: edicion.jornadas_auditoria || 0,
       });
     } catch { return null; }
   }, [edicion?.normas, edicion?.modelo, edicion?.meses, edicion?.complejidad, edicion?.sedes,
@@ -1035,6 +1039,7 @@ export default function Ofertas() {
           fecha_primer_pago: r.fecha_primer_pago || r.fecha_inicio || null, fecha_certificacion: r.fecha_certificacion || null,
           emisora_id: r.emisora_id || 'trescore', notas_oferta: r.notas_oferta || null, forma_pago: r.forma_pago || null,
           modelo_mantenimiento: r.modelo_mantenimiento || null, situacion: r.situacion || null,
+          jornadas_auditoria: r.jornadas_auditoria || 0,
           ...(r.numero_oferta && Number.isFinite(Number(r.precio)) ? { override: { precioCatalogo: Number(r.precio) } } : {}),
         };
         let vivo = null;

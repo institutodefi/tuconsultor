@@ -12,25 +12,25 @@ import { eurES } from './formato.js';
 import { CATALOGO_TAREAS } from './catalogoTareas.js';
 
 export const NORMAS = [
-  { id: '9001',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
-  { id: '14001',    nombre: 'ISO 14001', desc: 'Gestión ambiental',              nivel: 'J3', hApoyo: 46 },
-  { id: '45001',    nombre: 'ISO 45001', desc: 'Seguridad y salud laboral',      nivel: 'J2', hApoyo: 63 },
-  { id: '27001',    nombre: 'ISO 27001', desc: 'Seguridad de la información',    nivel: 'J2', hApoyo: 81 },
+  { id: '9001', ambito: 'calidad',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
+  { id: '14001', ambito: 'ambiental',    nombre: 'ISO 14001', desc: 'Gestión ambiental',              nivel: 'J3', hApoyo: 46 },
+  { id: '45001', ambito: 'personas',    nombre: 'ISO 45001', desc: 'Seguridad y salud laboral',      nivel: 'J2', hApoyo: 63 },
+  { id: '27001', ambito: 'ciber',    nombre: 'ISO 27001', desc: 'Seguridad de la información',    nivel: 'J2', hApoyo: 81 },
   // Extensión de privacidad de ISO 27001/27002 (SGIC). Exige un SGSI en el que
   // apoyarse: contratada con la 27001 cuesta el 70 %, porque contexto, riesgos,
   // auditoría y revisión se hacen una sola vez para las dos.
-  { id: '27701',    nombre: 'ISO 27701', desc: 'Privacidad de la información · extensión de ISO 27001', nivel: 'J2', hApoyo: 55, solapeCon: '27001', solapeFactor: 0.7 },
-  { id: '42001',    nombre: 'ISO 42001', desc: 'Inteligencia artificial',        nivel: 'J3', hApoyo: 42 },
-  { id: '56001',    nombre: 'ISO 56001', desc: 'Gestión de la innovación',       nivel: 'J3', hApoyo: 75 },
-  { id: '21001',    nombre: 'ISO 21001', desc: 'Organizaciones educativas · complementaria a ISO 9001', nivel: 'J3', hApoyo: 19, solapeCon: '9001', solapeFactor: 0.5 },
-  { id: '9004',     nombre: 'ISO 9004',  desc: 'Calidad sostenible · complementaria a ISO 9001', nivel: 'J3', hApoyo: 11, solapeCon: '9001', solapeFactor: 0.5 },
-  { id: 'une93200', nombre: 'UNE 93200', desc: 'Cartas de Servicios',            nivel: 'J3', hApoyo: 25 },
-  { id: 'une158101', nombre: 'UNE 158101', desc: 'Gestión de centros residenciales', nivel: 'J3', hApoyo: 91 },
-  { id: 'une66181', nombre: 'UNE 66181', desc: 'Calidad de la formación virtual', nivel: 'J3', hApoyo: 30 },
+  { id: '27701', ambito: 'ciber',    nombre: 'ISO 27701', desc: 'Privacidad de la información · extensión de ISO 27001', nivel: 'J2', hApoyo: 55, solapeCon: '27001', solapeFactor: 0.7 },
+  { id: '42001', ambito: 'innovacion',    nombre: 'ISO 42001', desc: 'Inteligencia artificial',        nivel: 'J3', hApoyo: 42 },
+  { id: '56001', ambito: 'innovacion',    nombre: 'ISO 56001', desc: 'Gestión de la innovación',       nivel: 'J3', hApoyo: 75 },
+  { id: '21001', ambito: 'calidad',    nombre: 'ISO 21001', desc: 'Organizaciones educativas · complementaria a ISO 9001', nivel: 'J3', hApoyo: 19, solapeCon: '9001', solapeFactor: 0.5 },
+  { id: '9004', ambito: 'calidad',     nombre: 'ISO 9004',  desc: 'Calidad sostenible · complementaria a ISO 9001', nivel: 'J3', hApoyo: 11, solapeCon: '9001', solapeFactor: 0.5 },
+  { id: 'une93200', ambito: 'servicios', nombre: 'UNE 93200', desc: 'Cartas de Servicios',            nivel: 'J3', hApoyo: 25 },
+  { id: 'une158101', ambito: 'servicios', nombre: 'UNE 158101', desc: 'Gestión de centros residenciales', nivel: 'J3', hApoyo: 91 },
+  { id: 'une66181', ambito: 'servicios', nombre: 'UNE 66181', desc: 'Calidad de la formación virtual', nivel: 'J3', hApoyo: 30 },
   // Horas del desglose de tareas facilitado (101 h Igualdad · 147 h Diversidad).
   // El Plan de Diversidad solapa con el de Igualdad: ver `solapeCon` más abajo.
-  { id: 'igualdad',   nombre: 'Plan de Igualdad',   desc: 'Plan de igualdad de empresa', nivel: 'J3', hApoyo: 101 },
-  { id: 'diversidad', nombre: 'Plan de Diversidad', desc: 'Diversidad, equidad e inclusión · se integra con el Plan de Igualdad', nivel: 'J3', hApoyo: 147,
+  { id: 'igualdad', ambito: 'igualdad',   nombre: 'Plan de Igualdad',   desc: 'Plan de igualdad de empresa', nivel: 'J3', hApoyo: 101 },
+  { id: 'diversidad', ambito: 'igualdad', nombre: 'Plan de Diversidad', desc: 'Diversidad, equidad e inclusión · se integra con el Plan de Igualdad', nivel: 'J3', hApoyo: 147,
     solapeCon: 'igualdad', solapeFactor: 0.62 },
 
   // Variantes CON SEGUIMIENTO: el plan más el acompañamiento del primer año.
@@ -39,13 +39,35 @@ export const NORMAS = [
   // hoy se hacen y no se cobran.
   //   2 comisiones de seguimiento (4 h)  ·  revisión de indicadores (6 h)
   //   informe anual de seguimiento (8 h) ·  actualización del registro (6 h)
-  { id: 'igualdad-seg',   nombre: 'Plan de Igualdad con seguimiento',   desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 125 },
-  { id: 'diversidad-seg', nombre: 'Plan de Diversidad con seguimiento', desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 171,
+  { id: 'igualdad-seg', ambito: 'igualdad',   nombre: 'Plan de Igualdad con seguimiento',   desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 125 },
+  { id: 'diversidad-seg', ambito: 'igualdad', nombre: 'Plan de Diversidad con seguimiento', desc: 'El plan más el seguimiento del primer año', nivel: 'J3', hApoyo: 171,
     solapeCon: 'igualdad-seg', solapeFactor: 0.67 },
-  { id: 'madridexcelente', nombre: 'Madrid Excelente', desc: 'Marca de garantía de la Comunidad de Madrid', nivel: 'J3', hApoyo: 30 },
+  { id: 'madridexcelente', ambito: 'calidad', nombre: 'Madrid Excelente', desc: 'Marca de garantía de la Comunidad de Madrid', nivel: 'J3', hApoyo: 30 },
 ];
 
 export const NORMA_BY_ID = Object.fromEntries(NORMAS.map(n => [n.id, n]));
+
+// ── Ámbitos (v143) ──────────────────────────────────────────────────────────
+// Diecisiete sistemas en una rejilla plana no se leen: quien oferta busca «lo
+// de medio ambiente» o «lo de ciber», no una norma por su número. El ámbito no
+// cambia el precio; ordena la elección.
+export const AMBITOS = [
+  { id: 'calidad',    nombre: 'Calidad y excelencia' },
+  { id: 'ambiental',  nombre: 'Medio ambiente' },
+  { id: 'ciber',      nombre: 'Seguridad de la información' },
+  { id: 'personas',   nombre: 'Seguridad y salud' },
+  { id: 'igualdad',   nombre: 'Igualdad y diversidad' },
+  { id: 'innovacion', nombre: 'Innovación e IA' },
+  { id: 'servicios',  nombre: 'Servicios y sectoriales' },
+];
+
+/** Las normas agrupadas por ámbito, en el orden de AMBITOS. Sin ámbito, al final. */
+export function normasPorAmbito(normas = NORMAS) {
+  const grupos = AMBITOS.map((a) => ({ ...a, normas: normas.filter((n) => n.ambito === a.id) }));
+  const sueltas = normas.filter((n) => !AMBITOS.some((a) => a.id === n.ambito));
+  if (sueltas.length) grupos.push({ id: 'otros', nombre: 'Otros', normas: sueltas });
+  return grupos.filter((g) => g.normas.length);
+}
 
 export const TARIFA = { J1: 30, J2: 40, J3: 55, Senior: 75 };
 export const MARGEN = 0.60;
@@ -122,6 +144,17 @@ export const MODELOS = {
     titulo: 'Implantación',
     claim: 'Proyecto completo, horas planificadas',
     leyenda: 'Pago único con 5 % de descuento, o en dos cuotas: 50 % al inicio y 50 % antes de auditorías.',
+  },
+  // ── Solo las jornadas de auditoría (v143) ──
+  // A veces no se vende implantación ni cuota: solo estar el día de la
+  // auditoría externa. Las normas dicen QUÉ se audita; el precio son las
+  // jornadas. Un pago único.
+  'Auditoría': {
+    id: 'Auditoría', tipo: 'bolsa', hSist: null, hPres: 0, paso: 25, suelo: 0,
+    soloJornadas: true,
+    titulo: 'Auditoría',
+    claim: `Acompañamiento a auditoría · ${ACOMPANAMIENTO_AUDITORIA_DIA} €/jornada`,
+    leyenda: 'Solo el acompañamiento a la auditoría externa, por jornadas. Un pago único; no incluye implantación ni mantenimiento.',
   },
 };
 
@@ -283,6 +316,7 @@ export const MESES_MODELO = {
   Relación: 12,
   Implicación: 12,
   Compromiso: 12,
+  'Auditoría': 1,
 };
 
 // Apoyo es el modelo de la recta final: solo se contrata cuando quedan tres
@@ -293,7 +327,7 @@ export const MAX_MESES_APOYO = 3;
 
 // Duración mínima según modelo y nº de sistemas.
 export function mesesPorModelo(modelo, nSistemas = 1) {   // eslint-disable-line no-unused-vars
-  if (modelo === 'Apoyo') return 1;
+  if (modelo === 'Apoyo' || modelo === 'Auditoría') return 1;
   return MESES_MODELO[modelo] || 3;
 }
 
@@ -315,6 +349,13 @@ export function calcular(normaIds, modeloId, opts = {}) {
   if (!m || !normaIds?.length) return null;
   const normas = normaIds.map(id => NORMA_BY_ID[id]).filter(Boolean);
   if (!normas.length) return null;
+
+  // ── Jornadas de acompañamiento a la auditoría externa (v143) ──
+  // Extra que se elige: se suma a cualquier oferta a tarifa de jornada, y en
+  // el modelo «Auditoría» es lo único que se contrata. No entra en la cuota
+  // mensual: es un cargo único, se preste el servicio que se preste.
+  const jornadasPedidas = Math.max(0, Math.round(Number(opts.jornadasAuditoria) || 0));
+  const jornadasAuditoria = m.soloJornadas ? Math.max(1, jornadasPedidas) : jornadasPedidas;
 
   // Factor de descuento sobre la 9001 si el cliente ya la tiene certificada (−50% en horas).
   const tiene9001 = !!opts.tiene9001;
@@ -385,7 +426,11 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // veces y la oferta saldría al doble.
   const genericas = normas.filter((n) => !FASES_PLAN[n.id]);
 
-  if (m.usaHorasProyecto) {
+  if (m.soloJornadas) {
+    // Una jornada de acompañamiento son 8 h de un senior: es quien se sienta
+    // delante del auditor. No hay horas de implantación que repartir.
+    raw.Senior += jornadasAuditoria * 8;
+  } else if (m.usaHorasProyecto) {
     // Horas planificadas completas: la implantación hace el trabajo entero.
     for (const n of genericas) raw[n.nivel] += n.hApoyo * solapeDe(n) * (n.id === '9001' ? f9001 : 1);
   } else if (m.tipo === 'bolsa') {
@@ -533,6 +578,9 @@ export function calcular(normaIds, modeloId, opts = {}) {
   // que enseña el panel de fases, que es de donde sale.
   let precioCatalogo = Math.ceil(precioGenerico / m.paso) * m.paso + Math.round(importePlanes);
   if (m.suelo > 0 && !importePlanes) precioCatalogo = Math.max(m.suelo, precioCatalogo);
+  // El modelo «Auditoría» no se dimensiona por horas de implantación: su
+  // precio son las jornadas por su tarifa, sin redondeos ni suelos.
+  if (m.soloJornadas) precioCatalogo = jornadasAuditoria * ACOMPANAMIENTO_AUDITORIA_DIA;
 
   // ══════════════════════════════════════════════════════════════════════════
   // PRECIO POR SISTEMA (modelos de cuota mensual)
@@ -570,22 +618,52 @@ export function calcular(normaIds, modeloId, opts = {}) {
                suelo: bruto < sueloDeEste };
     });
 
-    // Las horas presenciales son por cliente, no por sistema: se suman una vez.
+    // ── Las presenciales van DENTRO, no aparte (v143) ──
+    // La presencialidad forma parte del modelo (Implicación 2 h al mes,
+    // Compromiso 3 h), pero no es un servicio suelto que se pueda quitar. Como
+    // línea propia en la oferta parecía un añadido opcional y se discutía. Su
+    // coste se reparte entre los sistemas, en proporción a lo que vale cada
+    // uno: el total de la cuota NO cambia, desaparece la línea.
+    //
+    // Los sistemas con precio pactado (cliente antiguo) quedan fuera del
+    // reparto: ese precio se negoció y no se toca. Si TODOS lo están, el
+    // importe no se reparte en ningún sitio y manda lo pactado.
     let importePresencial = 0;
     if (horasPresenciales) {
       const t = tarifa[horasPresenciales.nivel];
       importePresencial = Math.ceil((horasPresenciales.horas * t * (1 + margen)) / m.paso) * m.paso;
     }
+    const repartibles = desgloseSistemas.filter((x) => !x.manual);
+    if (importePresencial > 0 && repartibles.length) {
+      const base = repartibles.reduce((a, x) => a + x.precio, 0);
+      let puesto = 0;
+      repartibles.forEach((x, i) => {
+        // En euros enteros: un sistema a «562,50 €» en la oferta no se lee
+        // como una tarifa, se lee como un error. El último se queda el resto.
+        const parte = i === repartibles.length - 1
+          ? Math.round(importePresencial - puesto)
+          : Math.round(importePresencial * (base > 0 ? x.precio / base : 1 / repartibles.length));
+        puesto += parte;
+        x.precio = Math.round((x.precio + parte) * 100) / 100;
+        x.presencialIncluido = parte;   // informativo para el equipo
+        // Tras el reparto ya no está en el suelo: la etiqueta «mínimo» al
+        // lado de un precio que lo supera confunde más que informa.
+        x.suelo = x.precio <= (x.sueloAplicado ?? 0);
+      });
+    }
 
     const sumaSistemas = desgloseSistemas.reduce((a, s) => a + s.precio, 0);
-    const subtotal = sumaSistemas + importePresencial;
+    const subtotal = sumaSistemas;
     const pct = descuentoVolumen(desgloseSistemas.length);
     const importeDto = Math.round(subtotal * (pct / 100) * 100) / 100;
 
     volumen = {
       nSistemas: desgloseSistemas.length,
       sumaSistemas: Math.round(sumaSistemas * 100) / 100,
-      importePresencial,
+      // Ya repartido entre los sistemas: NO se suma al subtotal ni se enseña
+      // como línea. Se conserva para que el equipo sepa cuánto pesa.
+      presencialIncluido: importePresencial,
+      importePresencial: 0,
       subtotal: Math.round(subtotal * 100) / 100,
       pct, importeDto,
       total: Math.round((subtotal - importeDto) * 100) / 100,
@@ -771,6 +849,17 @@ export function calcular(normaIds, modeloId, opts = {}) {
     reglasActivas: usarReglas,   // si estaban aplicándose las reglas comerciales
     // Pago anual por adelantado (11 × 12). Solo tiene sentido en cuotas: en una
     // implantación no hay mensualidades que adelantar.
+    // ── Jornadas de acompañamiento a auditoría (v143) ──
+    // `enPrecio` dice si ya están dentro de `precioCatalogo` (modelo
+    // «Auditoría», donde son lo único que se vende) o si son un cargo único
+    // APARTE de la cuota o del proyecto, que es lo normal.
+    auditoria: jornadasAuditoria > 0 ? {
+      jornadas: jornadasAuditoria,
+      precioDia: ACOMPANAMIENTO_AUDITORIA_DIA,
+      importe: jornadasAuditoria * ACOMPANAMIENTO_AUDITORIA_DIA,
+      enPrecio: !!m.soloJornadas,
+      texto: `${jornadasAuditoria} ${jornadasAuditoria === 1 ? 'jornada' : 'jornadas'} de acompañamiento a la auditoría externa · ${ACOMPANAMIENTO_AUDITORIA_DIA} €/jornada`,
+    } : null,
     adelantado: m.tipo === 'mes' ? pagoAdelantado(precioCatalogo) : null,
     pagoAdelantado: opts.pagoAdelantado === true && m.tipo === 'mes',
     plazoCorto,   // informativo: el plazo está por debajo del mínimo del modelo
