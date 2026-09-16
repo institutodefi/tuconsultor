@@ -49,7 +49,8 @@ export default function EstablecerPassword() {
 
         {haySesion === false && (
           <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-300">
-            Este enlace no es válido o ha caducado. Pide al administrador que te reenvíe la invitación.
+            Este enlace no es válido o ha caducado. Los enlaces valen una vez y durante un tiempo limitado.{' '}
+            <a href="/app/acceso" className="underline">Pide uno nuevo desde la pantalla de acceso</a> («Pedir un enlace nuevo», con tu correo).
           </div>
         )}
 

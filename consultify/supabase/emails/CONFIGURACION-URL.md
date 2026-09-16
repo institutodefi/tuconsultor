@@ -56,6 +56,28 @@ correos de una rama no llevarán a ninguna parte.
 
 ---
 
+## 1b · Caducidad de los enlaces y códigos (v143)
+
+Panel de Supabase → **Authentication → Providers → Email → Email OTP Expiration**.
+
+Por defecto son **3600 segundos (1 hora)**, y vale tanto para el botón del
+correo como para el código de ocho cifras. La plantilla de invitación promete
+24 horas: para que sea verdad, pon aquí **86400** (es el máximo). Si prefieres
+dejar 1 hora, cambia el texto de `2-invitacion.html`.
+
+Lo que pasó el 15/09: una invitación abierta 17 horas después → `otp_expired`
+→ la persona probó el código como contraseña → «email o contraseña
+incorrectos». Desde v143 la pantalla de acceso lo explica, acepta el código
+(«Tengo un código del correo») y permite **pedir un enlace nuevo** con solo el
+correo (`/api/acceso`): reenvía la invitación si la cuenta nunca puso
+contraseña, o el correo de restablecer si ya la tenía.
+
+Si el enlace del correo lleva `redirect_to=…/app/acceso` en vez de
+`…/app/establecer-password`, es que la lista blanca de arriba no incluye esa
+ruta: añádela (o el comodín `/app/**`). Mientras tanto la aplicación lo salva:
+al llegar a `/app/acceso` con un token de invitación te manda a crear la
+contraseña.
+
 ## 2 · Plantillas de correo
 
 Panel de Supabase → **Authentication → Emails**, una pestaña por plantilla.

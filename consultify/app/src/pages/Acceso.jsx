@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { validarPassword, mensajePassword } from '../lib/password.js';
 import { esGratuito, esInterno, listaInternos } from '../lib/dominios.js';
+import { supabase } from '../lib/supabase.js';
 
 function CampoPassword({ id, label, value, onChange, required, autoComplete, error }) {
   const [visible, setVisible] = useState(false);
@@ -71,6 +72,67 @@ export default function Acceso() {
   const [c, setC] = useState({ email: '', password: '' });
   const [cMsg, setCMsg] = useState(null);
   const [cBusy, setCBusy] = useState(false);
+
+  // ── Lo que trae la URL al llegar desde un correo (v143) ──
+  // · Un enlace de invitación o de contraseña válido llega con un token en el
+  //   hash (`type=invite` / `type=recovery`): su sitio es «crea tu contraseña»,
+  //   no esta pantalla (si Supabase no tiene permitida esa URL de vuelta, cae
+  //   aquí y, con sesión, se entraba sin contraseña).
+  // · Uno caducado llega con `error_code=otp_expired`: se dice claro y se
+  //   ofrece pedir otro. Antes solo salía «email o contraseña incorrectos».
+  const [enlace, setEnlace] = useState(null);   // { caducado: bool, texto }
+  useEffect(() => {
+    const h = String(window.location.hash || '');
+    if (!h) return;
+    const q = new URLSearchParams(h.replace(/^#/, ''));
+    const tipo = q.get('type');
+    if (q.get('access_token') && (tipo === 'invite' || tipo === 'recovery' || tipo === 'signup')) { nav('/establecer-password' + h, { replace: true }); return; }
+    if (q.get('error') || q.get('error_code')) {
+      const cod = q.get('error_code') || '';
+      setEnlace({ caducado: /expired|otp/i.test(cod) || /expired/i.test(q.get('error_description') || ''), texto: q.get('error_description') || cod });
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [nav]);
+
+  // ── El código del correo (v143) ──
+  // El correo de invitación trae un código de un solo uso «por si el botón no
+  // funciona» y decía «introdúcelo en /app/acceso», pero aquí no había dónde.
+  const [conCodigo, setConCodigo] = useState(false);
+  const [codigo, setCodigo] = useState('');
+  async function entrarConCodigo(e) {
+    e.preventDefault(); setCBusy(true); setCMsg(null);
+    try {
+      if (!supabase) throw new Error('Sin conexión con el servicio de acceso.');
+      const email = c.email.trim().toLowerCase(); const token = codigo.replace(/\s+/g, '');
+      if (!email || !token) throw new Error('Escribe tu correo y el código del correo.');
+      // El código vale para el tipo de correo que lo trajo: se prueban en orden.
+      let ok = false, ultimo = null;
+      for (const type of ['invite', 'recovery', 'magiclink', 'email', 'signup']) {
+        const { error } = await supabase.auth.verifyOtp({ email, token, type });
+        if (!error) { ok = true; break; }
+        ultimo = error;
+      }
+      if (!ok) throw new Error(/expired|invalid/i.test(ultimo?.message || '') ? 'El código no es válido o ha caducado. Pide un enlace nuevo aquí abajo.' : (ultimo?.message || 'No se pudo entrar con el código.'));
+      nav('/establecer-password', { replace: true });
+    } catch (err) { setCMsg(err.message || 'No se pudo entrar con el código.'); }
+    finally { setCBusy(false); }
+  }
+
+  // ── Pedir un enlace nuevo (invitación caducada u olvido de contraseña) ──
+  const [pidiendo, setPidiendo] = useState(false);
+  const [pedido, setPedido] = useState(null);
+  async function pedirEnlace() {
+    const email = c.email.trim().toLowerCase();
+    if (!email) { setCMsg('Escribe tu correo y vuelve a pulsar.'); return; }
+    setPidiendo(true); setCMsg(null); setPedido(null);
+    try {
+      const r = await fetch('/api/acceso', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'reenviar', email }) });
+      const j = await r.json().catch(() => ({ ok: false, error: `Sin respuesta (${r.status})` }));
+      if (!j.ok) throw new Error(j.error);
+      setPedido(j.mensaje || 'Enviado.');
+    } catch (err) { setCMsg(err.message || 'No se pudo pedir el enlace.'); }
+    finally { setPidiendo(false); }
+  }
 
   // Estado clientes (login + registro)
   const [modo, setModo] = useState('login');
@@ -147,11 +209,30 @@ export default function Acceso() {
         {/* ─── CONSULTORES ─── */}
         <PanelAcceso acento="navy" titulo="Consultores" subtitulo="Equipo y administración" icono={iconoConsultor}
           footer={<p className="mt-4 text-center text-xs font-medium text-[#9FC0CB]">¿Sin cuenta de consultoría? La crea la administración desde la zona de equipo.</p>}>
-          <form onSubmit={loginConsultor} className="space-y-4">
+          {enlace && (
+            <div className="mb-4 rounded-xl border border-brand-orange/50 bg-brand-orange/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-[#EAF4F7]">
+              <p className="font-extrabold text-brand-orange">{enlace.caducado ? 'El enlace del correo ha caducado o ya se usó' : 'El enlace del correo no es válido'}</p>
+              <p className="mt-1 text-[#CFE3E9]">Los enlaces de invitación y de contraseña valen una sola vez y durante un tiempo limitado. Escribe tu correo y pulsa <b>«Pedir un enlace nuevo»</b>: te llega otro al momento. El código de ocho cifras del correo <b>no es tu contraseña</b>: se usa en «Tengo un código del correo».</p>
+            </div>
+          )}
+          <form onSubmit={conCodigo ? entrarConCodigo : loginConsultor} className="space-y-4">
             <div><label className="label" htmlFor="c-email">Email corporativo</label><input id="c-email" type="email" required className="input" autoComplete="email" value={c.email} onChange={e => setC({ ...c, email: e.target.value })} /></div>
-            <CampoPassword id="c-pass" label="Contraseña" value={c.password} onChange={e => setC({ ...c, password: e.target.value })} required={!demo} autoComplete="current-password" />
+            {conCodigo ? (
+              <div>
+                <label className="label" htmlFor="c-codigo">Código del correo</label>
+                <input id="c-codigo" className="input tracking-[0.2em]" inputMode="numeric" autoComplete="one-time-code" placeholder="12345678" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+                <p className="mt-1 text-[11px] text-[#7FA7B4]">El de «o usa este código» del correo de invitación o de contraseña. Vale una vez; si ha caducado, pide un enlace nuevo.</p>
+              </div>
+            ) : (
+              <CampoPassword id="c-pass" label="Contraseña" value={c.password} onChange={e => setC({ ...c, password: e.target.value })} required={!demo} autoComplete="current-password" />
+            )}
             {cMsg && <p className="text-sm font-bold text-red-300">{cMsg}</p>}
-            <button disabled={cBusy} className="btn-primary w-full">{cBusy ? 'Un momento…' : 'Entrar como consultor'}</button>
+            {pedido && <p className="text-sm font-bold text-emerald-300">{pedido}</p>}
+            <button disabled={cBusy} className="btn-primary w-full">{cBusy ? 'Un momento…' : conCodigo ? 'Entrar con el código' : 'Entrar como consultor'}</button>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px] font-bold">
+              <button type="button" onClick={() => { setConCodigo((v) => !v); setCMsg(null); }} className="text-[#9FC0CB] hover:text-[#EAF4F7]">{conCodigo ? 'Entrar con contraseña' : 'Tengo un código del correo'}</button>
+              <button type="button" onClick={pedirEnlace} disabled={pidiendo} className="text-brand-orange hover:underline disabled:opacity-50" title="Invitación caducada o contraseña olvidada: te llega un enlace nuevo al correo">{pidiendo ? 'Enviando…' : 'Pedir un enlace nuevo'}</button>
+            </div>
           </form>
         </PanelAcceso>
 
