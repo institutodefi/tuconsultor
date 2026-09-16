@@ -431,3 +431,8 @@
 - **Menú del portal**: grupos plegables (se abre solo el de la sección donde estás, con un punto naranja si está plegado), subentradas que ahora se pueden desplegar **sin tener que entrar antes en la sección** —«Generador de ofertas» es trabajo de cada día— y barra de 240 → **196 px**.
 - **Barra de Orbita**: 248 → **208 px**, y se encoge a un carril de iconos de 60 px con «Encoger». Con las dos barras y un portátil quedaban menos de mil píxeles para trabajar.
 - **Accesos rápidos de Inicio** plegados por defecto: doce chips ocupaban dos líneas y empujaban el saludo y la jornada fuera de la vista.
+
+## Blog · ISO 9001:2026 (v145)
+- Publicado el artículo **«ISO 9001:2026 ya está publicada: esto es lo que cambia»** (`blog_tuconsultor`, slug `iso-9001-2026-novedades`), redactado a partir de UNE-EN ISO 9001:2026: los seis cambios que anuncia el prólogo, tres matices menores verificados contra el texto, lo que no cambia, y la situación real de los certificados (el plazo lo fija el IAF y todavía no está publicado; no se da ninguna fecha como oficial).
+- Dos imágenes nuevas en `web/social-img/`: `iso-9001-2026.png` (ficha cuadrada del listado, 1200×1200) e `iso-9001-2026-infografia.png` (infografía vertical 1080×1620 @2x, descargable desde el artículo). Paleta y tipografía de marca.
+- **Pendiente de decidir**: el listado de `/blog/` no acota `fecha_publicacion` por arriba, así que enseña como publicados los 317 artículos programados hasta julio de 2027. Por eso este artículo lleva fecha 26/07/2027: es la única forma de que salga el primero sin tocar el listado. Acotar la consulta (`fecha_publicacion=lte.<hoy>`) es una línea y devolvería las fechas a la verdad.
