@@ -15,7 +15,7 @@
   functions = "consultify/netlify/functions"
 
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_SERVICE_ROLE_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_SERVICE_ROLE_KEY,MS_CLIENT_SECRET,OUTLOOK_CLIENT_STATE"
 
 [functions]
   node_bundler = "esbuild"
@@ -37,10 +37,38 @@
 [functions."cobros-diario"]
   schedule = "0 6 * * *"
 
+# Outlook, ida: la red de seguridad. Órbita empuja en el momento en que se
+# guarda una sesión; esto recoge lo que fallara entonces (un 429, la función
+# caída, el evento borrado a mano en Outlook).
+[functions."outlook-empujar"]
+  schedule = "*/10 * * * *"
+
+# Outlook, vuelta: las suscripciones de cambios caducan a los ~3 días. Si esto
+# no corre, la sincronización se queda en una sola dirección sin avisar.
+[functions."outlook-suscripciones"]
+  schedule = "0 5 * * *"
+
 # ── 1 · Funciones (válidas en ambos hosts; deben ir ANTES de los rewrites) ──
 [[redirects]]
   from = "/api/agenda-feed"
   to = "/.netlify/functions/agenda-feed"
+  status = 200
+
+# La URL de avisos de Microsoft Graph. Es pública por obligación (Graph llama
+# desde fuera), así que la función valida el clientState de cada aviso.
+[[redirects]]
+  from = "/api/outlook-avisos"
+  to = "/.netlify/functions/outlook-avisos"
+  status = 200
+
+[[redirects]]
+  from = "/api/outlook-empujar"
+  to = "/.netlify/functions/outlook-empujar"
+  status = 200
+
+[[redirects]]
+  from = "/api/outlook-suscripciones"
+  to = "/.netlify/functions/outlook-suscripciones"
   status = 200
 
 [[redirects]]

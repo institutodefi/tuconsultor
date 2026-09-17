@@ -477,3 +477,16 @@
 - **Se recuerda** (`portal.barra` en el mismo almacén que el resto de plegables): quien trabaja siempre con la barra cerrada no repite el gesto cada mañana.
 - El nombre accesible del botón dice «el menú de Órbita», no «la barra lateral»: la barra de la izquierda ya tiene su propio botón de encoger y con lector de pantalla dos «encoger la barra lateral» no dicen cuál es cuál.
 - **Inicio estrena icono.** No tenía: en el menú abierto se notaba poco, pero encogido su entrada salía como un cuadro vacío.
+
+## Outlook bidireccional (v151)
+- **De calendario de solo lectura a sincronización de verdad.** Hasta ahora Órbita publicaba un `.ics` suscribible: Outlook lo leía y ya. Ahora cada sesión es un **evento real** en el calendario del consultor —se crea, se mueve y se cancela— y lo que él mueva o cancele allí **vuelve a Órbita**.
+- **Microsoft Graph con permiso de aplicación** (`Calendars.ReadWrite`) y consentimiento de administrador, como pediste. Sin usuario delante: no hay tokens que caduquen ni consentimientos que renovar persona a persona.
+- **Tres reglas que evitan los desastres**, y están en el código y en el esquema, no en la cabeza de nadie:
+  - *El bucle.* Escribir genera un aviso, y atender ese aviso escribiría otra vez. Se corta guardando el `changeKey` de cada escritura nuestra: si el aviso trae ese mismo valor, es nuestro y se ignora.
+  - *El empate.* Gana el último cambio, comparando el `actualizado` de la sesión (disparador nuevo) con el `lastModifiedDateTime` del evento.
+  - *El borrado.* Cancelar en Outlook **no borra la fila**: la sesión pasa a `anulada`, que es el estado que el resto del sistema ya entiende. Un clic accidental en un móvil no puede destruir el registro de un trabajo hecho.
+- **Solo se tocan los eventos de Órbita.** El permiso alcanza al calendario entero, pero únicamente se escribe sobre eventos que llevan una propiedad extendida `OrbitaSesionId`. Una reunión suya se ignora y no se modifica nunca.
+- **Migración v151** (aplicada): `tarea_sesiones.actualizado` con disparador, las cuatro columnas de enlace con Outlook, `perfiles.outlook_sync` / `outlook_upn`, y las tablas `outlook_suscripciones` y `outlook_bitacora`. Las dos nuevas con RLS y sin políticas: solo la clave de servicio escribe.
+- **Tres funciones**: `outlook-empujar` (ida, cada 10 min y en el momento de guardar una sesión), `outlook-avisos` (vuelta, el webhook de Graph con su apretón de manos) y `outlook-suscripciones` (las suscripciones caducan a los ~3 días y se renuevan a diario a las 5:00 UTC).
+- **⚠ Falta lo que solo puedes hacer tú**: el registro de aplicación en Entra ID y cinco variables en Netlify. Está paso a paso en `docs/OUTLOOK.md`, incluido el aviso importante: `Calendars.ReadWrite` de aplicación alcanza **todos** los buzones del tenant y hay que acotarlo con una *Application Access Policy* a un grupo con solo el equipo.
+- **Pendiente**: el interruptor en pantalla. Hoy se enciende por SQL (`perfiles.outlook_sync`). Y no se ha podido probar contra Graph: sin credenciales no hay contra qué probar.
