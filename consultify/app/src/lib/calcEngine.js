@@ -12,7 +12,15 @@ import { eurES } from './formato.js';
 import { CATALOGO_TAREAS } from './catalogoTareas.js';
 
 export const NORMAS = [
-  { id: '9001', ambito: 'calidad',     nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
+  { id: '9001', ambito: 'servicios',   nombre: 'ISO 9001',  desc: 'Gestión de la calidad',          nivel: 'J3', hApoyo: 34 },
+  // Transición para quien ya está certificado en la versión 2015 (v146). No es
+  // una implantación: el sistema existe y funciona. Lo que se compra es el
+  // análisis de diferencias, separar riesgos de oportunidades, rehacer la
+  // gestión del cambio, aterrizar la cultura de la calidad y pasar la auditoría
+  // de transición. Va aparte de la 9001 porque el trabajo y el precio no se
+  // parecen: implantar son 34 h de apoyo, transitar son 24.
+  { id: '9001-transicion', ambito: 'servicios', nombre: 'Transición a ISO 9001:2026',
+    desc: 'Para sistemas ya certificados en la versión 2015', nivel: 'J3', hApoyo: 24 },
   { id: '14001', ambito: 'ambiental',    nombre: 'ISO 14001', desc: 'Gestión ambiental',              nivel: 'J3', hApoyo: 46 },
   { id: '45001', ambito: 'personas',    nombre: 'ISO 45001', desc: 'Seguridad y salud laboral',      nivel: 'J2', hApoyo: 63 },
   { id: '27001', ambito: 'ciber',    nombre: 'ISO 27001', desc: 'Seguridad de la información',    nivel: 'J2', hApoyo: 81 },

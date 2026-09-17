@@ -270,3 +270,12 @@
   for = "/BingSiteAuth.xml"
   [headers.values]
     Content-Type = "application/xml; charset=utf-8"
+
+# Imágenes para redes sociales. LinkedIn e Instagram las descargan una vez y
+# las cachean por su cuenta, y los ficheros nunca cambian de contenido con el
+# mismo nombre: se sirven inmutables durante un año. Cubre iso2026 y orbita por
+# igual, que es como estaban pensadas.
+[[headers]]
+  for = "/social-img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
