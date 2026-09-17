@@ -12,7 +12,9 @@ export default function Shell({ children }) {
   // (248 px) más el menú del portal, en un portátil quedaban menos de mil
   // píxeles para el trabajo de verdad; y esta barra tiene tres enlaces.
   const [ancha, alternarAncha] = usarPlegado('shell.barra', true);
-  const ANCHO = ancha ? 208 : 60;
+  // 180 y no 208: con el menú del portal al lado, dos columnas anchas se
+  // comían medio escritorio antes de llegar al contenido.
+  const ANCHO = ancha ? 180 : 56;
   const navItem = ({ isActive }) =>
     (isActive
       ? `rounded-lg py-2 bg-brand-verde/15 text-brand-verdeTexto font-bold ${ancha ? 'px-3' : 'px-0 text-center'}`
@@ -40,8 +42,18 @@ export default function Shell({ children }) {
         <button onClick={alternarAncha} aria-expanded={ancha}
           aria-label={ancha ? 'Encoger la barra lateral' : 'Ampliar la barra lateral'}
           title={ancha ? 'Encoger la barra' : 'Ampliar la barra'}
-          className={`mt-3 flex items-center gap-1.5 self-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#5E8C9C] transition hover:bg-white/5 hover:text-[#9FC0CB] ${ancha ? '' : 'px-1.5'}`}>
-          <span className={`transition-transform duration-200 ${ancha ? '' : 'rotate-180'}`}>◄</span>
+          className={`mt-3 flex items-center gap-1.5 self-center rounded-lg border border-[#2A6A82] bg-[#0D3242] px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9FC0CB] transition hover:border-brand-orange hover:bg-[#124459] hover:text-[#EAF4F7] ${ancha ? '' : '!px-1.5'}`}>
+          {/* El mismo icono que en el menú del portal: un panel con una flecha.
+              Antes era un triángulo suelto que lo mismo podía significar
+              «atrás». Dos botones que hacen lo mismo se dibujan igual. */}
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2.5" />
+            <path d="M9.5 4v16" />
+            {ancha
+              ? <path d="M17 9.5 14.5 12l2.5 2.5" strokeWidth="2.4" />
+              : <path d="M14 9.5 16.5 12 14 14.5" strokeWidth="2.4" />}
+          </svg>
           {ancha && 'Encoger'}
         </button>
         <div className={`mt-auto pb-5 ${ancha ? 'px-3' : 'px-2'}`}>

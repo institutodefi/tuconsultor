@@ -157,11 +157,18 @@ function BotonBarra({ abierta, alternar }) {
       aria-expanded={abierta}
       title={abierta ? 'Encoger el menú' : 'Desplegar el menú'}
       aria-label={abierta ? 'Encoger el menú de Órbita' : 'Desplegar el menú de Órbita'}
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#1E5468] text-[#7FA7B4] transition hover:border-brand-orange/40 hover:text-[#EAF4F7]"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#2A6A82] bg-[#0D3242] text-[#9FC0CB] shadow-sm transition hover:border-brand-orange hover:bg-[#124459] hover:text-[#EAF4F7]"
     >
-      <svg className={`h-3.5 w-3.5 transition-transform duration-200 ${abierta ? '' : 'rotate-180'}`}
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M15 18l-6-6 6-6" />
+      {/* Un panel con una flecha, no una flecha suelta. La flecha sola podía
+          leerse como «atrás»; el rectángulo con su línea dice que lo que se
+          abre y se cierra es ESTA columna, y hacia dónde. */}
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <path d="M9.5 4v16" />
+        {abierta
+          ? <path d="M17 9.5 14.5 12l2.5 2.5" strokeWidth="2.4" />
+          : <path d="M14 9.5 16.5 12 14 14.5" strokeWidth="2.4" />}
       </svg>
     </button>
   );
@@ -178,7 +185,9 @@ function GrupoNav({ grupo: g, indice, activo, onNavigate, loc }) {
       {g.label && (
         <button type="button" onClick={alternar} aria-expanded={desplegado}
           className="flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-left transition hover:bg-white/[0.04]">
-          <span className="min-w-0 flex-1 text-[9.5px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#7FA7B4]">{g.label}</span>
+          {/* Menos espaciado que antes: con la barra a 180 px, «Comercial y
+              proyectos» se partía en dos líneas. */}
+          <span className="min-w-0 flex-1 text-[9px] font-extrabold uppercase leading-tight tracking-[0.03em] text-[#7FA7B4]">{g.label}</span>
           {/* Plegado, un punto avisa de que la sección activa está ahí dentro. */}
           {!desplegado && activo && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange" />}
           <svg className={`h-3 w-3 shrink-0 text-[#4E7E8F] transition-transform duration-200 ${desplegado ? 'rotate-180' : ''}`}
@@ -319,7 +328,7 @@ export default function ConsultorPortal() {
         <div className="flex gap-5">
           {/* Sidebar fija (desktop) */}
           <aside className={`hidden shrink-0 transition-[width] duration-200 lg:block ${
-            barraAbierta ? 'w-[196px]' : 'w-[52px]'}`}>
+            barraAbierta ? 'w-[180px]' : 'w-[48px]'}`}>
             <div className="sticky top-24">
               {barraAbierta ? (
                 <>
