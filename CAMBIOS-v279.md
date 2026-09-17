@@ -490,3 +490,8 @@
 - **Tres funciones**: `outlook-empujar` (ida, cada 10 min y en el momento de guardar una sesión), `outlook-avisos` (vuelta, el webhook de Graph con su apretón de manos) y `outlook-suscripciones` (las suscripciones caducan a los ~3 días y se renuevan a diario a las 5:00 UTC).
 - **⚠ Falta lo que solo puedes hacer tú**: el registro de aplicación en Entra ID y cinco variables en Netlify. Está paso a paso en `docs/OUTLOOK.md`, incluido el aviso importante: `Calendars.ReadWrite` de aplicación alcanza **todos** los buzones del tenant y hay que acotarlo con una *Application Access Policy* a un grupo con solo el equipo.
 - **Pendiente**: el interruptor en pantalla. Hoy se enciende por SQL (`perfiles.outlook_sync`). Y no se ha podido probar contra Graph: sin credenciales no hay contra qué probar.
+
+## Galobart sí podía hacer ofertas: el enlace no estaba (v152)
+- **El síntoma**: «no puedo hacer ofertas, el módulo se abre vacío y sin botón de crear». **La causa**: la ruta `/planificador` sí admite a consultoría —está en su lista de roles desde siempre— pero colgaba en el menú de «Ofertas», que no. El padre se filtraba primero y se llevaba por delante al hijo. La ruta funcionaba; el enlace no existía.
+- **Arreglado en general, no con un parche**: una entrada con hijos ahora se ve si el rol la permite **a ella o a alguno de sus hijos**, y cuando el padre no le corresponde, apunta al primer hijo visible. Así no vuelve a pasar la próxima vez que se reparta un permiso.
+- Comprobado: con rol `consultor`, «Comercial y proyectos» pasa a mostrar `Ofertas → Generador de ofertas`.

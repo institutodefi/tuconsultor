@@ -199,16 +199,28 @@ export const rolesAsignablesPor = (rol) => rol === 'superadmin'
 export const tabsParaRol = (rol) => TABS_PORTAL.filter((t) => t.roles.includes(rol));
 
 // Grupos visibles para el rol (filtra items y descarta grupos vacíos)
-// Filtra por rol también los hijos: un consultor ve «Ofertas» pero dentro solo
-// lo que le corresponde, sin entradas que le darían un «no tienes permiso».
+//
+// Una entrada con hijos se ve si el rol la permite A ELLA **o a alguno de sus
+// hijos**. Sin esto, «Generador de ofertas» —que sí es de consultoría— quedaba
+// escondido detrás de «Ofertas», que no lo es: la ruta funcionaba y el enlace
+// no existía. Rafael Galobart lo reportó como «no puedo hacer ofertas», y lo
+// que no podía era encontrarlas.
+//
+// Cuando el padre no le corresponde pero sí un hijo, el padre apunta al primer
+// hijo visible: pulsarlo tiene que llevar a algún sitio, no a un «no tienes
+// permiso».
 export const gruposParaRol = (rol) =>
   GRUPOS_PORTAL
     .map((g) => ({
       ...g,
       items: g.items
-        .filter((it) => it.roles.includes(rol))
-        .map((it) => (it.hijos
-          ? { ...it, hijos: it.hijos.filter((h) => h.roles.includes(rol)) }
-          : it)),
+        .map((it) => {
+          const hijos = (it.hijos || []).filter((h) => h.roles.includes(rol));
+          const propio = it.roles.includes(rol);
+          if (!propio && !hijos.length) return null;
+          if (!it.hijos) return it;
+          return { ...it, hijos, to: propio ? it.to : (hijos[0]?.to || it.to) };
+        })
+        .filter(Boolean),
     }))
     .filter((g) => g.items.length > 0);
