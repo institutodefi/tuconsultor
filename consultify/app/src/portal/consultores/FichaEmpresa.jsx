@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { insertRow, updateRow, deleteRow, holdedFn, brevoFn, explicarErrorBd, listTable } from '../../lib/data.js';
+import { useAuth } from '../../lib/auth.jsx';
 import {
   validarCif, normalizarCif, emailValido, semaforoEmpresa,
   candidatasMatriz, ESTADOS_COMERCIALES, nombreVisible, ETIQUETAS_EMPRESA, tieneEtiqueta, alternarEtiqueta,
@@ -84,7 +85,11 @@ export default function FichaEmpresa({
   puedeEditar, puedeBorrar, onCambio, onSeleccionar, onCerrar, onAbrirContacto, enDialogo = false,
 }) {
   const esNueva = !empresa?.id;
+  const { user, role } = useAuth();
   const [form, setForm] = useState(null);
+  // El equipo, para poner y quitar el responsable comercial de la cuenta.
+  const [equipo, setEquipo] = useState([]);
+  useEffect(() => { listTable('perfiles').then((x) => setEquipo(x || [])).catch(() => setEquipo([])); }, []);
   const [msg, setMsg] = useState(null);
   // Dos pestañas en la ficha: los datos del cliente y sus documentos. La ficha
   // se había vuelto muy larga —contactos, fiscal, grupo, homologación,
@@ -230,7 +235,12 @@ export default function FichaEmpresa({
   // mientras se da de alta, y el id real una vez existe.
   useEffect(() => {
     setForm(esNueva
-      ? { pais: 'España', es_cliente: true, es_proveedor: false, estado_comercial: 'potencial', ...empresa }
+      ? { pais: 'España', es_cliente: true, es_proveedor: false, estado_comercial: 'potencial',
+          // Quien da de alta una cuenta se la queda. Era el agujero que
+          // señalaba Rafael: daba de alta clientes que no entraban en su
+          // cartera y tenía que pedir que se los asignaran.
+          asignado_a: ['comercial', 'superadmin', 'admin', 'director'].includes(role) ? (user?.id || null) : null,
+          ...empresa }
       : null);
     // Al guardar un alta se hace `setForm(null)`; sin esta guarda el efecto
     // volvería a abrir un formulario vacío encima y parecería que no se guardó.
@@ -398,6 +408,7 @@ export default function FichaEmpresa({
       es_proveedor: !!form.es_proveedor,
       tags: Array.isArray(form.tags) && form.tags.length ? form.tags : null,
       estado_comercial: form.estado_comercial || 'potencial',
+      asignado_a: form.asignado_a || null,
       direccion: String(form.direccion ?? '').trim() || null,
       poblacion: String(form.poblacion ?? '').trim() || null,
       cp: String(form.cp ?? '').trim() || null,
@@ -814,6 +825,18 @@ export default function FichaEmpresa({
               <select className="input !py-1.5 !px-2.5 !text-[13px]" value={form.estado_comercial || 'potencial'}
                 onChange={(e) => setForm({ ...form, estado_comercial: e.target.value })}>
                 {ESTADOS_COMERCIALES.map((e) => <option key={e.k} value={e.k}>{e.label}</option>)}
+              </select>
+            </label>
+            {/* El responsable comercial de la cuenta: quien la trabaja y a
+                quien se le pregunta. No es el jefe de cuenta de entrega, que
+                responde del proyecto una vez vendido. */}
+            <label className="block">
+              <span className="mb-0.5 block text-[10px] font-extrabold uppercase tracking-wide text-[#7FA7B4]">Responsable comercial</span>
+              <select className="input !py-1.5 !px-2.5 !text-[13px]" value={form.asignado_a || ''}
+                onChange={(e) => setForm({ ...form, asignado_a: e.target.value || null })}>
+                <option value="">— sin asignar —</option>
+                {equipo.filter((x) => x.activo !== false && x.rol !== 'cliente')
+                  .map((x) => <option key={x.id} value={x.id}>{`${x.nombre || ''} ${x.apellidos || ''}`.trim() || x.email}</option>)}
               </select>
             </label>
             {form.es_cliente && (

@@ -281,7 +281,9 @@ const tieneEtiquetaEn = (tags, k) => Array.isArray(tags) && tags.map((t) => Stri
 // superadministración; el administrador de la cuenta de cliente lo hace desde
 // su portal (RPC cliente_guardar_empresa). Contactos: administración y
 // superadministración; la propia persona edita lo suyo desde «Mis datos».
-export const puedeEditarEmpresas = (role) => ['superadmin', 'admin', 'gestion'].includes(role);
+// «comercial» (v152) entra aquí: si no puede crear ni editar una empresa, no
+// puede trabajar una cuenta, y entonces el rol no sirve de nada.
+export const puedeEditarEmpresas = (role) => ['superadmin', 'admin', 'director', 'comercial', 'gestion'].includes(role);
 export const puedeEditarContactos = (role) => ['superadmin', 'admin'].includes(role);
 /** El cliente operativo de una empresa: por traza (cliente_id_old) o por CIF. */
 export function clienteDeEmpresa(empresa, clientes = []) {

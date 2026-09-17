@@ -495,3 +495,18 @@
 - **El síntoma**: «no puedo hacer ofertas, el módulo se abre vacío y sin botón de crear». **La causa**: la ruta `/planificador` sí admite a consultoría —está en su lista de roles desde siempre— pero colgaba en el menú de «Ofertas», que no. El padre se filtraba primero y se llevaba por delante al hijo. La ruta funcionaba; el enlace no existía.
 - **Arreglado en general, no con un parche**: una entrada con hijos ahora se ve si el rol la permite **a ella o a alguno de sus hijos**, y cuando el padre no le corresponde, apunta al primer hijo visible. Así no vuelve a pasar la próxima vez que se reparta un permiso.
 - Comprobado: con rol `consultor`, «Comercial y proyectos» pasa a mostrar `Ofertas → Generador de ofertas`.
+
+## Rol comercial y cartera de cuentas (v152)
+Primera tanda de lo que pide el informe de Rafael Galobart. Lo que se ha comprobado antes de tocar nada, porque dos de sus cuatro puntos «críticos» no eran lo que parecían:
+
+- **«No puedo hacer ofertas»** → el permiso lo tenía; lo que no tenía era el enlace. Arreglado en v152_113 (arriba).
+- **«No hay propietario comercial de la cuenta»** → la columna `empresas.asignado_a` **existe desde hace versiones**, con su clave ajena a `perfiles`. Lo que no existía era una sola pantalla que la leyera o la escribiera, así que estaba vacía en las 75 empresas. No había que inventar el concepto: había que usarlo.
+
+Lo hecho:
+
+- **Rol «Comercial»**, el sexto. Hasta ahora a un comercial se le daba un usuario de «Consultoría» y toda su experiencia era la de quien factura horas de entrega: agenda 70/10/20, control de horas, capacidad de producción… todo a cero y sin sentido. Ve Inicio, el CRM entero, Ofertas (histórico y generador), sus datos y las políticas; no ve el panel económico ni el control de horas.
+- **Cartera de cuentas en funcionamiento**: columna «Responsable» en el listado y en el CSV, orden por responsable —las cuentas sin dueño al final, que son las que hay que repartir—, selector en la ficha de la empresa, pestaña **«Mis cuentas»** con su contador, y acciones en lote **«Asignármelas»** y «Asignar a…» para dirección.
+- **La cuenta nace con dueño.** Quien da de alta una empresa se la queda. Era el agujero exacto que señalaba Rafael: daba de alta clientes que no entraban en su cartera y tenía que pedir que se los asignaran.
+- **Migración v152** (aplicada). Y de paso, un fallo que llevaba tiempo ahí: la restricción `perfiles_rol_check` **no incluía `director`**, un rol que la aplicación usa desde hace versiones. Cualquier intento de guardar un perfil de dirección fallaba contra la base de datos.
+
+Quedan, por este orden: embudo de oportunidades con fases e importe, registro de actividad por cuenta, cuadro de mando comercial y el reparto de jornada propio del rol comercial.

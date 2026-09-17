@@ -1,15 +1,21 @@
 // ════════════════════════════════════════════════════════════════
 // PERMISOS POR ROL — fuente única de verdad para la UI
-// Roles: superadmin · admin · director · consultor · gestion · cliente
+// Roles: superadmin · admin · director · consultor · comercial · gestion · cliente
+//
+// «comercial» (v152) es el que faltaba. Hasta ahora a un comercial se le daba
+// un usuario de «Consultoría», y toda su experiencia era la de alguien que
+// factura horas de entrega: agenda con reparto 70/10/20, control de horas,
+// capacidad de producción… todo a cero y sin sentido para quien vende.
 // ════════════════════════════════════════════════════════════════
 
-export const ROLES = ['superadmin', 'admin', 'director', 'consultor', 'gestion', 'cliente'];
+export const ROLES = ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion', 'cliente'];
 
 export const ROL_LABEL = {
   superadmin: 'Superadministración',
   admin: 'Administración',
   director: 'Dirección de Proyecto',
   consultor: 'Consultoría',
+  comercial: 'Comercial',
   gestion: 'Equipo de gestión',
   cliente: 'Cliente',
 };
@@ -24,7 +30,7 @@ export const GRUPOS_PORTAL = [
       // Inicio arriba del todo y suelto: es la pantalla de entrada y desde ahí
       // se llega a lo demás. Estaba dentro de «Operación», por debajo de la
       // agenda, así que quien quería volver al principio no sabía dónde mirar.
-      { to: '', label: 'Inicio', icon: 'home', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: '', label: 'Inicio', icon: 'home', roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
     ],
   },
   {
@@ -58,17 +64,18 @@ export const GRUPOS_PORTAL = [
       // (antes «Cartera de clientes» era otra entrada que llevaba al mismo sitio).
       {
         to: 'empresas', label: 'Empresas', icon: 'building',
-        roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'],
+        roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'],
         hijos: [
-          { to: 'empresas',                  label: 'Todas',                       roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-          { to: 'empresas?filtro=cliente',   label: 'Clientes',                    roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+          { to: 'empresas?filtro=mias',      label: 'Mis cuentas',                 roles: ['comercial', 'superadmin', 'admin', 'director'] },
+          { to: 'empresas',                  label: 'Todas',                       roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
+          { to: 'empresas?filtro=cliente',   label: 'Clientes',                    roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
           { to: 'empresas?filtro=proveedor', label: 'Proveedores',                 roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-          { to: 'empresas?filtro=potencial', label: 'Potenciales',                 roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'empresas?filtro=potencial', label: 'Potenciales',                 roles: ['superadmin', 'admin', 'director', 'comercial', 'gestion'] },
           { to: 'proveedores',               label: 'Homologación de proveedores', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
-          { to: 'clientes/dashboard',        label: 'Dashboard de clientes',       roles: ['superadmin', 'admin', 'director', 'gestion'] },
+          { to: 'clientes/dashboard',        label: 'Dashboard de clientes',       roles: ['superadmin', 'admin', 'director', 'comercial', 'gestion'] },
         ],
       },
-      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'contactos', label: 'Contactos', icon: 'contact',  roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
     ],
   },
   {
@@ -80,8 +87,8 @@ export const GRUPOS_PORTAL = [
         to: 'ofertas', label: 'Ofertas', icon: 'receipt',
         roles: ['superadmin', 'admin', 'director', 'gestion'],
         hijos: [
-          { to: 'ofertas',      label: 'Histórico de ofertas', roles: ['superadmin', 'admin', 'director', 'gestion'] },
-          { to: 'planificador', label: 'Generador de ofertas', roles: ['superadmin', 'admin', 'director', 'consultor'] },
+          { to: 'ofertas',      label: 'Histórico de ofertas', roles: ['superadmin', 'admin', 'director', 'comercial', 'gestion'] },
+          { to: 'planificador', label: 'Generador de ofertas', roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial'] },
           { to: 'reglas',       label: 'Reglas comerciales',   roles: ['superadmin', 'admin', 'director'] },
         ],
       },
@@ -111,14 +118,14 @@ export const GRUPOS_PORTAL = [
   {
     label: 'Organización',
     items: [
-      { to: 'mis-datos', label: 'Mis datos', icon: 'user', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'mis-datos', label: 'Mis datos', icon: 'user', roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
       { to: 'equipo', label: 'Equipo', icon: 'user-cog', roles: ['superadmin', 'admin'] },
       { to: 'procesos-internos', label: 'Procesos internos', icon: 'repeat', roles: ['superadmin', 'admin', 'director', 'consultor'] },
       { to: 'versiones', label: 'Backlog de versiones', icon: 'git-branch', roles: ['superadmin', 'admin', 'director'] },
       { to: 'registro', label: 'Control de accesos', icon: 'shield-alert', roles: ['superadmin', 'admin'] },
       { to: 'accesibilidad', label: 'Accesibilidad AAA', icon: 'accessibility', roles: ['superadmin', 'admin', 'director'] },
       { to: 'accesos', label: 'Accesos', icon: 'key', roles: ['superadmin', 'admin'] },
-      { to: 'politicas', label: 'Políticas y avisos', icon: 'shield-check', roles: ['superadmin', 'admin', 'director', 'consultor', 'gestion'] },
+      { to: 'politicas', label: 'Políticas y avisos', icon: 'shield-check', roles: ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'] },
     ],
   },
 ];
@@ -133,6 +140,7 @@ export const ROLES_CLIENTE = ['administrador', 'consultor', 'usuario_cliente'];
 export const ROL_CLIENTE_LABEL = {
   administrador: 'Administración (responsable del proyecto)',
   consultor: 'Consultoría',
+  comercial: 'Comercial',
   usuario_cliente: 'Persona usuaria del cliente',
 };
 
@@ -179,11 +187,11 @@ export const can = {
   // catálogo alimenta las horas de TODAS las ofertas y de todos los proyectos.
   // Cambiar las horas de una tarea ahí mueve el precio de lo que se está
   // ofertando en ese momento, y esa decisión tiene que estar acotada.
-  verCatalogoTareas: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
+  verCatalogoTareas: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'].includes(rol),
   editarCatalogoTareas: (rol) => ['superadmin', 'admin'].includes(rol),
 
   // Entrar a la zona interna
-  esEquipo: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'gestion'].includes(rol),
+  esEquipo: (rol) => ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion'].includes(rol),
   // Todos los proyectos, con todos los permisos, estén o no en su equipo:
   // programar a cualquiera, asignar, cerrar. Administración y dirección.
   todoProyecto: (rol) => ['superadmin', 'admin', 'director'].includes(rol),
@@ -191,9 +199,9 @@ export const can = {
 
 /** Roles que un usuario puede ASIGNAR a otros. */
 export const rolesAsignablesPor = (rol) => rol === 'superadmin'
-  ? ['superadmin', 'admin', 'director', 'consultor', 'gestion']
+  ? ['superadmin', 'admin', 'director', 'consultor', 'comercial', 'gestion']
   : rol === 'admin'
-    ? ['admin', 'director', 'consultor', 'gestion']   // sin superadmin
+    ? ['admin', 'director', 'consultor', 'comercial', 'gestion']   // sin superadmin
     : [];
 
 export const tabsParaRol = (rol) => TABS_PORTAL.filter((t) => t.roles.includes(rol));

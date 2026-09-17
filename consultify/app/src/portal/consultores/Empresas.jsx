@@ -24,6 +24,9 @@ const EMPRESA_NUEVA = Object.freeze({});
 // ════════════════════════════════════════════════════════════════════════════
 
 const FILTROS = [
+  // «Mis cuentas» va primero para quien tiene cartera: es su vista de trabajo,
+  // no un filtro más. Para el resto de roles no aparece (ver FILTROS_VISIBLES).
+  ['mias',       'Mis cuentas'],
   ['todas',      'Todas'],
   ['cliente',    'Clientes'],
   ['proveedor',  'Proveedores'],
@@ -34,9 +37,14 @@ const FILTROS = [
 
 const PUNTO = { rojo: 'bg-red-500', ambar: 'bg-brand-orange', verde: 'bg-emerald-400' };
 const ORDENES = [
-  ['nombre', 'Nombre'], ['poblacion', 'Población'], ['estado', 'Estado'], ['contactos', 'Nº contactos'], ['reciente', 'Última modificación'],
+  ['nombre', 'Nombre'], ['poblacion', 'Población'], ['estado', 'Estado'], ['responsable', 'Responsable'], ['contactos', 'Nº contactos'], ['reciente', 'Última modificación'],
 ];
 const S = (v) => String(v ?? '');
+
+// Quién ve la pestaña «Mis cuentas»: quien puede tener cartera. A consultoría
+// y gestión no se les asignan cuentas, así que les saldría siempre vacía.
+const CON_CARTERA = ['comercial', 'superadmin', 'admin', 'director'];
+const filtrosVisibles = (rol) => FILTROS.filter(([k]) => k !== 'mias' || CON_CARTERA.includes(rol));
 
 export default function Empresas() {
   const { role, demo, user } = useAuth();
@@ -49,6 +57,7 @@ export default function Empresas() {
   const [contactos, setContactos] = useState([]);
   const [vinculos, setVinculos] = useState([]);
   const [clientes, setClientes] = useState([]);   // para saber quién es gestor de cuenta de cada empresa
+  const [equipo, setEquipo] = useState([]);       // para poner nombre al responsable comercial
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
   // El filtro vive en la ruta (empresas?filtro=cliente): así «Clientes» del
@@ -76,17 +85,28 @@ export default function Empresas() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const [e, c, v, cl] = await Promise.all([
+      const [e, c, v, cl, pf] = await Promise.all([
         listTable('empresas').catch((e) => { setErrorCarga(e?.message || String(e)); return []; }),
         listTable('contactos').catch(() => []),
         listTable('empresa_contactos').catch(() => []),
         listTable('clientes').catch(() => []),
+        listTable('perfiles').catch(() => []),
       ]);
       (e || []).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-      setEmpresas(e || []); setContactos(c || []); setVinculos(v || []); setClientes(cl || []);
+      setEmpresas(e || []); setContactos(c || []); setVinculos(v || []); setClientes(cl || []); setEquipo(pf || []);
     } finally { setCargando(false); }
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Nombre del responsable comercial de cada cuenta. La columna `asignado_a`
+  // existía desde hace versiones y no la leía ninguna pantalla: aquí empieza a
+  // servir para algo.
+  const nombreResponsable = useCallback((id) => {
+    if (!id) return null;
+    const p = equipo.find((x) => String(x.id) === String(id));
+    if (!p) return 'Alguien que ya no está';
+    return `${p.nombre || ''} ${p.apellidos || ''}`.trim() || p.email || '—';
+  }, [equipo]);
 
   // Semáforo precalculado por empresa
   const semaforos = useMemo(() => {
@@ -102,6 +122,7 @@ export default function Empresas() {
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase();
     return empresas.filter((e) => {
+      if (filtro === 'mias' && String(e.asignado_a || '') !== String(user?.id || '')) return false;
       if (filtro === 'cliente' && !e.es_cliente) return false;
       if (filtro === 'proveedor' && !e.es_proveedor) return false;
       if (filtro === 'potencial' && e.estado_comercial !== 'potencial') return false;
@@ -121,11 +142,17 @@ export default function Empresas() {
       if (orden === 'nombre') r = nombreVisible(a).localeCompare(nombreVisible(b), 'es');
       else if (orden === 'poblacion') r = S(a.poblacion).localeCompare(S(b.poblacion), 'es') || nombreVisible(a).localeCompare(nombreVisible(b), 'es');
       else if (orden === 'estado') r = etq(a).localeCompare(etq(b), 'es') || nombreVisible(a).localeCompare(nombreVisible(b), 'es');
+      else if (orden === 'responsable') {
+        // Las cuentas sin dueño al final: son las que hay que repartir, y
+        // mezcladas entre las asignadas no se ven.
+        const n = (e) => nombreResponsable(e.asignado_a) || 'zzzz';
+        r = n(a).localeCompare(n(b), 'es') || nombreVisible(a).localeCompare(nombreVisible(b), 'es');
+      }
       else if (orden === 'contactos') r = (semaforos.get(String(a.id))?.n || 0) - (semaforos.get(String(b.id))?.n || 0);
       else if (orden === 'reciente') r = S(a.updated_at || a.creado).localeCompare(S(b.updated_at || b.creado));
       return desc ? -r : r;
     });
-  }, [empresas, q, filtro, semaforos, estado, provincia, orden, desc, etiqueta]);
+  }, [empresas, q, filtro, semaforos, estado, provincia, orden, desc, etiqueta, user?.id, nombreResponsable]);
   const provincias = useMemo(() => [...new Set(empresas.map((e) => S(e.provincia).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), [empresas]);
   const cabecera = (k, etq, cls = '') => (
     <th className={`px-3 py-2 text-left ${cls}`}>
@@ -145,6 +172,11 @@ export default function Empresas() {
   const loteEstado = (estado) => lote.ejecutar(`marcadas como ${estado}`,
     (e) => updateRow('empresas', e.id, { estado_comercial: estado }));
 
+  // Repartir cartera. `null` la deja libre, que es tan necesario como asignarla:
+  // cuando alguien se va, sus cuentas tienen que poder volver al montón.
+  const loteAsignar = (id, etq) => lote.ejecutar(etq,
+    (e) => updateRow('empresas', e.id, { asignado_a: id }));
+
   const loteBorrar = () => lote.ejecutarConAviso(
     'eliminadas',
     `Se van a eliminar ${lote.nMarcados} empresa(s). Sus contactos quedarán sin empresa. No se puede deshacer.`,
@@ -161,6 +193,7 @@ export default function Empresas() {
       ['Cliente', (e) => (e.es_cliente ? 'sí' : 'no')],
       ['Proveedor', (e) => (e.es_proveedor ? 'sí' : 'no')],
       ['Estado', (e) => e.estado_comercial],
+      ['Responsable', (e) => nombreResponsable(e.asignado_a) || ''],
     ],
     'empresas',
   );
@@ -176,6 +209,7 @@ export default function Empresas() {
   };
 
   const empresa = sel ? empresas.find((e) => String(e.id) === String(sel)) : null;
+  const mias = empresas.filter((e) => String(e.asignado_a || '') === String(user?.id || '')).length;
   const sinRevisar = empresas.filter((e) => e.revisado === false).length;
   const rojas = useMemo(() => [...semaforos.values()].filter((s) => s.color === 'rojo').length, [semaforos]);
   const huerfanos = useMemo(
@@ -224,7 +258,7 @@ export default function Empresas() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="eyebrow">CRM</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">{filtro === 'cliente' ? 'Clientes' : filtro === 'proveedor' ? 'Proveedores' : filtro === 'potencial' ? 'Potenciales' : 'Empresas y clientes'}</h1>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#EAF4F7]">{filtro === 'mias' ? 'Mis cuentas' : filtro === 'cliente' ? 'Clientes' : filtro === 'proveedor' ? 'Proveedores' : filtro === 'potencial' ? 'Potenciales' : 'Empresas y clientes'}</h1>
           <p className="mt-1 text-sm font-medium text-[#9FC0CB]">
             Clientes, proveedores y potenciales en una sola ficha. Cada empresa lleva sus contactos y, si es proveedor, su homologación.
           </p>
@@ -258,6 +292,28 @@ export default function Empresas() {
           <BotonLote onClick={() => marcarComo('es_proveedor', true, 'marcadas como proveedor')}>Marcar proveedor</BotonLote>
           <BotonLote onClick={() => loteEstado('activo')}>Estado: activo</BotonLote>
           <BotonLote onClick={() => loteEstado('potencial')}>Estado: potencial</BotonLote>
+        </>}
+        {CON_CARTERA.includes(role) && <>
+          <BotonLote onClick={() => loteAsignar(user?.id, 'asignadas a ti')}>Asignármelas</BotonLote>
+          {['superadmin', 'admin', 'director'].includes(role) && (
+            <select
+              className="input !w-auto !py-1 !text-[11.5px]"
+              value=""
+              onChange={(ev) => {
+                const v = ev.target.value;
+                if (!v) return;
+                const p = equipo.find((x) => String(x.id) === v);
+                loteAsignar(v === 'libre' ? null : v,
+                  v === 'libre' ? 'dejadas sin asignar' : `asignadas a ${`${p?.nombre || ''} ${p?.apellidos || ''}`.trim() || 'alguien'}`);
+                ev.target.value = '';
+              }}
+              title="Asignar la cartera a otra persona">
+              <option value="">Asignar a…</option>
+              <option value="libre">— Sin asignar —</option>
+              {equipo.filter((x) => x.activo !== false && x.rol !== 'cliente')
+                .map((x) => <option key={x.id} value={x.id}>{`${x.nombre || ''} ${x.apellidos || ''}`.trim() || x.email}</option>)}
+            </select>
+          )}
         </>}
         {puedeBorrar && <BotonLote onClick={loteBorrar} peligro>Eliminar</BotonLote>}
       </BarraLote>
@@ -327,10 +383,10 @@ export default function Empresas() {
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar: nombre, CIF, población, correo, teléfono, etiqueta…" className="input max-w-sm !py-1.5 !text-[12.5px]" />
         <div className="flex flex-wrap overflow-hidden rounded-xl border border-[#1E5468] text-[11.5px] font-bold">
-          {FILTROS.map(([k, l]) => (
+          {filtrosVisibles(role).map(([k, l]) => (
             <button key={k} onClick={() => setFiltro(k)}
               className={`px-2.5 py-1.5 ${filtro === k ? 'bg-brand-verde text-[#061F2B]' : 'text-[#9FC0CB] hover:text-[#EAF4F7]'}`}>
-              {l}{k === 'incidencia' && rojas > 0 ? ` (${rojas})` : ''}{k === 'sin_revisar' && sinRevisar > 0 ? ` (${sinRevisar})` : ''}
+              {l}{k === 'mias' && mias > 0 ? ` (${mias})` : ''}{k === 'incidencia' && rojas > 0 ? ` (${rojas})` : ''}{k === 'sin_revisar' && sinRevisar > 0 ? ` (${sinRevisar})` : ''}
             </button>
           ))}
         </div>
@@ -369,6 +425,7 @@ export default function Empresas() {
                   {cabecera('nombre', 'Empresa')}
                   <th className="hidden px-3 py-2 text-left sm:table-cell">Tipo</th>
                   {cabecera('estado', 'Estado', 'hidden md:table-cell')}
+                  {cabecera('responsable', 'Responsable', 'hidden xl:table-cell')}
                   {cabecera('poblacion', 'Población', 'hidden lg:table-cell')}
                   {cabecera('contactos', 'Contactos', 'text-right')}
                 </tr>
@@ -441,6 +498,11 @@ export default function Empresas() {
                       </td>
                       <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] font-semibold text-[#9FC0CB] md:table-cell">
                         {ESTADOS_COMERCIALES.find((x) => x.k === e.estado_comercial)?.label || 'Potencial'}
+                      </td>
+                      <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] xl:table-cell">
+                        {e.asignado_a
+                          ? <span className="text-[#9FC0CB]">{nombreResponsable(e.asignado_a)}</span>
+                          : <span className="text-[#5F8494]">Sin asignar</span>}
                       </td>
                       <td onClick={() => seleccionar(e.id)} className="cursor-pointer hidden px-3 py-1.5 text-[11.5px] text-[#9FC0CB] lg:table-cell">{e.poblacion || '—'}{e.provincia && e.provincia !== e.poblacion ? ` (${e.provincia})` : ''}</td>
                       <td onClick={() => seleccionar(e.id)} className="cursor-pointer px-3 py-1.5 text-right text-[11.5px] font-bold text-[#9FC0CB]">{s.n}</td>
