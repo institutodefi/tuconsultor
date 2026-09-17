@@ -982,8 +982,10 @@
      entra desde el blog, donde el ancho original no se controla. */
   img, svg, video { max-width: 100%; }
   /* `height:auto` solo donde no hay una altura puesta a propósito: aplicarlo a
-     todo aplastaría los logos de la cabecera y el pie, que sí la llevan. */
-  img:not([style*="height"]):not(.nav-logo img) { height: auto; }
+     todo aplastaría los logos de la cabecera y el pie, que sí la llevan.
+     El pie NO estaba exceptuado y sus logos salían a tamaño natural: la
+     regla ganaba por especificidad a `.tc-marcas img`. */
+  img:not([style*="height"]):not(.nav-logo img):not(.tc-marcas img) { height: auto; }
 
   .post-body a, .faq-a a {
     text-decoration: underline;
@@ -1038,24 +1040,54 @@
    · Competían con el pie en peso visual. Se reducen y se separan con una línea
      y un rótulo: son una credencial, no el mensaje principal. */
 
+/* Una sola banda, no dos: las marcas del grupo a un lado y las
+   certificaciones al otro, separadas por una línea vertical. Antes eran dos
+   filas apiladas y el pie se hacía largo repitiendo el logo dos veces.
+
+   Las dos columnas se estiran a la misma altura (`align-items: stretch`) y
+   las marcas se reparten con `space-between`, así que el alto lo marcan los
+   sellos y los logos se acomodan a él: quedan equilibrados sin números
+   mágicos que haya que retocar cada vez que cambie un sello. */
 .tc-sellos-caja {
   margin: 34px auto 0;
   padding-top: 26px;
   border-top: 1px solid rgba(255,255,255,.09);
-  text-align: center;
+  display: grid;
+  grid-template-columns: auto auto;
+  /* Centradas, no pegadas a los bordes: las marcas ocupan 140 px y los sellos
+     540, así que `space-between` abría un hueco de medio pie en el que la
+     columna de la izquierda se quedaba sola. Juntas y centradas se leen como
+     una sola banda, que es lo que son. */
+  justify-content: center;
+  align-items: stretch;
+  column-gap: clamp(32px, 7vw, 104px);
+  row-gap: 0;
+  text-align: start;
 }
+.tc-rotulo-marcas  { grid-column: 1; grid-row: 1; }
+.tc-marcas         { grid-column: 1; grid-row: 2; }
+.tc-rotulo-sellos  { grid-column: 2; grid-row: 1; }
+.tc-sellos         { grid-column: 2; grid-row: 2; }
+
+/* La línea va en los dos elementos de la columna derecha, no en el hueco:
+   así es continua de arriba abajo. Por eso el rótulo separa con `padding` y
+   no con `margin`, que dejaría el trazo partido. */
+.tc-rotulo-sellos, .tc-sellos {
+  border-inline-start: 1px solid rgba(255,255,255,.09);
+  padding-inline-start: clamp(18px, 3.5vw, 40px);
+}
+
 .tc-sellos-rotulo {
   font-size: 10px; font-weight: 800;
   letter-spacing: 1.6px; text-transform: uppercase;
   color: #7f8db0;            /* 5,1:1 sobre el fondo: legible sin gritar */
-  margin: 0 0 14px;
+  margin: 0; padding-bottom: 14px;
 }
 
 .tc-sellos {
-  display: inline-flex; flex-wrap: wrap;
-  align-items: stretch; justify-content: center;
+  display: flex; flex-wrap: wrap;
+  align-items: stretch; justify-content: flex-start;
   gap: 18px;
-  padding: 0;
   /* Sin placa blanca: los tres ISO ya son transparentes y se apoyan sobre el
      fondo del pie. El ENS conserva su marco azul, que es parte de su diseño
      oficial y no se puede recortar. */
@@ -1098,15 +1130,15 @@
   font-size: 8.5px; font-weight: 700;
   letter-spacing: .3px; text-transform: uppercase;
   color: var(--acento-texto);   /* 9,5:1 sobre el fondo del pie */
-  opacity: 0; height: 0; overflow: hidden;
+  opacity: 0; height: 12px; overflow: hidden;
   transition: opacity .18s ease;
 }
 .tc-sello-enlace:hover .tc-sello-ver,
-.tc-sello-enlace:focus-visible .tc-sello-ver { opacity: 1; height: auto; }
+.tc-sello-enlace:focus-visible .tc-sello-ver { opacity: 1; }
 /* Si alguien tiene reducido el movimiento, se muestra siempre: no debe hacer
    falta un gesto para descubrir que hay un enlace. */
 @media (prefers-reduced-motion: reduce) {
-  .tc-sello-ver { opacity: 1; height: auto; }
+  .tc-sello-ver { opacity: 1; }
   .tc-sello-enlace { transition: none; }
   .tc-sello-enlace:hover { transform: none; }
 }
@@ -1149,21 +1181,48 @@
 /* ── Las tres marcas del grupo ───────────────────────────────────────────────
    TuConsultor es la casa, Consultify el servicio y Orbita la herramienta.
    Juntas explican la relación sin necesidad de texto.
-   Van SOBRE los sellos y separadas por una línea: quiénes somos y qué
-   acreditamos son cosas distintas, y mezclarlas confunde las dos. */
+   Van en fila, no apiladas, y centradas verticalmente contra el bloque de
+   sellos: los tres son logotipos horizontales y en columna quedaban como una
+   lista. */
 .tc-marcas {
-  display: flex; flex-wrap: wrap;
-  align-items: center; justify-content: center; gap: 22px;
-  margin-bottom: 20px; padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,.07);
+  display: flex; flex-direction: row; flex-wrap: nowrap;
+  align-items: center; justify-content: flex-start;
+  gap: clamp(18px, 2.4vw, 32px); margin: 0; padding: 0; border: 0;
 }
-.tc-marcas a { display: inline-flex; border-radius: 8px; padding: 4px; transition: opacity .18s ease; }
-.tc-marcas img { height: 26px; width: auto; display: block; opacity: .88; }
+.tc-marcas a { display: inline-flex; border-radius: 8px; padding: 2px 4px; margin-inline-start: -4px; transition: opacity .18s ease; }
+/* Alturas distintas a propósito: los tres logos tienen proporciones distintas
+   y a la misma altura el de Consultify se veía pequeño. Están igualados a
+   ojo, que es como se mira un pie de página. */
+.tc-marcas img { height: 38px; width: auto; display: block; opacity: .88; }
+.tc-marcas a[aria-label="Consultify"] img { height: 33px; }
 .tc-marcas a:hover img, .tc-marcas a:focus-visible img { opacity: 1; }
 .tc-marcas a:focus-visible { outline: 2px solid var(--acento-texto); outline-offset: 2px; }
+
+/* ── La banda en pantallas estrechas ─────────────────────────────────────────
+   Dos columnas con cuatro sellos no caben. Se vuelve a apilar: marcas arriba
+   en fila, línea horizontal, y los sellos debajo. */
+@media (max-width: 1120px) {
+  .tc-sellos-caja {
+    grid-template-columns: 1fr;
+    justify-content: center; justify-items: center;
+    text-align: center;
+  }
+  .tc-rotulo-marcas { grid-column: 1; grid-row: 1; }
+  .tc-marcas        { grid-column: 1; grid-row: 2; }
+  .tc-rotulo-sellos { grid-column: 1; grid-row: 3; }
+  .tc-sellos        { grid-column: 1; grid-row: 4; }
+  .tc-marcas {
+    flex-wrap: wrap; justify-content: center; gap: 22px;
+    padding-bottom: 20px; margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .tc-rotulo-sellos, .tc-sellos { border-inline-start: 0; padding-inline-start: 0; }
+  .tc-sellos { justify-content: center; }
+}
 @media (max-width: 620px) {
   .tc-marcas { gap: 14px; margin-bottom: 16px; padding-bottom: 16px; }
-  .tc-marcas img { height: 21px; }
+  .tc-marcas img { height: 22px; }
+  .tc-marcas a[aria-label="Consultify"] img { height: 19px; }
 }
 
 /* ── Menú en móvil ───────────────────────────────────────────────────────────
@@ -1300,6 +1359,7 @@ footer a:hover, .pie-tc a:hover { color: #A16707 !important; }
 .tc-sello figcaption { color: #44557A !important; }
 .tc-sello figcaption .num { color: #22314F !important; }
 .tc-marcas { border-bottom-color: #d3ddef !important; }
+.tc-rotulo-sellos, .tc-sellos { border-inline-start-color: #d3ddef !important; }
 .tc-sello-enlace:hover, .tc-sello-enlace:focus-visible { background: rgba(13,50,84,.06) !important; }
 .tc-sello-enlace:focus-visible { outline-color: #22314F !important; }
 .tc-sello-ver { color: #A16707 !important; }

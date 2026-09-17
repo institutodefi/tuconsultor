@@ -1162,7 +1162,53 @@
   }
 
 
+
+/* ── Banda de marcas y sellos ────────────────────────────────────────────────
+   Esta página no carga `estilo-base.css` —tiene su propio diseño inline— y el
+   bloque de marcas y sellos estaba pegado aquí sin sus estilos: los logotipos
+   salían a tamaño natural, 600 px de ancho. Esto es lo mínimo de aquella hoja
+   para que la banda se vea igual que en el resto del sitio. */
+.tc-sellos-caja{margin:34px auto 0;padding-top:26px;border-top:1px solid rgba(255,255,255,.09);
+  display:grid;grid-template-columns:auto auto;justify-content:center;align-items:stretch;
+  column-gap:clamp(32px,7vw,104px);row-gap:0;text-align:start}
+.tc-rotulo-marcas{grid-column:1;grid-row:1}
+.tc-marcas{grid-column:1;grid-row:2}
+.tc-rotulo-sellos{grid-column:2;grid-row:1}
+.tc-sellos{grid-column:2;grid-row:2}
+.tc-rotulo-sellos,.tc-sellos{border-inline-start:1px solid rgba(255,255,255,.09);padding-inline-start:clamp(18px,3.5vw,40px)}
+.tc-sellos-rotulo{font-size:10px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#7f8db0;margin:0;padding-bottom:14px}
+.tc-marcas{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:clamp(18px,2.4vw,32px);margin:0;padding:0;border:0}
+.tc-marcas a{display:inline-flex;border-radius:8px;padding:2px 4px;margin-inline-start:-4px;transition:opacity .18s ease}
+.tc-marcas img{height:38px;width:auto;display:block;opacity:.88}
+.tc-marcas a[aria-label="Consultify"] img{height:33px}
+.tc-marcas a:hover img{opacity:1}
+.tc-sellos{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:flex-start;gap:18px}
+.tc-sello{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;margin:0;padding:0 8px;min-width:96px}
+.tc-sello-img{height:58px;display:flex;align-items:center;justify-content:center}
+.tc-sello img{max-height:58px;max-width:92px;width:auto;height:auto;display:block}
+.tc-sello-enlace{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;
+  text-decoration:none;color:inherit;border-radius:10px;padding:4px 2px;transition:background .18s ease,transform .18s ease}
+.tc-sello-enlace:hover{background:rgba(255,255,255,.07);transform:translateY(-2px)}
+.tc-sello-ver{font-size:8.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#F99001;
+  opacity:0;height:12px;overflow:hidden;transition:opacity .18s ease}
+.tc-sello-enlace:hover .tc-sello-ver{opacity:1}
+.tc-sello figcaption{font-size:9px;line-height:1.35;color:#97a4c2;letter-spacing:.1px}
+.tc-sello figcaption .num{display:block;font-weight:700;color:#d6dff0;font-variant-numeric:tabular-nums}
+@media (max-width:1120px){
+  .tc-sellos-caja{grid-template-columns:1fr;justify-content:center;justify-items:center;text-align:center}
+  .tc-rotulo-marcas{grid-row:1}.tc-marcas{grid-row:2}.tc-rotulo-sellos{grid-row:3}.tc-sellos{grid-row:4}
+  .tc-rotulo-marcas,.tc-marcas,.tc-rotulo-sellos,.tc-sellos{grid-column:1}
+  .tc-marcas{flex-wrap:wrap;justify-content:center;gap:22px;
+    padding-bottom:20px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .tc-rotulo-sellos,.tc-sellos{border-inline-start:0;padding-inline-start:0;justify-content:center}
+}
+@media (max-width:620px){
+  .tc-sellos{display:grid;grid-template-columns:1fr 1fr;gap:14px 6px;width:100%}
+  .tc-sello{min-width:0;padding:0 2px}.tc-sello-img{height:50px}.tc-sello img{max-height:50px;max-width:100%}
+  .tc-marcas img{height:22px}.tc-marcas a[aria-label="Consultify"] img{height:19px}
+}
 </style>
+
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/svg+xml" href="/marca/orbita-favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
@@ -1877,12 +1923,13 @@
   </div>
 
     <div class="tc-sellos-caja">
+      <p class="tc-sellos-rotulo tc-rotulo-marcas">Marcas del grupo</p>
       <div class="tc-marcas">
         <a href="/" aria-label="TuConsultor"><img src="/marca/20-aniversario/web-horizontal-color-600.png" alt="TuConsultor" /></a>
         <a href="/consultify/" aria-label="Consultify"><img src="/marca/consultify-horizontal-light.svg" alt="Consultify" /></a>
         <a href="https://consultify.tuconsultor.com/app/acceso" aria-label="Orbita.PMTools"><img src="/marca/orbita-pmtool-h-oscuro.svg" alt="Orbita.PMTools" /></a>
       </div>
-      <p class="tc-sellos-rotulo">Sistemas de gestión certificados</p>
+      <p class="tc-sellos-rotulo tc-rotulo-sellos">Sistemas de gestión certificados</p>
       <div class="tc-sellos" id="tc-sellos" role="group" aria-label="Certificaciones de TuConsultor"></div>
     </div>
     </footer>

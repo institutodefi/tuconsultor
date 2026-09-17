@@ -459,3 +459,14 @@
 - Fotos recortadas al formato del resto del equipo: `nombre-apellido.jpg` a 330×360 y `-sq.jpg` a 400×400, encuadradas en el tercio superior para que la cara quede donde está en las demás.
 - Las biografías salen **solo** de lo que dicen sus CV. Fuera de la web pública quedan teléfono, correo personal, fecha de nacimiento y domicilio: en las fichas del equipo no pinta nada de eso y en los dos CV venía.
 - Jorge no tiene LinkedIn en el CV, así que su ficha va sin ese bloque en vez de con un enlace a ninguna parte.
+
+## Pie de página · una sola banda de logos (v149)
+- **Las marcas del grupo y los sellos ISO pasan a una única banda**: marcas a la izquierda, certificaciones a la derecha, separadas por una línea vertical. Antes eran dos filas apiladas —logos, línea horizontal, sellos— y el pie repetía el logotipo de TuConsultor dos veces en cuatro centímetros.
+- **Los tres logotipos van en fila**, no apilados —son logotipos horizontales y en columna quedaban como una lista— y centrados verticalmente contra el bloque de sellos. A 38 px de alto, que es lo que hace falta para que no queden flojos al lado de sellos de 58 px. Las dos columnas de la banda se estiran a la misma altura: 114 px las dos.
+- **Rótulo también para las marcas** («Marcas del grupo»), para que las dos columnas empiecen a la misma altura y quede claro qué es cada cosa: quiénes somos a un lado, qué acreditamos al otro.
+- **Los dos rótulos, por fin traducidos.** «Sistemas de gestión certificados» salía en español en las 102 páginas inglesas, las 92 francesas, las alemanas y las árabes. Ahora van en su idioma. 313 páginas tocadas.
+- **La banda se invierte sola en árabe**: está hecha con propiedades lógicas (`border-inline-start`, `flex-start`), así que en RTL las marcas van a la derecha y los sellos a la izquierda, con la línea en medio. Comprobado.
+- **Bajo 1120 px vuelve a apilarse**, marcas arriba en fila, línea horizontal y sellos debajo: tres logotipos en fila más cuatro sellos necesitan unos 1.000 px, y por debajo de eso no caben al lado.
+- **Dos arreglos de paso**:
+  - Los logotipos del pie salían **a tamaño natural**. La regla global `img:not([style*="height"]):not(.nav-logo img) { height: auto }` le ganaba por especificidad a `.tc-marcas img`, y su propio comentario decía que el pie estaba exceptuado cuando no lo estaba. Ahora sí lo está.
+  - **«Ver certificado» ya no da un salto.** Aparecía al pasar el ratón creciendo de 0 a su altura y empujaba el sello hacia arriba. El hueco está reservado siempre.
