@@ -527,3 +527,8 @@ Quedan, por este orden: embudo de oportunidades con fases e importe, registro de
 - **De 404 px a 360 px antes de llegar al contenido.** La barra de la izquierda pasa de 208 a 180, y el menú del portal de 196 a 180. Con las dos abiertas se recuperan 44 px de ancho útil; encogidas, de 112 a 104.
 - Para que «Comercial y proyectos» no se partiera en dos líneas a ese ancho, los rótulos de grupo bajan de 9,5 a 9 px y su espaciado de 0,08 a 0,03 em. Cabe en una línea y sigue leyéndose.
 - **El botón de encoger, dibujado como lo que hace**: un panel con una flecha, en vez de una flecha suelta que lo mismo podía significar «atrás». Con borde, fondo y 32 px, que antes era un trazo fino de 28 px que costaba ver. **Los dos botones —el de la barra y el del menú— usan ahora el mismo icono**: dos controles que hacen lo mismo se dibujan igual.
+
+## El hueco a la izquierda del menú (v155)
+- **El bloque del portal iba centrado** (`mx-auto max-w-[1400px]`). En una pantalla ancha eso dejaba un hueco enorme entre la barra de la aplicación y el menú —y otro al otro lado— que no era de nadie: ni menú ni contenido.
+- Fuera el centrado: el menú queda pegado a la barra, que es su sitio. Lo que sobra se va al otro lado, donde no molesta. En una pantalla de 2000 px el menú pasa de empezar en 250 a empezar en 72.
+- Y el tope sube de 1400 a **1800 px**: el tablero de oportunidades enseña sus cinco columnas sin apretarse, y las tablas de horas caben enteras.

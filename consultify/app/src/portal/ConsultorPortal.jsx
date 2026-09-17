@@ -308,7 +308,13 @@ export default function ConsultorPortal() {
     <>
       {!politicasOk && <GatePoliticas />}
       <BarraVerComo />
-      <div className="mx-auto max-w-[1400px] px-3 sm:px-5 py-4 sm:py-8">
+      {/* El tope era 1400 px centrados. En una pantalla ancha eso dejaba un
+          hueco enorme a la izquierda del menú —entre él y la barra de la
+          aplicación— porque el bloque entero iba centrado. Sin `mx-auto` el
+          menú queda pegado a la barra, que es su sitio: lo que sobra se va al
+          otro lado, donde no molesta. Y el tope sube a 1800, así el tablero de
+          oportunidades y las tablas de horas se ven enteros. */}
+      <div className="max-w-[1800px] px-3 sm:px-4 py-4 sm:py-8">
         {/* Barra superior móvil */}
         <div className="mb-4 flex items-center justify-between lg:hidden">
           <div>
