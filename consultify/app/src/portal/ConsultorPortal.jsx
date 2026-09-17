@@ -35,6 +35,9 @@ import Inicio from './consultores/Inicio.jsx';
 // Iconos SVG inline (sin dependencias). 20×20, stroke currentColor.
 const Icon = ({ name, className = 'h-5 w-5' }) => {
   const paths = {
+    // Inicio no tenía icono: en el menú abierto se notaba poco, pero con la
+    // barra encogida su entrada salía como un cuadro vacío.
+    home: <><path d="M3 10.5L12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></>,
     'calendar-check': <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4" /></>,
     'layout-dashboard': <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></>,
     'calendar-days': <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></>,
@@ -89,6 +92,76 @@ function NavItems({ onNavigate, grupos }) {
         <GrupoNav key={gi} grupo={g} indice={gi} activo={activoEn(g)} onNavigate={onNavigate} loc={loc} />
       ))}
     </nav>
+  );
+}
+
+/** El mismo menú, encogido: solo iconos.
+ *
+ * Encoger no puede significar «ahora navega peor». Con la barra cerrada se ven
+ * los mismos destinos de primer nivel, en el mismo orden y con una línea que
+ * separa los grupos; el nombre sale al pasar por encima. Las subentradas no
+ * caben en 52 px, así que el icono lleva a la sección y desde dentro se ven. */
+function NavIconos({ grupos }) {
+  const loc = useLocation();
+  const ruta = loc.pathname.replace(/\/+$/, '');
+  const esActiva = (t) => {
+    const base = t.to.split('?')[0];
+    if (base === '') return /\/consultores$/.test(ruta);
+    return ruta.endsWith(`/${base}`) || ruta.includes(`/${base}/`)
+      || (t.hijos || []).some((h) => ruta.endsWith(`/${h.to.split('?')[0]}`));
+  };
+
+  return (
+    <nav className="flex flex-col items-center gap-1">
+      {grupos.map((g, gi) => (
+        <div key={gi} className={`flex w-full flex-col items-center gap-1 ${
+          gi ? 'mt-1 border-t border-[#1E5468] pt-2' : ''}`}>
+          {g.items.map((t) => {
+            const activa = esActiva(t);
+            return (
+              <NavLink
+                key={t.to}
+                to={t.to}
+                end={t.to === ''}
+                title={t.label}
+                aria-label={t.label}
+                aria-current={activa ? 'page' : undefined}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                  activa
+                    ? 'bg-brand-orange/15 text-[#F9A83A] ring-1 ring-brand-orange/40'
+                    : 'text-[#7FA7B4] hover:bg-[#0D3242] hover:text-[#EAF4F7]'
+                }`}
+              >
+                <Icon name={t.icon} className="h-4 w-4" />
+              </NavLink>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+/** El botón que encoge y despliega el menú del portal.
+ *
+ * El nombre accesible dice «el menú de Órbita» y no «la barra lateral»:
+ * la barra de la izquierda tiene su propio botón de encoger y con lector
+ * de pantalla dos «encoger la barra lateral» no dicen cuál es cuál. */
+function BotonBarra({ abierta, alternar }) {
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      aria-expanded={abierta}
+      title={abierta ? 'Encoger el menú' : 'Desplegar el menú'}
+      aria-label={abierta ? 'Encoger el menú de Órbita' : 'Desplegar el menú de Órbita'}
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#1E5468] text-[#7FA7B4] transition hover:border-brand-orange/40 hover:text-[#EAF4F7]"
+    >
+      <svg className={`h-3.5 w-3.5 transition-transform duration-200 ${abierta ? '' : 'rotate-180'}`}
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15 18l-6-6 6-6" />
+      </svg>
+    </button>
   );
 }
 
@@ -212,6 +285,9 @@ export default function ConsultorPortal() {
   // CRM (Empresas · Contactos): el consultor también entra, así ve con quién habla.
   const verCrm = ['superadmin', 'admin', 'director', 'gestion', 'consultor'].includes(role);
   const [movilAbierto, setMovilAbierto] = useState(false);
+  // La barra encogida se recuerda: quien trabaja en tablas anchas —control
+  // de horas, proyectos— no tiene por qué cerrarla cada mañana.
+  const [barraAbierta, alternarBarra] = usarPlegado('portal.barra', true);
 
 
   return (
@@ -237,11 +313,30 @@ export default function ConsultorPortal() {
 
         <div className="flex gap-5">
           {/* Sidebar fija (desktop) */}
-          <aside className="hidden lg:block w-[196px] shrink-0">
+          <aside className={`hidden shrink-0 transition-[width] duration-200 lg:block ${
+            barraAbierta ? 'w-[196px]' : 'w-[52px]'}`}>
             <div className="sticky top-24">
-              <p className="eyebrow px-2.5 !text-[9px]">Operaciones</p>
-              <h1 className="mt-0.5 mb-4 px-2.5 text-[17px] font-extrabold leading-tight tracking-tight">Orbita.PMTools</h1>
-              <NavItems grupos={grupos} />
+              {barraAbierta ? (
+                <>
+                  <div className="flex items-start justify-between gap-1 pr-0.5">
+                    <div className="min-w-0">
+                      <p className="eyebrow px-2.5 !text-[9px]">Operaciones</p>
+                      <h1 className="mt-0.5 px-2.5 text-[17px] font-extrabold leading-tight tracking-tight">Orbita.PMTools</h1>
+                    </div>
+                    <BotonBarra abierta={barraAbierta} alternar={alternarBarra} />
+                  </div>
+                  <div className="mt-4">
+                    <NavItems grupos={grupos} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-3 flex justify-center">
+                    <BotonBarra abierta={barraAbierta} alternar={alternarBarra} />
+                  </div>
+                  <NavIconos grupos={grupos} />
+                </>
+              )}
             </div>
           </aside>
 

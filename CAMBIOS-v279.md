@@ -470,3 +470,10 @@
 - **Dos arreglos de paso**:
   - Los logotipos del pie salían **a tamaño natural**. La regla global `img:not([style*="height"]):not(.nav-logo img) { height: auto }` le ganaba por especificidad a `.tc-marcas img`, y su propio comentario decía que el pie estaba exceptuado cuando no lo estaba. Ahora sí lo está.
   - **«Ver certificado» ya no da un salto.** Aparecía al pasar el ratón creciendo de 0 a su altura y empujaba el sello hacia arriba. El hueco está reservado siempre.
+
+## El menú del portal se encoge (v150)
+- **Botón de encoger en el menú de Órbita.** La barra de navegación del portal (196 px) pasa a 52 px con un clic, y el contenido se queda esos 144 px. Pensado para las pantallas anchas —control de horas, proyectos, agenda del equipo—, donde la tabla es lo que importa.
+- **Encogido no significa navegar peor**: se ven los mismos destinos de primer nivel, en el mismo orden, como iconos con el nombre al pasar por encima y una línea que separa los grupos. La sección activa sigue marcada. Las subentradas no caben en 52 px, así que el icono lleva a la sección y desde dentro se ven.
+- **Se recuerda** (`portal.barra` en el mismo almacén que el resto de plegables): quien trabaja siempre con la barra cerrada no repite el gesto cada mañana.
+- El nombre accesible del botón dice «el menú de Órbita», no «la barra lateral»: la barra de la izquierda ya tiene su propio botón de encoger y con lector de pantalla dos «encoger la barra lateral» no dicen cuál es cuál.
+- **Inicio estrena icono.** No tenía: en el menú abierto se notaba poco, pero encogido su entrada salía como un cuadro vacío.
