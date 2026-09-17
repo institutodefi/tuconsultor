@@ -83,6 +83,12 @@ export const GRUPOS_PORTAL = [
     // las personas; esto es lo que se hace con ellas.
     label: 'Comercial y proyectos',
     items: [
+      // El embudo va ANTES que las ofertas, porque es lo que pasa antes: una
+      // oferta es el final de una oportunidad, no su principio.
+      {
+        to: 'oportunidades', label: 'Oportunidades', icon: 'target',
+        roles: ['superadmin', 'admin', 'director', 'comercial', 'gestion', 'consultor'],
+      },
       {
         to: 'ofertas', label: 'Ofertas', icon: 'receipt',
         roles: ['superadmin', 'admin', 'director', 'gestion'],

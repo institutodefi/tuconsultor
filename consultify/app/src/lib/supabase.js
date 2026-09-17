@@ -60,6 +60,15 @@ export const demoDB = {
   presupuestos: [
     { id: 'pr1', email: 'maria@industriasnorte.es', normas: ['9001','14001','27001'], modelo: 'Implicación', precio: 1325, tipo: 'mes', creado: '2026-06-01T10:00:00Z' },
   ],
+  // El embudo comercial (v153). En demo hacen falta datos o el tablero se ve
+  // vacío y no se entiende para qué sirve.
+  oportunidades: [
+    { id: 'op1', empresa_id: 'emp-inor', titulo: 'Ampliación a ISO 27001', fase: 'cualificada', importe: 9800, fecha_cierre: '2026-11-20', origen: 'Cliente actual', responsable_id: 'demo', notas: 'Han pedido presupuesto tras la auditoría.' },
+    { id: 'op2', empresa_id: 'emp-matriz', titulo: 'ENS categoría media', fase: 'propuesta', importe: 14500, fecha_cierre: '2026-10-15', origen: 'Licitación', responsable_id: 'demo', notas: '' },
+    { id: 'op3', empresa_id: 'emp-pot', titulo: 'Plan de diversidad', fase: 'contactada', importe: 3200, fecha_cierre: '2026-12-01', origen: 'LinkedIn', responsable_id: 'demo', notas: '' },
+    { id: 'op4', empresa_id: 'emp-fil1', titulo: 'Transición a ISO 9001:2026', fase: 'negociacion', importe: 2400, fecha_cierre: '2026-10-05', origen: 'Cliente actual', responsable_id: 'demo', notas: '' },
+    { id: 'op5', empresa_id: 'emp-matriz', titulo: 'Formación en ciberseguridad', fase: 'ganada', importe: 1800, fecha_cierre: '2026-09-01', origen: 'Referencia', responsable_id: 'demo', notas: '' },
+  ],
   // ── Proyectos, equipo, tareas y sesiones (control de horas, v116) ──
   // Lo justo para que Control de horas y las agendas enseñen algo sin base
   // de datos: dos proyectos vivos, Carlota en los dos, Irene en uno.

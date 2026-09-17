@@ -510,3 +510,15 @@ Lo hecho:
 - **Migración v152** (aplicada). Y de paso, un fallo que llevaba tiempo ahí: la restricción `perfiles_rol_check` **no incluía `director`**, un rol que la aplicación usa desde hace versiones. Cualquier intento de guardar un perfil de dirección fallaba contra la base de datos.
 
 Quedan, por este orden: embudo de oportunidades con fases e importe, registro de actividad por cuenta, cuadro de mando comercial y el reparto de jornada propio del rol comercial.
+
+## Embudo de oportunidades (v153)
+- **Lo que faltaba de verdad.** Antes de construirlo hay que dejar claro que ya existían dos cosas parecidas que no lo son:
+  - `empresas.estado_comercial` → el ciclo de vida de una **empresa** (potencial, activo, inactivo, perdido). Una empresa puede ser cliente activo y tener a la vez una oportunidad abierta.
+  - `presupuestos.estado` → el estado de una **oferta ya emitida** (emitida, aceptada, rechazada). El embudo empezaba cuando ya habías hecho la propuesta: justo después de la parte difícil.
+  - La **oportunidad** es lo de antes: el trato que se trabaja, con fase, importe y fecha de cierre, desde que aparece hasta que se gana o se pierde.
+- **Tablero por fases** (Nueva · Contactada · Cualificada · Propuesta · Negociación, y las cerradas aparte), con el total de cada columna. Se mueve con el selector de la tarjeta, no arrastrando: arrastrar se usa dos veces y se falla una.
+- **Cuatro cifras arriba**, y la primera es la que importa: **previsión ponderada** (importe × probabilidad). Sumar el embudo entero y llamarlo previsión es como se llega a fin de trimestre con la mitad. La probabilidad la pone la fase y se puede ajustar a mano.
+- **Las fechas de cierre pasadas se marcan en rojo.** Es la señal más barata de que el embudo cuenta algo que ya no existe.
+- **Del embudo a la oferta sin copiar nada**: «Generar oferta →» abre el generador con empresa, CIF, contacto y teléfono ya puestos. Reutiliza el camino que ya existía para lanzar ofertas desde la ficha de un cliente, en vez de inventar otro.
+- **Migración v153** (aplicada), con un arreglo que había que cazar antes de que se notara: **el rol `comercial` de la v152 no estaba en ninguna política RLS**. Las políticas enumeran los roles una a una —41 nombran a `gestion`— así que un usuario comercial habría visto las pantallas y le habría fallado cada guardado con un error de permisos que no dice nada. Reescritas las once del CRM y de la generación de ofertas. Nada de proyectos, sesiones ni horas: eso es entrega.
+- Cerrar es un hecho con fecha: `cerrada_en` se pone sola al pasar a ganada o perdida, y se borra si la oportunidad vuelve a abrirse. Dejarlo a mano es garantizar que la mitad de las filas mientan.

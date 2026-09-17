@@ -26,6 +26,7 @@ import Accesos from './consultores/Accesos.jsx';
 import ProcesosInternos from './consultores/ProcesosInternos.jsx';
 import ControlHoras from './consultores/ControlHoras.jsx';
 import GeneradorOfertas from '../pages/GeneradorOfertas.jsx';
+import Oportunidades from './consultores/Oportunidades.jsx';
 import BarraVerComo from '../components/BarraVerComo.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { usarPlegado } from '../components/Plegable.jsx';
@@ -38,6 +39,7 @@ const Icon = ({ name, className = 'h-5 w-5' }) => {
     // Inicio no tenía icono: en el menú abierto se notaba poco, pero con la
     // barra encogida su entrada salía como un cuadro vacío.
     home: <><path d="M3 10.5L12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></>,
+    target: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></>,
     'calendar-check': <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4" /></>,
     'layout-dashboard': <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></>,
     'calendar-days': <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></>,
@@ -283,7 +285,10 @@ export default function ConsultorPortal() {
   const verPlanAgendaSist = ['superadmin', 'admin', 'director', 'consultor'].includes(role);
   const verClientes = ['superadmin', 'admin', 'director', 'gestion'].includes(role);
   // CRM (Empresas · Contactos): el consultor también entra, así ve con quién habla.
-  const verCrm = ['superadmin', 'admin', 'director', 'gestion', 'consultor'].includes(role);
+  const verCrm = ['superadmin', 'admin', 'director', 'gestion', 'consultor', 'comercial'].includes(role);
+  // El embudo lo ve todo el equipo: esconderle a dirección o a quien va a
+  // ejecutar el proyecto lo que hay en camino no protege nada.
+  const verEmbudo = ['superadmin', 'admin', 'director', 'comercial', 'gestion', 'consultor'].includes(role);
   const [movilAbierto, setMovilAbierto] = useState(false);
   // La barra encogida se recuerda: quien trabaja en tablas anchas —control
   // de horas, proyectos— no tiene por qué cerrarla cada mañana.
@@ -363,6 +368,7 @@ export default function ConsultorPortal() {
               {/* Horas por consultor y capacidad: quien reparte trabajo ve a
                   todo el equipo; consultoría, su propia ficha. */}
               <Route path="control-horas" element={<Guard ok={verPlanAgendaSist}><ControlHoras /></Guard>} />
+              <Route path="oportunidades" element={<Guard ok={verEmbudo}><Oportunidades /></Guard>} />
               <Route path="planificador" element={<Guard ok={verPlanAgendaSist}><GeneradorOfertas /></Guard>} />
               <Route path="equipo" element={<Guard ok={verEquipo}><Equipo /></Guard>} />
               <Route path="accesos" element={<Guard ok={role === 'superadmin'}><Accesos /></Guard>} />

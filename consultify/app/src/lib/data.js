@@ -18,6 +18,9 @@ function demo() {
     cliente_certificados: demoClone('cliente_certificados'), cliente_documentos: demoClone('cliente_documentos'), documento_notas: [],
     cliente_sedes: demoClone('cliente_sedes'),
     reglas_comerciales: [],
+    // El embudo comercial (v153): sin datos en demo, el tablero sale vacío y
+    // no se entiende para qué sirve.
+    oportunidades: demoClone('oportunidades'),
     versiones: [],
     registro_accesos: [],
     accesibilidad_criterios: [
