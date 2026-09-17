@@ -453,3 +453,9 @@
 - **`scripts/traducir-blog.mjs`**: traductor por lotes, reanudable. Salta lo que ya está al día, rehace lo que cambió, comprueba que la estructura HTML del original se respeta y descarta la traducción si no cuadra. `--simular` dice qué haría y cuánto ocuparía sin gastar nada.
 - El artículo de ISO 9001:2026 ya está en inglés como prueba de extremo a extremo.
 - **Comprobado y descartado**: `/orbita/` **no da 404** —responde 200 con su página— y las 96 imágenes de la campaña ya están en producción. Esa nota del brief estaba desfasada.
+
+## Team · Rafael Galobart y Jorge San Nicolás (v148)
+- Dos fichas nuevas en la sección **Team** de «Quiénes somos», en español y en inglés: **Rafael Galobart · Responsable Comercial** (con su LinkedIn) y **Jorge San Nicolás · Apoyo en Proyectos Digitales**.
+- Fotos recortadas al formato del resto del equipo: `nombre-apellido.jpg` a 330×360 y `-sq.jpg` a 400×400, encuadradas en el tercio superior para que la cara quede donde está en las demás.
+- Las biografías salen **solo** de lo que dicen sus CV. Fuera de la web pública quedan teléfono, correo personal, fecha de nacimiento y domicilio: en las fichas del equipo no pinta nada de eso y en los dos CV venía.
+- Jorge no tiene LinkedIn en el CV, así que su ficha va sin ese bloque en vez de con un enlace a ninguna parte.
