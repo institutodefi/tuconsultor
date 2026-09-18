@@ -142,6 +142,10 @@ export default function Sistemas() {
     const conEv = filas.find((t) => Array.isArray(t.evidencias) && t.evidencias.length) || con;
     const conFlujo = filas.find((t) => t.entradas || t.salidas) || con;
     return {
+      titulo: con.titulo || '',
+      // Las horas que se ven en la tabla, con los cambios sin guardar ya
+      // aplicados: si acabas de escribir 6 en la celda, la ficha enseña 6.
+      horas: Object.fromEntries(MODELOS_COL.map((m) => [m, horasDe(g, m) ?? ''])),
       definicion: con.definicion || '',
       subtareas: propias.length ? propias : base,
       esBase: !propias.length && base.length > 0,
@@ -150,12 +154,29 @@ export default function Sistemas() {
       salidas: conFlujo.salidas || '',
     };
   };
-  async function guardarDefinicion(g, { definicion, subtareas, evidencias, entradas, salidas, llevar }) {
+  async function guardarDefinicion(g, { proceso, subproceso, titulo, horas, definicion, subtareas, evidencias, entradas, salidas, llevar }) {
     const ids = MODELOS_COL.map((m) => g.porModelo[m]?.id).filter(Boolean);
+    // El nombre y la ficha son de la TAREA: van a las filas de todos los
+    // modelos. Solo las horas cambian por modelo.
     const campos = { definicion, subtareas, evidencias, entradas, salidas };
+    if (proceso !== undefined && proceso !== g.proceso) campos.proceso = proceso;
+    if (subproceso !== undefined && subproceso !== g.subproceso) campos.subproceso = subproceso;
+    if (titulo) campos.titulo = titulo;
     for (const id of ids) await updateRow('tareas_catalogo', id, campos);
     setCatalogo((cs) => cs.map((x) => (ids.includes(x.id) ? { ...x, ...campos } : x)));
-    if (!llevar) return { mensaje: 'Ficha guardada en el catálogo.' };
+
+    // Las horas van por el camino de siempre —el que además replanifica los
+    // proyectos abiertos— en vez de duplicar aquí esa lógica, que es la
+    // delicada: escribir horas sin replanificar deja el plan mintiendo.
+    let horasMsg = '';
+    const cambios = Object.entries(horas || {});
+    if (cambios.length) {
+      const nuevos = Object.fromEntries(cambios.map(([m, v]) => [kDe(g, m), Number(v) || 0]));
+      const r = await guardarYReplanificar(nuevos);
+      horasMsg = ` · ${r?.resumen || `${cambios.length} modelo(s) con horas nuevas`}`;
+    }
+
+    if (!llevar) return { mensaje: `Ficha guardada en el catálogo.${horasMsg}` };
 
     // A los proyectos abiertos: las tareas que nacen de esta fila (por enlace
     // al catálogo o por norma + subproceso), no hechas. La checklist se mezcla:
@@ -243,12 +264,15 @@ export default function Sistemas() {
   //    enlace `catalogo_id`), no hechas, no ajustadas a mano ni integradas. Los
   //    proyectos cerrados no se tocan: lo que se hizo, se hizo con sus horas.
   // 3. Actualiza la agenda de quien tenga esa tarea asignada.
-  async function guardarYReplanificar() {
-    if (!hayCambios) return;
+  // `lote`: los cambios a guardar. Sin él, los de la tabla (`edits`). Con él,
+  // los que manda la ficha del subproceso, que no ha pasado por `edits`.
+  async function guardarYReplanificar(lote = null) {
+    const pendientes = lote || edits;
+    if (!Object.keys(pendientes).length) return null;
     setGuardando(true); setMsg(null);
     try {
       const cambiadas = [];   // filas del catálogo con horas nuevas
-      for (const [k, horas] of Object.entries(edits)) {
+      for (const [k, horas] of Object.entries(pendientes)) {
         const [clave, modelo] = k.split('|');
         const g = grupos.find((x) => x.clave === clave) || catalogo.filter((t) => t.norma_id === normaSel && (t.subproceso || t.titulo || '') === clave)
           .reduce((acc, t) => acc || { clave, subproceso: t.subproceso || '', proceso: t.proceso || '', orden: t.orden ?? 999, porModelo: {} }, null);
@@ -294,10 +318,14 @@ export default function Sistemas() {
       }
 
       await cargar();
-      setEdits({}); setManual(new Set());
-      setMsg(cambiadas.length
+      // Solo se limpia la tabla cuando lo guardado ERA la tabla: si viene de
+      // la ficha, los cambios que haya a medias en la tabla siguen ahí.
+      if (!lote) { setEdits({}); setManual(new Set()); }
+      const resumen = cambiadas.length
         ? `${cambiadas.length} celda(s) guardadas · ${nTareas} tarea(s) replanificadas en ${proyectosTocados.size} proyecto(s) abierto(s).`
-        : 'No había cambios reales que guardar.');
+        : 'No había cambios reales que guardar.';
+      setMsg(resumen);
+      return { resumen, cambiadas: cambiadas.length, tareas: nTareas };
     } catch (e) { setMsg(`No se pudo guardar: ${e?.message || e}`); }
     finally { setGuardando(false); }
   }
@@ -305,7 +333,7 @@ export default function Sistemas() {
   return (
     <div className="space-y-6">
       {defAbierta && (
-        <DefinicionTarea grupo={defAbierta} norma={normaSel} editable={puedeEditar}
+        <DefinicionTarea grupo={defAbierta} norma={normaSel} editable={puedeEditar} modelos={MODELOS_COL}
           {...definicionDe(defAbierta)}
           onGuardar={(datos) => guardarDefinicion(defAbierta, datos)} onCerrar={() => setDefAbierta(null)} />
       )}

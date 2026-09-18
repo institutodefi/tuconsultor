@@ -27,17 +27,29 @@ import { normalizarEvidencias } from '../lib/evidencias.js';
 // ════════════════════════════════════════════════════════════════════════════
 
 const PESTANAS = [
+  ['proceso', 'Proceso'],
   ['definicion', 'Definición'],
   ['subtareas', 'Subtareas'],
   ['evidencias', 'Evidencias'],
+  ['horas', 'Horas por modelo'],
   ['flujo', 'Entradas y salidas'],
 ];
 
 export default function DefinicionTarea({
   grupo, norma, definicion = '', subtareas = [], evidencias = [], entradas = '', salidas = '',
+  titulo = '', horas = {}, modelos = [],
   esBase = false, editable = true, onGuardar, onCerrar,
 }) {
-  const [pestana, setPestana] = useState('definicion');
+  const [pestana, setPestana] = useState('proceso');
+  // Proceso, subproceso y título: el nombre de la cosa. Se editaban en la
+  // tabla, campo a campo y sin contexto; aquí se ven los tres juntos.
+  const [proc, setProc] = useState(grupo?.proceso || '');
+  const [sub, setSub] = useState(grupo?.subproceso || '');
+  const [tit, setTit] = useState(titulo || '');
+  // Las horas de cada modelo. Es lo único que cambia POR MODELO: lo demás es
+  // de la tarea. Mueven el precio, así que al guardar se replanifican los
+  // proyectos abiertos igual que si se editaran en la tabla.
+  const [hs, setHs] = useState(() => Object.fromEntries(modelos.map((m) => [m, horas?.[m] ?? ''])));
   const [def, setDef] = useState(definicion || '');
   const [lista, setLista] = useState(normalizarSubtareas(subtareas).map((x) => x.texto));
   const [evs, setEvs] = useState(normalizarEvidencias(evidencias));
@@ -49,9 +61,12 @@ export default function DefinicionTarea({
 
   const mismo = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   // Con la propuesta base sin fijar, guardar siempre tiene sentido: la deja escrita en el catálogo.
+  const horasCambiadas = modelos.filter((m) => String(hs[m] ?? '') !== String(horas?.[m] ?? ''));
   const cambiado = esBase
     || def !== (definicion || '')
     || ent !== (entradas || '') || sal !== (salidas || '')
+    || proc !== (grupo?.proceso || '') || sub !== (grupo?.subproceso || '') || tit !== (titulo || '')
+    || horasCambiadas.length > 0
     || !mismo(lista, normalizarSubtareas(subtareas).map((x) => x.texto))
     || !mismo(evs, normalizarEvidencias(evidencias));
 
@@ -71,6 +86,8 @@ export default function DefinicionTarea({
     setOcupado(true); setMsg(null);
     try {
       const r = await onGuardar({
+        proceso: proc.trim(), subproceso: sub.trim(), titulo: tit.trim(),
+        horas: Object.fromEntries(horasCambiadas.map((m) => [m, hs[m] === '' ? 0 : Number(hs[m])])),
         definicion: def.trim() || null,
         subtareas: lista.map((t) => t.trim()).filter(Boolean).map((texto) => ({ texto })),
         evidencias: normalizarEvidencias(evs),
@@ -84,7 +101,7 @@ export default function DefinicionTarea({
     finally { setOcupado(false); }
   }
 
-  const cuenta = { subtareas: lista.length, evidencias: evs.length };
+  const cuenta = { subtareas: lista.length, evidencias: evs.length, horas: horasCambiadas.length };
 
   return (
     <DialogoFicha
@@ -114,6 +131,61 @@ export default function DefinicionTarea({
             </button>
           ))}
         </div>
+
+        {pestana === 'proceso' && (
+          <div className="space-y-3">
+            <div>
+              <label className="label" htmlFor="dt-proc">Proceso</label>
+              <input id="dt-proc" className="input !text-[13px]" readOnly={!editable} value={proc}
+                placeholder="PE1 PLANIFICACIÓN ESTRATÉGICA" onChange={(e) => setProc(e.target.value)} />
+            </div>
+            <div>
+              <label className="label" htmlFor="dt-sub">Subproceso</label>
+              <input id="dt-sub" className="input !text-[13px]" readOnly={!editable} value={sub}
+                placeholder="S1 PE1 GESTIÓN DEL CONTEXTO Y GI" onChange={(e) => setSub(e.target.value)} />
+              <p className="campo-nota">El código (S1 PE1) es la trazabilidad con el mapa de procesos del cliente y con la norma. Cambiarlo cambia a qué apunta.</p>
+            </div>
+            <div>
+              <label className="label" htmlFor="dt-tit">Título de la tarea</label>
+              <input id="dt-tit" className="input !text-[13px]" readOnly={!editable} value={tit}
+                placeholder="Cómo se llama en el plan del proyecto" onChange={(e) => setTit(e.target.value)} />
+            </div>
+            <p className="campo-nota">Los tres se guardan en las filas de todos los modelos: son de la tarea, no del modelo.</p>
+          </div>
+        )}
+
+        {pestana === 'horas' && (
+          <div>
+            <p className="label">Horas de trabajo en cada modelo</p>
+            <p className="campo-nota mb-2">
+              Lo único que cambia por modelo. Al guardar se escriben en el catálogo y se llevan a las tareas
+              de los proyectos abiertos que salen de esta fila —las que no estén hechas, ni ajustadas a mano, ni integradas—.
+              Los proyectos cerrados no se tocan: lo que se hizo, se hizo con sus horas.
+            </p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {modelos.map((m) => {
+                const tocada = String(hs[m] ?? '') !== String(horas?.[m] ?? '');
+                return (
+                  <label key={m} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${tocada ? 'border-brand-orange bg-brand-orange/10' : 'border-[#1E5468] bg-[#0A2B3A]'}`}>
+                    <span className="text-[12.5px] font-bold text-[#EAF4F7]">{m}</span>
+                    <span className="flex items-center gap-1.5">
+                      <input type="number" min="0" step="0.1" className="input !w-24 !py-1 !text-right !text-[12.5px]"
+                        readOnly={!editable} value={hs[m] ?? ''} placeholder="0"
+                        title={tocada ? `Sin guardar (antes ${horas?.[m] ?? '—'} h)` : ''}
+                        onChange={(e) => setHs((x) => ({ ...x, [m]: e.target.value }))} />
+                      <span className="text-[11.5px] font-bold text-[#7FA7B4]">h</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            {horasCambiadas.length > 0 && (
+              <p className="mt-2 rounded-lg bg-brand-orange/10 px-3 py-1.5 text-[11.5px] font-bold text-brand-orange">
+                {horasCambiadas.length} modelo(s) con horas nuevas. Se replanifican al guardar.
+              </p>
+            )}
+          </div>
+        )}
 
         {pestana === 'definicion' && (
           <div>

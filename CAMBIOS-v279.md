@@ -560,3 +560,13 @@ Panel nuevo bajo el informe de rentabilidad. El informe dice si una oferta encaj
   - *El mismo trabajo con horas muy distintas según la norma*: descuadres del catálogo. A veces justificados; muchas veces, una fila que se quedó sin actualizar.
 - **Aplicar una sugerencia** escribe `horas_base` en el catálogo, y solo para administración. Las desviaciones con muy pocos casos no ofrecen el botón: se miran, no se aplican.
 - **Lo que hay hoy, dicho sin adornos**: en la base **no hay ni una tarea cerrada con horas imputadas**, así que la comparación planificado/real todavía no puede calcularse y el panel lo dice en la primera línea. Una lista vacía sin explicación se lee como «todo bien», y no es lo mismo «no hay desviaciones» que «no hay con qué medirlas». Con el catálogo de hoy sí salen **23 tareas comunes** entre normas y **67 descuadres**.
+
+## Todo el subproceso se edita al pinchar en él (v156)
+Lo que faltaba de la primera entrega: la ficha enseñaba y editaba una parte, y el resto seguía en la tabla, campo a campo y sin contexto. Ahora **al pinchar un subproceso se edita todo lo suyo en el mismo sitio**, en seis pestañas:
+
+- **Proceso** — proceso, subproceso y título de la tarea. Se escriben en las filas de todos los modelos: son de la tarea, no del modelo. Con el aviso de que el código (S1 PE1) es la trazabilidad con el mapa del cliente y con la norma, así que cambiarlo cambia a qué apunta.
+- **Definición · Subtareas · Evidencias · Entradas y salidas** — como ya estaban.
+- **Horas por modelo** — los cinco modelos, con su hora cada uno. Es lo único que cambia por modelo; lo demás es de la tarea.
+- Las horas **no se guardan por un camino nuevo**: usan el de siempre, el que además replanifica los proyectos abiertos. Escribir horas sin replanificar deja el plan mintiendo, y duplicar esa lógica es la forma más segura de que las dos copias se separen.
+- Los modelos con horas nuevas se marcan en naranja y se avisa de cuántos se van a replanificar antes de guardar.
+- La tabla sigue igual para lo que la tabla hace bien: comparar de un vistazo las horas de todos los subprocesos y editar en tanda.
