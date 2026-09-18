@@ -532,3 +532,15 @@ Quedan, por este orden: embudo de oportunidades con fases e importe, registro de
 - **El bloque del portal iba centrado** (`mx-auto max-w-[1400px]`). En una pantalla ancha eso dejaba un hueco enorme entre la barra de la aplicación y el menú —y otro al otro lado— que no era de nadie: ni menú ni contenido.
 - Fuera el centrado: el menú queda pegado a la barra, que es su sitio. Lo que sobra se va al otro lado, donde no molesta. En una pantalla de 2000 px el menú pasa de empezar en 250 a empezar en 72.
 - Y el tope sube de 1400 a **1800 px**: el tablero de oportunidades enseña sus cinco columnas sin apretarse, y las tablas de horas caben enteras.
+
+## El proceso como unidad · evidencias, entradas y salidas (v154 · primera parte)
+Primera de las cuatro piezas del encargo: **el catálogo**. Lo demás (copiar al cliente, el mapa de procesos del cliente y el chequeo con IA) va detrás y se apoya en esto.
+
+- **La ficha de cada subproceso pasa de dos cosas a cuatro**, en pestañas: *Definición* (qué es), *Subtareas* (los pasos que se hacen), ***Evidencias*** (lo que hay que poder enseñar) y ***Entradas y salidas*** (de dónde viene el trabajo y qué deja hecho).
+- **Una evidencia no es una subtarea**, y por eso van separadas: la subtarea es trabajo que se hace; la evidencia es un documento que tiene que existir, estar vigente y responder a un requisito. Cada una lleva título, qué tiene que contener para servir, el apartado de la norma que la motiva y si es obligatoria.
+- Lo que se escribe en «qué tiene que contener para servir» **es lo que va a leer la IA** cuando revise el documento aportado. Cuanto más concreto, menos discutible el veredicto.
+- Las horas siguen editándose en la tabla, por modelo: la ficha es de la tarea, el precio es del modelo.
+- **«Guardar y llevar a proyectos abiertos»** ahora arrastra también las evidencias: se crean en los proyectos vivos mezclándolas con las que ya hubiera. **Lo aportado no se tira nunca**, ni aunque el catálogo deje de pedirlo.
+- **Migración v154** (aplicada): `tareas_catalogo` gana `evidencias`, `entradas` y `salidas`; y nacen las dos tablas que sostienen el resto del encargo — **`cliente_procesos`** (el mapa de procesos del cliente, que hasta ahora no existía: el SxxPxx era un texto que no apuntaba a nada) y **`cliente_evidencias`** (lo que se pide, lo que se aporta y el veredicto de la revisión por IA).
+- Una decisión que queda grabada en el esquema: **`estado` y `ia_veredicto` son columnas distintas**. Lo que dice la persona y lo que opinó el modelo no son lo mismo. La IA propone, no decide.
+- `lib/evidencias.js`, con la misma disciplina que `subtareas.js`: funciones puras, probadas desde Node, y `veredictoAlDia()` — si el documento ya no es el que se revisó, el veredicto es de otra cosa y no se enseña como válido.

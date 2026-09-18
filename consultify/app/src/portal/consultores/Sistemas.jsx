@@ -1,5 +1,6 @@
 import DefinicionTarea from '../../components/DefinicionTarea.jsx';
 import { normalizarSubtareas, mezclarSubtareas } from '../../lib/subtareas.js';
+import { normalizarEvidencias, mezclarEvidencias } from '../../lib/evidencias.js';
 import { subtareasBasePara } from '../../lib/subtareasBase.js';
 import { useEffect, useMemo, useState } from 'react';
 import { listTable, insertRow, updateRow, deleteRow } from '../../lib/data.js';
@@ -136,13 +137,25 @@ export default function Sistemas() {
     // Sin subtareas propias, la estructura base del subproceso (propuesta):
     // se ve, se puede retocar y al guardar queda fijada en el catálogo.
     const base = propias.length ? [] : normalizarSubtareas(subtareasBasePara(g.subproceso, normaSel));
-    return { definicion: con.definicion || '', subtareas: propias.length ? propias : base, esBase: !propias.length && base.length > 0 };
+    // Evidencias, entradas y salidas: igual que la definición, son de la tarea
+    // y no del modelo, así que se leen de la primera fila que las tenga.
+    const conEv = filas.find((t) => Array.isArray(t.evidencias) && t.evidencias.length) || con;
+    const conFlujo = filas.find((t) => t.entradas || t.salidas) || con;
+    return {
+      definicion: con.definicion || '',
+      subtareas: propias.length ? propias : base,
+      esBase: !propias.length && base.length > 0,
+      evidencias: normalizarEvidencias(conEv.evidencias),
+      entradas: conFlujo.entradas || '',
+      salidas: conFlujo.salidas || '',
+    };
   };
-  async function guardarDefinicion(g, { definicion, subtareas, llevar }) {
+  async function guardarDefinicion(g, { definicion, subtareas, evidencias, entradas, salidas, llevar }) {
     const ids = MODELOS_COL.map((m) => g.porModelo[m]?.id).filter(Boolean);
-    for (const id of ids) await updateRow('tareas_catalogo', id, { definicion, subtareas });
-    setCatalogo((cs) => cs.map((x) => (ids.includes(x.id) ? { ...x, definicion, subtareas } : x)));
-    if (!llevar) return { mensaje: 'Definición guardada en el catálogo.' };
+    const campos = { definicion, subtareas, evidencias, entradas, salidas };
+    for (const id of ids) await updateRow('tareas_catalogo', id, campos);
+    setCatalogo((cs) => cs.map((x) => (ids.includes(x.id) ? { ...x, ...campos } : x)));
+    if (!llevar) return { mensaje: 'Ficha guardada en el catálogo.' };
 
     // A los proyectos abiertos: las tareas que nacen de esta fila (por enlace
     // al catálogo o por norma + subproceso), no hechas. La checklist se mezcla:
@@ -156,7 +169,33 @@ export default function Sistemas() {
       await updateRow('cliente_tareas', ct.id, { definicion, subtareas: mezclarSubtareas(ct.subtareas, subtareas) });
       n++; proys.add(String(ct.proyecto_id));
     }
-    const mensaje = `Definición guardada · ${n} tarea(s) actualizadas en ${proys.size} proyecto(s) abierto(s).`;
+
+    // Las evidencias viven en su propia tabla, no dentro de la tarea: cada una
+    // tiene estado, documento y veredicto. Se mezclan igual que la checklist:
+    // lo aportado no se tira nunca.
+    let nEv = 0;
+    if (Array.isArray(evidencias)) {
+      const clientes = [...new Set(afectadas.map((ct) => String(ct.cliente_id)).filter(Boolean))];
+      const yaHay = clientes.length ? await listTable('cliente_evidencias').catch(() => []) : [];
+      for (const ct of afectadas) {
+        const suyas = yaHay.filter((e) => String(e.cliente_tarea_id || '') === String(ct.id));
+        const mezcla = mezclarEvidencias(suyas, evidencias);
+        for (const ev of mezcla) {
+          const previa = suyas.find((x) => String(x.titulo).toLowerCase() === String(ev.titulo).toLowerCase());
+          const fila = {
+            cliente_id: ct.cliente_id, cliente_tarea_id: ct.id, cliente_proceso_id: ct.cliente_proceso_id || null,
+            titulo: ev.titulo, definicion: ev.definicion || null, requisito: ev.requisito || null,
+            obligatoria: ev.obligatoria !== false, norma_id: ct.norma_id || null, orden: ev.orden ?? null,
+          };
+          try {
+            if (previa) await updateRow('cliente_evidencias', previa.id, fila);
+            else { await insertRow('cliente_evidencias', fila); nEv++; }
+          } catch { /* una evidencia que no entra no puede tumbar el resto */ }
+        }
+      }
+    }
+
+    const mensaje = `Ficha guardada · ${n} tarea(s) y ${nEv} evidencia(s) nuevas en ${proys.size} proyecto(s) abierto(s).`;
     setMsg(mensaje);
     return { mensaje };
   }
@@ -267,7 +306,7 @@ export default function Sistemas() {
     <div className="space-y-6">
       {defAbierta && (
         <DefinicionTarea grupo={defAbierta} norma={normaSel} editable={puedeEditar}
-          definicion={definicionDe(defAbierta).definicion} subtareas={definicionDe(defAbierta).subtareas} esBase={definicionDe(defAbierta).esBase}
+          {...definicionDe(defAbierta)}
           onGuardar={(datos) => guardarDefinicion(defAbierta, datos)} onCerrar={() => setDefAbierta(null)} />
       )}
       <div>
@@ -327,7 +366,7 @@ export default function Sistemas() {
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-[#7FA7B4]">
                 <th className="py-2">Proceso</th>
                 <th className="py-2">Subproceso</th>
-                <th className="py-2 text-center" title="Definición y subtareas (checklist) de la tarea">Definición</th>
+                <th className="py-2 text-center" title="Definición, subtareas, evidencias y entradas/salidas del subproceso">Ficha</th>
                 {MODELOS_COL.map(m => <th key={m} className="py-2 text-right px-1">{m}</th>)}
                 <th className="py-2"></th>
               </tr>
@@ -344,11 +383,18 @@ export default function Sistemas() {
                     {(() => {
                       const d = definicionDe(g);
                       const n = d.subtareas.length;
+                      const e = d.evidencias.length;
+                      const algo = n || e || d.definicion || d.entradas || d.salidas;
                       return (
                         <button type="button" onClick={() => setDefAbierta(g)}
-                          className={`whitespace-nowrap rounded-lg border px-2 py-1 text-[11px] font-bold transition ${n || d.definicion ? 'border-brand-verde/50 bg-brand-verde/10 text-brand-verdeTexto hover:border-brand-verde' : 'border-[#1E5468] text-[#7FA7B4] hover:border-brand-orange hover:text-brand-orange'}`}
-                          title={d.definicion ? d.definicion.slice(0, 160) : 'Sin definición todavía'}>
-                          ☰ {n ? `${n} subtarea${n === 1 ? '' : 's'}${d.esBase ? ' · base' : ''}` : puedeEditar ? 'Definir' : '—'}
+                          className={`whitespace-nowrap rounded-lg border px-2 py-1 text-[11px] font-bold transition ${algo ? 'border-brand-verde/50 bg-brand-verde/10 text-brand-verdeTexto hover:border-brand-verde' : 'border-[#1E5468] text-[#7FA7B4] hover:border-brand-orange hover:text-brand-orange'}`}
+                          title={d.definicion ? d.definicion.slice(0, 160) : 'Sin ficha todavía'}>
+                          {/* Dos cuentas, no una: los pasos que se hacen y los
+                              documentos que hay que enseñar son cosas
+                              distintas, y saber cuál falta importa. */}
+                          ☰ {algo
+                            ? [n ? `${n} subt.` : null, e ? `${e} evid.` : null, d.esBase ? 'base' : null].filter(Boolean).join(' · ') || 'definida'
+                            : puedeEditar ? 'Definir' : '—'}
                         </button>
                       );
                     })()}
