@@ -544,3 +544,19 @@ Primera de las cuatro piezas del encargo: **el catálogo**. Lo demás (copiar al
 - **Migración v154** (aplicada): `tareas_catalogo` gana `evidencias`, `entradas` y `salidas`; y nacen las dos tablas que sostienen el resto del encargo — **`cliente_procesos`** (el mapa de procesos del cliente, que hasta ahora no existía: el SxxPxx era un texto que no apuntaba a nada) y **`cliente_evidencias`** (lo que se pide, lo que se aporta y el veredicto de la revisión por IA).
 - Una decisión que queda grabada en el esquema: **`estado` y `ia_veredicto` son columnas distintas**. Lo que dice la persona y lo que opinó el modelo no son lo mismo. La IA propone, no decide.
 - `lib/evidencias.js`, con la misma disciplina que `subtareas.js`: funciones puras, probadas desde Node, y `veredictoAlDia()` — si el documento ya no es el que se revisó, el veredicto es de otra cosa y no se enseña como válido.
+
+## Apoyo con más de tres meses: avisa, no bloquea (v155)
+- Apoyo es el modelo de la recta final y lo normal siguen siendo **tres meses o menos** hasta la certificación. Pero **impedirlo era demasiado**: hay casos razonables —una bolsa de horas que el cliente quiere estirar, una auditoría que se mueve— en los que la oferta correcta era Apoyo y el sistema no dejaba emitirla.
+- Ahora sale un aviso con el plazo real y lo que suele encajar mejor, y se decide. **Prohibir lo que a veces es correcto solo enseña a buscarle la vuelta.**
+- Sigue bloqueando lo que sí es un agujero: Apoyo sin declarar la fecha de certificación o el fin de la bolsa. Sin una de las dos no se sabe cuántas horas hay que reservar.
+
+## Lo que dicen tus proyectos · sugerencias sobre las horas (v155)
+Panel nuevo bajo el informe de rentabilidad. El informe dice si una oferta encaja con su precio; esto dice si las horas con las que se calculó ese precio se parecen a la realidad.
+
+- **No es un modelo que adivine: es aritmética sobre vuestros propios datos**, y cada sugerencia enseña de cuántos casos sale. Una sugerencia sin muestra es una opinión, y una opinión no debería mover el precio de nada. Un modelo de lenguaje sobre cuatro filas solo serviría para escribir bonito una conjetura.
+- **Tres familias**:
+  - *Lo planificado contra lo imputado*, subproceso a subproceso. Solo cuenta tareas **cerradas** con horas: una tarea a medias con pocas horas no dice que se tarde menos, dice que no ha terminado. Se ignora todo lo que quede por debajo del 20 %, que es ruido.
+  - *Se hacen una vez y se planifican varias*: subprocesos presentes en varias normas del mismo alcance. La auditoría interna se hace una vez aunque se certifiquen tres normas; si el plan la cuenta tres veces, o sobran horas en la oferta o se regalan en la ejecución.
+  - *El mismo trabajo con horas muy distintas según la norma*: descuadres del catálogo. A veces justificados; muchas veces, una fila que se quedó sin actualizar.
+- **Aplicar una sugerencia** escribe `horas_base` en el catálogo, y solo para administración. Las desviaciones con muy pocos casos no ofrecen el botón: se miran, no se aplican.
+- **Lo que hay hoy, dicho sin adornos**: en la base **no hay ni una tarea cerrada con horas imputadas**, así que la comparación planificado/real todavía no puede calcularse y el panel lo dice en la primera línea. Una lista vacía sin explicación se lee como «todo bien», y no es lo mismo «no hay desviaciones» que «no hay con qué medirlas». Con el catálogo de hoy sí salen **23 tareas comunes** entre normas y **67 descuadres**.

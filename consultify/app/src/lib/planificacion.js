@@ -177,14 +177,20 @@ export function validarPlanificacion({ inicio, certificacion, fin, modelo, norma
     }
   }
 
-  // APOYO: es el modelo de la recta final. Solo se contrata cuando quedan
-  // TRES MESES O MENOS hasta la certificación; con más plazo, lo que toca es
-  // una implantación o un modelo de cuota. Se mide contra la certificación (o
-  // el fin, si no hay fecha de auditoría). Bloquea.
+  // APOYO: es el modelo de la recta final. Lo normal es contratarlo cuando
+  // quedan TRES MESES O MENOS hasta la certificación; con más plazo, lo que
+  // suele tocar es una implantación o un modelo de cuota.
+  //
+  // AVISA, NO BLOQUEA (v155). Antes lo impedía, y la realidad traía casos
+  // razonables —una bolsa de horas que el cliente quiere estirar, una
+  // auditoría que se mueve— en los que la oferta correcta era Apoyo y el
+  // sistema no dejaba emitirla. Prohibir lo que a veces es correcto solo
+  // enseña a buscarle la vuelta. Ahora se ve el aviso y se decide.
   if (modelo === 'Apoyo' && meses != null && meses > MAX_MESES_APOYO) {
-    errores.push(
-      `Apoyo solo se contrata con ${MAX_MESES_APOYO} meses o menos hasta la certificación y aquí quedan ${meses}. ` +
-      'Con más plazo, elige Implantación o un modelo de cuota.',
+    avisos.push(
+      `Apoyo con ${meses} meses hasta la certificación: lo habitual son ${MAX_MESES_APOYO} o menos. ` +
+      'Con este plazo suele encajar mejor Implantación o un modelo de cuota. ' +
+      'Si lo emites igual, cuenta que la bolsa de horas tiene que llegar hasta el final.',
     );
   }
   // Apoyo exige DECLARAR el plazo: la fecha de certificación (auditoría) o,

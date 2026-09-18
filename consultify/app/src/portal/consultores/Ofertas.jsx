@@ -14,6 +14,7 @@ import DialogoFicha from '../../components/DialogoFicha.jsx';
 import ImportarContacto from '../../components/ImportarContacto.jsx';
 import DatoEspejo, { AvisoDesfase } from '../../components/DatoEspejo.jsx';
 import InformeRentabilidad from '../../components/InformeRentabilidad.jsx';
+import SugerenciasHoras from '../../components/SugerenciasHoras.jsx';
 import { normalizarCif, puedeEditarContactos } from '../../lib/crm.js';
 import { montarDocumento, logicaDe, SITUACION_BY_ID } from '../../lib/documentoOferta.js';
 import { cargarCatalogoVivo } from '../../lib/catalogoVivo.js';
@@ -544,6 +545,9 @@ export default function Ofertas() {
 
       {/* ── Lo debido según la carga frente a lo cobrado, oferta a oferta ── */}
       {rows && <InformeRentabilidad ofertas={rows} />}
+      {/* El informe dice si la oferta encaja con el precio; esto, si las
+          horas con las que se calculó ese precio se parecen a la realidad. */}
+      {rows && <SugerenciasHoras ofertas={rows} />}
 
       {/* ── El motor da hoy un precio distinto al que se emitió ── */}
       {avisoPrecio && (
